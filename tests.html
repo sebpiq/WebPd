@@ -18,15 +18,18 @@
 	<script src='pd.js' type='text/javascript'></script>
 	<script type='text/javascript'>
 		function launch() {
-			tests = ['test-1-basic-osc', 'test-2-mutiply', 'test-3-add'];
+			tests = ['test-no-such-file', 'test-0-bad-object', 'test-1-basic-osc', 'test-2-mutiply', 'test-3-add'];
 			var body = document.getElementsByTagName("body")[0];
 			var contents = document.createElement('div');
 			
 			var pdfile = document.location.href.split("?")[1];
 			if (pdfile) {
+				// information and graphic about this patch
 				contents.innerHTML = contents.innerHTML + "<h1>" + pdfile + "</h1><img src='unittests/" + pdfile + ".png'>";
+				// create a new pd instance
 				var pd = new Pd();
-				pd.load("unittests/" + pdfile + ".pd");
+				// Load up the particular patch, and play it when the patch-is-loaded callback fires
+				pd.load("unittests/" + pdfile + ".pd", pd.play);
 			} else {
 				for (t in tests){
 					contents.innerHTML = contents.innerHTML + "<p><a href='?" + tests[t] + "'><p><img src='unittests/" + tests[t] + ".png'></p>" + tests[t] + "</a></p>";
@@ -37,5 +40,10 @@
 		}
 	</script>
 </head>
-<body onLoad='var l = launch();'></body>
+<body onLoad='var l = launch();'>
+	<h1>WebPd</h1>
+	<p>Copyright Chris McCormick, 2010.</p>
+	<p><a href='COPYING'>LGPLv3 Licensed.</a></p>
+	<p>You will need Firefox's "Audio Data API" builds from <a href='https://wiki.mozilla.org/Audio_Data_API'>here</a>.</p>
+</body>
 </html>
