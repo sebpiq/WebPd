@@ -1,0 +1,66 @@
+<audio id="audio" onaudiowritten="audioWritten(event)"></audio>
+<input type="text" size="4" id="freq" value="440"><label for="hz">Hz</label>
+<button onclick="generateWaveform()">set</button>
+<button onclick="start()">play</button>
+<button onclick="stop()">stop</button>
+<div id="out"></div>
+<script type="text/javascript">
+var sampledata = [];
+var freq = 440;
+var interval = -1;
+
+// var m = document.getElementById("audio");
+m = new Audio();
+m.mozSetup(1, 44100, 1);
+var out = document.getElementById("out");
+function audioWritten(e)
+{
+  var a = Array(e.mozFrameBuffer.length);
+  for (var i=0; i<e.mozFrameBuffer.length; i++) {
+     a[i] = e.mozFrameBuffer.item(i);
+  }
+  alert(a.toString());
+  out.innerHTML = "[" + a.toString() + "]\n";
+}
+
+var buffered = 0;
+
+function writeData()
+{
+  var n = Math.ceil(freq / 100);
+  out.innerHTML = "";
+  while(!buffered) {
+    buffered = m.mozWriteAudio(sampledata.length, sampledata);
+    out.innerHTML += buffered + "<br/>";
+  }
+  buffered = 0;
+}
+
+function start()
+{
+  interval = setInterval(writeData, 50);
+}
+
+function stop()
+{
+  if (interval != -1) {
+    clearInterval(interval);
+    interval = -1;
+  }
+}
+
+function generateWaveform()
+{
+  freq = parseFloat(document.getElementById("freq").value);
+  // we're playing at 44.1kHz, so figure out how many samples
+  // will give us one full period
+  var samples = 44100 / freq;
+  sampledata = Array(Math.round(samples));
+  for (var i=0; i<sampledata.length; i++) {
+    sampledata[i] = Math.sin(2*Math.PI * (i / sampledata.length));
+  }
+  //out.firstChild.textContent += "[" + sampledata.toString() + "]\n";
+}
+
+generateWaveform();
+</script>

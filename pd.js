@@ -1,14 +1,30 @@
 /***
-	A very basic implementation of Pd-dsp for the web.
+	A very basic implementation of Pd's dsp engine for the web.
 	
 	Copyright Chris McCormick, 2010.
 	Licensed under the terms of the LGPLv3.
 ***/
 
-var Pd = function Pd() {
+var Pd = function Pd(sampleRate, bufferSize) {
+	// set my own sample rate
+	this.sampleRate = sampleRate;
+	// output buffer (stereo)
+	this.output = Array(bufferSize * 2);
+	// the audio element we'll use to make sound
+	this.el = null;
+	// how many frames have we run
+	this.frame = 0;
+	// the size of our buffers
+	this.bufferSize = bufferSize;
+	// closure reference to this object
+	var me = this;
+	
 	// internal representation of the DSP graph.
 	this._graph = {
+		// an array of every object we know about
 		"objects": [],
+		// an array of all of the end-points of the dsp graph
+		// (like dac~ or print~ or send~ or outlet~)
 		"endpoints": [],
 	};
 	
@@ -44,7 +60,7 @@ var Pd = function Pd() {
 			matches[l] = matches[l].substr(0, matches[l].length - 2)
 			// split this found line into tokens
 			var tokens = matches[l].split(" ");
-			console.log(tokens);
+			this.log(tokens);
 			// if we've found a create token
 			if (tokens[0] == "#X") {
 				// is this an obj instantiation
@@ -53,9 +69,13 @@ var Pd = function Pd() {
 					if (PdObjects[tokens[4]]) {
 						// instantiate this dsp object
 						var obj = new Object(PdObjects[tokens[4]]);
+						// let this object know about it's container graph
+						obj.pd = this;
 						// let this object know what type of thing it is
 						obj.type = tokens[4];
-						// initialise this object with the arguments
+						// frame counter - how many frames have we run for
+						obj.frame = 0;
+						// initialise this object with the arguments from the patch
 						if (obj.init) {
 							obj.init(tokens);
 						}
@@ -65,6 +85,11 @@ var Pd = function Pd() {
 						// put it in our graph of known objects
 						obj.graphindex = this._graph.objects.length;
 						this._graph.objects[obj.graphindex] = obj;
+						// create the outlet buffers for this object
+						obj.outlets = [];
+						for (var o=0; o < obj.buffers; o++) {
+							obj.outlets[o] = Array(this.bufferSize);
+						}
 						// if it's an endpoint, add it to the graph's list of known endpoints
 						if (obj.endpoint) {
 							this._graph.endpoints.push(obj);
@@ -86,24 +111,117 @@ var Pd = function Pd() {
 		return this;
 	}
 	
+	/** Periodically check and fill up the buffer, as needed **/
+	this.write = function() {
+		// because this is an interval callback, we use 'me' instead of 'this'
+		var buffered = 0;
+		var count = 0;
+		me.output.length = 0;
+		
+		while(!buffered && count < 3000) {
+			// increase the frame count
+			me.frame += 1;
+			// run the dsp function on all endpoints to get data
+			for (var e in me._graph.endpoints) {
+				// dac~ objects will copy their output to this.output
+				me.tick(me._graph.endpoints[e]);
+			}
+			// copy the data from all endpoints into the audio output
+			if (me.el.mozWriteAudio) {
+				buffered = me.el.mozWriteAudio(me.output.length, me.output);
+			} else {
+				buffered = 1;
+				me.log(me.output);
+			}
+			// check we haven't run a ridiculous number of times
+			count++;
+  		}
+		
+		// things are not going well. stop the audio.
+		if (count >= 3000) {
+			this.stop();
+		}
+	}
+	
+	/** Dsp tick function which makes sure a node's parents all get run before running it. **/
+	this.tick = function(obj) {
+		// look at each inlet, and make sure that the previous objects have all run this frame
+		for (var o in obj.inlets) {
+			var inlet = obj.inlets[o][0];
+			// run this inlet if it hasn't run yet
+			if (inlet.frame < this.frame) {
+				this.tick(inlet);
+			}
+		}
+		// run this object's dsp process
+		obj.dsptick();
+		// update this objects' frame count
+		obj.frame = this.frame;
+	}
+	
 	/** Starts this graph running **/
 	this.play = function() {
-		console.log(this._graph);
+		this.log("Graph:");
+		this.log(this._graph);
+		// check we're not already running
+		if (this.interval != -1) {
+			// set up our audio element
+			this.el = new Audio();
+			if (this.el.mozSetup) {
+				this.el.mozSetup(2, this.sampleRate, 1);
+				// start a regular buffer fill
+				this.interval = setInterval(this.write, 50);
+			} else {
+				this.interval = setTimeout(this.write, 50);
+			}
+			// reset the frame count
+			this.frame = 0;
+			// reset the frame count on all objects
+			for (var o in this._graph.objects) {
+				this._graph.objects[0].frame = 0;
+			}
+		}
+	}
+	
+	/** Stops this graph from running **/
+	this.stop = function() {
+		// if we're already running
+		if (this.interval != -1) {
+			// clear the interval
+			clearInterval(this.interval);
+			this.interval = -1;
+			// destroy the audio element
+			this.el = null;
+  		}
 	}
 	
 	/** log an error **/
 	this.log = function(msg) {
-		if (console) {
+		if (console && console.log) {
 			console.log(msg);
+		} else {
+			alert(msg);
+			// log manually in HTML
+			document.writeln(msg);
 		}
 	}
 };
 window.Pd = Pd;
 
 var PdObjects = {
+	// Every PdObject also gets the following variables set on creation:
+	// graph = the parent graph
+	// type = inititalisation string name (e.g. "osc~")
+	// inlets = array, where the index is the inlet number, of two-tuples
+	//	the first being the previous object in the chain
+	//	the second being that object's connected outlet
+	// dsp = a function which makes sure the previous objects have been calculated
+	//	then runs dspfunc on this object - see the dsp function above
+	
 	// basic oscillator
 	"osc~": {
 		"endpoint": false,
+		"buffers": 1,
 		"init": function(args) {
 			if (args.length >= 6) {
 				this.freq = args[5];
@@ -111,14 +229,29 @@ var PdObjects = {
 				this.freq = 0;
 			}
 		},
-		"dspfunc": function() {
-			
+		"dsptick": function() {
+			console.log('run');
+			for (var i=0; i<this.outlets[0].length; i++) {
+				this.outlets[0][i] = 0;
+			}
 		},
 	},
 	
 	// digital to analogue converter (sound output)
 	"dac~": {
 		"endpoint": true,
+		"buffers": 0,
+		"init": function(args) {
+		},
+		"dsptick": function() {
+			var i1 = this.inlets[0][0].outlets[this.inlets[0][1]];
+			var i2 = this.inlets[1][0].outlets[this.inlets[1][1]];
+			// copy interleaved data from inlets to the graph's output buffer
+			for (var i=0; i < i1.length; i++) {
+				this.pd.output[i * 2] = i1;
+				this.pd.output[i * 2 + 1] = i1;
+			}
+		},
 	},
 };
 
