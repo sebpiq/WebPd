@@ -23,13 +23,12 @@ function audioWritten(e)
   out.innerHTML = "[" + a.toString() + "]\n";
 }
 
-var buffered = 0;
-
 function writeData()
 {
+  var buffered = 0;
   var n = Math.ceil(freq / 100);
   out.innerHTML = "";
-  while(buffered < 1000) {
+  while(!buffered) {
     buffered = m.mozWriteAudio(sampledata.length, sampledata);
     out.innerHTML += buffered + "<br/>";
   }
@@ -38,7 +37,7 @@ function writeData()
 
 function start()
 {
-  interval = setInterval(writeData, 50);
+  interval = setInterval(writeData, 10);
 }
 
 function stop()

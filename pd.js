@@ -201,12 +201,14 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	
 	/** log an error **/
 	this.log = function(msg) {
-		if (console && console.log) {
+		if (window.console) {
 			console.log(msg);
 		} else {
-			alert(msg);
 			// log manually in HTML
-			document.writeln(msg);
+			if (!this.console) {
+				this.console = document.getElementById('console');
+			}
+			this.console.innerHTML += msg + "\n";
 		}
 	}
 };
