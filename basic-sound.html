@@ -29,7 +29,7 @@ function writeData()
 {
   var n = Math.ceil(freq / 100);
   out.innerHTML = "";
-  while(!buffered) {
+  while(buffered < 1000) {
     buffered = m.mozWriteAudio(sampledata.length, sampledata);
     out.innerHTML += buffered + "<br/>";
   }

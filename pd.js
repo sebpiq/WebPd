@@ -168,11 +168,15 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			// set up our audio element
 			this.el = new Audio();
 			if (this.el.mozSetup) {
+				// initialise our audio output element
 				this.el.mozSetup(2, this.sampleRate, 1);
 				// start a regular buffer fill
 				this.interval = setInterval(this.write, 50);
 			} else {
+				// just a few test frames
 				this.interval = setTimeout(this.write, 50);
+				this.interval = setTimeout(this.write, 100);
+				this.interval = setTimeout(this.write, 150);
 			}
 			// reset the frame count
 			this.frame = 0;
@@ -228,11 +232,13 @@ var PdObjects = {
 			} else {
 				this.freq = 0;
 			}
+			this.sampCount = 0;
+			this.samplesize = this.pd.sampleRate / this.freq;
 		},
 		"dsptick": function() {
-			console.log('run');
 			for (var i=0; i<this.outlets[0].length; i++) {
-				this.outlets[0][i] = 0;
+				this.outlets[0][i] = Math.sin(2 * Math.PI * (this.sampCount / this.samplesize));
+				this.sampCount += 1;
 			}
 		},
 	},
@@ -248,8 +254,8 @@ var PdObjects = {
 			var i2 = this.inlets[1][0].outlets[this.inlets[1][1]];
 			// copy interleaved data from inlets to the graph's output buffer
 			for (var i=0; i < i1.length; i++) {
-				this.pd.output[i * 2] = i1;
-				this.pd.output[i * 2 + 1] = i1;
+				this.pd.output[i * 2] = i1[i];
+				this.pd.output[i * 2 + 1] = i2[i];
 			}
 		},
 	},
