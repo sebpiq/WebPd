@@ -68,17 +68,17 @@ var Pd = function Pd(sampleRate, bufferSize) {
 					// see if we know about this type of object yet
 					if (PdObjects[tokens[4]]) {
 						// instantiate this dsp object
-						var obj = new Object(PdObjects[tokens[4]]);
+						var obj = new Object();
+						// copy properties from the right type of thing
+						for (var m in PdObjects[tokens[4]]) {
+							obj[m] = PdObjects[tokens[4]][m];
+						}
 						// let this object know about it's container graph
 						obj.pd = this;
 						// let this object know what type of thing it is
 						obj.type = tokens[4];
 						// frame counter - how many frames have we run for
 						obj.frame = 0;
-						// initialise this object with the arguments from the patch
-						if (obj.init) {
-							obj.init(tokens);
-						}
 						// create the inlets array for this object
 						// array holds 2-tuple entries of [src-object, src-outlet-number]
 						obj.inlets = [];
@@ -89,6 +89,10 @@ var Pd = function Pd(sampleRate, bufferSize) {
 						obj.outlets = [];
 						for (var o=0; o < obj.buffers; o++) {
 							obj.outlets[o] = Array(this.bufferSize);
+						}
+						// initialise this object with the arguments from the patch
+						if (obj.init) {
+							obj.init(tokens);
 						}
 						// if it's an endpoint, add it to the graph's list of known endpoints
 						if (obj.endpoint) {
@@ -230,7 +234,7 @@ var PdObjects = {
 		"buffers": 1,
 		"init": function(args) {
 			if (args.length >= 6) {
-				this.freq = args[5];
+				this.freq = parseFloat(args[5]);
 			} else {
 				this.freq = 0;
 			}
@@ -258,6 +262,32 @@ var PdObjects = {
 			for (var i=0; i < i1.length; i++) {
 				this.pd.output[i * 2] = i1[i];
 				this.pd.output[i * 2 + 1] = i2[i];
+			}
+		},
+	},
+	
+	// multiply object
+	"*~": {
+		"endpoint": false,
+		"buffers": 1,
+		"init": function(args) {
+			if (args.length >= 6) {
+				this.val = parseFloat(args[5]);
+			}
+			this.pd.log(this.inlets);
+		},
+		"dsptick": function() {
+			if (this.val) {
+				var i1 = this.inlets[0][0].outlets[this.inlets[0][1]];
+				for (var i=0; i < i1.length; i++) {
+					this.outlets[0][i] = i1[i] * this.val;
+				}
+			} else {
+				var i1 = this.inlets[0][0].outlets[this.inlets[0][1]];
+				var i2 = this.inlets[1][0].outlets[this.inlets[1][1]];
+				for (var i=0; i < i1.length; i++) {
+					this.outlets[0][i] = i1[i] * i2[i];
+				}
 			}
 		},
 	},
