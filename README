@@ -1,0 +1,26 @@
+WebPd
+=====
+
+WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) patches to run in the browser without plugins. Right now the focus is on dsp objects only, to enable you to mock up dsp engines in Pd, put them on the web, and control them with Javascript.
+
+Here are the [unit test pages](tests). To run these, you will need Firefox's Audio Data API builds from [here](https://build.mozilla.org/tryserver-builds/david.humphrey@senecac.on.ca-try-c0d0827d0ec0/). More information about the [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available online.
+
+Contributing
+------------
+
+Right now I'm really looking for people to contribute dsp objects (the ones ending with '~'). Here's how you can contribute code:
+
+ * Get bzr from http://bazaar-ng.org/ or `apt-get install bzr`
+ * Get your own versioned copy of the source with `bzr branch http://mccormick.cx/dev/webpd/`
+ * Browse to 'tests.html' in the webpd directory
+ * Add you own test by modifying line 21 of tests.html and creating these files in the unitests directory:
+	* A PNG render of your patch - e.g. use `scrot -s my-test-patch.png` under linux and select the portion of your patch as a thumbnail.
+	* The patch itself created in Pd - e.g. my-test-patch.pd
+ * Modify pd.js until your patch works
+ * Use `bzr add` and `bzr commit` to commit your changes
+ * Send me your changes so that I can merge them. The easiest way to do that is for you to push your code somewhere I can access it with `bzr push`. Often the best way is to push it over sftp or ftp to a web-accessible directory, and then send me the URL. e.g. `bzr push sftp://myserver.com/my/web/directory/`
+
+Have fun!
+
+Copyright Chris McCormick, 2010.
+LGPLv3 Licensed.
