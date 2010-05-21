@@ -68,32 +68,10 @@ var Pd = function Pd(sampleRate, bufferSize) {
 					// see if we know about this type of object yet
 					if (PdObjects[tokens[4]]) {
 						// instantiate this dsp object
-						var obj = new Object();
-						// copy properties from the right type of thing
-						for (var m in PdObjects[tokens[4]]) {
-							obj[m] = PdObjects[tokens[4]][m];
-						}
-						// let this object know about it's container graph
-						obj.pd = this;
-						// let this object know what type of thing it is
-						obj.type = tokens[4];
-						// frame counter - how many frames have we run for
-						obj.frame = 0;
-						// create the inlets array for this object
-						// array holds 2-tuple entries of [src-object, src-outlet-number]
-						obj.inlets = [];
+						var obj = new PdObject(PdObjects[tokens[4]], this, tokens[4], tokens);
 						// put it in our graph of known objects
 						obj.graphindex = this._graph.objects.length;
 						this._graph.objects[obj.graphindex] = obj;
-						// create the outlet buffers for this object
-						obj.outlets = [];
-						for (var o=0; o < obj.buffers; o++) {
-							obj.outlets[o] = Array(this.bufferSize);
-						}
-						// initialise this object with the arguments from the patch
-						if (obj.init) {
-							obj.init(tokens);
-						}
 						// if it's an endpoint, add it to the graph's list of known endpoints
 						if (obj.endpoint) {
 							this._graph.endpoints.push(obj);
@@ -218,6 +196,40 @@ var Pd = function Pd(sampleRate, bufferSize) {
 };
 window.Pd = Pd;
 
+/** PdObject prototype, common to all Pd objects **/
+var PdObject = function (proto, pd, type, args) {
+	// let this object know about it's container graph
+	this.pd = pd;
+	// let this object know what type of thing it is
+	this.type = type;
+	// frame counter - how many frames have we run for
+	this.frame = 0;
+	
+	// create the inlets array for this object
+	// array holds 2-tuple entries of [src-object, src-outlet-number]
+	this.inlets = [];
+	// copy properties from the right type of thing
+	for (var m in proto) {
+		this[m] = proto[m];
+	}
+
+	// create the outlet buffers for this object
+	this.outlets = [];
+	for (var o=0; o < this.buffers; o++) {
+		this.outlets[o] = Array(this.pd.bufferSize);
+	}
+	
+	// initialise this object with the arguments from the patch
+	if (this.init) {
+		this.init(args);
+	}
+	
+	/** Gets the output buffer of the object's outlet connected to inlet number idx **/
+	this.inletBuffer = function(idx) {
+		return this.inlets[idx][0].outlets[this.inlets[idx][1]];
+	}
+}
+
 var PdObjects = {
 	// Every PdObject also gets the following variables set on creation:
 	// graph = the parent graph
@@ -256,8 +268,8 @@ var PdObjects = {
 		"init": function(args) {
 		},
 		"dsptick": function() {
-			var i1 = this.inlets[0][0].outlets[this.inlets[0][1]];
-			var i2 = this.inlets[1][0].outlets[this.inlets[1][1]];
+			var i1 = this.inletBuffer(0);
+			var i2 = this.inletBuffer(1);
 			// copy interleaved data from inlets to the graph's output buffer
 			for (var i=0; i < i1.length; i++) {
 				this.pd.output[i * 2] = i1[i];
@@ -277,16 +289,46 @@ var PdObjects = {
 			this.pd.log(this.inlets);
 		},
 		"dsptick": function() {
+			// if we have a set integer value, use that
 			if (this.val) {
-				var i1 = this.inlets[0][0].outlets[this.inlets[0][1]];
+				var i1 = this.inletBuffer(0);
 				for (var i=0; i < i1.length; i++) {
 					this.outlets[0][i] = i1[i] * this.val;
 				}
+			// otherwise, mutiply two buffers together
 			} else {
-				var i1 = this.inlets[0][0].outlets[this.inlets[0][1]];
-				var i2 = this.inlets[1][0].outlets[this.inlets[1][1]];
+				var i1 = this.inletBuffer(0);
+				var i2 = this.inletBuffer(1);
 				for (var i=0; i < i1.length; i++) {
 					this.outlets[0][i] = i1[i] * i2[i];
+				}
+			}
+		},
+	},
+
+	// addition object
+	"+~": {
+		"endpoint": false,
+		"buffers": 1,
+		"init": function(args) {
+			if (args.length >= 6) {
+				this.val = parseFloat(args[5]);
+			}
+			this.pd.log(this.inlets);
+		},
+		"dsptick": function() {
+			// if we have a set integer value, use that
+			if (this.val) {
+				var i1 = this.inletBuffer(0);
+				for (var i=0; i < i1.length; i++) {
+					this.outlets[0][i] = i1[i] + this.val;
+				}
+			// otherwise, mutiply two buffers together
+			} else {
+				var i1 = this.inletBuffer(0);
+				var i2 = this.inletBuffer(1);
+				for (var i=0; i < i1.length; i++) {
+					this.outlets[0][i] = i1[i] + i2[i];
 				}
 			}
 		},
