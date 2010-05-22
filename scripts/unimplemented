@@ -1,0 +1,8 @@
+#!/bin/bash
+O_IFS=$IFS
+IFS=' '
+objects=`grep -e '^<' OBJECTS.txt`
+echo $objects
+echo -e "Total:\c"
+echo $objects | wc -l
+IFS=$O_IFS

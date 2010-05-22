@@ -1,0 +1,261 @@
+GLUE
+----
+
+< bang, b, bng
+< float, f
+< symbol
+< int
+< send, s
+< receive, r
+< select, sel
+< route
+< pack
+< unpack
+< trigger, t
+< spigot
+< moses
+< until
+< print
+< makefilename
+< change
+< swap
+< value
+< toggle
+< list (prepend, append, trim, length)
+
+TIME
+----
+
+< delay, del
+< metro
+< line
+< timer
+< cputime
+< realtime
+< pipe
+
+MATH
+----
+
+< +
+< -
+< *
+< /
+< pow
+
+< ==
+< !=
+< >
+< <
+< >=
+< <=
+
+< &
+< &&
+< |
+< ||
+< %
+
+< mtof
+< powtodb
+< rmstodb
+< ftom
+< dbtopow
+< dbtorms
+
+< mod
+< div
+< sin
+< cos
+< tan
+
+< atan
+< atan2
+< sqrt
+< log
+< exp
+< abs
+
+< random
+< max
+< min
+< clip
+< wrap
+
+MIDI
+----
+
+< notein
+< ctlin
+< pgmin
+< bendin
+< touchin
+< polytouchin
+< midiin
+< sysexin
+
+< noteout
+< ctlout
+< pgmout
+< bendout
+< touchout
+< polytouchout
+< midiout
+
+< makenote
+< stripnote
+
+TABLES
+------
+
+< tabread
+< tabread4
+< tabwrite
+< soundfiler
+
+MISC
+----
+
+< loadbang
+< serial
+< netsend
+< netreceive
+< qlist
+< textfile
+< openpanel
+< savepanel
+< bag
+< poly
+< key
+< keyup
+< keyname
+< declare
+
+AUDIO MATH
+----------
+
+> +~
+< -~
+> *~
+< /~
+< max~
+< min~
+< clip~
+< q8_rsqrt~
+< q8_sqrt~
+< wrap~
+< fft~
+< ifft~
+< rfft~
+< rifft~
+< pow~
+< log~
+< exp~
+< abs~
+< framp~
+< mtof~
+< ftom~
+< rmstodb~
+< dbtorms~
+< rmstopow~
+< powtorms~
+
+AUDIO GLUE
+----------
+
+> dac~
+< adc~
+< sig~
+< line~
+< vline~
+< threshold~
+< snapshot~
+< vsnapshot~
+< bang~
+< samplerate~
+< send~, s~
+< receive~, r~
+< throw~
+< catch~
+< block~
+< switch~
+< readsf~
+< writesf~
+
+AUDIO SOURCES
+-------------
+
+> phasor~
+< cos~
+> osc~
+< tabwrite~
+< tabplay~
+< tabread4~
+< tabosc4~
+< tabsend~
+< tabreceive~
+
+AUDIO FILTERS
+-------------
+
+< vcf~
+< noise~
+< env~
+< hip~
+< lop~
+< bp~
+< biquad~
+< samphold~
+< print~
+< rpole~
+< rzero~
+< rzero_rev~
+< cpole~
+< czero~
+< czero_rev~
+
+AUDIO DELAY
+-----------
+
+< delwrite~
+< delread~
+< vd~
+
+< pd
+< table
+< inlet
+< outlet
+< inlet~
+< outlet~
+
+DATA STRUCTURES
+---------------
+
+< struct
+< drawcurve
+< filledcurve
+< drawpolygon
+< filledpolygon
+< plot
+< drawnumber
+
+ACCESSING DATA
+--------------
+
+< pointer
+< get
+< set
+< element
+< getsize
+< setsize
+< append
+< sublist
+
+OBSOLETE
+--------
+
+< namecanvas
+< scalar
+< scope~
+< template
+
