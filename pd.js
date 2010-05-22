@@ -333,6 +333,27 @@ var PdObjects = {
 			}
 		},
 	},
+	
+	// basic oscillator
+	"phasor~": {
+		"endpoint": false,
+		"buffers": 1,
+		"init": function(args) {
+			if (args.length >= 6) {
+				this.freq = parseFloat(args[5]);
+			} else {
+				this.freq = 0;
+			}
+			this.sampCount = 0;
+			this.samplesize = this.pd.sampleRate / this.freq;
+		},
+		"dsptick": function() {
+			for (var i=0; i<this.outlets[0].length; i++) {
+				this.outlets[0][i] = (this.sampCount % this.samplesize) / this.samplesize;
+				this.sampCount += 1;
+			}
+		},
+	},
 };
 
 /********************************
