@@ -1,0 +1,17 @@
+body {
+	margin-left: 50px;
+	margin-right: 50px;
+	font-family: Arial, Sans;
+}
+
+img {
+	border: 1px solid gray;
+}
+
+a {
+	text-decoration: none;
+}
+
+#buttons {
+	margin-top: 10px;
+}

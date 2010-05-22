@@ -34,6 +34,7 @@
           var soundData = getSoundData(currentWritePosition, portionSize);
           audio.mozWriteAudio(soundData);
           currentWritePosition += portionSize;
+          console.log(audio.mozCurrentSampleOffset());
         }
       }
 

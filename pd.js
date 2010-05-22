@@ -16,6 +16,10 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	this.frame = 0;
 	// the size of our buffers
 	this.bufferSize = bufferSize;
+	// the last position written to the audiobuffer
+	this.lastWritePosition = 0;
+	// the audio-filling interval id
+	this.interval = -1;
 	// closure reference to this object
 	var me = this;
 	
@@ -88,39 +92,61 @@ var Pd = function Pd(sampleRate, bufferSize) {
 				}
 			}
 		}
+		// output a message with our graph
+		this.log("Graph:");
+		this.log(this._graph);
 		// run the loadcallback to notify the user that the patch is loaded
 		this.loadcallback(this);
 		return this;
 	}
 	
+	// TODO: OPTIMISE - next two methods - remove the check for mozWriteAudio and create
+	// a totally different method which gets checked at startup and used instead.
+	
+	/** Checks if the hardware buffer is hungry for more **/
+	this.hungry = function() {
+		// are we a few buffers ahead?
+		return this.lastWritePosition < this.el.mozCurrentSampleOffset() + this.sampleRate / 2;
+	}
+	
+	/** Fills up the hardware buffer with the data from this.output **/
+	this.fillbuffer = function() {
+		// copy the data from all endpoints into the audio output
+		if (this.el.mozWriteAudio) {
+			this.el.mozWriteAudio(this.output);
+			// update our last write position so we know where we're up to
+			this.lastWritePosition += this.output.length;
+		} else {
+			// non-audio version, output the frame as text
+			this.log(me.output);
+		}
+	}
+	
 	/** Periodically check and fill up the buffer, as needed **/
 	this.write = function() {
-		// because this is an interval callback, we use 'me' instead of 'this'
-		var buffered = 0;
+		// because this is an interval callback, we use the closure-friendly 'me' instead of 'this'
 		var count = 0;
-		me.output.length = 0;
 		
-		while(!buffered && count < 3000) {
+		// while we still need to add more to the buffer, do it - should usually do about two loops
+		while(this.hungry() && count < 100) {
+			// reset our output buffer (gets written to by dac~ objects)
+			for (var i=0; i<this.output.length; i++)
+				this.output[i] = 0;
 			// increase the frame count
-			me.frame += 1;
+			this.frame += 1;
 			// run the dsp function on all endpoints to get data
-			for (var e in me._graph.endpoints) {
-				// dac~ objects will copy their output to this.output
-				me.tick(me._graph.endpoints[e]);
+			for (var e in this._graph.endpoints) {
+				// dac~ objects will add their output to this.output
+				this.tick(this._graph.endpoints[e]);
 			}
-			// copy the data from all endpoints into the audio output
-			if (me.el.mozWriteAudio) {
-				buffered = me.el.mozWriteAudio(me.output.length, me.output);
-			} else {
-				buffered = 1;
-				me.log(me.output);
-			}
+			this.fillbuffer(this.output);
 			// check we haven't run a ridiculous number of times
 			count++;
   		}
 		
 		// things are not going well. stop the audio.
-		if (count >= 3000) {
+		if (count >= 100) {
+			this.log("Overflowed 10 write() calls - your patch is probably too heavy.");
 			this.stop();
 		}
 	}
@@ -143,22 +169,25 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	
 	/** Starts this graph running **/
 	this.play = function() {
-		this.log("Graph:");
-		this.log(this._graph);
 		// check we're not already running
-		if (this.interval != -1) {
+		if (this.interval == -1) {
+			this.log("Starting audio.");
 			// set up our audio element
 			this.el = new Audio();
 			if (this.el.mozSetup) {
 				// initialise our audio output element
 				this.el.mozSetup(2, this.sampleRate, 1);
+				// initial buffer fill
+				this.write();
 				// start a regular buffer fill
-				this.interval = setInterval(this.write, 50);
+				this.interval = setInterval(function() { me.write(); }, Math.floor(this.bufferSize / this.sampleRate));
 			} else {
 				// just a few test frames
-				this.interval = setTimeout(this.write, 50);
-				this.interval = setTimeout(this.write, 100);
-				this.interval = setTimeout(this.write, 150);
+				this.log("Generating a few test frames of data:")
+				for (var i=0; i<10; i++) {
+					this.log("Frame " + i);
+					this.write();
+				}
 			}
 			// reset the frame count
 			this.frame = 0;
@@ -166,6 +195,8 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			for (var o in this._graph.objects) {
 				this._graph.objects[0].frame = 0;
 			}
+		} else {
+			this.log("Already started.");
 		}
 	}
 	
@@ -173,12 +204,17 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	this.stop = function() {
 		// if we're already running
 		if (this.interval != -1) {
+			this.log("Stopping audio.");
 			// clear the interval
 			clearInterval(this.interval);
-			this.interval = -1;
 			// destroy the audio element
 			this.el = null;
-  		}
+			this.interval = -1;
+			// reset our counter
+			this.lastWritePosition = 0;
+  		} else {
+			this.log("Already stopped.");
+		}
 	}
 	
 	/** log an error **/
@@ -272,8 +308,8 @@ var PdObjects = {
 			var i2 = this.inletBuffer(1);
 			// copy interleaved data from inlets to the graph's output buffer
 			for (var i=0; i < i1.length; i++) {
-				this.pd.output[i * 2] = i1[i];
-				this.pd.output[i * 2 + 1] = i2[i];
+				this.pd.output[i * 2] += i1[i];
+				this.pd.output[i * 2 + 1] += i2[i];
 			}
 		},
 	},
@@ -334,7 +370,7 @@ var PdObjects = {
 		},
 	},
 	
-	// basic oscillator
+	// basic phasor (0 to 1)
 	"phasor~": {
 		"endpoint": false,
 		"buffers": 1,
