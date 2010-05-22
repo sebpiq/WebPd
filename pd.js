@@ -291,7 +291,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			for (var i=0; i<this.outlets[0].length; i++) {
-				this.outlets[0][i] = Math.sin(2 * Math.PI * (this.sampCount / this.samplesize));
+				this.outlets[0][i] = Math.cos(2 * Math.PI * (this.sampCount / this.samplesize));
 				this.sampCount += 1;
 			}
 		},
