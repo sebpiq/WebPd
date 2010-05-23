@@ -1,3 +1,100 @@
+AUDIO MATH
+----------
+
+> +~
+< -~
+> *~
+< /~
+< max~
+< min~
+< clip~
+< q8_rsqrt~
+< q8_sqrt~
+< wrap~
+< fft~
+< ifft~
+< rfft~
+< rifft~
+< pow~
+< log~
+< exp~
+< abs~
+< framp~
+< mtof~
+< ftom~
+< rmstodb~
+< dbtorms~
+< rmstopow~
+< powtorms~
+
+AUDIO GLUE
+----------
+
+> dac~
+< adc~
+< sig~
+< line~
+< vline~
+< threshold~
+< snapshot~
+< vsnapshot~
+< bang~
+< samplerate~
+< send~, s~
+< receive~, r~
+< throw~
+< catch~
+< block~
+< switch~
+< readsf~
+< writesf~
+
+AUDIO SOURCES
+-------------
+
+> phasor~
+< cos~
+> osc~
+< tabwrite~
+< tabplay~
+< tabread4~
+< tabosc4~
+< tabsend~
+< tabreceive~
+
+AUDIO FILTERS
+-------------
+
+< vcf~
+< noise~
+< env~
+< hip~
+< lop~
+< bp~
+< biquad~
+< samphold~
+< print~
+< rpole~
+< rzero~
+< rzero_rev~
+< cpole~
+< czero~
+< czero_rev~
+
+AUDIO DELAY
+-----------
+
+< delwrite~
+< delread~
+< vd~
+
+< pd
+< table
+< inlet
+< outlet
+< inlet~
+< outlet~
+
 GLUE
 ----
 
@@ -130,103 +227,6 @@ MISC
 < keyup
 < keyname
 < declare
-
-AUDIO MATH
-----------
-
-> +~
-< -~
-> *~
-< /~
-< max~
-< min~
-< clip~
-< q8_rsqrt~
-< q8_sqrt~
-< wrap~
-< fft~
-< ifft~
-< rfft~
-< rifft~
-< pow~
-< log~
-< exp~
-< abs~
-< framp~
-< mtof~
-< ftom~
-< rmstodb~
-< dbtorms~
-< rmstopow~
-< powtorms~
-
-AUDIO GLUE
-----------
-
-> dac~
-< adc~
-< sig~
-< line~
-< vline~
-< threshold~
-< snapshot~
-< vsnapshot~
-< bang~
-< samplerate~
-< send~, s~
-< receive~, r~
-< throw~
-< catch~
-< block~
-< switch~
-< readsf~
-< writesf~
-
-AUDIO SOURCES
--------------
-
-> phasor~
-< cos~
-> osc~
-< tabwrite~
-< tabplay~
-< tabread4~
-< tabosc4~
-< tabsend~
-< tabreceive~
-
-AUDIO FILTERS
--------------
-
-< vcf~
-< noise~
-< env~
-< hip~
-< lop~
-< bp~
-< biquad~
-< samphold~
-< print~
-< rpole~
-< rzero~
-< rzero_rev~
-< cpole~
-< czero~
-< czero_rev~
-
-AUDIO DELAY
------------
-
-< delwrite~
-< delread~
-< vd~
-
-< pd
-< table
-< inlet
-< outlet
-< inlet~
-< outlet~
 
 DATA STRUCTURES
 ---------------
