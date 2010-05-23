@@ -15,3 +15,16 @@ a {
 #buttons {
 	margin-top: 10px;
 }
+
+#unimplemented {
+	display: none;
+}
+
+#bzrlog {
+	display: none;
+}
+
+#logo {
+	float: right;
+	margin: 5px;
+}

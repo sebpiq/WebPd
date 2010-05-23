@@ -3,24 +3,90 @@ WebPd
 
 WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) patches to run in the browser without plugins. Right now the focus is on dsp objects only, to enable you to mock up dsp engines in Pd, put them on the web, and control them with Javascript.
 
-Here are the [unit test pages](tests). To run these, you will need Firefox's Audio Data API builds from [here](https://build.mozilla.org/tryserver-builds/david.humphrey@senecac.on.ca-try-c0d0827d0ec0/). More information about the [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available online.
+Here are the [unit test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need Firefox's Audio Data API builds from [here](http://ftp.mozilla.org/pub/mozilla.org/firefox/tryserver-builds/david.humphrey@senecac.on.ca-d9932b6962bd/). More information about the [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available online.
+
+This is changing very fast right now and new FireFox builds are coming out every day. If you want to keep abreast of the latest changes, here is the WebPd mailing list: <http://groups.google.com/group/web-pure-data/>
 
 Contributing
 ------------
 
-Right now I'm really looking for people to contribute dsp objects (the ones ending with '~'). Here's how you can contribute code:
+Right now I'm really looking for people to contribute dsp objects (or 'tilde' objects with names ending with '~'). The messaging side of Pd is not yet implemented. Here's how you can contribute code:
 
- * Get bzr from http://bazaar-ng.org/ or `apt-get install bzr`
- * Get your own versioned copy of the source with `bzr branch http://mccormick.cx/dev/webpd/`
- * Browse to 'tests.html' in the webpd directory
- * Add you own test by modifying line 21 of tests.html and creating these files in the unitests directory:
-	* A PNG render of your patch - e.g. use `scrot -s my-test-patch.png` under linux and select the portion of your patch as a thumbnail.
+ * Get the source code.
+   * You can either use SVN and get the source code from http://code.google.com/p/web-pure-data/
+   * Or you can use bzr (which is what I use):
+     * Get bzr from <http://bazaar-ng.org/> or `apt-get install bzr`.
+     * Get your own versioned copy of the source with the command `bzr branch http://mccormick.cx/dev/webpd/`.
+
+The advantage of using bzr is that you can make local commits in your copy of the source, and once you are finished you can push those commits to me in one bunch. With SVN you can't push the changes back into the repository unless I give you commit access on the project.
+
+You could also use git-svn and I will merge git pushes if you make them available somewhere like github.
+
+ * Browse to 'tests.html' in the webpd directory and have a look at the existing tests.
+ * Find a PdObject which is not yet implemented.
+ * Add your own test by modifying line 21 of tests.html and creating these files in the unitests/ sub-directory:
+	* A PNG render of your patch - e.g. use `scrot -s my-test-patch.png` under linux and select the portion of your patch to use as a thumbnail.
 	* The patch itself created in Pd - e.g. my-test-patch.pd
  * Modify pd.js until your patch works
- * Use `bzr add` and `bzr commit` to commit your changes
+   * You will most likely want to add missing objects to the PdObjects array. See below for the anatomy of a PdObject.
+ * Use `bzr add` and `bzr commit` to commit your changes (or `git commit`, `svn commit`, whatever).
  * Send me your changes so that I can merge them. The easiest way to do that is for you to push your code somewhere I can access it with `bzr push`. Often the best way is to push it over sftp or ftp to a web-accessible directory, and then send me the URL. e.g. `bzr push sftp://myserver.com/my/web/directory/`
+
+Anatomy of a PdObject
+---------------------
+
+Here is the source code of the [+~] object, which adds two audio inlets together, with verbose comments. You can find this code inside pd.js in the PdObjects array. The really important bit is the "dsptick" method which is where the actual audio processing goes on. You can copy and paste this object to implement new Pd objects.
+
+	// Use the object name as it appears in the Pd patch here
+	"+~": {
+		// Endpoints are special objects where audio finishes up and exits the patch.
+		// e.g. [dac~] (audio output), [outlet~] (output to another patch), and [print~] (output to the console)
+		// Most objects aren't endpoints.
+		"endpoint": false,
+		
+		// How many audio outlets i have - an audio buffer will be created for each outlet.
+		"buffers": 1,
+		
+		// This method is run when the object is created.
+		// You can do stuff in here like read in the arguments and initialise variables.
+		"init": function(args) {
+			if (args.length >= 6) {
+				this.val = parseFloat(args[5]);
+			}
+			this.pd.log(this.inlets);
+		},
+		
+		// This is the most important method, and gets called each time the dsp graph is computed (every frame).
+		// In here you should usually be taking a vector of audio data from your inlets with this.inletBuffer(0)
+		// and then applying some function to every piece of audio data, and then placing the resulting output
+		// into this object's outlet buffer.
+		"dsptick": function() {
+			// This part checks whether the object was initialised with a fixed float value. e.g. [+~ 0.5]
+			// If it has been initialised with a fixed float, then we want to multiply every piece of data
+			// in the audio buffer by that fixed value.
+			if (this.val) {
+				// Get the incoming data buffer.
+				var i1 = this.inletBuffer(0);
+				// Loop through the incoming data and multiply each value by our fixed integer.
+				// Store the result in our outlet buffer.
+				for (var i=0; i < i1.length; i++) {
+					this.outlets[0][i] = i1[i] + this.val;
+				}
+			// If we are instead multiplying two audio streams together we execute this bit.
+			} else {
+				// Get the incoming data buffers of both audio streams.
+				var i1 = this.inletBuffer(0);
+				var i2 = this.inletBuffer(1);
+				// Loop through the incoming data from both streams, multiplying them together.
+				// Store the result in our outlet buffer.
+				for (var i=0; i < i1.length; i++) {
+					this.outlets[0][i] = i1[i] + i2[i];
+				}
+			}
+		},
+	},
 
 Have fun!
 
-Copyright Chris McCormick, 2010.
-LGPLv3 Licensed.
+Copyright [Chris McCormick](http://mccormick.cx/), 2010.
+[LGPLv3 Licensed](COPYING).
