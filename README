@@ -3,7 +3,7 @@ WebPd
 
 WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) patches to run in the browser without plugins. Right now the focus is on dsp objects only, to enable you to mock up dsp engines in Pd, put them on the web, and control them with Javascript.
 
-Here are the [unit test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need Firefox's Audio Data API builds from [here](http://ftp.mozilla.org/pub/mozilla.org/firefox/tryserver-builds/david.humphrey@senecac.on.ca-d9932b6962bd/). More information about the [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available online.
+Here are the [unit test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need the experimental Firefox Audio Data API builds from [here](http://ftp.mozilla.org/pub/mozilla.org/firefox/tryserver-builds/david.humphrey@senecac.on.ca-c0d0827d0ec0/). More information about the [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available online.
 
 This is changing very fast right now and new FireFox builds are coming out every day. If you want to keep abreast of the latest changes, here is the WebPd mailing list: <http://groups.google.com/group/web-pure-data/>
 
