@@ -70,20 +70,21 @@ var Pd = function Pd(sampleRate, bufferSize) {
 				// is this an obj instantiation
 				if (tokens[1] == "obj") {
 					// see if we know about this type of object yet
-					if (PdObjects[tokens[4]]) {
-						// instantiate this dsp object
-						var obj = new PdObject(PdObjects[tokens[4]], this, tokens[4], tokens);
-						// put it in our graph of known objects
-						obj.graphindex = this._graph.objects.length;
-						this._graph.objects[obj.graphindex] = obj;
-						// if it's an endpoint, add it to the graph's list of known endpoints
-						if (obj.endpoint) {
-							this._graph.endpoints.push(obj);
-						}
-					} else {
+					var proto = tokens[4];
+					if (!PdObjects[proto]) {
+						proto = "null";
 						// TODO: see if we can load this from a url and queue it to be loaded up after parsing
 						this.log(" " + tokens[4]);
 						this.log("... couldn't create");
+					}
+					// instantiate this dsp object
+					var obj = new PdObject(PdObjects[proto], this, proto, tokens);
+					// put it in our graph of known objects
+					obj.graphindex = this._graph.objects.length;
+					this._graph.objects[obj.graphindex] = obj;
+					// if it's an endpoint, add it to the graph's list of known endpoints
+					if (obj.endpoint) {
+						this._graph.endpoints.push(obj);
 					}
 				} else if (tokens[1] == "connect") {
 					// connect objects together
@@ -162,7 +163,8 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			}
 		}
 		// run this object's dsp process
-		obj.dsptick();
+		if (obj.dsptick)
+			obj.dsptick();
 		// update this objects' frame count
 		obj.frame = this.frame;
 	}
@@ -275,6 +277,12 @@ var PdObjects = {
 	//	the second being that object's connected outlet
 	// dsp = a function which makes sure the previous objects have been calculated
 	//	then runs dspfunc on this object - see the dsp function above
+	
+	// null placeholder object for PdObjects which don't exist
+	"null": {
+		"endpoint": false,
+		"buffers": 0,
+	},
 	
 	// basic oscillator
 	"osc~": {
