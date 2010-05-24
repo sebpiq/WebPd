@@ -29,6 +29,14 @@
 				pd = new Pd(44100, 4410);
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
 				pd.load("unittests/" + pdfile + ".pd", pd.play);
+				
+				// trigger the load of the interface html (if it exists)
+				MakeRequest("unittests/" + pdfile + ".html", {"loadcomplete": function(result, request) {
+						if (request.status != 404) {
+							document.getElementById("interface").innerHTML = result;
+						}
+					}
+				});
 			} else {
 				for (t in tests){
 					contents.innerHTML = contents.innerHTML + "<p><a href='?" + tests[t] + "'><p><img src='unittests/" + tests[t] + ".png'></p>" + tests[t] + "</a></p>";
@@ -43,6 +51,7 @@
 	<p><a href='COPYING'>LGPLv3 Licensed.</a></p>
 	<p>You will need Firefox's "Audio Data API" builds from <a href='https://wiki.mozilla.org/Audio_Data_API'>here</a>.</p>
 	<div id='contents'></div>
+	<div id='interface'></div>
 	<div id='buttons'></div>
 	<pre id='console'></pre>
 </body>

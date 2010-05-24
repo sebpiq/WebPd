@@ -16,6 +16,10 @@ a {
 	margin-top: 10px;
 }
 
+#interface {
+	margin: 10px;
+}
+
 #unimplemented {
 	display: none;
 }
