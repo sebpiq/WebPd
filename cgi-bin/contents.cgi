@@ -2,4 +2,4 @@
 
 echo "Content-type: text/html"
 echo
-markdown README
+markdown ../README
