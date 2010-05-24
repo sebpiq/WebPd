@@ -1,0 +1,6 @@
+#N canvas 637 62 450 300 10;
+#X obj 11 56 dac~;
+#X obj 11 35 osc~ 440;
+#X obj 11 14 receive frequency;
+#X connect 1 0 0 0;
+#X connect 2 0 1 0;

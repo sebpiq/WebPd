@@ -287,8 +287,14 @@ var PdObject = function (proto, pd, type, args) {
 	}
 	
 	/** Gets the output buffer of the object's outlet connected to inlet number idx **/
-	this.inletBuffer = function(idx) {
-		return this.inlets[idx][0].outlets[this.inlets[idx][1]];
+	this.inletBufferFunc = function(idx) {
+		// TODO: optimise so that this is only done once at object creation (post-init loadbang)
+		if (this.inlets[idx]) {
+			var buffer = this.inlets[idx][0].outlets[this.inlets[idx][1]];
+			return function(x) { return buffer[x]; }
+		} else {
+			return function(x) { return 0; }
+		}
 	}
 	
 	// finally, initialise this object with the arguments from the patch
@@ -336,6 +342,7 @@ var PdObjects = {
 			}
 		},
 		"message": function(val) {
+			this.pd.log(val);
 			this.freq = parseFloat(val);
 			this.samplesize = this.pd.sampleRate / this.freq;
 		},
@@ -348,12 +355,12 @@ var PdObjects = {
 		"init": function(args) {
 		},
 		"dsptick": function() {
-			var i1 = this.inletBuffer(0);
-			var i2 = this.inletBuffer(1);
+			var i1 = this.inletBufferFunc(0);
+			var i2 = this.inletBufferFunc(1);
 			// copy interleaved data from inlets to the graph's output buffer
-			for (var i=0; i < i1.length; i++) {
-				this.pd.output[i * 2] += i1[i];
-				this.pd.output[i * 2 + 1] += i2[i];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				this.pd.output[i * 2] += i1(i);
+				this.pd.output[i * 2 + 1] += i2(i);
 			}
 		},
 	},
@@ -371,16 +378,16 @@ var PdObjects = {
 		"dsptick": function() {
 			// if we have a set integer value, use that
 			if (this.val) {
-				var i1 = this.inletBuffer(0);
-				for (var i=0; i < i1.length; i++) {
-					this.outlets[0][i] = i1[i] * this.val;
+				var i1 = this.inletBufferFunc(0);
+				for (var i=0; i < this.pd.bufferSize; i++) {
+					this.outlets[0][i] = i1(i) * this.val;
 				}
 			// otherwise, mutiply two buffers together
 			} else {
-				var i1 = this.inletBuffer(0);
-				var i2 = this.inletBuffer(1);
-				for (var i=0; i < i1.length; i++) {
-					this.outlets[0][i] = i1[i] * i2[i];
+				var i1 = this.inletBufferFunc(0);
+				var i2 = this.inletBufferFunc(1);
+				for (var i=0; i < this.pd.bufferSize; i++) {
+					this.outlets[0][i] = i1(i) * i2(i);
 				}
 			}
 		},
@@ -399,16 +406,16 @@ var PdObjects = {
 		"dsptick": function() {
 			// if we have a set integer value, use that
 			if (this.val) {
-				var i1 = this.inletBuffer(0);
-				for (var i=0; i < i1.length; i++) {
-					this.outlets[0][i] = i1[i] + this.val;
+				var i1 = this.inletBufferFunc(0);
+				for (var i=0; i < this.pd.bufferSize; i++) {
+					this.outlets[0][i] = i1(i) + this.val;
 				}
 			// otherwise, mutiply two buffers together
 			} else {
-				var i1 = this.inletBuffer(0);
-				var i2 = this.inletBuffer(1);
-				for (var i=0; i < i1.length; i++) {
-					this.outlets[0][i] = i1[i] + i2[i];
+				var i1 = this.inletBufferFunc(0);
+				var i2 = this.inletBufferFunc(1);
+				for (var i=0; i < this.pd.bufferSize; i++) {
+					this.outlets[0][i] = i1(i) + i2(i);
 				}
 			}
 		},
@@ -435,7 +442,7 @@ var PdObjects = {
 		},
 	},
 	
-	// ordinary receiver
+	// ordinary message receiver
 	"r": {
 		"endpoint": false,
 		"outletTypes": ["message"],
@@ -451,6 +458,9 @@ var PdObjects = {
 		},
 	},
 };
+
+// object name aliases
+PdObjects.receive = PdObjects.r;
 
 /********************************
 	Helper functions
