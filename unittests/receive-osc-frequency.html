@@ -1,5 +1,5 @@
 <html>
 <body>
-frequency: <input name='frequency' onchange='pd.send("frequency", this.value);' value='440' size="3"/>
+<p>frequency: <input id='frequency' value='440' size="3"/><input type='button' value='send' onclick='pd.send("frequency", document.getElementById("frequency").value);'/></p>
 </body>
 </html>
