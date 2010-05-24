@@ -20,6 +20,8 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	this.lastWritePosition = 0;
 	// the audio-filling interval id
 	this.interval = -1;
+	// receivers which are listening for messages
+	this.listeners = {};
 	// closure reference to this object
 	var me = this;
 	
@@ -88,8 +90,15 @@ var Pd = function Pd(sampleRate, bufferSize) {
 					}
 				} else if (tokens[1] == "connect") {
 					// connect objects together
-					this._graph.objects[parseInt(tokens[4])].inlets[parseInt(tokens[5])] =
-						[this._graph.objects[parseInt(tokens[2])], parseInt(tokens[3])];
+					var destination = this._graph.objects[parseInt(tokens[4])];
+					var destination_inlet = parseInt(tokens[5]);
+					var source = this._graph.objects[parseInt(tokens[2])];
+					var source_outlet = parseInt(tokens[3]);
+					if (source.outletTypes[source_outlet] == "dsp") {
+						destination.inlets[destination_inlet] = [source, source_outlet];
+					} else if (source.outletTypes[source_outlet] == "message") {
+						source.outlets[source_outlet] = [destination, destination_inlet];
+					}
 				}
 			}
 		}
@@ -99,6 +108,18 @@ var Pd = function Pd(sampleRate, bufferSize) {
 		// run the loadcallback to notify the user that the patch is loaded
 		this.loadcallback(this);
 		return this;
+	}
+	
+	// send a message to a named receiver
+	this.send = function(name, val) {
+		if (this.listeners[name] && this.listeners[name].message) {
+			this.listeners[name].message(val);
+		}
+	}
+	
+	// adds a new named listener to our graph
+	this.addlistener = function(name, who) {
+		this.listeners[name] = who;
 	}
 	
 	// TODO: OPTIMISE - next two methods - remove the check for mozWriteAudio and create
@@ -234,7 +255,9 @@ var Pd = function Pd(sampleRate, bufferSize) {
 };
 window.Pd = Pd;
 
-/** PdObject prototype, common to all Pd objects **/
+/*******************************************************
+	PdObject prototype, common to all Pd objects 
+ *******************************************************/
 var PdObject = function (proto, pd, type, args) {
 	// let this object know about it's container graph
 	this.pd = pd;
@@ -250,34 +273,43 @@ var PdObject = function (proto, pd, type, args) {
 	for (var m in proto) {
 		this[m] = proto[m];
 	}
-
+	
 	// create the outlet buffers for this object
 	this.outlets = [];
-	for (var o=0; o < this.buffers; o++) {
-		this.outlets[o] = Array(this.pd.bufferSize);
-	}
-	
-	// initialise this object with the arguments from the patch
-	if (this.init) {
-		this.init(args);
+	for (var o in this.outletTypes) {
+		if (this.outletTypes[o] == "dsp") {
+			this.outlets.push(Array(this.pd.bufferSize));
+		} else if (this.outletTypes[o] == "message") {
+			this.outlets.push("");
+		} else {
+			this.log("Unknown outlet type");
+		}
 	}
 	
 	/** Gets the output buffer of the object's outlet connected to inlet number idx **/
 	this.inletBuffer = function(idx) {
 		return this.inlets[idx][0].outlets[this.inlets[idx][1]];
 	}
+	
+	// finally, initialise this object with the arguments from the patch
+	if (this.init) {
+		this.init(args);
+	}
 }
 
-var PdObjects = {
-	// Every PdObject also gets the following variables set on creation:
-	// graph = the parent graph
-	// type = inititalisation string name (e.g. "osc~")
-	// inlets = array, where the index is the inlet number, of two-tuples
-	//	the first being the previous object in the chain
-	//	the second being that object's connected outlet
-	// dsp = a function which makes sure the previous objects have been calculated
-	//	then runs dspfunc on this object - see the dsp function above
+/*******************************************************
+	This object contains a prototype for every type of Pd object implemented so far
+	Every PdObject also gets the following variables set on creation:
 	
+	graph = the parent graph
+	type = inititalisation string name (e.g. "osc~")
+	inlets = array, where the index is the inlet number, of two-tuples
+		the first being the previous object in the chain
+		the second being that object's connected outlet
+	dsp = a function which makes sure the previous objects have been calculated
+		then runs dspfunc on this object - see the dsp function above
+ *******************************************************/
+var PdObjects = {
 	// null placeholder object for PdObjects which don't exist
 	"null": {
 		"endpoint": false,
@@ -287,7 +319,7 @@ var PdObjects = {
 	// basic oscillator
 	"osc~": {
 		"endpoint": false,
-		"buffers": 1,
+		"outletTypes": ["dsp"],
 		"init": function(args) {
 			if (args.length >= 6) {
 				this.freq = parseFloat(args[5]);
@@ -303,12 +335,16 @@ var PdObjects = {
 				this.sampCount += 1;
 			}
 		},
+		"message": function(val) {
+			this.freq = parseFloat(val);
+			this.samplesize = this.pd.sampleRate / this.freq;
+		},
 	},
 	
 	// digital to analogue converter (sound output)
 	"dac~": {
 		"endpoint": true,
-		"buffers": 0,
+		"outletTypes": [],
 		"init": function(args) {
 		},
 		"dsptick": function() {
@@ -325,7 +361,7 @@ var PdObjects = {
 	// multiply object
 	"*~": {
 		"endpoint": false,
-		"buffers": 1,
+		"outletTypes": ["dsp"],
 		"init": function(args) {
 			if (args.length >= 6) {
 				this.val = parseFloat(args[5]);
@@ -353,7 +389,7 @@ var PdObjects = {
 	// addition object
 	"+~": {
 		"endpoint": false,
-		"buffers": 1,
+		"outletTypes": ["dsp"],
 		"init": function(args) {
 			if (args.length >= 6) {
 				this.val = parseFloat(args[5]);
@@ -381,7 +417,7 @@ var PdObjects = {
 	// basic phasor (0 to 1)
 	"phasor~": {
 		"endpoint": false,
-		"buffers": 1,
+		"outletTypes": ["dsp"],
 		"init": function(args) {
 			if (args.length >= 6) {
 				this.freq = parseFloat(args[5]);
@@ -396,6 +432,22 @@ var PdObjects = {
 				this.outlets[0][i] = (this.sampCount % this.samplesize) / this.samplesize;
 				this.sampCount += 1;
 			}
+		},
+	},
+	
+	// ordinary receiver
+	"r": {
+		"endpoint": false,
+		"outletTypes": ["message"],
+		"init": function(args) {
+			this.outlets[0] = "";
+			if (args.length >= 6) {
+				this.pd.addlistener(args[5], this);
+			}
+		},
+		"message": function(val) {
+			// propagage this message to my outlet
+			this.outlets[0][0].message(val);
 		},
 	},
 };
