@@ -7,7 +7,7 @@
 <body onload='var codeblocks = document.getElementsByTagName("code"); for (c in codeblocks) {if (codeblocks[c].parentNode && codeblocks[c].parentNode.nodeName == "PRE") codeblocks[c].className="prettyprint"}; prettyPrint();'>
 <img src='logo.png' id='logo'/>
 <div id='contents'>
-<!--#exec cgi="contents.cgi" -->
+<!--#exec cgi="cgi-bin/contents.cgi" -->
 </div>
 
 <h2>Unimplemented objects</h2>
@@ -23,7 +23,7 @@
 <a onclick='document.getElementById("bzrlog").style.display="block";' href='#bzrlog' name='bzrlog'>(show)</a>
 <div id='bzrlog'>
 <pre>
-<!--#exec cgi="log.cgi" -->
+<!--#exec cgi="cgi-bin/log.cgi" -->
 </pre>
 </div>
 
