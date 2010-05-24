@@ -342,7 +342,6 @@ var PdObjects = {
 			}
 		},
 		"message": function(val) {
-			this.pd.log(val);
 			this.freq = parseFloat(val);
 			this.samplesize = this.pd.sampleRate / this.freq;
 		},
