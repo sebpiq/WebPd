@@ -246,10 +246,8 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			console.log(msg);
 		} else {
 			// log manually in HTML
-			if (!this.console) {
-				this.console = document.getElementById('console');
-			}
-			this.console.innerHTML += msg + "\n";
+			if (!this.console) this.console = document.getElementById('console');
+			if (this.console) this.console.innerHTML += msg + "\n";
 		}
 	}
 };
