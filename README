@@ -1,36 +1,54 @@
 WebPd
 =====
 
-WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) DSP patches to run in the browser without plugins. Right now the focus is on DSP objects, to enable you to mock up audio engines in Pd, put them on the web, and control them with Javascript.
+WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) audio patches to run in the browser without plugins. Right now the focus is on DSP objects, to enable you to mock up audio engines in Pd, put them on the web, and control them with Javascript.
 
 Here are the [test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need the experimental Firefox Audio Data API builds from [here](http://ftp.mozilla.org/pub/mozilla.org/firefox/tryserver-builds/david.humphrey@senecac.on.ca-c0d0827d0ec0/). More information about the [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available online.
 
-This is changing very fast right now and new FireFox builds are coming out every day. If you want to keep abreast of the latest changes, here is the WebPd mailing list: <http://groups.google.com/group/web-pure-data/>
+This is changing very fast right now and new FireFox builds are coming out every day. If you want to keep abreast of the latest changes, here is the WebPd mailing list: <http://groups.google.com/group/web-pure-data/>. You might also like to check [my blog](http://mccormick.cx/news).
+
+Copyright [Chris McCormick](http://mccormick.cx/), 2010. [LGPLv3 Licensed](COPYING).
+
+Documentation
+-------------
+
+Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm) by Miller Puckette, the creator of Pure Data. Note: very little of the full Pure Data functionality has been implemented yet. Most things probably won't work.
 
 Contributing
 ------------
 
 Right now I'm really looking for people to contribute DSP/audio objects (or 'tilde' objects with names ending with '~'). The messaging side of Pd is not yet implemented. Here's how you can contribute code:
 
- * Get the source code.
-   * You can either use SVN and get the source code from http://code.google.com/p/web-pure-data/
-   * Or you can use bzr (which is what I use):
-     * Get bzr from <http://bazaar-ng.org/> or `apt-get install bzr`.
-     * Get your own versioned copy of the source with the command `bzr branch http://mccormick.cx/dev/webpd/`.
-
-The advantage of using bzr is that you can make local commits in your copy of the source, and once you are finished you can push those commits to me in one bunch. With SVN you can't push the changes back into the repository unless I give you commit access on the project.
-
-You could also use git-svn and I will merge git pushes if you make them available somewhere like github.
-
+ * Get the source code (see below).
  * Browse to 'tests.html' in the webpd directory and have a look at the existing tests.
  * Find a PdObject which is not yet implemented.
- * Add your own test by modifying line 21 of tests.html and creating these files in the unitests/ sub-directory:
+ * Add your own test by modifying the 'tests' array in tests.html and creating these files in the unitests/ sub-directory:
 	* A PNG render of your patch - e.g. use `scrot -s my-test-patch.png` under linux and select the portion of your patch to use as a thumbnail.
 	* The patch itself created in Pd - e.g. my-test-patch.pd
  * Modify pd.js until your patch works
    * You will most likely want to add missing objects to the PdObjects array. See below for the anatomy of a PdObject.
  * Use `bzr add` and `bzr commit` to commit your changes (or `git commit`, `svn commit`, whatever).
- * Send me your changes so that I can merge them. The easiest way to do that is for you to push your code somewhere I can access it with `bzr push`. Often the best way is to push it over sftp or ftp to a web-accessible directory, and then send me the URL. e.g. `bzr push sftp://myserver.com/my/web/directory/`
+ * Send me your changes so that I can merge them. The easiest way to do that is for you to push your code somewhere I can access it with `bzr push`. Often the best way is to push it over sftp or ftp to a web-accessible directory, and then send me the URL. e.g. `bzr push sftp://myserver.com/my/web/directory/`. If you are using git you can also push your changes into a github repository and I will merge them from there with git-svn.
+
+Source code
+-----------
+
+### svn ###
+
+You can use SVN to get a read-only copy of the source code from <http://code.google.com/p/web-pure-data/> with the command `svn co svn checkout http://web-pure-data.googlecode.com/svn/trunk/ webpd-readonly`. Feel free to send me patches using diff, or else I can give you commit access to Google Code repository.
+
+### bzr ###
+
+You can use bzr to get the source code, which is what I use for local development.
+
+ * Get bzr from <http://bazaar-ng.org/> or `apt-get install bzr`.
+ * Get your own versioned copy of the source with the command `bzr branch http://mccormick.cx/dev/webpd/`.
+
+The advantage of using bzr is that you can make local commits in your copy of the source, and once you are finished you can push those commits to me in one bunch. With SVN you can't push the changes back into the repository unless I give you commit access on the project.
+
+### git ###
+
+You could also use git-svn to fetch a copy of the source from the google code repository, and I will merge git pushes if you make them available somewhere like github. Use the [git-svn instructions from github](http://github.com/guides/import-from-subversion) if you'd like to do that.
 
 Anatomy of a PdObject
 ---------------------
@@ -87,6 +105,3 @@ Here is the source code of the [+~] object, which adds two audio inlets together
 	},
 
 Have fun!
-
-Copyright [Chris McCormick](http://mccormick.cx/), 2010.
-[LGPLv3 Licensed](COPYING).
