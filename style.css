@@ -20,6 +20,16 @@ a {
 	margin: 10px;
 }
 
+.test {
+	float: left;
+	margin: 10px;
+	padding: 10px;
+	height: 200px;
+	width: 200px;
+	text-align: center;
+	border: 1px solid silver;
+}
+
 #unimplemented {
 	display: none;
 }

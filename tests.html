@@ -46,7 +46,7 @@
 				});
 			} else {
 				for (t in tests){
-					contents.innerHTML = contents.innerHTML + "<p><a href='?" + tests[t] + "'><p><img src='unittests/" + tests[t] + ".png'></p>" + tests[t] + "</a></p>";
+					contents.innerHTML = contents.innerHTML + "<span class='test'><a href='?" + tests[t] + "'><p>" + tests[t] + "</p><img src='unittests/" + tests[t] + ".png'></a></span>";
 				}
 			}
 		}
