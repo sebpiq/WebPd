@@ -333,17 +333,15 @@ var PdObjects = {
 				this.freq = 0;
 			}
 			this.sampCount = 0;
-			this.samplesize = this.pd.sampleRate / this.freq;
 		},
 		"dsptick": function() {
 			for (var i=0; i<this.outlets[0].length; i++) {
-				this.outlets[0][i] = Math.cos(2 * Math.PI * (this.sampCount / this.samplesize));
-				this.sampCount += 1;
+				this.outlets[0][i] = Math.cos(2 * Math.PI * (this.sampCount));
+				this.sampCount += 1 / (this.pd.sampleRate / this.freq);
 			}
 		},
 		"message": function(val) {
 			this.freq = parseFloat(val);
-			this.samplesize = this.pd.sampleRate / this.freq;
 		},
 	},
 	
@@ -390,6 +388,9 @@ var PdObjects = {
 				}
 			}
 		},
+		"message": function(val) {
+			this.val = val;
+		},
 	},
 
 	// addition object
@@ -417,6 +418,9 @@ var PdObjects = {
 					this.outlets[0][i] = i1(i) + i2(i);
 				}
 			}
+		},
+		"message": function(val) {
+			this.val = val;
 		},
 	},
 	
