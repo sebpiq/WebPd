@@ -35,7 +35,7 @@ Source code
 
 ### svn ###
 
-You can use SVN to get a read-only copy of the source code from <http://code.google.com/p/web-pure-data/> with the command `svn co svn checkout http://web-pure-data.googlecode.com/svn/trunk/ webpd-readonly`. Feel free to send me patches using diff, or else I can give you commit access to Google Code repository.
+You can use SVN to get a read-only copy of the source code from <http://code.google.com/p/web-pure-data/> with the command `svn checkout http://web-pure-data.googlecode.com/svn/trunk/ webpd-readonly`. Feel free to send me patches using diff, or else I can give you commit access to Google Code repository.
 
 ### bzr ###
 
