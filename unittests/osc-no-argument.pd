@@ -3,4 +3,5 @@
 #X obj 11 56 dac~;
 #X obj 11 14 r frequency;
 #X connect 0 0 1 0;
+#X connect 0 0 1 1;
 #X connect 2 0 0 0;
