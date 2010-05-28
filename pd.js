@@ -103,11 +103,11 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			}
 		}
 		
-		// After we have established our graph, let objects do additional setup
+		// After we have established our graph additionally set up the correct dsp eating inlet functions
 		for (var o in this._graph.objects) {
-			if (this._graph.objects[o].setup) {
-				this._graph.objects[o].setup();
-			}
+			this._graph.objects[o].setupdsp();
+			if (this._graph.objects[o].init)
+				this._graph.objects[o].init();
 		}
 		
 		// output a message with our graph
@@ -172,7 +172,7 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			this.fillbuffer(this.output);
 			// check we haven't run a ridiculous number of times
 			count++;
-  		}
+		}
 		
 		// things are not going well. stop the audio.
 		if (count >= 100) {
@@ -271,46 +271,72 @@ var PdObject = function (proto, pd, type, args) {
 	this.type = type;
 	// frame counter - how many frames have we run for
 	this.frame = 0;
+	// initialisation arguments
+	this.args = args;
 	
-	// create the inlets array for this object
+	// create the inlets and outlets array for this object
 	// array holds 2-tuple entries of [src-object, src-outlet-number]
 	this.inlets = [];
+	// array holds 2-tuple entries of [dest-object, dest-inlet-number]
+	this.outlets = [];
+	// holds a pointer to an existing outlet buffer, or a small buffer with a constant value
+	this.inletbuffer = [];
+	// holds actual buffers
+	this.outletbuffer = [];
+	
 	// copy properties from the right type of thing
 	for (var m in proto) {
 		this[m] = proto[m];
 	}
 	
 	// create the outlet buffers for this object
-	this.outlets = [];
-	for (var o in this.outletTypes) {
+	for (var o=0; o<this.outletTypes.length; o++) {
 		if (this.outletTypes[o] == "dsp") {
-			this.outlets.push(Array(this.pd.bufferSize));
-		} else if (this.outletTypes[o] == "message") {
-			this.outlets.push("");
-		} else {
-			this.log("Unknown outlet type");
-		}
-	}
-	
-	/** Gets the output buffer of the object's outlet connected to inlet number idx **/
-	this.inletBufferFunc = function(idx) {
-		if (this.inlets[idx]) {
-			var buffer = this.inlets[idx][0].outlets[this.inlets[idx][1]];
-			return function(x) { return buffer[x]; }
-		} else {
-			return function(x) { return 0; }
+			this.outletbuffer[o] = Array(this.pd.bufferSize);
 		}
 	}
 	
 	/** Sends a message to a particular outlet **/
 	this.sendmessage = function(outletnum, msg) {
+		var o = this.outlets[outletnum][0];
+		console.log(o.type);
 		// propagage this message to my outlet
 		this.outlets[outletnum][0].message(this.outlets[outletnum][1], msg);
 	}
 	
-	// finally, initialise this object with the arguments from the patch
-	if (this.init) {
-		this.init(args);
+	/** Run after the graph is created to set up DSP inlets specially (accept floats if not dsp) **/
+	this.setupdsp = function() {
+		if (this.dspinlets) {
+			for (var i=0; i<this.dspinlets.length; i++) {
+				// which inlet is supposed to be dsp friendly?
+				var idx = this.dspinlets[i];
+				console.log(this.type + " idx:" + idx);
+				// TODO: check for multiple incoming dsp data buffers and sum them
+				// see if the outlet that is connected to our inlet is of type 'dsp'
+				if (this.inlets[idx] && this.inlets[idx][0].outletTypes[this.inlets[idx][1]] == "dsp") {
+					// use that outlet's buffer as our inlet buffer
+					this.inletbuffer[idx] = this.inlets[idx][0].outletbuffer[this.inlets[idx][1]];
+				} else {
+					// otherwise it's a message inlet and if we get a float we want to use that instead
+					// create a new single-valued buffer, initialised to 0
+					this.inletbuffer[idx] = [0];
+					// override the existing message input to check for incoming floats
+					// and use them to set the buffer value
+					// store our old message function
+					var oldmessage = this.message;
+					this.message = function (inletnum, msg) {
+						var myidx = idx;
+						if (inletnum == myidx && !isNaN(parseFloat(msg))) {
+							// set our constant-buffer value to the incoming float value
+							this.inletbuffer[myidx][0] = parseFloat(msg);
+						}
+						// chain our old message function onto the end of this new one
+						if (oldmessage)
+							oldmessage(inletnum, msg);
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -338,26 +364,19 @@ var PdObjects = {
 	"osc~": {
 		"endpoint": false,
 		"outletTypes": ["dsp"],
-		"init": function(args) {
-			if (args.length >= 6) {
-				this.freq = parseFloat(args[5]);
-			} else {
-				this.freq = 0;
+		"dspinlets": [0],
+		"init": function() {
+			if (this.args.length >= 6) {
+				this.inletbuffer[0][0] = parseFloat(this.args[5]);
 			}
 			this.sampCount = 0;
 		},
-		"setup": function() {
-			
-		},
 		"dsptick": function() {
-			for (var i=0; i<this.outlets[0].length; i++) {
-				this.outlets[0][i] = Math.cos(2 * Math.PI * (this.sampCount));
-				this.sampCount += 1 / (this.pd.sampleRate / this.freq);
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i<this.outletbuffer[0].length; i++) {
+				this.outletbuffer[0][i] = Math.cos(2 * Math.PI * (this.sampCount));
+				this.sampCount += 1 / (this.pd.sampleRate / i1[i % i1.length]);
 			}
-		},
-		"message": function(inletnum, msg) {
-			if (inletnum == 0)
-				this.freq = parseFloat(msg);
 		},
 	},
 	
@@ -365,15 +384,14 @@ var PdObjects = {
 	"dac~": {
 		"endpoint": true,
 		"outletTypes": [],
-		"init": function(args) {
-		},
+		"dspinlets": [0, 1],
 		"dsptick": function() {
-			var i1 = this.inletBufferFunc(0);
-			var i2 = this.inletBufferFunc(1);
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
 			// copy interleaved data from inlets to the graph's output buffer
 			for (var i=0; i < this.pd.bufferSize; i++) {
-				this.pd.output[i * 2] += i1(i);
-				this.pd.output[i * 2 + 1] += i2(i);
+				this.pd.output[i * 2] += i1[i % i1.length];
+				this.pd.output[i * 2 + 1] += i2[i % i2.length];
 			}
 		},
 	},
@@ -382,25 +400,26 @@ var PdObjects = {
 	"*~": {
 		"endpoint": false,
 		"outletTypes": ["dsp"],
-		"init": function(args) {
-			if (args.length >= 6) {
-				this.val = parseFloat(args[5]);
+		"dspinlets": [0, 1],
+		"init": function() {
+			if (this.args.length >= 6) {
+				this.val = parseFloat(this.args[5]);
 			}
 			this.pd.log(this.inlets);
 		},
 		"dsptick": function() {
 			// if we have a set integer value, use that
 			if (this.val) {
-				var i1 = this.inletBufferFunc(0);
+				var i1 = this.inletbuffer[0];
 				for (var i=0; i < this.pd.bufferSize; i++) {
-					this.outlets[0][i] = i1(i) * this.val;
+					this.outletbuffer[0][i] = i1[i % i1.length] * this.val;
 				}
 			// otherwise, mutiply two buffers together
 			} else {
-				var i1 = this.inletBufferFunc(0);
-				var i2 = this.inletBufferFunc(1);
+				var i1 = this.inletbuffer[0];
+				var i2 = this.inletbuffer[1];
 				for (var i=0; i < this.pd.bufferSize; i++) {
-					this.outlets[0][i] = i1(i) * i2(i);
+					this.outletbuffer[0][i] = i1[i % i1.length] * i2[i % i2.length];
 				}
 			}
 		},
@@ -414,25 +433,26 @@ var PdObjects = {
 	"+~": {
 		"endpoint": false,
 		"outletTypes": ["dsp"],
-		"init": function(args) {
-			if (args.length >= 6) {
-				this.val = parseFloat(args[5]);
+		"dspinlets": [0, 1],
+		"init": function() {
+			if (this.args.length >= 6) {
+				this.val = parseFloat(this.args[5]);
 			}
 			this.pd.log(this.inlets);
 		},
 		"dsptick": function() {
 			// if we have a set integer value, use that
 			if (this.val) {
-				var i1 = this.inletBufferFunc(0);
+				var i1 = this.inletbuffer[0];
 				for (var i=0; i < this.pd.bufferSize; i++) {
-					this.outlets[0][i] = i1(i) + this.val;
+					this.outletbuffer[0][i] = i1[i % i1.length] + this.val;
 				}
 			// otherwise, mutiply two buffers together
 			} else {
-				var i1 = this.inletBufferFunc(0);
-				var i2 = this.inletBufferFunc(1);
+				var i1 = this.inletbuffer[0];
+				var i2 = this.inletbuffer[1];
 				for (var i=0; i < this.pd.bufferSize; i++) {
-					this.outlets[0][i] = i1(i) + i2(i);
+					this.outletbuffer[0][i] = i1[i % i1.length] + i2[i % i2.length];
 				}
 			}
 		},
@@ -446,9 +466,10 @@ var PdObjects = {
 	"phasor~": {
 		"endpoint": false,
 		"outletTypes": ["dsp"],
-		"init": function(args) {
-			if (args.length >= 6) {
-				this.freq = parseFloat(args[5]);
+		"dspinlets": [0],
+		"init": function() {
+			if (this.args.length >= 6) {
+				this.freq = parseFloat(this.args[5]);
 			} else {
 				this.freq = 0;
 			}
@@ -456,8 +477,8 @@ var PdObjects = {
 			this.samplesize = this.pd.sampleRate / this.freq;
 		},
 		"dsptick": function() {
-			for (var i=0; i<this.outlets[0].length; i++) {
-				this.outlets[0][i] = (this.sampCount % this.samplesize) / this.samplesize;
+			for (var i=0; i<this.outletbuffer[0].length; i++) {
+				this.outletbuffer[0][i] = (this.sampCount % this.samplesize) / this.samplesize;
 				this.sampCount += 1;
 			}
 		},
@@ -467,10 +488,9 @@ var PdObjects = {
 	"r": {
 		"endpoint": false,
 		"outletTypes": ["message"],
-		"init": function(args) {
-			this.outlets[0] = "";
-			if (args.length >= 6) {
-				this.pd.addlistener(args[5], this);
+		"init": function() {
+			if (this.args.length >= 6) {
+				this.pd.addlistener(this.args[5], this);
 			}
 		},
 		"message": function(inletnum, val) {
