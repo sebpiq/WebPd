@@ -22,6 +22,8 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	this.interval = -1;
 	// receivers which are listening for messages
 	this.listeners = {};
+	// callbacks which are scheduled to run at some point in time
+	this.scheduled = {};
 	// closure reference to this object
 	var me = this;
 	
@@ -155,17 +157,42 @@ var Pd = function Pd(sampleRate, bufferSize) {
 		}
 	}
 	
-	/** Periodically check and fill up the buffer, as needed **/
+	/** Schedule a callback at a particular time - milliseconds **/
+	this.schedule = function(time, callback) {
+		if (!this.scheduled[time])
+			this.scheduled[time] = [];
+		this.scheduled[time].push(callback);
+	}
+	
+	/** Run each frame - check and fill up the buffer, as needed **/
 	this.write = function() {
 		var count = 0;
 		
 		// while we still need to add more to the buffer, do it - should usually do about two loops
 		while(this.hungry() && count < 100) {
+			// increase the frame count
+			this.frame += 1;
+			// do we have any scheduled callbacks for this frame?
+			var abstime = this.frame * this.bufferSize / this.sampleRate;
+			var removescheduled = [];
+			for (var s in this.scheduled) {
+				if (s <= abstime) {
+					// for every callback in the list to be run at this time
+					for (var c=0; c<this.scheduled[s].length; c++) {
+						// run it
+						this.scheduled[s][c]();
+					}
+					// add it to our list of times to remove callbacks for
+					removescheduled.push(s);
+				}
+			}
+			// remove any scheduled callbacks we've already run
+			for (var r=0; r<removescheduled.length; r++) {
+				delete this.scheduled[removescheduled[r]];
+			}
 			// reset our output buffer (gets written to by dac~ objects)
 			for (var i=0; i<this.output.length; i++)
 				this.output[i] = 0;
-			// increase the frame count
-			this.frame += 1;
 			// run the dsp function on all endpoints to get data
 			for (var e in this._graph.endpoints) {
 				// dac~ objects will add their output to this.output
@@ -183,7 +210,7 @@ var Pd = function Pd(sampleRate, bufferSize) {
 		}
 	}
 	
-	/** Dsp tick function which makes sure a node's parents all get run before running it. **/
+	/** Dsp tick function run on an object which makes sure the object's parents all get run before running it. **/
 	this.tick = function(obj) {
 		// look at each inlet, and make sure that the previous objects have all run this frame
 		for (var o in obj.inlets) {
@@ -360,13 +387,11 @@ var PdObject = function (proto, pd, type, args) {
 var PdObjects = {
 	// null placeholder object for PdObjects which don't exist
 	"null": {
-		"endpoint": false,
 		"buffers": 0,
 	},
 	
 	// basic oscillator
 	"osc~": {
-		"endpoint": false,
 		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"init": function() {
@@ -407,7 +432,6 @@ var PdObjects = {
 	
 	// multiply object
 	"*~": {
-		"endpoint": false,
 		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
 		"init": function() {
@@ -428,7 +452,6 @@ var PdObjects = {
 	
 	// addition object
 	"+~": {
-		"endpoint": false,
 		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
 		"init": function() {
@@ -448,7 +471,6 @@ var PdObjects = {
 	
 	// basic phasor (0 to 1)
 	"phasor~": {
-		"endpoint": false,
 		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"init": function() {
@@ -470,7 +492,6 @@ var PdObjects = {
 	
 	// ordinary message receiver
 	"r": {
-		"endpoint": false,
 		"outletTypes": ["message"],
 		"init": function() {
 			// listen out for messages from the either with the name of our argument
@@ -485,15 +506,31 @@ var PdObjects = {
 		},
 	},
 	
-	/*
-	// loadbang
+	// loadbang (on launch it sends a bang)
 	"loadbang": {
-		"endpoint": false,
 		"outletTypes": ["message"],
 		"init": function() {
-			this.sendmessage(0, "bang");
+			var me = this;
+			this.pd.schedule(0, function() {
+				me.sendmessage(0, "bang");
+			});
 		},
-	},*/
+	},
+	
+	// print objects
+	"print": {
+		"init": function() {
+			// listen out for messages from the either with the name of our argument
+			if (this.args.length >= 6) {
+				this.printname = this.args[5];
+			} else {
+				this.printname = "print"
+			}
+		},
+		"message": function(inletnum, val) {
+			this.pd.log(this.printname + ": " + val);
+		},
+	},
 };
 
 // object name aliases
