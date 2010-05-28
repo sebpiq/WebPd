@@ -308,11 +308,13 @@ var PdObject = function (proto, pd, type, args) {
 			for (var i=0; i<this.dspinlets.length; i++) {
 				// which inlet is supposed to be dsp friendly?
 				var idx = this.dspinlets[i];
+				//console.log(this.type + " " + idx);
 				// TODO: check for multiple incoming dsp data buffers and sum them
 				// see if the outlet that is connected to our inlet is of type 'dsp'
 				if (this.inlets[idx] && this.inlets[idx][0].outletTypes[this.inlets[idx][1]] == "dsp") {
 					// use that outlet's buffer as our inlet buffer
 					this.inletbuffer[idx] = this.inlets[idx][0].outletbuffer[this.inlets[idx][1]];
+					//console.log("buffer");
 				} else {
 					// otherwise it's a message inlet and if we get a float we want to use that instead
 					// create a new single-valued buffer, initialised to 0
@@ -331,6 +333,7 @@ var PdObject = function (proto, pd, type, args) {
 						if (oldmessage)
 							oldmessage(inletnum, msg);
 					}
+					//console.log("single val");
 				}
 			}
 		}
@@ -375,8 +378,10 @@ var PdObjects = {
 				this.sampCount += i1[i % i1.length] / this.pd.sampleRate;
 			}
 		},
-		// TODO: 2nd inlet receives phase message
 		"message": function(inlet, message) {
+			if (inlet == 1) {
+				// TODO: 2nd inlet receives phase message
+			}
 		}
 	},
 	
