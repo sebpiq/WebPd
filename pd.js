@@ -102,6 +102,14 @@ var Pd = function Pd(sampleRate, bufferSize) {
 				}
 			}
 		}
+		
+		// After we have established our graph, let objects do additional setup
+		for (var o in this._graph.objects) {
+			if (this._graph.objects[o].setup) {
+				this._graph.objects[o].setup();
+			}
+		}
+		
 		// output a message with our graph
 		this.log("Graph:");
 		this.log(this._graph);
@@ -113,7 +121,8 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	// send a message to a named receiver
 	this.send = function(name, val) {
 		if (this.listeners[name] && this.listeners[name].message) {
-			this.listeners[name].message(val);
+			// inletnum of -1 signifies it came from somewhere other than an inlet
+			this.listeners[name].message(-1, val);
 		}
 	}
 	
@@ -140,13 +149,12 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			this.lastWritePosition += this.output.length;
 		} else {
 			// non-audio version, output the frame as text
-			this.log(me.output);
+			this.log(this.output);
 		}
 	}
 	
 	/** Periodically check and fill up the buffer, as needed **/
 	this.write = function() {
-		// because this is an interval callback, we use the closure-friendly 'me' instead of 'this'
 		var count = 0;
 		
 		// while we still need to add more to the buffer, do it - should usually do about two loops
@@ -286,13 +294,18 @@ var PdObject = function (proto, pd, type, args) {
 	
 	/** Gets the output buffer of the object's outlet connected to inlet number idx **/
 	this.inletBufferFunc = function(idx) {
-		// TODO: optimise so that this is only done once at object creation (post-init loadbang)
 		if (this.inlets[idx]) {
 			var buffer = this.inlets[idx][0].outlets[this.inlets[idx][1]];
 			return function(x) { return buffer[x]; }
 		} else {
 			return function(x) { return 0; }
 		}
+	}
+	
+	/** Sends a message to a particular outlet **/
+	this.sendmessage = function(outletnum, msg) {
+		// propagage this message to my outlet
+		this.outlets[outletnum][0].message(this.outlets[outletnum][1], msg);
 	}
 	
 	// finally, initialise this object with the arguments from the patch
@@ -312,6 +325,7 @@ var PdObject = function (proto, pd, type, args) {
 		the second being that object's connected outlet
 	dsp = a function which makes sure the previous objects have been calculated
 		then runs dspfunc on this object - see the dsp function above
+
  *******************************************************/
 var PdObjects = {
 	// null placeholder object for PdObjects which don't exist
@@ -332,14 +346,18 @@ var PdObjects = {
 			}
 			this.sampCount = 0;
 		},
+		"setup": function() {
+			
+		},
 		"dsptick": function() {
 			for (var i=0; i<this.outlets[0].length; i++) {
 				this.outlets[0][i] = Math.cos(2 * Math.PI * (this.sampCount));
 				this.sampCount += 1 / (this.pd.sampleRate / this.freq);
 			}
 		},
-		"message": function(val) {
-			this.freq = parseFloat(val);
+		"message": function(inletnum, msg) {
+			if (inletnum == 0)
+				this.freq = parseFloat(msg);
 		},
 	},
 	
@@ -386,8 +404,9 @@ var PdObjects = {
 				}
 			}
 		},
-		"message": function(val) {
-			this.val = val;
+		"message": function(inletnum, val) {
+			if (inletnum == 0)
+				this.val = val;
 		},
 	},
 
@@ -417,8 +436,9 @@ var PdObjects = {
 				}
 			}
 		},
-		"message": function(val) {
-			this.val = val;
+		"message": function(inletnum, val) {
+			if (inletnum == 0)
+				this.val = val;
 		},
 	},
 	
@@ -453,9 +473,9 @@ var PdObjects = {
 				this.pd.addlistener(args[5], this);
 			}
 		},
-		"message": function(val) {
-			// propagage this message to my outlet
-			this.outlets[0][0].message(val);
+		"message": function(inletnum, val) {
+			if (inletnum == -1)
+				this.sendmessage(0, val);
 		},
 	},
 };
