@@ -94,10 +94,12 @@ var Pd = function Pd(sampleRate, bufferSize) {
 					var destination_inlet = parseInt(tokens[5]);
 					var source = this._graph.objects[parseInt(tokens[2])];
 					var source_outlet = parseInt(tokens[3]);
-					if (source.outletTypes[source_outlet] == "dsp") {
-						destination.inlets[destination_inlet] = [source, source_outlet];
-					} else if (source.outletTypes[source_outlet] == "message") {
-						source.outlets[source_outlet] = [destination, destination_inlet];
+					if (source.outletTypes) {
+						if (source.outletTypes[source_outlet] == "dsp") {
+							destination.inlets[destination_inlet] = [source, source_outlet];
+						} else if (source.outletTypes[source_outlet] == "message") {
+							source.outlets[source_outlet] = [destination, destination_inlet];
+						}
 					}
 				}
 			}
@@ -289,10 +291,12 @@ var PdObject = function (proto, pd, type, args) {
 		this[m] = proto[m];
 	}
 	
-	// create the outlet buffers for this object
-	for (var o=0; o<this.outletTypes.length; o++) {
-		if (this.outletTypes[o] == "dsp") {
-			this.outletbuffer[o] = Array(this.pd.bufferSize);
+	if (this.outletTypes) {
+		// create the outlet buffers for this object
+		for (var o=0; o<this.outletTypes.length; o++) {
+			if (this.outletTypes[o] == "dsp") {
+				this.outletbuffer[o] = Array(this.pd.bufferSize);
+			}
 		}
 	}
 	
@@ -480,6 +484,16 @@ var PdObjects = {
 				this.sendmessage(0, val);
 		},
 	},
+	
+	/*
+	// loadbang
+	"loadbang": {
+		"endpoint": false,
+		"outletTypes": ["message"],
+		"init": function() {
+			this.sendmessage(0, "bang");
+		},
+	},*/
 };
 
 // object name aliases
