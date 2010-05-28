@@ -298,8 +298,6 @@ var PdObject = function (proto, pd, type, args) {
 	
 	/** Sends a message to a particular outlet **/
 	this.sendmessage = function(outletnum, msg) {
-		var o = this.outlets[outletnum][0];
-		console.log(o.type);
 		// propagage this message to my outlet
 		this.outlets[outletnum][0].message(this.outlets[outletnum][1], msg);
 	}
@@ -310,7 +308,6 @@ var PdObject = function (proto, pd, type, args) {
 			for (var i=0; i<this.dspinlets.length; i++) {
 				// which inlet is supposed to be dsp friendly?
 				var idx = this.dspinlets[i];
-				console.log(this.type + " idx:" + idx);
 				// TODO: check for multiple incoming dsp data buffers and sum them
 				// see if the outlet that is connected to our inlet is of type 'dsp'
 				if (this.inlets[idx] && this.inlets[idx][0].outletTypes[this.inlets[idx][1]] == "dsp") {
@@ -375,7 +372,7 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i<this.outletbuffer[0].length; i++) {
 				this.outletbuffer[0][i] = Math.cos(2 * Math.PI * (this.sampCount));
-				this.sampCount += 1 / (this.pd.sampleRate / i1[i % i1.length]);
+				this.sampCount += i1[i % i1.length] / this.pd.sampleRate;
 			}
 		},
 		// TODO: 2nd inlet receives phase message
@@ -453,10 +450,11 @@ var PdObjects = {
 			this.sampCount = 0;
 		},
 		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
 			// TODO: look this up in the Pd source and see if it behaves the same way on freq change
 			for (var i=0; i<this.outletbuffer[0].length; i++) {
 				this.outletbuffer[0][i] = this.sampCount;
-				this.sampCount = (this.sampCount + (this.pd.sampleRate / i1[i % i1.length])) % 1;
+				this.sampCount = (this.sampCount + (i1[i % i1.length] / this.pd.sampleRate)) % 1;
 			}
 		},
 	},
