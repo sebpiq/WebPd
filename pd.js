@@ -469,7 +469,7 @@ var PdObjects = {
 		},
 	},
 	
-	// multiply object
+	// dsp multiply object
 	"*~": {
 		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
@@ -489,7 +489,30 @@ var PdObjects = {
 		},
 	},
 	
-	// addition object
+	// dsp divide object (d_arithmetic.c line 454 - over_perform() )
+	"/~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+		"init": function() {
+			// argument sets right inlet constant value
+			if (this.args.length >= 6) {
+				this.inletbuffer[1][0] = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			// mutiply our two buffers together
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			var val2 = 0;
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				// return zero if denominator is zero
+				val2 = i2[i % i2.length];
+				this.outletbuffer[0][i] = (val2 ? i1[i % i1.length] / val2 : 0);
+			}
+		},
+	},
+	
+	// dsp addition object
 	"+~": {
 		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
@@ -504,6 +527,25 @@ var PdObjects = {
 			var i2 = this.inletbuffer[1];
 			for (var i=0; i < this.pd.bufferSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] + i2[i % i2.length];
+			}
+		},
+	},
+	
+	// dsp subtraction object
+	"-~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+		"init": function() {
+			// argument sets right inlet constant value
+			if (this.args.length >= 6) {
+				this.inletbuffer[1][0] = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = i1[i % i1.length] - i2[i % i2.length];
 			}
 		},
 	},
