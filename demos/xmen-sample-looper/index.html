@@ -7,7 +7,7 @@
 		var selection = null;
 		
 		function setup() {
-			pd = new Pd(44100, 4410, true);
+			pd = new Pd(44100, 4410);
 			pd.load("xmen.pd", pd.play);
 			selection = document.getElementById("selection");
 		}

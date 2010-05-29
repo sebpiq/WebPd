@@ -2142,6 +2142,7 @@
 #X msg 405 118 \; loop 0 \; glitch 1 \;;
 #X msg 405 73 \; loop 1 \; glitch 0 \;;
 #X obj 386 314 s-loader;
+#X text 185 167 (drag the mouse here ^);
 #X connect 2 0 5 1;
 #X connect 2 0 8 1;
 #X connect 3 0 15 0;
