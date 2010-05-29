@@ -140,11 +140,11 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 				// name of the array/table comes from the the "#X array" and "#X restore" matches above
 				var idx = parseInt(tokens[1]);
 				if (lastTable) {
-					for (var t=1; t<tokens.length; t++) {
+					for (var t=2; t<tokens.length; t++) {
 						this.tables[lastTable].data[idx] = parseFloat(tokens[t]);
 						idx += 1;
 					}
-					this.debug("read " + (tokens.length - 2) + " floats into table '" + lastTable + "'");
+					this.debug("read " + (tokens.length - 1) + " floats into table '" + lastTable + "'");
 				} else {
 					this.log("Error: got table data outside of a table.");
 				}
@@ -610,7 +610,7 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			var length = this.table.data.length;
 			for (var i=0; i<this.pd.bufferSize; i++) {
-				this.outletbuffer[0][i] = this.table.data[Math.min(length, Math.max(0, Math.round(i1[i % i1.length])))];
+				this.outletbuffer[0][i] = this.table.data[Math.min(length - 1, Math.max(0, Math.round(i1[i % i1.length])))];
 			}
 		},
 	},
