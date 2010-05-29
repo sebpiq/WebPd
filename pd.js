@@ -5,7 +5,9 @@
 	Licensed under the terms of the LGPLv3.
 ***/
 
-var Pd = function Pd(sampleRate, bufferSize) {
+var Pd = function Pd(sampleRate, bufferSize, debug) {
+	// whether we are in debug mode (more verbose output
+	this.debugMode = debug;
 	// set my own sample rate
 	this.sampleRate = sampleRate;
 	// output buffer (stereo)
@@ -21,9 +23,14 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	// the audio-filling interval id
 	this.interval = -1;
 	// receivers which are listening for messages
+	// keys are receiver names
 	this.listeners = {};
-	// callbacks which are scheduled to run at some point in time
+	// arrays of callbacks which are scheduled to run at some point in time
+	// keys are times
 	this.scheduled = {};
+	// arrays of float data - Pd's tables
+	// keys are table names
+	this.tables = {};
 	// closure reference to this object
 	var me = this;
 	
@@ -40,7 +47,7 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	this.loadcallback = null;
 	
 	// regular expression for finding valid lines of Pd in a file
-	var lines_re = new RegExp('(#(.*?)[^\]);\n',"gm");
+	var lines_re = new RegExp('(#((.|\n)*?));\n',"gi");
 	
 	/** Initiate a load of a Pd file **/
 	this.load = function (url, callback) {
@@ -63,12 +70,14 @@ var Pd = function Pd(sampleRate, bufferSize) {
 	this.parse = function(txt) {
 		// use our regular expression to match instances of valid Pd lines
 		var matches = txt.match(lines_re);
+		// last table name to add samples to
+		var lastTable = null;
 		for (var l in matches) {
 			// chop off the semicolon and carriage return
 			matches[l] = matches[l].substr(0, matches[l].length - 2)
-			// split this found line into tokens
-			var tokens = matches[l].split(" ");
-			this.log(tokens);
+			// split this found line into tokens (on space and carriage return)
+			var tokens = matches[l].split(/ |\n/);
+			this.debug("" + tokens);
 			// if we've found a create token
 			if (tokens[0] == "#X") {
 				// is this an obj instantiation
@@ -103,6 +112,26 @@ var Pd = function Pd(sampleRate, bufferSize) {
 							source.outlets[source_outlet] = [destination, destination_inlet];
 						}
 					}
+				} else if (tokens[1] == "array") {
+					// make a new table
+					this.tables[tokens[2]] = Array(parseInt(tokens[3]));
+					lastTable = tokens[2];
+				} else if (tokens[1] == "restore") {
+					// end the current table
+					lastTable = null;
+				}
+			} else if (tokens[0] == "#A") {
+				// reads in part of an array/table of data, starting at the index specified in this line
+				// name of the array/table comes from the the "#X array" and "#X restore" matches above
+				var idx = parseInt(tokens[1]);
+				if (lastTable) {
+					for (var t=1; t<tokens.length; t++) {
+						this.tables[lastTable][idx] = parseFloat(tokens[t]);
+						idx += 1;
+					}
+					this.debug("read " + (tokens.length - 2) + " floats into table '" + lastTable + "'");
+				} else {
+					this.log("Error: got table data outside of a table.");
 				}
 			}
 		}
@@ -115,8 +144,8 @@ var Pd = function Pd(sampleRate, bufferSize) {
 		}
 		
 		// output a message with our graph
-		this.log("Graph:");
-		this.log(this._graph);
+		this.debug("Graph:");
+		this.debug(this._graph);
 		// run the loadcallback to notify the user that the patch is loaded
 		this.loadcallback(this);
 		return this;
@@ -243,9 +272,9 @@ var Pd = function Pd(sampleRate, bufferSize) {
 				this.interval = setInterval(function() { me.write(); }, Math.floor(this.bufferSize / this.sampleRate));
 			} else {
 				// just a few test frames
-				this.log("Generating a few test frames of data:")
+				this.debug("Generating a few test frames of data:")
 				for (var i=0; i<10; i++) {
-					this.log("Frame " + i);
+					this.debug("Frame " + i);
 					this.write();
 				}
 			}
@@ -277,7 +306,7 @@ var Pd = function Pd(sampleRate, bufferSize) {
 		}
 	}
 	
-	/** log an error **/
+	/** log a message to console **/
 	this.log = function(msg) {
 		if (window.console) {
 			console.log(msg);
@@ -285,6 +314,16 @@ var Pd = function Pd(sampleRate, bufferSize) {
 			// log manually in HTML
 			if (!this.console) this.console = document.getElementById('console');
 			if (this.console) this.console.innerHTML += msg + "\n";
+		}
+	}
+
+	/** logs only when debugMode is set. Second argument doesn't prefix output (for object printing). **/
+	this.debug = function(msg) {
+		if (this.debugMode) {
+			if (typeof(msg) == "string")
+				this.log("debug: " + msg);
+			else
+				this.log(msg);
 		}
 	}
 };

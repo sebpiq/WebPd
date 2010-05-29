@@ -21,9 +21,9 @@
 				'receive-alias',
 				'osc-no-argument',
 				'osc-into-osc',
-				//'connection-fanning-in',
-				//'array',
+				'array',
 				//'tabread',
+				//'connection-fanning-in',
 			];
 			var body = document.getElementsByTagName("body")[0];
 			var contents = document.getElementById('contents');
@@ -35,8 +35,8 @@
 				buttons.innerHTML += "<input type='button' value='play' onclick='javascript: pd.play();' /> <input type='button' value='pause' onclick='javascript: pd.stop();' />";
 				// information and graphic about this patch
 				contents.innerHTML = contents.innerHTML + "<h1>" + pdfile + "</h1><img src='unittests/" + pdfile + ".png'>";
-				// create a new pd instance
-				pd = new Pd(44100, 4410);
+				// create a new pd instance in debug-output mode
+				pd = new Pd(44100, 4410, true);
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
 				pd.load("unittests/" + pdfile + ".pd", pd.play);
 				
