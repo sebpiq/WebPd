@@ -81,14 +81,20 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 			// if we've found a create token
 			if (tokens[0] == "#X") {
 				// is this an obj instantiation
-				if (tokens[1] == "obj") {
-					// see if we know about this type of object yet
-					var proto = tokens[4];
-					if (!PdObjects[proto]) {
-						proto = "null";
-						// TODO: see if we can load this from a url and queue it to be loaded up after parsing
-						this.log(" " + tokens[4]);
-						this.log("... couldn't create");
+				if (tokens[1] == "obj" || tokens[1] == "msg") {
+					var proto = "";
+					// if this is a message object
+					if (tokens[1] == "msg") {
+						proto = "msg";
+					} else {
+						// see if we know about this type of object yet
+						proto = tokens[4];
+						if (!PdObjects[proto]) {
+							proto = "null";
+							// TODO: see if we can load this from a url and queue it to be loaded up after parsing
+							this.log(" " + tokens[4]);
+							this.log("... couldn't create");
+						}
 					}
 					// instantiate this dsp object
 					var obj = new PdObject(PdObjects[proto], this, proto, tokens);
@@ -410,24 +416,26 @@ var PdObject = function (proto, pd, type, args) {
 	}
 }
 
-/*******************************************************
-	This object contains a prototype for every type of Pd object implemented so far
-	Every PdObject also gets the following variables set on creation:
+/**********************************************************************************************
+	This object contains a prototype for every type of Pd object implemented so far.
 	
-	graph = the parent graph
-	type = inititalisation string name (e.g. "osc~")
-	inlets = array, where the index is the inlet number, of two-tuples
-		the first being the previous object in the chain
-		the second being that object's connected outlet
-	dsp = a function which makes sure the previous objects have been calculated
-		then runs dspfunc on this object - see the dsp function above
-
- *******************************************************/
+	properties:
+		endpoint = set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
+		outletTypes = dsp/message
+		dspinlets = which inlet numbers can do dsp
+	
+	methods:
+		init = method which runs after the graph has been instantiated
+		dsptick = method which runs every frame for this object
+		message(inletnumber, message) = method which runs when this object receives a message at any inlet
+ **********************************************************************************************/
 var PdObjects = {
 	// null placeholder object for PdObjects which don't exist
 	"null": {
 		"buffers": 0,
 	},
+	
+	/************************** DSP objects ******************************/
 	
 	// basic oscillator
 	"osc~": {
@@ -571,6 +579,8 @@ var PdObjects = {
 		},
 	},
 	
+	/************************** Non-DSP objects ******************************/
+	
 	// ordinary message receiver
 	"r": {
 		"outletTypes": ["message"],
@@ -608,10 +618,26 @@ var PdObjects = {
 				this.printname = "print"
 			}
 		},
-		"message": function(inletnum, val) {
-			this.pd.log(this.printname + ": " + val);
+		"message": function(inletnum, message) {
+			this.pd.log(this.printname + ": " + message);
 		},
 	},
+	
+	// message objects like [hello $1(
+	"msg": {
+		"outletTypes": ["message"],
+		"init": function() {
+			// arguments set my value
+			this.value = this.args.slice(4).join(" ");
+		},
+		"message": function(inletnum, message) {
+			// TODO: check if my value has a semicolon at the start and act like 'send' if it does
+			var outmessage = this.value;
+			// TODO: replace $N with item N-1 from the incoming message
+			var bits = message.split(" ");
+			this.sendmessage(0, outmessage);
+		}
+	}
 };
 
 // object name aliases
