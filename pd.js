@@ -101,6 +101,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 					// put it in our graph of known objects
 					obj.graphindex = this._graph.objects.length;
 					this._graph.objects[obj.graphindex] = obj;
+					this.debug("Added " + obj.type + " to the graph at position " + obj.graphindex);
 					// if it's an endpoint, add it to the graph's list of known endpoints
 					if (obj.endpoint) {
 						this._graph.endpoints.push(obj);
@@ -119,8 +120,16 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 						}
 					}
 				} else if (tokens[1] == "array") {
-					// make a new table
-					this.tables[tokens[2]] = Array(parseInt(tokens[3]));
+					// instantiate this dsp object
+					var obj = new PdObject(PdObjects["table"], this, "table", tokens);
+					// put it in our graph of known objects
+					obj.graphindex = this._graph.objects.length;
+					this._graph.objects[obj.graphindex] = obj;
+					this.debug("Added " + obj.type + " to the graph at position " + obj.graphindex);
+					// this table needs a set of data
+					obj.data = Array(parseInt(tokens[3]));
+					// add this to our global list of tables
+					this.tables[tokens[2]] = obj;
 					lastTable = tokens[2];
 				} else if (tokens[1] == "restore") {
 					// end the current table
@@ -132,7 +141,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 				var idx = parseInt(tokens[1]);
 				if (lastTable) {
 					for (var t=1; t<tokens.length; t++) {
-						this.tables[lastTable][idx] = parseFloat(tokens[t]);
+						this.tables[lastTable].data[idx] = parseFloat(tokens[t]);
 						idx += 1;
 					}
 					this.debug("read " + (tokens.length - 2) + " floats into table '" + lastTable + "'");
@@ -432,7 +441,15 @@ var PdObject = function (proto, pd, type, args) {
 var PdObjects = {
 	// null placeholder object for PdObjects which don't exist
 	"null": {
-		"buffers": 0,
+	},
+	
+	"table": {
+		"init": function() {
+			if (this.args.length >= 4) {
+				this.name = this.args[2];
+			}
+			this.pd.debug(this.data);
+		},
 	},
 	
 	/************************** DSP objects ******************************/
@@ -572,9 +589,28 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			// TODO: look this up in the Pd source and see if it behaves the same way on freq change
-			for (var i=0; i<this.outletbuffer[0].length; i++) {
+			for (var i=0; i<this.pd.bufferSize; i++) {
 				this.outletbuffer[0][i] = this.sampCount;
 				this.sampCount = (this.sampCount + (i1[i % i1.length] / this.pd.sampleRate)) % 1;
+			}
+		},
+	},
+	
+	// read data from a table with no interpolation
+	"tabread~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets the name of the table to read from
+			if (this.args.length >= 6) {
+				this.table = this.pd.tables[this.args[5]];
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			var length = this.table.data.length;
+			for (var i=0; i<this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = this.table.data[Math.min(length, Math.max(0, Math.round(i1[i % i1.length])))];
 			}
 		},
 	},
