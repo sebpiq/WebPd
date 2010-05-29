@@ -22,7 +22,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	this.lastWritePosition = 0;
 	// the audio-filling interval id
 	this.interval = -1;
-	// receivers which are listening for messages
+	// arrays of receivers which are listening for messages
 	// keys are receiver names
 	this.listeners = {};
 	// arrays of callbacks which are scheduled to run at some point in time
@@ -168,15 +168,22 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	
 	// send a message to a named receiver
 	this.send = function(name, val) {
-		if (this.listeners[name] && this.listeners[name].message) {
-			// inletnum of -1 signifies it came from somewhere other than an inlet
-			this.listeners[name].message(-1, val);
+		this.debug("graph received: " + name + " " + val);
+		if (this.listeners[name]) {
+			for (var l=0; l<this.listeners[name].length; l++) {
+				if (this.listeners[name][l].message) {
+					// inletnum of -1 signifies it came from somewhere other than an inlet
+					this.listeners[name][l].message(-1, val);
+				}
+			}
 		}
 	}
 	
 	// adds a new named listener to our graph
 	this.addlistener = function(name, who) {
-		this.listeners[name] = who;
+		if (!this.listeners[name])
+			this.listeners[name] = [];
+		this.listeners[name][this.listeners[name].length] = who;
 	}
 	
 	// TODO: OPTIMISE - next two methods - remove the check for mozWriteAudio and create
@@ -332,7 +339,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 		}
 	}
 
-	/** logs only when debugMode is set. Second argument doesn't prefix output (for object printing). **/
+	/** logs only when debugMode is set. **/
 	this.debug = function(msg) {
 		if (this.debugMode) {
 			if (typeof(msg) == "string")
@@ -399,26 +406,36 @@ var PdObject = function (proto, pd, type, args) {
 				if (this.inlets[idx] && this.inlets[idx][0].outletTypes[this.inlets[idx][1]] == "dsp") {
 					// use that outlet's buffer as our inlet buffer
 					this.inletbuffer[idx] = this.inlets[idx][0].outletbuffer[this.inlets[idx][1]];
-					//console.log("buffer");
+					this.pd.debug(this.graphindex + " (" + this.type + ") at inlet " + idx + " dsp inlet real buffer");
 				} else {
 					// otherwise it's a message inlet and if we get a float we want to use that instead
 					// create a new single-valued buffer, initialised to 0
 					this.inletbuffer[idx] = [0];
+					
 					// override the existing message input to check for incoming floats
 					// and use them to set the buffer value
-					// store our old message function
-					var oldmessage = this.message;
-					this.message = function (inletnum, msg) {
-						var myidx = idx;
-						if (inletnum == myidx && !isNaN(parseFloat(msg))) {
-							// set our constant-buffer value to the incoming float value
-							this.inletbuffer[myidx][0] = parseFloat(msg);
-						}
-						// chain our old message function onto the end of this new one
-						if (oldmessage)
-							oldmessage(inletnum, msg);
+					// (remember the old message func so we can stack it on the end of the new one
+					// this is slightly complicated but oh well)
+					if (this.message) {
+						this["message_" + idx] = this.message;
 					}
-					//console.log("single val");
+					
+					// returns a new message function to replace the old one
+					function makeMessageFunc(myidx) {
+						return function (inletnum, msg) {
+							if (inletnum == myidx && !isNaN(parseFloat(msg))) {
+								// set our constant-buffer value to the incoming float value
+								this.inletbuffer[myidx][0] = parseFloat(msg);
+							}
+							// chain our old message function onto the end of this new one
+							if (this["message_" + myidx])
+								this["message_" + myidx](inletnum, msg);
+						}
+					}
+					
+					// replace our message function 
+					this.message = makeMessageFunc(idx);
+					this.pd.debug(this.graphindex + " (" + this.type + ") dsp inlet " + idx + " single val buffer");
 				}
 			}
 		}
