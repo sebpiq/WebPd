@@ -7,7 +7,7 @@ Here are the [test pages](tests) (i.e. examples of Pd patches which run in a web
 
 This is changing very fast right now and new FireFox builds are coming out every day. If you want to keep abreast of the latest changes, here is the WebPd mailing list: <http://groups.google.com/group/web-pure-data/>. You might also like to check [my blog](http://mccormick.cx/news).
 
-Copyright [Chris McCormick](http://mccormick.cx/), 2010. [LGPLv3 Licensed](COPYING).
+Copyright [Chris McCormick](http://mccormick.cx/), 2010. [Licensed under the terms of the AGPLv3 or a later version of that license](COPYING).
 
 Documentation
 -------------
