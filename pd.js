@@ -200,7 +200,6 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	// do we actually have audio access?
 	var audioTest = new Audio();
 	if (audioTest.mozSetup) {
-		console.log("mozSetup exists");
 		/** Checks if the hardware buffer is hungry for more **/
 		this.hungry = function() {
 			// are we a few buffers ahead?
