@@ -24,6 +24,8 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	this.lastWritePosition = 0;
 	// the audio-filling interval id
 	this.interval = -1;
+	// if there is any overflow writing to the hardware buffer we store it here
+	this.overflow = Array();
 	// arrays of receivers which are listening for messages
 	// keys are receiver names
 	this.listeners = {};
@@ -168,7 +170,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 		return this;
 	}
 	
-	// send a message to a named receiver
+	/** send a message from outside the graph to a named receiver inside the graph **/
 	this.send = function(name, val) {
 		this.debug("graph received: " + name + " " + val);
 		if (this.listeners[name]) {
@@ -181,33 +183,11 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 		}
 	}
 	
-	// adds a new named listener to our graph
+	/** adds a new named listener to our graph **/
 	this.addlistener = function(name, who) {
 		if (!this.listeners[name])
 			this.listeners[name] = [];
 		this.listeners[name][this.listeners[name].length] = who;
-	}
-	
-	// TODO: OPTIMISE - next two methods - remove the check for mozWriteAudio and create
-	// a totally different method which gets checked at startup and used instead.
-	
-	/** Checks if the hardware buffer is hungry for more **/
-	this.hungry = function() {
-		// are we a few buffers ahead?
-		return this.lastWritePosition < this.el.mozCurrentSampleOffset() + this.sampleRate / 2;
-	}
-	
-	/** Fills up the hardware buffer with the data from this.output **/
-	this.fillbuffer = function() {
-		// copy the data from all endpoints into the audio output
-		if (this.el.mozWriteAudio) {
-			this.el.mozWriteAudio(this.output);
-			// update our last write position so we know where we're up to
-			this.lastWritePosition += this.output.length;
-		} else {
-			// non-audio version, output the frame as text
-			this.log(this.output);
-		}
 	}
 	
 	/** Schedule a callback at a particular time - milliseconds **/
@@ -217,48 +197,92 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 		this.scheduled[time].push(callback);
 	}
 	
+	// do we actually have audio access?
+	var audioTest = new Audio();
+	if (audioTest.mozSetup) {
+		console.log("mozSetup exists");
+		/** Checks if the hardware buffer is hungry for more **/
+		this.hungry = function() {
+			// are we a few buffers ahead?
+			return this.lastWritePosition < this.el.mozCurrentSampleOffset() + this.sampleRate / 2;
+		}
+		
+		/** Fills up the hardware buffer with the data from this.output **/
+		this.fillbuffer = function(buffer) {
+			// actually write the audio to the buffer
+			var written = this.el.mozWriteAudio(buffer);
+			if (written < buffer.length) {
+				// copy the data from all endpoints into the audio output
+				this.overflow = buffer.slice(written);
+			} else {
+				this.overflow.length = 0;
+			}
+			// update our last write position so we know where we're up to
+			this.lastWritePosition += written;
+			return this.overflow.length;
+		}
+	// if not just write the output frames to the console
+	} else {
+		var runs = 0;
+		this.hungry = function() {
+			console.log("Frame: " + runs++);
+			return runs < 5;
+		}
+		
+		this.fillbuffer = function(buffer) {
+			// non-audio version, output the frame as text
+			this.log(buffer);
+		}
+	}
+	delete audioTest;
+	
 	/** Run each frame - check and fill up the buffer, as needed **/
 	this.write = function() {
 		var count = 0;
 		
 		// while we still need to add more to the buffer, do it - should usually do about two loops
 		while(this.hungry() && count < 100) {
-			// increase the frame count
-			this.frame += 1;
-			// do we have any scheduled callbacks for this frame?
-			var abstime = this.frame * this.bufferSize / this.sampleRate;
-			var removescheduled = [];
-			for (var s in this.scheduled) {
-				if (s <= abstime) {
-					// for every callback in the list to be run at this time
-					for (var c=0; c<this.scheduled[s].length; c++) {
-						// run it
-						this.scheduled[s][c]();
+			if (this.overflow.length) {
+				this.fillbuffer(this.overflow);
+			} else {
+				// increase the frame count
+				this.frame += 1;
+				// do we have any scheduled callbacks for this frame?
+				var abstime = this.frame * this.bufferSize / this.sampleRate;
+				var removescheduled = [];
+				for (var s in this.scheduled) {
+					if (s <= abstime) {
+						// for every callback in the list to be run at this time
+						for (var c=0; c<this.scheduled[s].length; c++) {
+							// run it
+							this.scheduled[s][c]();
+						}
+						// add it to our list of times to remove callbacks for
+						removescheduled.push(s);
 					}
-					// add it to our list of times to remove callbacks for
-					removescheduled.push(s);
 				}
+				// remove any scheduled callbacks we've already run
+				for (var r=0; r<removescheduled.length; r++) {
+					delete this.scheduled[removescheduled[r]];
+				}
+				// reset our output buffer (gets written to by dac~ objects)
+				for (var i=0; i<this.output.length; i++)
+					this.output[i] = 0;
+				// run the dsp function on all endpoints to get data
+				for (var e in this._graph.endpoints) {
+					// dac~ objects will add their output to this.output
+					this.tick(this._graph.endpoints[e]);
+				}
+				// if we have some overflow, write that first
+				this.fillbuffer(this.output);
+				// check we haven't run a ridiculous number of times
+				count++;
 			}
-			// remove any scheduled callbacks we've already run
-			for (var r=0; r<removescheduled.length; r++) {
-				delete this.scheduled[removescheduled[r]];
-			}
-			// reset our output buffer (gets written to by dac~ objects)
-			for (var i=0; i<this.output.length; i++)
-				this.output[i] = 0;
-			// run the dsp function on all endpoints to get data
-			for (var e in this._graph.endpoints) {
-				// dac~ objects will add their output to this.output
-				this.tick(this._graph.endpoints[e]);
-			}
-			this.fillbuffer(this.output);
-			// check we haven't run a ridiculous number of times
-			count++;
 		}
 		
 		// things are not going well. stop the audio.
 		if (count >= 100) {
-			this.log("Overflowed 10 write() calls - your patch is probably too heavy.");
+			this.log("Overflowed 100 write() calls - your patch is probably too heavy.");
 			this.stop();
 		}
 	}
@@ -295,12 +319,9 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 				// start a regular buffer fill
 				this.interval = setInterval(function() { me.write(); }, Math.floor(this.bufferSize / this.sampleRate));
 			} else {
-				// just a few test frames
+				// generate a few test frames
 				this.debug("Generating a few test frames of data:")
-				for (var i=0; i<10; i++) {
-					this.debug("Frame " + i);
-					this.write();
-				}
+				this.write();
 			}
 			// reset the frame count
 			this.frame = 0;
