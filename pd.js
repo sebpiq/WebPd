@@ -7,13 +7,15 @@
 	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
 ***/
 
-var Pd = function Pd(sampleRate, bufferSize, debug) {
+var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
+	// what type of javascript array do we want to use?
+	this.arrayType = arrayType || Array; // Float32Array
 	// whether we are in debug mode (more verbose output
 	this.debugMode = debug;
 	// set my own sample rate
 	this.sampleRate = sampleRate;
 	// output buffer (stereo)
-	this.output = Array(bufferSize * 2);
+	this.output = new this.arrayType(bufferSize * 2);
 	// the audio element we'll use to make sound
 	this.el = null;
 	// how many frames have we run
@@ -25,7 +27,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	// the audio-filling interval id
 	this.interval = -1;
 	// if there is any overflow writing to the hardware buffer we store it here
-	this.overflow = Array();
+	this.overflow = new this.arrayType(0);
 	// arrays of receivers which are listening for messages
 	// keys are receiver names
 	this.listeners = {};
@@ -131,7 +133,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 					this._graph.objects[obj.graphindex] = obj;
 					this.debug("Added " + obj.type + " to the graph at position " + obj.graphindex);
 					// this table needs a set of data
-					obj.data = Array(parseInt(tokens[3]));
+					obj.data = new this.arrayType(parseInt(tokens[3]));
 					// add this to our global list of tables
 					this.tables[tokens[2]] = obj;
 					lastTable = tokens[2];
@@ -392,8 +394,10 @@ var PdObject = function (proto, pd, type, args) {
 	// array holds 2-tuple entries of [dest-object, dest-inlet-number]
 	this.outlets = [];
 	// holds a pointer to an existing outlet buffer, or a small buffer with a constant value
+	// (array of buffers)
 	this.inletbuffer = [];
-	// holds actual buffers
+	// holds actual output buffers
+	// (array of two buffers)
 	this.outletbuffer = [];
 	
 	// copy properties from the right type of thing
@@ -405,7 +409,7 @@ var PdObject = function (proto, pd, type, args) {
 		// create the outlet buffers for this object
 		for (var o=0; o<this.outletTypes.length; o++) {
 			if (this.outletTypes[o] == "dsp") {
-				this.outletbuffer[o] = Array(this.pd.bufferSize);
+				this.outletbuffer[o] = new this.pd.arrayType(this.pd.bufferSize);
 			}
 		}
 	}
