@@ -112,6 +112,9 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 					if (obj.endpoint) {
 						this._graph.endpoints.push(obj);
 					}
+					// run the pre-init function which runs on an object before graph setup
+					if (obj.preinit)
+						obj.preinit();
 				} else if (tokens[1] == "connect") {
 					// connect objects together
 					var destination = this._graph.objects[parseInt(tokens[4])];
@@ -121,8 +124,10 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 					if (source.outletTypes) {
 						if (source.outletTypes[source_outlet] == "dsp") {
 							destination.inlets[destination_inlet] = [source, source_outlet];
+							this.debug("dsp connection " + source.type + " [" + source_outlet + "] to " + destination.type + " [" + destination_inlet + "]");
 						} else if (source.outletTypes[source_outlet] == "message") {
 							source.outlets[source_outlet] = [destination, destination_inlet];
+							this.debug("msg connection " + source.type + " [" + source_outlet + "] to " + destination.type + " [" + destination_inlet + "]");
 						}
 					}
 				} else if (tokens[1] == "array") {
@@ -226,7 +231,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	} else {
 		var runs = 0;
 		this.hungry = function() {
-			console.log("Frame: " + runs++);
+			this.debug("Frame: " + runs++);
 			return runs < 5;
 		}
 		
@@ -414,9 +419,43 @@ var PdObject = function (proto, pd, type, args) {
 		}
 	}
 	
+	/** Converts a Pd message to a float **/
+	this.tofloat = function(data) {
+		var element = data.split(" ")[0];
+		var foundfloat = parseFloat(element);
+		if (!isNaN(foundfloat)) {
+			element = foundfloat;
+		} else if (element != "symbol") {
+			this.pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
+			element = "";
+		} else {
+			element = 0;
+		}
+		return element;
+	}
+	
+	/** Converts a Pd message to a symbol **/
+	this.tosymbol = function(data) {
+		var element = data.split(" ")[0];
+		if (!isNaN(parseFloat(element))) {
+			element = "symbol float";
+		} else if (element != "symbol") {
+			this.pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
+			element = "";
+		} else {
+			element = "symbol " + data.split(" ")[1];
+		}
+		return element;
+	}
+	
+	/** Convert a Pd message to a bang **/
+	this.tobang = function(data) {
+		return "bang";
+	}
+	
 	/** Sends a message to a particular outlet **/
 	this.sendmessage = function(outletnum, msg) {
-		// propagage this message to my outlet
+		// propagate this message to my outlet
 		this.outlets[outletnum][0].message(this.outlets[outletnum][1], msg);
 	}
 	
@@ -477,6 +516,7 @@ var PdObject = function (proto, pd, type, args) {
 		dspinlets = which inlet numbers can do dsp
 	
 	methods:
+		preinit = method which runs after object creation, but before the graph has been instantiated
 		init = method which runs after the graph has been instantiated
 		dsptick = method which runs every frame for this object
 		message(inletnumber, message) = method which runs when this object receives a message at any inlet
@@ -661,7 +701,7 @@ var PdObjects = {
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
-	"r": {
+	"receive": {
 		"outletTypes": ["message"],
 		"init": function() {
 			// listen out for messages from the either with the name of our argument
@@ -674,6 +714,30 @@ var PdObjects = {
 			if (inletnum == -1)
 				this.sendmessage(0, val);
 		},
+	},
+	
+	// pd trigger type - right to left
+	"trigger": {
+		"outletTypes": [],
+		"preinit": function() {
+			this.triggers = this.args.slice(5);
+			for (var t=0; t<this.triggers.length; t++)
+				this.outletTypes.push("message");
+		},
+		"message": function(inletnum, message) {
+			for (var t=0; t<this.triggers.length; t++) {
+				var triggerindex = this.triggers.length - t - 1
+				var out = message;
+				if (this.triggers[triggerindex] == "f")
+					out = this.tofloat(message);
+				else if (this.triggers[triggerindex] == "s")
+					out = this.tosymbol(message);
+				else if (this.triggers[triggerindex] == "b")
+					out = this.tobang(message);
+				if (out != "")
+					this.sendmessage(triggerindex, out);
+			}
+		}
 	},
 	
 	// loadbang (on launch it sends a bang)
@@ -720,7 +784,8 @@ var PdObjects = {
 };
 
 // object name aliases
-PdObjects.receive = PdObjects.r;
+PdObjects.r = PdObjects.receive;
+PdObjects.t = PdObjects.trigger;
 
 /********************************
 	Helper functions

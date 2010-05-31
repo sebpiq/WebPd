@@ -1,0 +1,5 @@
+print: symbol hello
+print: 0
+print: bang
+print: symbol hello
+print: symbol hello

@@ -1,0 +1,12 @@
+#N canvas 773 114 450 300 10;
+#X obj 26 23 loadbang;
+#X obj 26 111 print;
+#X obj 26 64 t a s b f a;
+#X msg 26 44 42 kjlf 23 ljkl;
+#X connect 0 0 3 0;
+#X connect 2 0 1 0;
+#X connect 2 1 1 0;
+#X connect 2 2 1 0;
+#X connect 2 3 1 0;
+#X connect 2 4 1 0;
+#X connect 3 0 2 0;
