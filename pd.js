@@ -704,6 +704,26 @@ var PdObjects = {
 		},
 	},
 	
+	// midi to frequency in the dsp domain
+	"mtof~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= -1500) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					if (f > 1499) {
+						f = 1499;
+					}
+					this.outletbuffer[0][i] = 8.17579891564 * Math.exp(.0577622650 * f);
+				}
+			}
+		}
+	},
+	
 	// basic phasor (0 to 1)
 	"phasor~": {
 		"outletTypes": ["dsp"],
