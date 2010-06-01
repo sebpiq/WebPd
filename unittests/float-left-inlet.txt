@@ -1,0 +1,3 @@
+print: 23
+print: 12
+error: float: no method for 'hello'

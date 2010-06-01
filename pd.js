@@ -526,6 +526,8 @@ var PdObjects = {
 	"null": {
 	},
 	
+	/************************** Basic types objects ******************************/
+	
 	"table": {
 		"init": function() {
 			if (this.args.length >= 4) {
@@ -533,6 +535,50 @@ var PdObjects = {
 			}
 			this.pd.debug(this.data);
 		},
+	},
+	
+	"float": {
+		"outletTypes": ["message"],
+		"init": function() {
+			this.value = parseFloat(this.args[5]);
+			if (isNaN(this.value))
+				this.value = 0;
+		},
+		"message": function(inletnum, message) {
+			if (inletnum == 0) {
+				var atoms = message.split(" ");
+				var firstfloat = parseFloat(atoms[0]);
+				// the float object outputs it's value if it gets a bang
+				if (atoms[0] == "bang") {
+					this.sendmessage(0, this.value);
+				// if it gets some other symbol, throws an error
+				} else if (isNaN(firstfloat)) {
+					this.pd.log("error: float: no method for '" + atoms[0] + "'");
+				// if it gets a new value then it sets and outputs that value
+				} else {
+					this.value = firstfloat;
+					this.sendmessage(0, this.value);
+				}
+			} else {
+				// TODO: inlet two sets the value
+			}
+		}
+	},
+	
+	// message objects like [hello $1(
+	"msg": {
+		"outletTypes": ["message"],
+		"init": function() {
+			// arguments set my value
+			this.value = this.args.slice(4).join(" ");
+		},
+		"message": function(inletnum, message) {
+			// TODO: check if my value has a semicolon at the start and act like 'send' if it does
+			var outmessage = this.value;
+			// TODO: replace $N with item N-1 from the incoming message
+			var atoms = message.split(" ");
+			this.sendmessage(0, outmessage);
+		}
 	},
 	
 	/************************** DSP objects ******************************/
@@ -765,27 +811,13 @@ var PdObjects = {
 			this.pd.log(this.printname + ": " + message);
 		},
 	},
-	
-	// message objects like [hello $1(
-	"msg": {
-		"outletTypes": ["message"],
-		"init": function() {
-			// arguments set my value
-			this.value = this.args.slice(4).join(" ");
-		},
-		"message": function(inletnum, message) {
-			// TODO: check if my value has a semicolon at the start and act like 'send' if it does
-			var outmessage = this.value;
-			// TODO: replace $N with item N-1 from the incoming message
-			var bits = message.split(" ");
-			this.sendmessage(0, outmessage);
-		}
-	}
+
 };
 
 // object name aliases
 PdObjects.r = PdObjects.receive;
 PdObjects.t = PdObjects.trigger;
+PdObjects.f = PdObjects.float;
 
 /********************************
 	Helper functions
