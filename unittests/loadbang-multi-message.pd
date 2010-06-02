@@ -1,0 +1,6 @@
+#N canvas 601 110 450 300 10;
+#X obj 21 19 loadbang;
+#X obj 21 61 print;
+#X msg 21 40 hello foo \, 234 2 \, a \; ping pong \, foo var \;;
+#X connect 0 0 2 0;
+#X connect 2 0 1 0;

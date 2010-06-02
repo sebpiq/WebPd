@@ -615,17 +615,17 @@ var PdObjects = {
 			this.value = this.args.slice(4).join(" ");
 		},
 		"message": function(inletnum, message) {
-			// TODO: here be dragons. this needs a lot of work
-			// TODO: e.g. what happens if there is a message which ends in a semicolon?
-			var messages = this.value.split('\\;');
-			// TODO: replace $N with item N-1 from the incoming message
-			var submessages = messages[0].split('\\,');
-			for (var o=0; o<submessages.length; o++) {
-				this.sendmessage(0, submessages[o]);
-			}
-			// TODO: inject other messages back into the graph based on first atom name
-			for (var m=0; m<messages.length-1; m++) {
-				
+			if (inletnum == 0) {
+				var messages = this.pd.messagetokenizer(this.value);
+				// TODO: replace $N with item N-1 from the incoming message
+				var submessages = messages[0];
+				for (var o=0; o<submessages.length; o++) {
+					this.sendmessage(0, submessages[o]);
+				}
+				// TODO: inject other messages back into the graph based on first atom name
+				for (var m=0; m<messages.length-1; m++) {
+					
+				}
 			}
 		}
 	},
