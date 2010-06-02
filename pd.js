@@ -813,6 +813,91 @@ var PdObjects = {
 		},
 	},
 	
+	// creates simple dsp lines
+	"line~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// what the value was at the start of the line
+			this.startval = 0;
+			// sample index where the line started
+			this.start = 0;
+			// the destination value we are aiming for
+			this.destination = 0;
+			// this stores the length of this line in samples
+			this.length = 0;
+			// this stores our constant current value
+			this.line = 0;
+			// we want to use the dsptick method that returns a constant value for now
+			this.dsptick = this.dsptick_const;
+		},
+		"dsptick_const": function() {
+			// write a constant value to our output buffer for every sample
+			for (var i=0; i<this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = this.line;
+			}
+		},
+		"dsptick_line": function() {
+			// write this correct value of the line at each sample
+			for (var i=0; i<this.pd.bufferSize; i++) {
+				// how far along the line we are
+				var sample = (this.pd.frame * this.pd.bufferSize + i) - this.start;
+				// if we've reached the end of our line, switch back to the constant method
+				if (sample >= this.length) {
+					// bash our value to the desired destination value
+					this.line = this.destination;
+					// switch back to the constant output method
+					this.dsptick = this.dsptick_const;
+				// otherwise calculate the new line value
+				} else {
+					// how far down the line are we
+					var timefraction = sample / this.length;
+					// use that fraction to calculate the height
+					this.line = (sample / this.length) * (this.destination - this.startval) + this.startval;
+				}
+				this.outletbuffer[0][i] = this.line;
+			}
+		},
+		"message": function(inletnum, message) {
+			if (inletnum == 0) {
+				// get the individual pieces of the passed-in message
+				var parts = message.split(" ");
+				// if this is a single valued message we want line~ to output a constant value
+				if (parts.length == 1) {
+					// get the value out of the message
+					var newconst = parseFloat(parts[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newconst)) {
+						// bash our value to the value passed in
+						this.line = newconst;
+						console.log("Set line to " + this.line);
+						// set our dsptick function to be the one which sends a constant
+						this.dsptick = this.dsptick_const;
+					}
+				} else {
+					// get the destination value out of the first part of the message
+					var destination = parseFloat(parts[0]);
+					// get the length of this line in milliseconds
+					var time = parseFloat(parts[1]);
+					// make sure these values are not bogus
+					if (!isNaN(destination) && !isNaN(time)) {
+						// what sample do we start at - current frame
+						this.start = this.pd.frame * this.pd.bufferSize;
+						// the value at the starting sample of the line
+						this.startval = this.line;
+						// remember our destination
+						this.destination = destination;
+						// remember our length in samples
+						this.length = time * this.pd.sampleRate / 1000;
+						// switch over to the line dsp method
+						this.dsptick = this.dsptick_line;
+						console.log("Set line to " + this.start + " " + this.startval + " " + this.length + " " + this.destination);
+					}
+				}
+			}
+		},
+	},
+	
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
