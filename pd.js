@@ -461,6 +461,11 @@ var PdObject = function (proto, pd, type, args) {
 	
 	/** Converts a Pd message to a float **/
 	this.tofloat = function(data) {
+		// first check if we just got an actual float, return it if so
+		if (!isNaN(data)) {
+			return data;
+		}
+		// otherwise parse this thing
 		var element = data.split(" ")[0];
 		var foundfloat = parseFloat(element);
 		if (!isNaN(foundfloat)) {
