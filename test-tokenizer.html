@@ -1,0 +1,24 @@
+<html>
+<head>
+	<link rel="stylesheet" href="style.css" type="text/css" media="screen">
+	<script src='pd.js' type='text/javascript'></script>
+	<script type='text/javascript'>
+	function launch() {
+		var pd = new Pd(44100, 4410, true);
+		pd.log(pd.messagetokenizer("234"));
+		pd.log(pd.messagetokenizer("hello"));
+		pd.log(pd.messagetokenizer("234;"));
+		pd.log(pd.messagetokenizer("hello;"));
+		pd.log(pd.messagetokenizer("234; "));
+		pd.log(pd.messagetokenizer("2432, hello bing bong, 234; pants!"));
+		pd.log(pd.messagetokenizer("2432, hello bing bong, 234; ffieo fwemio wmfo, wfmeiomio; fmieowmio"));
+		pd.log(pd.messagetokenizer("2432\\, hello bing bong\\, 234\\; ffieo fwemio wmfo\\, wfmeiomio\\; fmieowmio"));
+	}
+	</script>
+</head>
+<body onLoad='var l = launch();'>
+	<h1>WebPd message tokenizer test</h1>
+	<pre id='console'></pre>
+</body>
+</html>
+

@@ -55,6 +55,8 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	// regular expression for finding valid lines of Pd in a file
 	var lines_re = new RegExp('(#((.|\n)*?));\n',"gi");
 	
+	/********************* "Public" methods ************************/
+	
 	/** Initiate a load of a Pd file **/
 	this.load = function (url, callback) {
 		this.loadcallback = callback;
@@ -62,15 +64,20 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		return this;
 	}
 	
-	/** Called when we receive the new patch from the network **/
-	this.loadcomplete = function(result, request) {
-		if (request.status == 404) {
-			// TODO: file not found, tell the user
-			this.log("No such file:", request.url);
-		} else {
-			this.parse(result);
+	/** send a message from outside the graph to a named receiver inside the graph **/
+	this.send = function(name, val) {
+		this.debug("graph received: " + name + " " + val);
+		if (this.listeners[name]) {
+			for (var l=0; l<this.listeners[name].length; l++) {
+				if (this.listeners[name][l].message) {
+					// inletnum of -1 signifies it came from somewhere other than an inlet
+					this.listeners[name][l].message(-1, val);
+				}
+			}
 		}
 	}
+	
+	/********************* Dealing with patches ************************/
 	
 	/** Parses a Pd file and creates a new DSP graph from it **/
 	this.parse = function(txt) {
@@ -177,18 +184,17 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		return this;
 	}
 	
-	/** send a message from outside the graph to a named receiver inside the graph **/
-	this.send = function(name, val) {
-		this.debug("graph received: " + name + " " + val);
-		if (this.listeners[name]) {
-			for (var l=0; l<this.listeners[name].length; l++) {
-				if (this.listeners[name][l].message) {
-					// inletnum of -1 signifies it came from somewhere other than an inlet
-					this.listeners[name][l].message(-1, val);
-				}
-			}
+	/** Called when we receive the new patch from the network **/
+	this.loadcomplete = function(result, request) {
+		if (request.status == 404) {
+			// TODO: file not found, tell the user
+			this.log("No such file:", request.url);
+		} else {
+			this.parse(result);
 		}
 	}
+	
+	/******************** Internal methods ************************/
 	
 	/** adds a new named listener to our graph **/
 	this.addlistener = function(name, who) {
@@ -203,6 +209,40 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 			this.scheduled[time] = [];
 		this.scheduled[time].push(callback);
 	}
+	
+	/**
+		Tokenizes a complex message with atoms, commas, and semicolons.
+		Returns an array of arrays of strings. (array of lists of comma separated messages).
+	 **/
+	var messages_re = /\\{0,1};/
+	var parts_re = /\\{0,1},/
+	this.messagetokenizer = function(message) {
+		var result = [];
+		var messages = message.split(messages_re);
+		for (var m=0; m<messages.length; m++) {
+			var submessagelist = [];
+			// TODO: replace $N with item N-1 from the incoming message
+			var submessages = messages[m].split(parts_re);
+			for (var s=0; s<submessages.length; s++) {
+				var atoms = submessages[s].split(" ");
+				var resultatoms = [];
+				for (var a=0; a<atoms.length; a++) {
+					if (atoms[a] != "") {
+						resultatoms.push(atoms[a]);
+					}
+				//console.log("resultatoms:");
+				//console.log(resultatoms);
+				}
+				if (resultatoms.length)
+					submessagelist.push(resultatoms.join(" "));
+			}
+			if (submessagelist.length)
+				result.push(submessagelist);
+		}
+		return result;
+	}
+	
+	/******************** DSP stuff ************************/
 	
 	// do we actually have audio access?
 	var audioTest = new Audio();
@@ -356,6 +396,8 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 			this.log("Already stopped.");
 		}
 	}
+	
+	/******************** console/logging stuff ************************/
 	
 	/** log a message to console **/
 	this.log = function(msg) {
@@ -573,11 +615,18 @@ var PdObjects = {
 			this.value = this.args.slice(4).join(" ");
 		},
 		"message": function(inletnum, message) {
-			// TODO: check if my value has a semicolon at the start and act like 'send' if it does
-			var outmessage = this.value;
+			// TODO: here be dragons. this needs a lot of work
+			// TODO: e.g. what happens if there is a message which ends in a semicolon?
+			var messages = this.value.split('\\;');
 			// TODO: replace $N with item N-1 from the incoming message
-			var atoms = message.split(" ");
-			this.sendmessage(0, outmessage);
+			var submessages = messages[0].split('\\,');
+			for (var o=0; o<submessages.length; o++) {
+				this.sendmessage(0, submessages[o]);
+			}
+			// TODO: inject other messages back into the graph based on first atom name
+			for (var m=0; m<messages.length-1; m++) {
+				
+			}
 		}
 	},
 	
@@ -704,26 +753,6 @@ var PdObjects = {
 		},
 	},
 	
-	// midi to frequency in the dsp domain
-	"mtof~": {
-		"outletTypes": ["dsp"],
-		"dspinlets": [0],
-		"dsptick": function() {
-			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
-				var f = i1[i % i1.length];
-				if (f <= -1500) {
-					this.outletbuffer[0][i] = 0;
-				} else {
-					if (f > 1499) {
-						f = 1499;
-					}
-					this.outletbuffer[0][i] = 8.17579891564 * Math.exp(.0577622650 * f);
-				}
-			}
-		}
-	},
-	
 	// basic phasor (0 to 1)
 	"phasor~": {
 		"outletTypes": ["dsp"],
@@ -743,6 +772,26 @@ var PdObjects = {
 				this.sampCount = (this.sampCount + (i1[i % i1.length] / this.pd.sampleRate)) % 1;
 			}
 		},
+	},
+	
+	// midi to frequency in the dsp domain
+	"mtof~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= -1500) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					if (f > 1499) {
+						f = 1499;
+					}
+					this.outletbuffer[0][i] = 8.17579891564 * Math.exp(.0577622650 * f);
+				}
+			}
+		}
 	},
 	
 	// read data from a table with no interpolation
