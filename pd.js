@@ -230,8 +230,6 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 					if (atoms[a] != "") {
 						resultatoms.push(atoms[a]);
 					}
-				//console.log("resultatoms:");
-				//console.log(resultatoms);
 				}
 				if (resultatoms.length)
 					submessagelist.push(resultatoms.join(" "));
@@ -870,7 +868,6 @@ var PdObjects = {
 					if (!isNaN(newconst)) {
 						// bash our value to the value passed in
 						this.line = newconst;
-						console.log("Set line to " + this.line);
 						// set our dsptick function to be the one which sends a constant
 						this.dsptick = this.dsptick_const;
 					}
@@ -891,7 +888,6 @@ var PdObjects = {
 						this.length = time * this.pd.sampleRate / 1000;
 						// switch over to the line dsp method
 						this.dsptick = this.dsptick_line;
-						console.log("Set line to " + this.start + " " + this.startval + " " + this.length + " " + this.destination);
 					}
 				}
 			}
