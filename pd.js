@@ -54,6 +54,12 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	
 	// regular expression for finding valid lines of Pd in a file
 	var lines_re = new RegExp('(#((.|\n)*?));\n',"gi");
+	// regular expression for finding dollarargs
+	this.dollarmatch = /(?:\\{0,1}\$)(\d+)/g;
+	// regular expression for delimiting messages
+	var messages_re = /\\{0,1};/
+	// regular expression for delimiting comma separated messages
+	var parts_re = /\\{0,1},/
 	
 	/********************* "Public" methods ************************/
 	
@@ -214,8 +220,6 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		Tokenizes a complex message with atoms, commas, and semicolons.
 		Returns an array of arrays of strings. (array of lists of comma separated messages).
 	 **/
-	var messages_re = /\\{0,1};/
-	var parts_re = /\\{0,1},/
 	this.messagetokenizer = function(message) {
 		var result = [];
 		var messages = message.split(messages_re);
@@ -619,15 +623,42 @@ var PdObjects = {
 		},
 		"message": function(inletnum, message) {
 			if (inletnum == 0) {
-				var messages = this.pd.messagetokenizer(this.value);
-				// TODO: replace $N with item N-1 from the incoming message
-				var submessages = messages[0];
-				for (var o=0; o<submessages.length; o++) {
-					this.sendmessage(0, submessages[o]);
+				// if our incoming message is a float, make an array of it
+				if (!isNaN(message)) {
+					var incoming = [message];
+				} else {
+					// atomize our incoming message
+					var incoming = message.split(" ");
 				}
-				// TODO: inject other messages back into the graph based on first atom name
-				for (var m=0; m<messages.length-1; m++) {
-					
+				// turn our value into it's constituent messages and sub-messages
+				var messages = this.pd.messagetokenizer(this.value);
+				for (var m=0; m<messages.length; m++) {
+					var submessages = messages[m];
+					for (var o=0; o<submessages.length; o++) {
+						// find all the dollarargs in this submessage
+						var dollarargs = submessages[o].match(this.pd.dollarmatch);
+						// this is the variable in which we'll replace all dollar args
+						var sendme = submessages[o];
+						// replace $N with item N-1 from the incoming message
+						if (dollarargs) {
+							for (var v=0; v<dollarargs.length; v++) {
+								// which argument number are we looking for?
+								var argnum = parseInt(dollarargs[v].replace(/\\{0,1}\$/, "")) - 1;
+								if (incoming[argnum]) {
+									sendme = sendme.replace(dollarargs[v], incoming[argnum]);
+								} else {
+									sendme = sendme.replace(" " + dollarargs[v], "");
+									sendme = sendme.replace(dollarargs[v] + ' ', "");
+								}
+							}
+						}
+						// TODO: what if they have an out-of-range argument?
+						// if this is the first real message which comes in
+						if (m == 0)
+							this.sendmessage(0, sendme);
+						// TODO: else inject other messages back into the graph based on first atom name
+						// note: what happens to the second submessage -> [; this is a test, blah blah blah( ?
+					}
 				}
 			}
 		}
