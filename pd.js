@@ -963,14 +963,17 @@ var PdObjects = {
 			for (var t=0; t<this.triggers.length; t++) {
 				var triggerindex = this.triggers.length - t - 1
 				var out = message;
+				// convert our message to it's correct type
 				if (this.triggers[triggerindex] == "f")
 					out = this.tofloat(message);
 				else if (this.triggers[triggerindex] == "s")
 					out = this.tosymbol(message);
 				else if (this.triggers[triggerindex] == "b")
 					out = this.tobang(message);
-				if (out != "")
+				// if we didn't get an empty string back
+				if (out !== "") {
 					this.sendmessage(triggerindex, out);
+				}
 			}
 		}
 	},
