@@ -1059,18 +1059,13 @@ var PdObjects = {
 			} else if (inletnum == 0) {
 				// we may have more than one number coming in
 				var parts = val.split(" ");
-				// use the second number to set the multiplier
-				if (parts.length > 1) {
-					var newnum = parseFloat(parts[1]);
-					// if it's a valid number set our multiplier
-					if (isNaN(newnum)) {
-						this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
-					} else {
-						this.multiplier = newnum;
-					}
-				}
-				// now extract the first number
+				// extract the first number
 				var mul = parseFloat(parts[0]);
+				// use the second number to set the multiplier
+				if (parts.length > 1 && !isNaN(mul)) {
+					// if it's a valid number send to the second outlet
+					this.message(1, parts[1]);
+				}
 				// if it's a valid float, use it to output a multiplication
 				if (isNaN(mul)) {
 					this.pd.log("error: *: no method for '" + val + "'");
