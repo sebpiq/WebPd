@@ -1034,6 +1034,53 @@ var PdObjects = {
 		}
 	},
 	
+	// multiply two numbers together
+	"*": {
+		"outletTypes": ["message"],
+		"init": function() {
+			// do i have a numeric argument
+			if (this.args.length >= 6) {
+				this.multiplier = parseFloat(this.args[5]);
+			} else {
+				this.multiplier = 0;
+			}
+		},
+		"message": function(inletnum, val) {
+			// right inlet changes value
+			if (inletnum == 1) {
+				var multiplier = parseFloat(val);
+				// if this is a valid number, set our multiplier
+				if (isNaN(multiplier)) {
+					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+				} else {
+					this.multiplier = multiplier;
+				}
+			// left inlet outputs the multiplication
+			} else if (inletnum == 0) {
+				// we may have more than one number coming in
+				var parts = val.split(" ");
+				// use the second number to set the multiplier
+				if (parts.length > 1) {
+					var newnum = parseFloat(parts[1]);
+					// if it's a valid number set our multiplier
+					if (isNaN(newnum)) {
+						this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					} else {
+						this.multiplier = newnum;
+					}
+				}
+				// now extract the first number
+				var mul = parseFloat(parts[0]);
+				// if it's a valid float, use it to output a multiplication
+				if (isNaN(mul)) {
+					this.pd.log("error: *: no method for '" + val + "'");
+				} else {
+					this.sendmessage(0, mul * this.multiplier);
+				}
+			}
+		},
+	},
+		
 	// loadbang (on launch it sends a bang)
 	"loadbang": {
 		"outletTypes": ["message"],
