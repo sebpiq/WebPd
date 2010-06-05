@@ -356,7 +356,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	this.play = function() {
 		// check we're not already running
 		if (this.interval == -1) {
-			this.log("Starting audio.");
+			this.debug("Starting audio.");
 			// set up our audio element
 			this.el = new Audio();
 			if (this.el.mozSetup) {
@@ -378,7 +378,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 				this._graph.objects[0].frame = 0;
 			}
 		} else {
-			this.log("Already started.");
+			this.debug("Already started.");
 		}
 	}
 	
@@ -386,7 +386,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	this.stop = function() {
 		// if we're already running
 		if (this.interval != -1) {
-			this.log("Stopping audio.");
+			this.debug("Stopping audio.");
 			// clear the interval
 			clearInterval(this.interval);
 			// destroy the audio element
@@ -395,20 +395,20 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 			// reset our counter
 			this.lastWritePosition = 0;
   		} else {
-			this.log("Already stopped.");
+			this.debug("Already stopped.");
 		}
 	}
 	
 	/******************** console/logging stuff ************************/
 	
 	/** log a message to console **/
-	this.log = function(msg) {
+	this.log = function(msg, debugconsole) {
 		if (window.console) {
 			console.log(msg);
 		} else {
 			// log manually in HTML
-			if (!this.console) this.console = document.getElementById('console');
-			if (this.console) this.console.innerHTML += msg + "\n";
+			var fakeconsole = document.getElementById(arguments.length == 2 ? "debug" : "console");
+			if (fakeconsole) fakeconsole.innerHTML += msg + "\n";
 		}
 	}
 
@@ -416,9 +416,9 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	this.debug = function(msg) {
 		if (this.debugMode) {
 			if (typeof(msg) == "string")
-				this.log("debug: " + msg);
+				this.log("debug: " + msg, 'debug');
 			else
-				this.log(msg);
+				this.log(msg, 'debug');
 		}
 	}
 };
@@ -973,6 +973,62 @@ var PdObjects = {
 				// if we didn't get an empty string back
 				if (out !== "") {
 					this.sendmessage(triggerindex, out);
+				}
+			}
+		}
+	},
+	
+	// unpacks a list of atoms to their correct types
+	"unpack": {
+		"outletTypes": [],
+		"preinit": function() {
+			this.slots = this.args.slice(5);
+			this.slottypes = [];
+			for (var t=0; t<this.slots.length; t++) {
+				// check if it's s or f
+				if (this.slots[t] == "f" || !isNaN(parseFloat(this.slots[t]))) {
+					this.outletTypes.push("message");
+					this.slottypes.push("f");
+				} else if (this.slots[t] == "s") {
+					this.outletTypes.push("message");
+					this.slottypes.push("s");
+				// if it's neither
+				} else {
+					// throw an error
+					this.pd.log("error: unpack: " + this.slots[t] + ": bad type");
+					// make it a float
+					this.outletTypes.push("message");
+					this.slottypes.push("f");
+				}
+			}
+		},
+		"message": function(inletnum, message) {
+			// break up our message into atoms
+			var parts = message.split(" ");
+			for (var t=0; t<parts.length; t++) {
+				// loop through all slots for which we know the type
+				var slotindex = parts.length - t - 1
+				// what kind of slot is this?
+				if (this.slottypes[slotindex] == "f") {
+					// this is a float emitting slot
+					var out = parseFloat(parts[slotindex]);
+					if (isNaN(out)) {
+						this.pd.log("error: unpack: type mismatch");
+						out = "";
+					}
+				} else {
+					// if it's a number throw an error
+					if (!isNaN(parseFloat(parts[slotindex]))) {
+						this.pd.log("error: unpack: type mismatch");
+						out = "";
+					} else {
+						// this is a symbol emitting slot
+						out = "symbol " + parts[slotindex];
+					}
+				}
+				// if we have something valid, send it
+				if (out !== "") {
+					this.sendmessage(slotindex, out);
 				}
 			}
 		}

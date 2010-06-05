@@ -1,0 +1,14 @@
+error: unpack: wookie: bad type
+c: 42
+d: 11
+e: symbol one
+error: unpack: type mismatch
+error: unpack: type mismatch
+error: unpack: type mismatch
+a: 4
+b: 3
+c: 2
+d: 1
+e: symbol a
+error: unpack: type mismatch
+e: symbol hello
