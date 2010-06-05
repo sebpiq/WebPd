@@ -633,6 +633,7 @@ var PdObjects = {
 				// turn our value into it's constituent messages and sub-messages
 				var messages = this.pd.messagetokenizer(this.value);
 				for (var m=0; m<messages.length; m++) {
+					// comma separated submessages
 					var submessages = messages[m];
 					for (var o=0; o<submessages.length; o++) {
 						// find all the dollarargs in this submessage
@@ -645,10 +646,12 @@ var PdObjects = {
 								// which argument number are we looking for?
 								var argnum = parseInt(dollarargs[v].replace(/\\{0,1}\$/, "")) - 1;
 								if (incoming[argnum]) {
+									// replace that argument with the same argument from the incoming message
 									sendme = sendme.replace(dollarargs[v], incoming[argnum]);
 								} else {
-									sendme = sendme.replace(" " + dollarargs[v], "");
-									sendme = sendme.replace(dollarargs[v] + ' ', "");
+									// throws an error and replaces arg with zero
+									this.pd.log("error: $" + (argnum + 1) + ": argument number out of range");
+									sendme = sendme.replace(dollarargs[v], "0");
 								}
 							}
 						}

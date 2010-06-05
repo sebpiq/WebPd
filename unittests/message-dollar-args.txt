@@ -1,0 +1,5 @@
+print: hello 3.14 pong ping pong yo
+error: $3: argument number out of range
+error: $2: argument number out of range
+error: $3: argument number out of range
+print: hello 42 0 0 0 yo

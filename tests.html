@@ -1,6 +1,11 @@
 <html>
 <head>
 	<link rel="stylesheet" href="style.css" type="text/css" media="screen">
+	<style>
+		#golden {
+			color: blue;
+		}
+	</style>
 	<script src='pd.js' type='text/javascript'></script>
 	<script type='text/javascript'>
 		var pd = null;
@@ -23,6 +28,9 @@
 				'trigger-naked-symbol',
 				'trigger-list',
 				'float-left-inlet',
+				'unpack',
+				'multiply',
+				'add',
 				
 				// dsp objects
 				'test-1-basic-osc',
@@ -47,6 +55,11 @@
 			var contents = document.getElementById('contents');
 			var buttons = document.getElementById('buttons');
 			
+			/** Handle the unit tests's expected output file **/
+			function expected() {
+				
+			}
+			
 			var pdfile = document.location.href.split("?")[1];
 			if (pdfile) {
 				// add play an pause buttons
@@ -58,6 +71,13 @@
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
 				pd.load("unittests/" + pdfile + ".pd", pd.play);
 				
+				// trigger the load of the expected unit tests output
+				MakeRequest("unittests/" + pdfile + ".txt", {"loadcomplete": function(result, request) {
+						if (request.status != 404) {
+							document.getElementById("golden").innerHTML = "---expected output---\n" + result;
+						}
+					}
+				});
 				// trigger the load of the interface html (if it exists)
 				MakeRequest("unittests/" + pdfile + ".html", {"loadcomplete": function(result, request) {
 						if (request.status != 404) {
