@@ -1,2 +1,3 @@
-connection fanning - make inlet/outlet holders be arrays
-sample accurate messages - give some messages a timestamp if they are to be executed at a certain time. in objects like [vline~] only execute them at that time.
+* connection fanning - make inlet/outlet holders be arrays
+* sample accurate messages - give some messages a timestamp if they are to be executed at a certain time. in objects like [vline~] only execute them at that time
+* 'callback' receivers which send data outside Pd
