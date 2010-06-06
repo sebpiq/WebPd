@@ -507,7 +507,10 @@ var PdObject = function (proto, pd, type, args) {
 		var type = typeof(msg);
 		// if it's a string, split the atom
 		if (type == "string") {
-			return msg.split(" ");
+			var parts = msg.split(" ");
+			if (parts[0] == "list")
+				parts.shift();
+			return parts;
 		// if it's an int, make a single valued array
 		} else if (type == "number") {
 			return [msg];
