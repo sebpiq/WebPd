@@ -522,8 +522,13 @@ var PdObject = function (proto, pd, type, args) {
 	
 	/** Sends a message to a particular outlet **/
 	this.sendmessage = function(outletnum, msg) {
-		// propagate this message to my outlet
-		this.outlets[outletnum][0].message(this.outlets[outletnum][1], msg);
+		if (this.outlets[outletnum]) {
+			// propagate this message to my outlet
+			this.outlets[outletnum][0].message(this.outlets[outletnum][1], msg);
+		} else {
+			// pd silently drops these messages into the ether
+			this.pd.debug(this.type + ": No outlet #" + outletnum);
+		}
 	}
 	
 	/** Run after the graph is created to set up DSP inlets specially (accept floats if not dsp) **/
@@ -668,7 +673,6 @@ var PdObjects = {
 								}
 							}
 						}
-						// TODO: what if they have an out-of-range argument?
 						// if this is the first real message which comes in
 						if (m == 0)
 							this.sendmessage(0, sendme);
