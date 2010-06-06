@@ -1,0 +1,9 @@
+error: pack: wookie: bad type
+print: list a 11 42 0 symbol 0
+error: inlet: expected 'float' but got 'symbol'
+error: inlet: expected 'float' but got 'symbol'
+error: pack_float: wrong type
+error: inlet: expected 'symbol' but got 'float'
+print: list a 1 2 3 symbol 0
+error: pack_float: wrong type
+print: list hello 1 2 3 symbol 0

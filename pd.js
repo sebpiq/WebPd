@@ -978,6 +978,84 @@ var PdObjects = {
 		}
 	},
 	
+	// packs various incoming things into a list
+	"pack": {
+		"outletTypes": ["message"],
+		"init": function() {
+			this.slots = this.args.slice(5);
+			this.slottypes = [];
+			this.vals = [];
+			for (var t=0; t<this.slots.length; t++) {
+				// check if it's s or f
+				var num = parseFloat(this.slots[t]);
+				if (this.slots[t] == "f" || !isNaN(num)) {
+					this.slottypes.push("f");
+					this.vals.push(isNaN(num) ? 0 : num);
+				} else if (this.slots[t] == "s") {
+					this.slottypes.push("s");
+					this.vals.push("symbol");
+				// if it's neither
+				} else {
+					// throw an error
+					this.pd.log("error: pack: " + this.slots[t] + ": bad type");
+					// make it a float
+					this.slottypes.push("f");
+					this.vals.push(isNaN(num) ? 0 : num);
+				}
+			}
+		},
+		"message": function(inletnum, message) {
+			// break up the incoming message into atoms
+			var parts = message.split(" ");
+			// grab a float version of the current inlet item
+			var newnum = parseFloat(parts[0]);
+			// has an error been thrown on this recursion
+			var errorthrow = false;
+			// this is just a normal single message
+			if (parts.length == 1) {
+				// if we're looking for a float
+				if (this.slottypes[inletnum] == "f") {
+					// if it's not a float but we're looking for one, throw an error
+					if (isNaN(newnum)) {
+						// inlet zero error is handled differently in Pd because of accepting type of any
+						if (inletnum)
+							this.pd.log("error: inlet: expected 'float' but got 'symbol'");	
+						else
+							this.pd.log("error: pack_symbol: wrong type");
+						errorthrow = true;
+					} else {
+						// we found a float, set our output vals to that
+						this.vals[inletnum] = newnum;
+					}
+				// if we're looking for a symbol
+				} else {
+					// we didn't find a symbol
+					if (!isNaN(newnum)) {
+						// inlet zero error is handled differently in Pd because of accepting type of any
+						if (inletnum)
+							this.pd.log("error: inlet: expected 'symbol' but got 'float'");
+						else
+							this.pd.log("error: pack_float: wrong type");
+						errorthrow = true;
+					} else {
+						// we found a symbol, set our output vals to that
+						this.vals[inletnum] = parts[0];
+					}
+				}
+				// if it's our leftmost outlet, send the output
+				if (inletnum == 0 && !errorthrow) {
+					// finally send our value to the output
+					this.sendmessage(0, "list " + this.vals.join(" "));
+				}
+			} else {
+				// if we've been passed a list, split it up and send it through each inlet
+				for (var i=0; i<parts.length; i++) {
+					this.message(parts.length - i - 1, parts[parts.length - i - 1]);
+				}
+			}
+		},
+	},
+	
 	// unpacks a list of atoms to their correct types
 	"unpack": {
 		"outletTypes": [],
