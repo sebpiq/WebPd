@@ -502,6 +502,21 @@ var PdObject = function (proto, pd, type, args) {
 		return "bang";
 	}
 	
+	/** Convert a Pd message to a javascript array **/
+	this.toarray = function(msg) {
+		var type = typeof(msg);
+		// if it's a string, split the atom
+		if (type == "string") {
+			return msg.split(" ");
+		// if it's an int, make a single valued array
+		} else if (type == "number") {
+			return [msg];
+		// otherwise it's proably an object/array and should stay that way
+		} else {
+			return msg;
+		}
+	}
+	
 	/** Sends a message to a particular outlet **/
 	this.sendmessage = function(outletnum, msg) {
 		// propagate this message to my outlet
@@ -595,7 +610,7 @@ var PdObjects = {
 		},
 		"message": function(inletnum, message) {
 			if (inletnum == 0) {
-				var atoms = message.split(" ");
+				var atoms = this.toarray(message);
 				var firstfloat = parseFloat(atoms[0]);
 				// the float object outputs it's value if it gets a bang
 				if (atoms[0] == "bang") {
@@ -623,13 +638,8 @@ var PdObjects = {
 		},
 		"message": function(inletnum, message) {
 			if (inletnum == 0) {
-				// if our incoming message is a float, make an array of it
-				if (!isNaN(message)) {
-					var incoming = [message];
-				} else {
-					// atomize our incoming message
-					var incoming = message.split(" ");
-				}
+				// get our atoms
+				var incoming = this.toarray(message);
 				// turn our value into it's constituent messages and sub-messages
 				var messages = this.pd.messagetokenizer(this.value);
 				for (var m=0; m<messages.length; m++) {
@@ -898,7 +908,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			if (inletnum == 0) {
 				// get the individual pieces of the passed-in message
-				var parts = message.split(" ");
+				var parts = this.toarray(message);
 				// if this is a single valued message we want line~ to output a constant value
 				if (parts.length == 1) {
 					// get the value out of the message
@@ -1006,7 +1016,7 @@ var PdObjects = {
 		},
 		"message": function(inletnum, message) {
 			// break up the incoming message into atoms
-			var parts = message.split(" ");
+			var parts = this.toarray(message);
 			// grab a float version of the current inlet item
 			var newnum = parseFloat(parts[0]);
 			// has an error been thrown on this recursion
@@ -1082,7 +1092,7 @@ var PdObjects = {
 		},
 		"message": function(inletnum, message) {
 			// break up our message into atoms
-			var parts = message.split(" ");
+			var parts = this.toarray(message);
 			for (var t=0; t<parts.length; t++) {
 				// loop through all slots for which we know the type
 				var slotindex = parts.length - t - 1
@@ -1135,9 +1145,7 @@ var PdObjects = {
 				}
 			// left inlet outputs the multiplication
 			} else if (inletnum == 0) {
-				// we may have more than one number coming in
-				var parts = val.split(" ");
-				// extract the first number
+				var parts = this.toarray(val);
 				var mul = parseFloat(parts[0]);
 				// use the second number to set the multiplier
 				if (parts.length > 1 && !isNaN(mul)) {
@@ -1178,7 +1186,7 @@ var PdObjects = {
 			// left inlet outputs the multiplication
 			} else if (inletnum == 0) {
 				// we may have more than one number coming in
-				var parts = val.split(" ");
+				var parts = this.toarray(val);
 				// extract the first number
 				var add = parseFloat(parts[0]);
 				// use the second number to set the multiplier
