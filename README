@@ -3,9 +3,9 @@ WebPd
 
 WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) audio patches to run in the browser without plugins. Right now the focus is on DSP objects, to enable you to mock up audio engines in Pd, put them on the web, and control them with Javascript.
 
-Here are the [test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need the experimental Firefox Audio Data API builds from [here](https://wiki.mozilla.org/Audio_Data_API#Obtaining_Code_and_Builds). More information about the [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available online.
+Here are the [test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need Firefox version 4. You can search for Firefox 4 and download it from the [Mozilla homepage](http://www.mozilla.org/). More information about the Firefox [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available.
 
-This is changing very fast right now and new FireFox builds are coming out every day. If you want to keep abreast of the latest changes, here is the WebPd mailing list: <http://groups.google.com/group/web-pure-data/>. You might also like to check [my blog](http://mccormick.cx/news).
+If you want to keep abreast of the latest changes, here is the WebPd Google Code page. You might also like to check [my blog](http://mccormick.cx/news).
 
 Copyright [Chris McCormick](http://mccormick.cx/), 2010. [Licensed under the terms of the AGPLv3 or a later version of that license](COPYING).
 
@@ -17,7 +17,7 @@ Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_docu
 Contributing
 ------------
 
-Right now I'm really looking for people to contribute DSP/audio objects (or 'tilde' objects with names ending with '~'). The messaging side of Pd is not yet implemented. Here's how you can contribute code:
+Right now I'm really looking for people to contribute DSP/audio objects (or 'tilde' objects with names ending with '~'). The messaging side of Pd is only partially implemented. Here's how you can contribute code:
 
  * Get the source code (see below).
  * Browse to 'tests.html' in the webpd directory and have a look at the existing tests.
