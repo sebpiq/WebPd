@@ -53,7 +53,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	this.loadcallback = null;
 	
 	// regular expression for finding valid lines of Pd in a file
-	var lines_re = new RegExp('(#((.|\n)*?));\n',"gi");
+	var lines_re = new RegExp('(#((.|\r|\n)*?));\r{0,1}\n',"gi");
 	// regular expression for finding dollarargs
 	this.dollarmatch = /(?:\\{0,1}\$)(\d+)/g;
 	// regular expression for delimiting messages
@@ -92,10 +92,10 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		// last table name to add samples to
 		var lastTable = null;
 		for (var l in matches) {
-			// chop off the semicolon and carriage return
-			matches[l] = matches[l].substr(0, matches[l].length - 2)
-			// split this found line into tokens (on space and carriage return)
-			var tokens = matches[l].split(/ |\n/);
+			// chop off the semicolon and end-of-line
+			matches[l] = matches[l].split(/;\r{0,1}\n/)[0];
+			// split this found line into tokens (on space and line break)
+			var tokens = matches[l].split(/ |\r\n?|\n/);
 			this.debug("" + tokens);
 			// if we've found a create token
 			if (tokens[0] == "#X") {

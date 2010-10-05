@@ -1,0 +1,8 @@
+#N canvas 83 137 483 292 12;
+#X obj 7 6 loadbang;
+#X msg 7 31 this is a very very long message hopefully with internal
+linebreaks etcetera blah blah blah blah blah hello hello 1 2 3 4 5
+ping pong foo bar yo!;
+#X obj 7 88 print;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
