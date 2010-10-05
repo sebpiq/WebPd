@@ -950,6 +950,19 @@ var PdObjects = {
 		},
 	},
 	
+	//frequency to midi in the dsp domain
+	"ftom~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+					this.outletbuffer[0][i] = (f > 0 ? (17.3123405046 * Math.log(.12231220585 * f)) : -1500);
+			}
+		},
+	},
+	
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
