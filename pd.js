@@ -975,6 +975,19 @@ var PdObjects = {
 		},
 	},
 	
+	//dsp absolute value
+	"abs~": {
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+		    var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				this.outletbuffer[0][i] = (f >= 0 ? f : -f);
+			}
+		},
+	},
+	
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
