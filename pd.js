@@ -1174,9 +1174,6 @@ var PdObjects = {
 
 	// dsp power object
 	"pow~": {
-	    "defaultinlets":2,
-		"defaultoutlets":1,
-		"description":"Outputs left inlet raised to the power of right inlet.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
 		"init": function() {
@@ -1198,6 +1195,39 @@ var PdObjects = {
 					} else {
 					this.outletbuffer[0][i] = 0;
 					}
+			}
+		},
+	},
+	
+	// dsp log e
+	"log~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"computes the logarithm of the left inlet, to the base 'e' (about 2.718), or to another base specified by the inlet or a cration argument.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+		"init": function() {
+			// argument sets right inlet constant value
+			// PD does not actually support an argument for [log~]
+			// but it's helpfile says it does, so I left it in. --bj
+			if (this.args.length >= 6) {
+				this.inletbuffer[1][0] = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				var g = i2[i % i2.length];
+				if (f <= 0) {
+				    //rather than blow up, output a number
+				    this.outletbuffer[0][i] = -1000;
+					} else if (g <= 0) {
+					    this.outletbuffer[0][i] = Math.log(f);
+					} else {
+					    this.outletbuffer[0][i] = (Math.log(f) / Math.log(g));
+					}	
 			}
 		},
 	},
