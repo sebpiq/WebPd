@@ -1299,6 +1299,27 @@ var PdObjects = {
 		},
 	},
 	
+	// dsp convert rms to db
+	"rmstodb~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert rms to db.",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= 0) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					g = 100 + (8.6858896380652 * Math.log(f));
+					this.outletbuffer[0][i] = (g < 0 ? 0 : g);
+				}
+			}
+		},
+	},
+	
 	
 
 	/************************** Non-DSP objects ******************************/
