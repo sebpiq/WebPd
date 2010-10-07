@@ -850,6 +850,9 @@ var PdObjects = {
 	
 	//frequency to midi in the dsp domain
 	"ftom~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Converts frequency to midi pitch values.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
@@ -965,6 +968,9 @@ var PdObjects = {
 	
 	// dsp cosine
 	"cos~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Returns the cosine of the input.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
@@ -977,6 +983,9 @@ var PdObjects = {
 	
 	//dsp absolute value
 	"abs~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Returns the absolute value of the input.",
 	    "outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
@@ -990,6 +999,9 @@ var PdObjects = {
 	
 	// dsp wrap
 	"wrap~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Wraps a signal value between 0 and 1.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
@@ -1002,6 +1014,9 @@ var PdObjects = {
 	
 	// convert float to signal
 	"sig~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert a float to a signal.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"init": function() {
@@ -1037,6 +1052,9 @@ var PdObjects = {
 	
     // dsp maximum object
     "max~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"Outputs the greater of two signals.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
 		"init": function() {
@@ -1056,6 +1074,9 @@ var PdObjects = {
 	
 	// dsp minimum object
     "min~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"Outputs the lesser of two signals.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
 		"init": function() {
@@ -1075,6 +1096,9 @@ var PdObjects = {
 	
 	// dsp clip object
 	"clip~": {
+	    "defaultinlets":3,
+		"defaultoutlets":1,
+		"description":"Clips a signal to a range.",
 		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"init": function() {
