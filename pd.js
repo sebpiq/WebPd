@@ -1837,6 +1837,47 @@ var PdObjects = {
 		}
 	},
 	
+		//switch object
+	"spigot": {
+		"defaultinlets":2,
+	        "defaultoutlets":1,
+	        "description":"open and close a switch",
+		"outletTypes": ["message"],
+		"init": function() {
+		
+		// do i have a numeric argument
+			if (this.args.length >= 6) {
+			        var tmp= parseInt(this.args[5]);
+			        if(parseInt(this.args[5]) && this.args[5]!=0){this.state = 1;			
+			} else {
+				this.state=0;
+			}
+		    }
+		},
+		"message": function(inletnum, message) {
+		
+		if (inletnum == 0 && this.state!=0) {	//if its open, just send the message	
+			this.sendmessage(0, message);
+			}
+		
+		if (inletnum == 1) {//set states
+		var state=parseInt(message);
+		 if(!isNaN(state)){ //is a valid int		        
+			if(state==0){
+		        this.state=0;
+			}else{ //non-zero
+		        this.state=1;
+			 }
+			}			
+			else{//it doesn't like bangs, etc
+			this.pd.log("error: inlet: expected float but got '" + message + "'");
+			}
+		     
+	           }
+		}	
+			
+		},
+		
 };
 
 // object name aliases
