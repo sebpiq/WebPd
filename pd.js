@@ -1174,7 +1174,7 @@ var PdObjects = {
 
 	// dsp power object
 	"pow~": {
-	    "defaultinlets":1,
+	    "defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"Outputs left inlet raised to the power of right inlet.",
 		"outletTypes": ["dsp"],
