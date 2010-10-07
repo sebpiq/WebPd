@@ -1340,7 +1340,7 @@ var PdObjects = {
 	
 	//  dsp sample and hold (triggered by a decrease in value)
 	"samphold~": {
-	    "defaultinlets":0,
+	    "defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"Sample left inlet when right inlet decreases in value.",
 		"init": function() {
