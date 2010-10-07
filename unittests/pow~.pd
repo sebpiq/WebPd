@@ -1,0 +1,12 @@
+#N canvas 386 300 450 300 12;
+#X obj 7 9 sig~ 21;
+#X obj 73 9 sig~ 2;
+#X obj 8 64 osc~;
+#X obj 9 93 dac~;
+#X obj 8 38 pow~;
+#X text 48 49 441 Hz;
+#X connect 0 0 4 0;
+#X connect 1 0 4 1;
+#X connect 2 0 3 0;
+#X connect 2 0 3 1;
+#X connect 4 0 2 0;
