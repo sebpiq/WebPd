@@ -1338,6 +1338,36 @@ var PdObjects = {
 	},
 	
 	
+	//  dsp sample and hold (triggered by a decrease in value)
+	"samphold~": {
+	    "defaultinlets":0,
+		"defaultoutlets":1,
+		"description":"Sample left inlet when right inlet decreases in value.",
+		"init": function() {
+		    this.lastin = 0;
+			this.lastout = 0;
+		},	
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+        "dsptick": function() {
+		    var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+			   var f = i1[i % i1.length];
+			   var g = i2[i % i2.length];
+			   var trig = g;
+			   if (trig < this.lastin) {
+			       var out = f;
+				   this.lastout = out;
+				} else {
+				   var out = this.lastout;
+				}   
+               this.outletbuffer[0][i] = out;
+               this.lastin = trig;
+			}
+		},
+	},
+	
 
 	/************************** Non-DSP objects ******************************/
 	
