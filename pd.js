@@ -1000,6 +1000,41 @@ var PdObjects = {
 		},
 	},
 	
+	// convert float to signal
+	"sig~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets constant value
+			if (this.args.length >= 6) {
+				this.sig = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			// write a constant value to our output buffer for every sample
+			for (var i=0; i<this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = this.sig;
+			}
+		},
+		
+		"message": function(inletnum, message) {
+			if (inletnum == 0) {
+				// get the individual pieces of the passed-in message
+				var parts = this.toarray(message);
+				// if this is a single valued message we want to output a constant value
+				if (parts.length == 1) {
+					// get the value out of the message
+					var newconst = parseFloat(parts[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newconst)) {
+						// bash our value to the value passed in
+						this.sig = newconst;
+					}
+				}
+			}
+		},
+	},
+	
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
