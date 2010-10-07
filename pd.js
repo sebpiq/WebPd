@@ -1276,6 +1276,28 @@ var PdObjects = {
 		},
 	},
 	
+	// dsp convert db to rms
+	"dbtorms~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert db to rms.",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= 0) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					if (f > 485) {
+						f = 485;
+					}
+					this.outletbuffer[0][i] = Math.exp(0.1151292546497 * (f - 100));
+				}
+			}
+		},
+	},
 	
 	
 
