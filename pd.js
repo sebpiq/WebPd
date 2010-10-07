@@ -1072,6 +1072,66 @@ var PdObjects = {
 			}
 		},
 	},
+	
+	// dsp clip object
+	"clip~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets constant value
+			if (this.args.length >= 7) {
+				this.low = parseFloat(this.args[5]);
+				this.hi = parseFloat(this.args[6]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+			    var f = i1[i % i1.length];
+				var low = this.low;
+				var hi = this.hi;
+				var out = f;
+				if (f<low){
+				    out = low;
+				} else if (f>hi){
+				      out = hi;
+				} else {
+				      out = f;
+				}	
+				this.outletbuffer[0][i] = out;
+			}
+		},
+		
+		"message": function(inletnum, message) {
+			if (inletnum == 1) {
+				// get the individual pieces of the passed-in message
+				var partslow = this.toarray(message);
+				// if this is a single valued message we want to output a constant value
+				if (partslow.length == 1) {
+					// get the value out of the message
+					var newlow = parseFloat(partslow[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newlow)) {
+						// bash our value to the value passed in
+						this.low = newlow;
+					}
+				} else if (inletnum == 2) {
+				      // get the individual pieces of the passed-in message
+				      var partshi = this.toarray(message);
+				      // if this is a single valued message we want to output a constant value
+				      if (partshi.length == 1) {
+					      // get the value out of the message
+					      var newhi = parseFloat(partshi[0]);
+					      // make sure the value is not bogus (do nothing if it is)
+					      if (!isNaN(newhi)) {
+						    // bash our value to the value passed in
+						    this.hi = newhi;
+						  }	
+					  }
+				  }
+			}
+		},
+	},
      
 	/************************** Non-DSP objects ******************************/
 	
