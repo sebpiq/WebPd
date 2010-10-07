@@ -1,0 +1,11 @@
+#N canvas 442 307 450 300 12;
+#X obj 68 9 noise~;
+#X obj 68 61 hip~;
+#X obj 68 86 dac~;
+#X obj 128 10 loadbang;
+#X msg 128 35 10000;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 1 0 2 1;
+#X connect 3 0 4 0;
+#X connect 4 0 1 1;

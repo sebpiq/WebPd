@@ -1369,6 +1369,77 @@ var PdObjects = {
 	},
 	
 
+	// 1-pole 1-zero hipass filter
+	"hip~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"1-pole 1-zero hipass filter",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets right inlet constant value
+			this.last = 0;
+			if (this.args.length >= 6) {
+			    this.hz = parseFloat(this.args[5]);
+				var f = this.hz
+				f = (f > 0 ? f : 0);
+				this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
+				if (this.coef < 0) {
+				    this.coef = 0;
+				} else if (this.coef > 1) {
+				    this.coef = 1;
+				}				    
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+			    if (this.coef < 1) {
+				        var next = (i1[i % i1.length]) + ((this.coef) * (this.last));
+					    this.outletbuffer[0][i] = (next - this.last);
+					    this.last = next;
+             	    if (this.last < .000001) {
+				        this.last = 0;
+				    }
+                } else {
+				    this.outletbuffer[0][i] = i1[i % i1.length];
+					this.last = 0;
+				    }
+			}
+		},	
+		"message": function(inletnum, message) {
+		    if (inletnum == 0) {
+			    var parts1 = this.toarray(message);
+				if (parts1[0] == "clear"){
+				 this.last = 0;   
+				}
+			}	
+				
+			if (inletnum == 1) {
+			    // get the individual pieces of the passed-in message
+				var parts = this.toarray(message);
+				// check for single value
+				if (parts.length == 1) {
+					// get the value out of the message
+					var newconst = parseFloat(parts[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newconst)) {
+						// bash our value to the value passed in
+						var f = newconst;
+				        f = (f > 0 ? f : 0);
+				        this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
+				        if (this.coef < 0) {
+				            this.coef = 0;
+				        } else if (this.coef > 1) {
+				            this.coef = 1;
+				        }	
+			        }
+				}
+			}	
+		},
+	},	
+			    
+
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
