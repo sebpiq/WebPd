@@ -878,7 +878,10 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			var length = this.table.data.length;
 			for (var i=0; i<this.pd.bufferSize; i++) {
-				this.outletbuffer[0][i] = this.table.data[Math.min(length - 1, Math.max(0, Math.round(i1[i % i1.length])))];
+				//this.outletbuffer[0][i] = this.table.data[Math.min(length - 1, Math.max(0, Math.round(i1[i % i1.length])))];
+				//Not sure if this is faster -bj
+				var s = Math.floor(i1[i % i1.length])
+				this.outletbuffer[0][i] = this.table.data[(s >= 0 ? (s > (length - 1) ? (length -1) : s) : 0)];
 			}
 		},
 	},
@@ -1316,6 +1319,20 @@ var PdObjects = {
 					g = 100 + (8.6858896380652 * Math.log(f));
 					this.outletbuffer[0][i] = (g < 0 ? 0 : g);
 				}
+			}
+		},
+	},
+	
+	// generate noise from -1 to 1
+	"noise~":{
+	    "defaultinlets":0,
+		"defaultoutlets":1,
+		"description":"White noise.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [],
+		"dsptick": function() {
+			for (var i=0; i<this.outletbuffer[0].length; i++) {
+				this.outletbuffer[0][i] = ((2 * Math.random()) - 1);
 			}
 		},
 	},
