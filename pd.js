@@ -988,6 +988,18 @@ var PdObjects = {
 		},
 	},
 	
+	// dsp wrap
+	"wrap~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i<this.outletbuffer[0].length; i++) {
+				this.outletbuffer[0][i] = (i1[i % i1.length])-(Math.floor(i1[i % i1.length]));
+			}
+		},
+	},
+	
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
