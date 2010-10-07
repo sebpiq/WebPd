@@ -1157,6 +1157,21 @@ var PdObjects = {
 		},
 	},
      
+	 //  dsp exp -- e to the power of input
+	"exp~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Returns e to the power of input.",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+		    var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = Math.exp(i1[i % i1.length]);
+			}
+		},
+	},
+
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
