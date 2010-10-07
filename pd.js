@@ -1255,6 +1255,28 @@ var PdObjects = {
 		},
 	},
 	
+	// dsp convert pow to db
+	"powtodb~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert power to db. 100db = 1 Power",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= 0) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					var g = 100 + (4.3429448190326 * Math.log(f));
+                    this.outletbuffer[0][i] = (g < 0 ? 0 : g);
+				}
+			}
+		},
+	},
+	
+	
 	
 
 	/************************** Non-DSP objects ******************************/
