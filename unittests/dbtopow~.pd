@@ -1,0 +1,10 @@
+#N canvas 448 279 450 300 12;
+#X obj 8 34 dbtopow~;
+#X obj 8 8 sig~ 126.44;
+#X obj 7 61 osc~;
+#X obj 7 86 dac~;
+#X text 45 61 about 440 hz;
+#X connect 0 0 2 0;
+#X connect 1 0 0 0;
+#X connect 2 0 3 0;
+#X connect 2 0 3 1;
