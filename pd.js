@@ -83,6 +83,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		}
 	}
 	
+	
 	/********************* Dealing with patches ************************/
 	
 	/** Parses a Pd file and creates a new DSP graph from it **/
@@ -848,6 +849,22 @@ var PdObjects = {
 		}
 	},
 	
+	//frequency to midi in the dsp domain
+	"ftom~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Converts frequency to midi pitch values.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+					this.outletbuffer[0][i] = (f > 0 ? (17.3123405046 * Math.log(.12231220585 * f)) : -1500);
+			}
+		},
+	},
+	
 	// read data from a table with no interpolation
 	"tabread~": {
 		"outletTypes": ["dsp"],
@@ -862,7 +879,10 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			var length = this.table.data.length;
 			for (var i=0; i<this.pd.bufferSize; i++) {
-				this.outletbuffer[0][i] = this.table.data[Math.min(length - 1, Math.max(0, Math.round(i1[i % i1.length])))];
+				//this.outletbuffer[0][i] = this.table.data[Math.min(length - 1, Math.max(0, Math.round(i1[i % i1.length])))];
+				//Not sure if this is faster -bj
+				var s = Math.floor(i1[i % i1.length])
+				this.outletbuffer[0][i] = this.table.data[(s >= 0 ? (s > (length - 1) ? (length -1) : s) : 0)];
 			}
 		},
 	},
@@ -950,19 +970,543 @@ var PdObjects = {
 		},
 	},
 	
-	//frequency to midi in the dsp domain
-	"ftom~": {
+	// dsp cosine
+	"cos~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Returns the cosine of the input.",
 		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i<this.outletbuffer[0].length; i++) {
+				this.outletbuffer[0][i] = Math.cos(2 * Math.PI * (i1[i % i1.length]));
+			}
+		},
+	},
+	
+	//dsp absolute value
+	"abs~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Returns the absolute value of the input.",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+		    var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				this.outletbuffer[0][i] = (f >= 0 ? f : -f);
+			}
+		},
+	},
+	
+	// dsp wrap
+	"wrap~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Wraps a signal value between 0 and 1.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i<this.outletbuffer[0].length; i++) {
+				this.outletbuffer[0][i] = (i1[i % i1.length])-(Math.floor(i1[i % i1.length]));
+			}
+		},
+	},
+	
+	// convert float to signal
+	"sig~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert a float to a signal.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets constant value
+			if (this.args.length >= 6) {
+				this.sig = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			// write a constant value to our output buffer for every sample
+			for (var i=0; i<this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = this.sig;
+			}
+		},
+		
+		"message": function(inletnum, message) {
+			if (inletnum == 0) {
+				// get the individual pieces of the passed-in message
+				var parts = this.toarray(message);
+				// if this is a single valued message we want to output a constant value
+				if (parts.length == 1) {
+					// get the value out of the message
+					var newconst = parseFloat(parts[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newconst)) {
+						// bash our value to the value passed in
+						this.sig = newconst;
+					}
+				}
+			}
+		},
+	},
+	
+    // dsp maximum object
+    "max~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"Outputs the greater of two signals.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+		"init": function() {
+			// argument sets right inlet constant value
+			if (this.args.length >= 6) {
+				this.inletbuffer[1][0] = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = (i1[i % i1.length] > i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
+			}
+		},
+	},
+	
+	// dsp minimum object
+    "min~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"Outputs the lesser of two signals.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+		"init": function() {
+			// argument sets right inlet constant value
+			if (this.args.length >= 6) {
+				this.inletbuffer[1][0] = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = (i1[i % i1.length] < i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
+			}
+		},
+	},
+	
+	// dsp clip object
+	"clip~": {
+	    "defaultinlets":3,
+		"defaultoutlets":1,
+		"description":"Clips a signal to a range.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets constant value
+			if (this.args.length >= 7) {
+				this.low = parseFloat(this.args[5]);
+				this.hi = parseFloat(this.args[6]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+			    var f = i1[i % i1.length];
+				var low = this.low;
+				var hi = this.hi;
+				var out = f;
+				if (f<low){
+				    out = low;
+				} else if (f>hi){
+				      out = hi;
+				} else {
+				      out = f;
+				}	
+				this.outletbuffer[0][i] = out;
+			}
+		},
+		
+		"message": function(inletnum, message) {
+			if (inletnum == 1) {
+				// get the individual pieces of the passed-in message
+				var partslow = this.toarray(message);
+				// if this is a single valued message we want to output a constant value
+				if (partslow.length == 1) {
+					// get the value out of the message
+					var newlow = parseFloat(partslow[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newlow)) {
+						// bash our value to the value passed in
+						this.low = newlow;
+					}
+				} else if (inletnum == 2) {
+				      // get the individual pieces of the passed-in message
+				      var partshi = this.toarray(message);
+				      // if this is a single valued message we want to output a constant value
+				      if (partshi.length == 1) {
+					      // get the value out of the message
+					      var newhi = parseFloat(partshi[0]);
+					      // make sure the value is not bogus (do nothing if it is)
+					      if (!isNaN(newhi)) {
+						    // bash our value to the value passed in
+						    this.hi = newhi;
+						  }	
+					  }
+				  }
+			}
+		},
+	},
+     
+	 //  dsp exp object -- e to the power of input
+	"exp~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Returns e to the power of input.",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+		    var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				this.outletbuffer[0][i] = Math.exp(i1[i % i1.length]);
+			}
+		},
+	},
+
+	// dsp power object
+	"pow~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+		"init": function() {
+			// argument sets right inlet constant value
+			// PD does not actually support an argument for [pow~]
+			// but it's helpfile says it does, so I left it in. --bj
+			if (this.args.length >= 6) {
+				this.inletbuffer[1][0] = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				var g = i2[i % i2.length];
+				if (f > 0) {
+				    this.outletbuffer[0][i] = Math.pow(f, g);
+					} else {
+					this.outletbuffer[0][i] = 0;
+					}
+			}
+		},
+	},
+	
+	// dsp log e
+	"log~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"computes the logarithm of the left inlet, to the base 'e' (about 2.718), or to another base specified by the inlet or a cration argument.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+		"init": function() {
+			// argument sets right inlet constant value
+			// PD does not actually support an argument for [log~]
+			// but it's helpfile says it does, so I left it in. --bj
+			if (this.args.length >= 6) {
+				this.inletbuffer[1][0] = parseFloat(this.args[5]);
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				var g = i2[i % i2.length];
+				if (f <= 0) {
+				    //rather than blow up, output a number
+				    this.outletbuffer[0][i] = -1000;
+					} else if (g <= 0) {
+					    this.outletbuffer[0][i] = Math.log(f);
+					} else {
+					    this.outletbuffer[0][i] = (Math.log(f) / Math.log(g));
+					}	
+			}
+		},
+	},
+	
+	// dsp convert db to pow
+	"dbtopow~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert db to power. 100db = 1 Power",
+	    "outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i < this.pd.bufferSize; i++) {
 				var f = i1[i % i1.length];
-					this.outletbuffer[0][i] = (f > 0 ? (17.3123405046 * Math.log(.12231220585 * f)) : -1500);
+				if (f <= 0) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					if (f > 870) {
+						f = 870;
+					}
+					this.outletbuffer[0][i] = Math.exp(0.2302585092994 * (f-100));
+				}
 			}
 		},
 	},
 	
+	// dsp convert pow to db
+	"powtodb~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert power to db. 100db = 1 Power",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= 0) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					var g = 100 + (4.3429448190326 * Math.log(f));
+                    this.outletbuffer[0][i] = (g < 0 ? 0 : g);
+				}
+			}
+		},
+	},
+	
+	// dsp convert db to rms
+	"dbtorms~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert db to rms.",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= 0) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					if (f > 485) {
+						f = 485;
+					}
+					this.outletbuffer[0][i] = Math.exp(0.1151292546497 * (f - 100));
+				}
+			}
+		},
+	},
+	
+	// dsp convert rms to db
+	"rmstodb~": {
+	    "defaultinlets":1,
+		"defaultoutlets":1,
+		"description":"Convert rms to db.",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var f = i1[i % i1.length];
+				if (f <= 0) {
+					this.outletbuffer[0][i] = 0;
+				} else {
+					g = 100 + (8.6858896380652 * Math.log(f));
+					this.outletbuffer[0][i] = (g < 0 ? 0 : g);
+				}
+			}
+		},
+	},
+	
+	// generate noise from -1 to 1
+	"noise~":{
+	    "defaultinlets":0,
+		"defaultoutlets":1,
+		"description":"White noise.",
+		"outletTypes": ["dsp"],
+		"dspinlets": [],
+		"dsptick": function() {
+			for (var i=0; i<this.outletbuffer[0].length; i++) {
+				this.outletbuffer[0][i] = ((2 * Math.random()) - 1);
+			}
+		},
+	},
+	
+	
+	//  dsp sample and hold (triggered by a decrease in value)
+	"samphold~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"Sample left inlet when right inlet decreases in value.",
+		"init": function() {
+		    this.lastin = 0;
+			this.lastout = 0;
+		},	
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0, 1],
+        "dsptick": function() {
+		    var i1 = this.inletbuffer[0];
+			var i2 = this.inletbuffer[1];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+			   var f = i1[i % i1.length];
+			   var g = i2[i % i2.length];
+			   var trig = g;
+			   if (trig < this.lastin) {
+			       var out = f;
+				   this.lastout = out;
+				} else {
+				   var out = this.lastout;
+				}   
+               this.outletbuffer[0][i] = out;
+               this.lastin = trig;
+			}
+		},
+	},
+	
+
+	// 1-pole 1-zero hipass filter
+	"hip~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"1-pole 1-zero hipass filter",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets right inlet constant value
+			this.last = 0;
+			if (this.args.length >= 6) {
+			    this.hz = parseFloat(this.args[5]);
+				var f = this.hz
+				f = (f > 0 ? f : 0);
+				this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
+				if (this.coef < 0) {
+				    this.coef = 0;
+				} else if (this.coef > 1) {
+				    this.coef = 1;
+				}				    
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+			    if (this.coef < 1) {
+				        var next = (i1[i % i1.length]) + ((this.coef) * (this.last));
+					    this.outletbuffer[0][i] = (next - this.last);
+					    this.last = next;
+             	    if (this.last < .00000000001) {
+				        this.last = 0;
+				    }
+                } else {
+				    this.outletbuffer[0][i] = i1[i % i1.length];
+					this.last = 0;
+				    }
+			}
+		},	
+		"message": function(inletnum, message) {
+		    if (inletnum == 0) {
+			    var parts1 = this.toarray(message);
+				if (parts1[0] == "clear"){
+				 this.last = 0;   
+				}
+			}	
+				
+			if (inletnum == 1) {
+			    // get the individual pieces of the passed-in message
+				var parts = this.toarray(message);
+				// check for single value
+				if (parts.length == 1) {
+					// get the value out of the message
+					var newconst = parseFloat(parts[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newconst)) {
+						// bash our value to the value passed in
+						var f = newconst;
+				        f = (f > 0 ? f : 0);
+				        this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
+				        if (this.coef < 0) {
+				            this.coef = 0;
+				        } else if (this.coef > 1) {
+				            this.coef = 1;
+				        }	
+			        }
+				}
+			}	
+		},
+	},	
+			    
+    // 1-pole 1-zero lopass filter
+	"lop~": {
+	    "defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"1-pole 1-zero lopass filter",
+	    "outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"init": function() {
+			// argument sets right inlet constant value
+			this.last = 0;
+			if (this.args.length >= 6) {
+			    this.hz = parseFloat(this.args[5]);
+				var f = this.hz
+				f = (f > 0 ? f : 0);
+				this.coef = (f * (2 * 3.14159) / this.pd.sampleRate);
+				if (this.coef < 0) {
+				    this.coef = 0;
+				} else if (this.coef > 1) {
+				    this.coef = 1;
+				}				    
+			}
+		},
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
+			for (var i=0; i < this.pd.bufferSize; i++) {
+				var output = ((this.coef * i1[i % i1.length]) + ((1-this.coef) * this.last));
+			    this.outletbuffer[0][i] = output;
+				this.last = output;
+                if (this.last < .00000000001) {
+			        this.last = 0;
+		        }
+			}
+		},	
+		"message": function(inletnum, message) {
+		    if (inletnum == 0) {
+			    var parts1 = this.toarray(message);
+				if (parts1[0] == "clear"){
+				 this.last = 0;   
+				}
+			}	
+				
+			if (inletnum == 1) {
+			    // get the individual pieces of the passed-in message
+				var parts = this.toarray(message);
+				// check for single value
+				if (parts.length == 1) {
+					// get the value out of the message
+					var newconst = parseFloat(parts[0]);
+					// make sure the value is not bogus (do nothing if it is)
+					if (!isNaN(newconst)) {
+						// bash our value to the value passed in
+						var f = newconst;
+				        f = (f > 0 ? f : 0);
+				        this.coef = (f * ((2 * 3.14159) / this.pd.sampleRate));
+				        if (this.coef < 0) {
+				            this.coef = 0;
+				        } else if (this.coef > 1) {
+				            this.coef = 1;
+				        }	
+			        }
+				}
+			}	
+		},
+	},	
+		
+	
+		
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
@@ -1250,12 +1794,97 @@ var PdObjects = {
 		},
 	},
 
+	//bang on a conditional match
+	"select": { 
+		"defaultinlets":2,
+	        "defaultoutlets":2,
+	        "description":"bang on a conditional match",
+		"outletTypes": ["message"],
+		"init": function() {
+			// do i have a default argument
+			if (this.args.length >= 6) {
+			        var arr=this.args;
+			        arr.splice(0,5);//remove other crap
+				this.matches = arr;
+			} else {
+				this.matches = ["0"];//default 0
+			}
+		},
+		"message": function(inletnum, val) {
+		// right inlet changes match values
+			if (inletnum == 1) {
+			var arr=val.split(' ');
+			this.matches=arr;
+			}
+			
+			//left inlet tests match
+			if (inletnum == 0) {
+			
+			//convert incoming val to a string
+			val=''+val+''; var found=0;
+			for(var i in this.matches){
+			  if(val==this.matches[i]){ 
+			      this.sendmessage(0, "bang"); //on match, output bang to left outlet
+			      found=1; break;
+			  }
+			}
+			if(found==0){this.sendmessage(1, val);//TODO:2nd outlet not working notworking, graph bug i think
+			 }//output non matches to right outlet
+			
+			
+			}
+			
+		}
+	},
+	
+		//switch object
+	"spigot": {
+		"defaultinlets":2,
+	        "defaultoutlets":1,
+	        "description":"open and close a switch",
+		"outletTypes": ["message"],
+		"init": function() {
+		
+		// do i have a numeric argument
+			if (this.args.length >= 6) {
+			        var tmp= parseInt(this.args[5]);
+			        if(parseInt(this.args[5]) && this.args[5]!=0){this.state = 1;			
+			} else {
+				this.state=0;
+			}
+		    }
+		},
+		"message": function(inletnum, message) {
+		
+		if (inletnum == 0 && this.state!=0) {	//if its open, just send the message	
+			this.sendmessage(0, message);
+			}
+		
+		if (inletnum == 1) {//set states
+		var state=parseInt(message);
+		 if(!isNaN(state)){ //is a valid int		        
+			if(state==0){
+		        this.state=0;
+			}else{ //non-zero
+		        this.state=1;
+			 }
+			}			
+			else{//it doesn't like bangs, etc
+			this.pd.log("error: inlet: expected float but got '" + message + "'");
+			}
+		     
+	           }
+		}	
+			
+		},
+		
 };
 
 // object name aliases
 PdObjects.r = PdObjects.receive;
 PdObjects.t = PdObjects.trigger;
 PdObjects.f = PdObjects.float;
+PdObjects.sel = PdObjects.select;
 
 /********************************
 	Helper functions
