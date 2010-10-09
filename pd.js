@@ -1795,46 +1795,35 @@ var PdObjects = {
 	},
 
 	//bang on a conditional match
-	"select": { 
-		"defaultinlets":2,
-	        "defaultoutlets":2,
-	        "description":"bang on a conditional match",
-		"outletTypes": ["message"],
-		"init": function() {
-			// do i have a default argument
-			if (this.args.length >= 6) {
-			        var arr=this.args;
-			        arr.splice(0,5);//remove other crap
-				this.matches = arr;
-			} else {
-				this.matches = ["0"];//default 0
+	"select":{
+		"outletTypes": [],
+		"preinit": function() {
+			this.matches = this.args.slice(5);
+			for (var m=0; m<this.matches.length; m++)
+				this.outletTypes.push("message");
+		},
+		"message": function(inletnum, message) {
+		    // right inlet changes match values
+			if (inletnum == 1) {
+			    var arr=message.split(' ');
+			    this.matches=arr;
+			}
+			if(inletnum == 0){
+				var hits = 0;
+			    for (var m=0; m<this.matches.length; m++) {
+				    var matchesindex = (this.matches.length - m - 1);
+				    var out = message;
+				    if (this.matches[matchesindex] == out){
+					    this.sendmessage(matchesindex, "bang");
+					    hits++; 
+				    } 
+					//this part doesn't work
+					if(hits==0){
+					    this.sendmessage(this.matches.length, message);
+					}	
+				}	
 			}
 		},
-		"message": function(inletnum, val) {
-		// right inlet changes match values
-			if (inletnum == 1) {
-			var arr=val.split(' ');
-			this.matches=arr;
-			}
-			
-			//left inlet tests match
-			if (inletnum == 0) {
-			
-			//convert incoming val to a string
-			val=''+val+''; var found=0;
-			for(var i in this.matches){
-			  if(val==this.matches[i]){ 
-			      this.sendmessage(0, "bang"); //on match, output bang to left outlet
-			      found=1; break;
-			  }
-			}
-			if(found==0){this.sendmessage(1, val);//TODO:2nd outlet not working notworking, graph bug i think
-			 }//output non matches to right outlet
-			
-			
-			}
-			
-		}
 	},
 	
 		//switch object
