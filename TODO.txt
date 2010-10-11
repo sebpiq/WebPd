@@ -1,4 +1,8 @@
-* fromString method for constructing patches programmatically
+* fix [sel]
+* fix [random] and [noise~] (use Pd's algorithm)
+* send proximity-to-line code to spencer
+* create the metro object as an example for timer objects
 * connection fanning - make inlet/outlet holders be arrays
+* fromString method for constructing patches programmatically
 * sample accurate messages - give some messages a timestamp if they are to be executed at a certain time. in objects like [vline~] only execute them at that time
 * 'callback' receivers which send data outside Pd, like in pd-for-android
