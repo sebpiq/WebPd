@@ -633,7 +633,14 @@ var PdObjects = {
 					this.sendmessage(0, this.value);
 				}
 			} else {
-				// TODO: inlet two sets the value
+			    //inlet two sets the value
+			    var atoms = this.toarray(message);
+				var firstfloat = parseFloat(atoms[0]);
+				if(isNaN(firstfloat)){
+				    this.pd.log("error: float: right inlet no method for'" + atoms[0] + "'"); 
+				} else{
+				    this.value = firstfloat;
+				}	
 			}
 		}
 	},
@@ -1011,7 +1018,9 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i<this.outletbuffer[0].length; i++) {
-				this.outletbuffer[0][i] = (i1[i % i1.length])-(Math.floor(i1[i % i1.length]));
+			    f = i1[i % i1.length];
+				k = Math.floor(f);
+				this.outletbuffer[0][i] = f - k;
 			}
 		},
 	},
@@ -1037,20 +1046,16 @@ var PdObjects = {
 		},
 		
 		"message": function(inletnum, message) {
-			if (inletnum == 0) {
-				// get the individual pieces of the passed-in message
-				var parts = this.toarray(message);
-				// if this is a single valued message we want to output a constant value
-				if (parts.length == 1) {
-					// get the value out of the message
-					var newconst = parseFloat(parts[0]);
-					// make sure the value is not bogus (do nothing if it is)
-					if (!isNaN(newconst)) {
-						// bash our value to the value passed in
-						this.sig = newconst;
-					}
-				}
-			}
+			// get the individual pieces of the passed-in message
+			var parts = this.toarray(message);
+			// get the value out of the message
+			var newconst = parseFloat(parts[0]);
+			// make sure the value is not bogus 
+			if (!isNaN(newconst)) {
+				this.sig = newconst;
+			} else {
+			    this.pd.log("error: sig~: no method for '" + atoms[0] + "'");
+			}	
 		},
 	},
 	
@@ -1116,13 +1121,13 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i < this.pd.bufferSize; i++) {
 			    var f = i1[i % i1.length];
-				var low = this.low;
-				var hi = this.hi;
+				//var low = this.low;
+				//var hi = this.hi;
 				var out = f;
-				if (f<low){
-				    out = low;
-				} else if (f>hi){
-				      out = hi;
+				if (f<this.low){
+				    out = this.low;
+				} else if (f>this.hi){
+				      out = this.hi;
 				} else {
 				      out = f;
 				}	
@@ -1135,28 +1140,34 @@ var PdObjects = {
 				// get the individual pieces of the passed-in message
 				var partslow = this.toarray(message);
 				// if this is a single valued message we want to output a constant value
-				if (partslow.length == 1) {
+				if (partslow.length >= 1) {
 					// get the value out of the message
 					var newlow = parseFloat(partslow[0]);
-					// make sure the value is not bogus (do nothing if it is)
+					var newhi = parseFloat(partslow[1]);
+					// make sure the value is not bogus
 					if (!isNaN(newlow)) {
-						// bash our value to the value passed in
 						this.low = newlow;
-					}
+					} else {
+					    this.pd.log("error: clip~: no method for '" + partslow[0] + "'");
+					}	
+					if(!inNaN(newhi)){
+					    this.hi = newhi;
+					} else {
+ 					    this.pd.log("error: sig~: no method for '" + partslow[1] + "'");
+					}	
 				} else if (inletnum == 2) {
-				      // get the individual pieces of the passed-in message
-				      var partshi = this.toarray(message);
-				      // if this is a single valued message we want to output a constant value
-				      if (partshi.length == 1) {
-					      // get the value out of the message
-					      var newhi = parseFloat(partshi[0]);
-					      // make sure the value is not bogus (do nothing if it is)
-					      if (!isNaN(newhi)) {
-						    // bash our value to the value passed in
-						    this.hi = newhi;
-						  }	
-					  }
-				  }
+				    // get the individual pieces of the passed-in message
+				    var partshi = this.toarray(message);
+					// get the value out of the message
+				    var newhi = parseFloat(partshi[0]);
+			        // make sure the value is not bogus
+			        if (!isNaN(newhi)) {
+		  		        // bash our value to the value passed in
+				        this.hi = newhi;
+					} else {
+ 					    this.pd.log("error: sig~: no method for '" + partshi[0] + "'");
+					}	
+				}
 			}
 		},
 	},
@@ -1326,6 +1337,7 @@ var PdObjects = {
 	
 	// generate noise from -1 to 1
 	"noise~":{
+	//TODO: convert to actual algorithm that Pure Data uses	
 	    "defaultinlets":0,
 		"defaultoutlets":1,
 		"description":"White noise.",
@@ -1356,15 +1368,14 @@ var PdObjects = {
 			for (var i=0; i < this.pd.bufferSize; i++) {
 			   var f = i1[i % i1.length];
 			   var g = i2[i % i2.length];
-			   var trig = g;
-			   if (trig < this.lastin) {
+			   if (g < this.lastin) {
 			       var out = f;
 				   this.lastout = out;
 				} else {
 				   var out = this.lastout;
 				}   
                this.outletbuffer[0][i] = out;
-               this.lastin = trig;
+               this.lastin = g;
 			}
 		},
 	},
@@ -1384,7 +1395,7 @@ var PdObjects = {
 			    this.hz = parseFloat(this.args[5]);
 				var f = this.hz
 				f = (f > 0 ? f : 0);
-				this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
+				this.coef = (1 - (f * ((2 * Math.PI) / this.pd.sampleRate)));
 				if (this.coef < 0) {
 				    this.coef = 0;
 				} else if (this.coef > 1) {
@@ -1454,7 +1465,7 @@ var PdObjects = {
 			    this.hz = parseFloat(this.args[5]);
 				var f = this.hz
 				f = (f > 0 ? f : 0);
-				this.coef = (f * (2 * 3.14159) / this.pd.sampleRate);
+				this.coef = (f * (2 * Math.PI) / this.pd.sampleRate);
 				if (this.coef < 0) {
 				    this.coef = 0;
 				} else if (this.coef > 1) {
