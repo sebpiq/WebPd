@@ -1987,6 +1987,43 @@ var PdObjects = {
 			
 		},
 		
+		//generate a random number
+	"random": {
+	        "defaultinlets":2,
+	        "defaultoutlets":1,
+	        "description":"generate a random number",
+		"outletTypes": ["message"],
+		"init": function() {
+			// do i have a numeric argument
+			if (this.args.length >= 6) {
+				this.max = parseFloat(this.args[5]);
+			} else {
+				this.max = 1;
+			}
+		},
+		"message": function(inletnum, val) {
+			// right inlet changes value
+			if (inletnum == 1) {
+				var max = parseFloat(val);
+				// if this is a valid number, set our max
+				if (isNaN(max)) {
+					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+				} else {
+					this.max = max;
+				}
+			// left inlet outputs the random number
+			} 
+			else if (inletnum == 0) {
+
+		           var randomnum=Math.floor(Math.random()*this.max)
+				       //I moved this from log to debug -bj
+	                   this.pd.debug('random= '+randomnum+' from max='+this.max);
+	                     this.sendmessage(0, randomnum);
+			}
+		},
+	},
+	
+	
 };
 
 // object name aliases
