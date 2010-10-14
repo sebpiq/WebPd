@@ -1970,6 +1970,7 @@ var PdObjects = {
 			}
 		
 		if (inletnum == 1) {//set states
+		//TODO: add float input
 		var state=parseInt(message);
 		 if(!isNaN(state)){ //is a valid int		        
 			if(state==0){
@@ -2023,6 +2024,40 @@ var PdObjects = {
 		},
 	},
 	
+	//stores and outputs an integer
+	"int": {
+	        "defaultinlets":2,
+	        "defaultoutlets":1,
+	        "description":"store and output an integer",
+		"outletTypes": ["message"],
+		"init": function() {
+			this.value = parseInt(this.args[5]);
+			if (isNaN(this.value))
+				this.value = 0;
+		},
+		"message": function(inletnum, message) {
+			if (inletnum == 0) {
+				var atoms = this.toarray(message);
+				var firstint = parseInt(atoms[0]);
+				// the int object outputs it's value if it gets a bang
+				if (atoms[0] == "bang") {
+					this.sendmessage(0, this.value);
+				// if it gets some other symbol, throws an error
+				} else if (isNaN(firstint)) {
+					this.pd.log("error: int: no method for '" + atoms[0] + "'");
+				// if it gets a new value then it sets and outputs that value
+				} else {
+					this.value = firstint;
+					this.sendmessage(0, this.value);
+				}
+			} else {
+				// inlet two sets the value
+				var atoms = this.toarray(message);
+				var firstint = parseInt(atoms[0]);
+				if (!isNaN(firstint)) { this.value = firstint;}
+			}
+		}
+	},
 	
 };
 
@@ -2030,6 +2065,7 @@ var PdObjects = {
 PdObjects.r = PdObjects.receive;
 PdObjects.t = PdObjects.trigger;
 PdObjects.f = PdObjects.float;
+PdObjects.i = PdObjects.int;
 PdObjects.sel = PdObjects.select;
 
 /********************************
