@@ -1518,6 +1518,31 @@ var PdObjects = {
 		},
 	},	
 	
+	//BROKEN! this.input not being set in dsptick for some reason
+	//convert signal to float
+	"snapshot~": {
+	    "outletTypes": ["message"],
+		"dspinlets": [0],
+		"init": function() {
+		    this.input = 0;
+		},	
+		"dsptick": function() {
+		    var i1 = this.inletbuffer[0];
+	        for (var i=0; i < this.pd.bufferSize; i++) {
+			    this.input = i1[i % i1.length];
+			}
+		},
+		"message": function(inletnum, message) {
+			var atoms = this.toarray(message);
+			if (atoms[0] == "bang") {
+				this.sendmessage(0, this.input);
+			// if it gets some other symbol, throws an error
+			} else {
+				this.pd.log("error: snapshot~: no method for '" + atoms[0] + "'");
+				}
+		},
+	},	
+
 		
 	/************************** Non-DSP objects ******************************/
 	
@@ -1738,6 +1763,47 @@ var PdObjects = {
 		},
 	},
 	
+	// divide two numbers 
+	"/": {
+		"outletTypes": ["message"],
+		"init": function() {
+			// do i have a numeric argument
+			if (this.args.length >= 6) {
+				this.divisor = parseFloat(this.args[5]);
+			} else {
+				this.divisor = 0;
+			}
+		},
+		"message": function(inletnum, val) {
+			// right inlet changes value
+			if (inletnum == 1) {
+				var divisor = parseFloat(val);
+				// if this is a valid number, set our divisor
+				if (isNaN(divisor)) {
+					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+				} else {
+					this.divisor = divisor;
+				}
+			// left inlet outputs the division
+			} else if (inletnum == 0) {
+				var parts = this.toarray(val);
+				var div = parseFloat(parts[0]);
+				// use the second number to set the divisor
+				if (parts.length > 1 && !isNaN(div)) {
+					// if it's a valid number send to the second outlet
+					this.message(1, parts[1]);
+				}
+				// if it's a valid float, use it to output a division
+				if (isNaN(div)) {
+					this.pd.log("error: /: no method for '" + parts[0] + "'");
+				} else {
+				    var result = (this.divisor ? (div/this.divisor) : 0);
+					this.sendmessage(0, result);
+				}
+			}
+		},
+	},
+	
 	// add two numbers together
 	"+": {
 		"outletTypes": ["message"],
@@ -1775,6 +1841,48 @@ var PdObjects = {
 					this.pd.log("error: +: no method for '" + parts[0] + "'");
 				} else {
 					this.sendmessage(0, add + this.addition);
+				}
+			}
+		},
+	},
+	
+	// subtract two numbers 
+	"-": {
+		"outletTypes": ["message"],
+		"init": function() {
+			// do i have a numeric argument
+			if (this.args.length >= 6) {
+				this.subtraction = parseFloat(this.args[5]);
+			} else {
+				this.subtraction = 0;
+			}
+		},
+		"message": function(inletnum, val) {
+			// right inlet changes value
+			if (inletnum == 1) {
+				var subtract = parseFloat(val);
+				// if this is a valid number, set our subtract
+				if (isNaN(subtract)) {
+					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+				} else {
+					this.subtraction = subtract;
+				}
+			// left inlet outputs the subtraction
+			} else if (inletnum == 0) {
+				// we may have more than one number coming in
+				var parts = this.toarray(val);
+				// extract the first number
+				var subt = parseFloat(parts[0]);
+				// use the second number to set the subtractor
+				if (parts.length > 1 && !isNaN(subt)) {
+					// if it's a valid number send to the second outlet
+					this.message(1, parts[1]);
+				}
+				// if it's a valid float, use it to output a subtraction
+				if (isNaN(subt)) {
+					this.pd.log("error: -: no method for '" + parts[0] + "'");
+				} else {
+					this.sendmessage(0, subt - this.subtraction);
 				}
 			}
 		},
