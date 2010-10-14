@@ -83,7 +83,9 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		}
 	}
 	
-	
+	this.testbang = function(){
+	    this.send("test", "bang");
+	}	
 	/********************* Dealing with patches ************************/
 	
 	/** Parses a Pd file and creates a new DSP graph from it **/
@@ -1515,7 +1517,6 @@ var PdObjects = {
 			}	
 		},
 	},	
-		
 	
 		
 	/************************** Non-DSP objects ******************************/

@@ -18,6 +18,7 @@
 		function launch() {
 			tests = [
 				// basic functionality tests
+				'bang-button',
 				'test-no-such-file',
 				'test-0-bad-object',
 				'two-bad-objects',
@@ -103,7 +104,7 @@
 			var pdfile = document.location.href.split("?")[1];
 			if (pdfile) {
 				// add play an pause buttons
-				buttons.innerHTML += "<input type='button' value='play' onclick='javascript: pd.play();' /> <input type='button' value='pause' onclick='javascript: pd.stop();' />";
+				buttons.innerHTML += "<input type='button' value='play' onclick='javascript: pd.play();' /> <input type='button' value='pause' onclick='javascript: pd.stop();' /> <input type='button' value='bang' onclick='javascript: pd.testbang();' />";
 				
 				// information and graphic about this patch
 				contents.innerHTML = contents.innerHTML + "<h1>" + pdfile + "</h1><img src='unittests/" + pdfile + ".png'>";

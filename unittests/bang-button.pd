@@ -1,0 +1,8 @@
+#N canvas 420 253 450 300 12;
+#X obj 50 63 print;
+#X obj 78 31 r test;
+#X obj 5 5 loadbang;
+#X msg 5 30 Loaded;
+#X connect 1 0 0 0;
+#X connect 2 0 3 0;
+#X connect 3 0 0 0;
