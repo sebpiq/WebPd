@@ -2059,6 +2059,19 @@ var PdObjects = {
 		}
 	},
 	
+	//bang button object
+	"bang": {
+		"defaultinlets":1,
+	        "defaultoutlets":1,
+	        "description":"send a bang for any input",
+		"outletTypes": ["message"],
+		"init": function() {
+		},
+		"message": function(inletnum, message) {
+			this.sendmessage(0, "bang");
+			}
+		},
+	
 };
 
 // object name aliases
@@ -2067,6 +2080,8 @@ PdObjects.t = PdObjects.trigger;
 PdObjects.f = PdObjects.float;
 PdObjects.i = PdObjects.int;
 PdObjects.sel = PdObjects.select;
+PdObjects.bng = PdObjects.bang;
+
 
 /********************************
 	Helper functions
