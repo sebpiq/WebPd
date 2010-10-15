@@ -3,12 +3,17 @@
 	<link rel="stylesheet" href="style.css" type="text/css" media="screen">
 	<style>
 		#golden {
+		    margin: 2px;
+		    border: 1px solid darkblue;
 			color: blue;
 		}
 		#console {
-			border: 0px solid silver;
+		    margin: 2px;
+			border: 1px solid black;
 		}
 		#debug {
+		    margin: 2px;
+		    border: 1px solid red;
 			color: red;
 		}
 	</style>
@@ -124,7 +129,7 @@
 				// trigger the load of the expected unit tests output
 				MakeRequest("unittests/" + pdfile + ".txt", {"loadcomplete": function(result, request) {
 						if (request.status != 404) {
-							document.getElementById("golden").innerHTML = "---expected output---\n" + result;
+							document.getElementById("golden").innerHTML = "---EXPECTED OUTPUT---\n" + result;
 						}
 					}
 				});
@@ -149,11 +154,12 @@
 	<p>Copyright Chris McCormick, 2010.</p>
 	<p><a href='COPYING'>AGPLv3 Licensed.</a></p>
 	<p>You will need Firefox's "Audio Data API" builds from <a href='https://wiki.mozilla.org/Audio_Data_API#Obtaining_Code_and_Builds'>here</a>.</p>
+	
 	<div id='contents'></div>
 	<div id='interface'></div>
 	<div id='buttons'></div>
-	<pre id='golden'></pre>
 	<pre id='console'></pre>
+	<pre id='golden'></pre>
 	<pre id='debug'></pre>
 </body>
 </html>

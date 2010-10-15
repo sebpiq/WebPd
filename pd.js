@@ -1723,6 +1723,8 @@ var PdObjects = {
 		}
 	},
 	
+	
+	
 	// multiply two numbers together
 	"*": {
 		"outletTypes": ["message"],
@@ -1946,7 +1948,7 @@ var PdObjects = {
 		},
 	},
 	
-		//switch object
+	//switch object
 	"spigot": {
 		"defaultinlets":2,
 	        "defaultoutlets":1,
@@ -1988,7 +1990,7 @@ var PdObjects = {
 			
 		},
 		
-		//generate a random number
+	//generate a random number
 	"random": {
 	        "defaultinlets":2,
 	        "defaultoutlets":1,
@@ -2071,6 +2073,8 @@ var PdObjects = {
 			this.sendmessage(0, "bang");
 			}
 		},
+	
+   
 	
 };
 

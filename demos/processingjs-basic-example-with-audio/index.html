@@ -26,10 +26,10 @@ void setup(){
   size( 200, 200 );
   stroke(255); 
   strokeWeight( 10 );
-  frameRate( 20 );
+  frameRate( 30 );
   X = width / 2;
   Y = width / 2;
-  pd = new Pd(44100, 2205);
+  pd = new Pd(44100, 200);
   pd.load("patch.pd", pd.play);
 }
 
@@ -80,10 +80,10 @@ void setup(){
   size( 200, 200 );
   stroke(255); 
   strokeWeight( 10 );
-  frameRate( 20 );
+  frameRate( 30 );
   X = width / 2;
   Y = width / 2;
-  pd = new Pd(44100, 2205);
+  pd = new Pd(44100, 200);
   pd.load("patch.pd", pd.play);
 }
 
