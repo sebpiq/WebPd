@@ -1946,6 +1946,44 @@ var PdObjects = {
 		},
 	},
 	
+	//bang on a conditional match
+	"route":{
+		"outletTypes": [],
+		"preinit": function() {
+			this.matches = this.args.slice(5);
+			for (var m=0; m<=this.matches.length; m++){
+				this.outletTypes.push("message");
+			}	
+		},
+		"message": function(inletnum, message) {
+		    // right inlet changes match values
+			if (inletnum == 1) {
+			    this.matches=message.split(' ');
+			}
+			if(inletnum == 0){				
+				var hits=0;
+				// break up our message into atoms
+				var parts = this.toarray(message);
+			    for (var m=0; m<this.matches.length; m++) {
+				    var matchesindex = (this.matches.length - m - 1);
+				    if (this.matches[matchesindex] == message){
+						if(parts.length>1){
+							var out=this.parts.slice(1);
+						}
+						else{
+							var out="bang";
+						}	
+						hits++;
+					    this.sendmessage(matchesindex, out);
+				    }	
+				} 
+				if(hits==0){
+					this.sendmessage((this.matches.length), message);
+				}	
+			}
+		},
+	},
+	
 	//switch object
 	"spigot": {
 		"defaultinlets":2,
