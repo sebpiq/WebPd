@@ -1921,28 +1921,26 @@ var PdObjects = {
 		"outletTypes": [],
 		"preinit": function() {
 			this.matches = this.args.slice(5);
-			for (var m=0; m<this.matches.length; m++)
+			for (var m=0; m<=this.matches.length; m++){
 				this.outletTypes.push("message");
+			}	
 		},
 		"message": function(inletnum, message) {
 		    // right inlet changes match values
 			if (inletnum == 1) {
-			    var arr=message.split(' ');
-			    this.matches=arr;
+			    this.matches=message.split(' ');
 			}
 			if(inletnum == 0){
-				var hits = 0;
+				var hits=0;
 			    for (var m=0; m<this.matches.length; m++) {
 				    var matchesindex = (this.matches.length - m - 1);
-				    var out = message;
-				    if (this.matches[matchesindex] == out){
+				    if (this.matches[matchesindex] == message){
+						hits++;
 					    this.sendmessage(matchesindex, "bang");
-					    hits++; 
-				    } 
-					//this part doesn't work
-					if(hits==0){
-					    this.sendmessage(this.matches.length, message);
-					}	
+				    }	
+				} 
+				if(hits==0){
+					this.sendmessage((this.matches.length), message);
 				}	
 			}
 		},
