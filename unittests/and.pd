@@ -1,0 +1,28 @@
+#N canvas 175 92 450 300 12;
+#X obj 12 10 loadbang;
+#X obj 12 35 t b b b b b b;
+#X msg 12 60 0;
+#X msg 116 60 0;
+#X msg 185 60 0;
+#X msg 150 60 1;
+#X msg 81 60 1;
+#X msg 47 60 1;
+#X obj 87 131 print;
+#X obj 89 10 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 87 106 &&;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 1 1 7 0;
+#X connect 1 2 6 0;
+#X connect 1 3 3 0;
+#X connect 1 4 5 0;
+#X connect 1 5 4 0;
+#X connect 2 0 10 0;
+#X connect 3 0 10 0;
+#X connect 4 0 10 1;
+#X connect 5 0 10 0;
+#X connect 6 0 10 1;
+#X connect 7 0 10 0;
+#X connect 9 0 1 0;
+#X connect 10 0 8 0;

@@ -1,0 +1,19 @@
+#N canvas 620 92 450 300 12;
+#X obj 37 115 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+1;
+#X obj 37 135 print;
+#X obj 26 19 loadbang;
+#X obj 26 44 t b b b b;
+#X msg 45 72 0;
+#X msg 83 72 1;
+#X obj 137 24 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X connect 0 0 1 0;
+#X connect 2 0 3 0;
+#X connect 3 0 0 0;
+#X connect 3 1 4 0;
+#X connect 3 2 5 0;
+#X connect 3 3 0 0;
+#X connect 4 0 0 0;
+#X connect 5 0 0 0;
+#X connect 6 0 3 0;
