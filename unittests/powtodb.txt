@@ -1,0 +1,6 @@
+print: 130
+print: 120
+print: 110
+print: 100
+print: 0
+print: 0

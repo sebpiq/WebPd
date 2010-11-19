@@ -1,0 +1,5 @@
+
+reject: 2
+shoe: horn
+reject: drum
+horn: bang

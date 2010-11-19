@@ -1,0 +1,6 @@
+print: 1.5698
+print: 1.5608
+print: 1.47113
+print: 0.785398
+print: 0
+print: -0.785398

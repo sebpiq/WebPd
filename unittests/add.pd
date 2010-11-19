@@ -1,4 +1,4 @@
-#N canvas 760 123 450 300 10;
+#N canvas 574 123 450 300 10;
 #X obj 21 19 loadbang;
 #X msg 140 71 13;
 #X obj 21 133 print;

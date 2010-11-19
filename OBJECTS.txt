@@ -2,38 +2,38 @@ AUDIO MATH
 ----------
 
 > +~
-< -~
+> -~
 > *~
-< /~
-< max~
-< min~
-< clip~
+> /~
+> max~
+> min~
+> clip~
 < q8_rsqrt~
 < q8_sqrt~
-< wrap~
+> wrap~
 < fft~
 < ifft~
 < rfft~
 < rifft~
-< pow~
-< log~
-< exp~
-< abs~
+> pow~
+> log~
+> exp~
+> abs~
 < framp~
-< mtof~
-< ftom~
-< rmstodb~
-< dbtorms~
-< rmstopow~
-< powtorms~
+> mtof~
+> ftom~
+> rmstodb~
+> dbtorms~
+> rmstopow~
+> powtorms~
 
 AUDIO GLUE
 ----------
 
 > dac~
 < adc~
-< sig~
-< line~
+> sig~
+> line~
 < vline~
 < threshold~
 < snapshot~
@@ -53,10 +53,11 @@ AUDIO SOURCES
 -------------
 
 > phasor~
-< cos~
+> cos~
 > osc~
 < tabwrite~
 < tabplay~
+> tabread~
 < tabread4~
 < tabosc4~
 < tabsend~
@@ -66,13 +67,13 @@ AUDIO FILTERS
 -------------
 
 < vcf~
-< noise~
+> noise~
 < env~
-< hip~
-< lop~
+> hip~
+> lop~
 < bp~
 < biquad~
-< samphold~
+> samphold~
 < print~
 < rpole~
 < rzero~
@@ -89,7 +90,7 @@ AUDIO DELAY
 < vd~
 
 < pd
-< table
+> table
 < inlet
 < outlet
 < inlet~
@@ -103,13 +104,13 @@ GLUE
 < symbol
 < int
 < send, s
-< receive, r
-< select, sel
+> receive, r
+> select, sel
 < route
-< pack
-< unpack
-< trigger, t
-< spigot
+> pack
+> unpack
+> trigger, t
+> spigot
 < moses
 < until
 < print
@@ -134,9 +135,9 @@ TIME
 MATH
 ----
 
-< +
+> +
 < -
-< *
+> *
 < /
 < pow
 
@@ -213,7 +214,7 @@ TABLES
 MISC
 ----
 
-< loadbang
+> loadbang
 < serial
 < netsend
 < netreceive

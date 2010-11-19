@@ -5,7 +5,7 @@ body {
 }
 
 img {
-	border: 1px solid gray;
+	border: 1px solid black;
 }
 
 a {
@@ -22,9 +22,9 @@ a {
 
 .test {
 	float: left;
-	margin: 10px;
-	padding: 10px;
-	height: 200px;
+	margin: 20px;
+	padding: 1px;
+	height: 300px;
 	width: 323px;
 	text-align: center;
 	border: 1px solid silver;

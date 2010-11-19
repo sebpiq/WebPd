@@ -1,0 +1,4 @@
+reject: 2
+reject: 2
+print: bang
+print: bang

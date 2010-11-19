@@ -3,12 +3,17 @@
 	<link rel="stylesheet" href="style.css" type="text/css" media="screen">
 	<style>
 		#golden {
+		    margin: 2px;
+		    border: 1px solid darkblue;
 			color: blue;
 		}
 		#console {
-			border: 0px solid silver;
+		    margin: 2px;
+			border: 1px solid black;
 		}
 		#debug {
+		    margin: 2px;
+		    border: 1px solid red;
 			color: red;
 		}
 	</style>
@@ -18,6 +23,7 @@
 		function launch() {
 			tests = [
 				// basic functionality tests
+				'bang-button',
 				'test-no-such-file',
 				'test-0-bad-object',
 				'two-bad-objects',
@@ -25,7 +31,6 @@
 				'linebreaks',
 				
 				// message objects
-				'test-button',
 				'loadbang-into-print',
 				'loadbang-basic-message-print',
 				'loadbang-multi-message',
@@ -36,20 +41,62 @@
 				'trigger-naked-symbol',
 				'trigger-list',
 				'float-left-inlet',
+				'float-right-inlet',
 				'unpack',
 				'pack',
 				'multiply',
+				'divide',
 				'add',
+				'subtract',
 				'sel',
+				'sel2',
 				'spigot',
+				'count',
+				'random',
+				'int',
+				'bng',
+				'route_f',
+				'route_s',
+				//'metro',
+				'equals',
+				'not_equal',
+				'compare',
+				'toggle',
+				'change',
+				'mtof',
+				'min',
+				'max',
+				'exp',
+				'log',
+				'dbtorms',
+				'rmstodb',
+				'dbtopow',
+				'powtodb',
+				'ftom',
+				'atan',
+				'sqrt',
+				'abs',
+				'tan',
+				'cos',
+				'sin',
+				'wrap',
+				'div',
+				'mod',
+				'atan2',
+				'pow',
+				'moses',
+				'swap',
+				'or',
+				'and',
+				'clip',
 				
 				// dsp objects
 				'test-1-basic-osc',
 				'osc~-left-only',
 				'multiply~',
-				'divide',
+				'divide~',
 				'test-3-add',
-				'subtract',
+				'subtract~',
 				'test-4-multiply-constant',
 				'test-5-phasor',
 				'test-6-two-dacs',
@@ -89,7 +136,7 @@
 				'hip~msg',
 				'lop~',
 				'lop~msg',
-				'snapshot~'
+				'snapshot~',
 			];
 			var body = document.getElementsByTagName("body")[0];
 			var contents = document.getElementById('contents');
@@ -103,7 +150,7 @@
 			var pdfile = document.location.href.split("?")[1];
 			if (pdfile) {
 				// add play an pause buttons
-				buttons.innerHTML += "<input type='button' value='play' onclick='javascript: pd.play();' /> <input type='button' value='pause' onclick='javascript: pd.stop();' />";
+				buttons.innerHTML += "<input type='button' value='play' onclick='javascript: pd.play();' /> <input type='button' value='pause' onclick='javascript: pd.stop();' /> <input type='button' value='bang' onclick='javascript: pd.testbang();' />";
 				
 				// information and graphic about this patch
 				contents.innerHTML = contents.innerHTML + "<h1>" + pdfile + "</h1><img src='unittests/" + pdfile + ".png'>";
@@ -116,7 +163,7 @@
 				// trigger the load of the expected unit tests output
 				MakeRequest("unittests/" + pdfile + ".txt", {"loadcomplete": function(result, request) {
 						if (request.status != 404) {
-							document.getElementById("golden").innerHTML = "---expected output---\n" + result;
+							document.getElementById("golden").innerHTML = "---EXPECTED OUTPUT---\n" + result;
 						}
 					}
 				});
@@ -130,7 +177,7 @@
 				});
 			} else {
 				for (t in tests){
-					contents.innerHTML = contents.innerHTML + "<span class='test'><a href='?" + tests[t] + "'><p>" + tests[t] + "</p><img src='unittests/" + tests[t] + ".png'></a></span>";
+					contents.innerHTML = contents.innerHTML + "<span class='test'><a href='?" + tests[t] + "'><p>" + tests[t] + "</p><img src='unittests/" + tests[t] +  ".png'></a></span>";
 				}
 			}
 		}
@@ -141,11 +188,12 @@
 	<p>Copyright Chris McCormick, 2010.</p>
 	<p><a href='COPYING'>AGPLv3 Licensed.</a></p>
 	<p>You will need Firefox's "Audio Data API" builds from <a href='https://wiki.mozilla.org/Audio_Data_API#Obtaining_Code_and_Builds'>here</a>.</p>
+	
 	<div id='contents'></div>
 	<div id='interface'></div>
 	<div id='buttons'></div>
-	<pre id='golden'></pre>
 	<pre id='console'></pre>
+	<pre id='golden'></pre>
 	<pre id='debug'></pre>
 </body>
 </html>
