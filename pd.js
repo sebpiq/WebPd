@@ -53,7 +53,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	this.loadcallback = null;
 	
 	// regular expression for finding valid lines of Pd in a file
-	var lines_re = new RegExp('(#((.|\r|\n)*?));\r{0,1}\n',"gi");
+	var lines_re = new RegExp('(#((.|\r|\n)*?))\r{0,1}\n{0,1};\r{0,1}\n',"gi");
 	// regular expression for finding dollarargs
 	this.dollarmatch = /(?:\\{0,1}\$)(\d+)/g;
 	// regular expression for delimiting messages
