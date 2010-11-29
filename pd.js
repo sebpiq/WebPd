@@ -53,7 +53,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	this.loadcallback = null;
 	
 	// regular expression for finding valid lines of Pd in a file
-	var lines_re = new RegExp('(#((.|\r|\n)*?))\r{0,1}\n{0,1};\r{0,1}\n',"gi");
+	var lines_re = new RegExp("(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n", "gi");
 	// regular expression for finding dollarargs
 	this.dollarmatch = /(?:\\{0,1}\$)(\d+)/g;
 	// regular expression for delimiting messages
@@ -80,6 +80,8 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 					this.listeners[name][l].message(-1, val);
 				}
 			}
+		} else {
+			this.log("error: " + name + ": no such object");
 		}
 	}
 	
@@ -90,15 +92,12 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	
 	/** Parses a Pd file and creates a new DSP graph from it **/
 	this.parse = function(txt) {
-		// use our regular expression to match instances of valid Pd lines
-		var matches = txt.match(lines_re);
 		// last table name to add samples to
 		var lastTable = null;
-		for (var l in matches) {
-			// chop off the semicolon and end-of-line
-			matches[l] = matches[l].split(/;\r{0,1}\n/)[0];
+		// use our regular expression to match instances of valid Pd lines
+		while (pdline = lines_re.exec(txt)) {
 			// split this found line into tokens (on space and line break)
-			var tokens = matches[l].split(/ |\r\n?|\n/);
+			var tokens = pdline[1].split(/ |\r\n?|\n/);
 			this.debug("" + tokens);
 			// if we've found a create token
 			if (tokens[0] == "#X") {
