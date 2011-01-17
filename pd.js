@@ -86,7 +86,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	}
 	
 	this.testbang = function(){
-	    this.send("test", "bang");
+		this.send("test", "bang");
 	}	
 	/********************* Dealing with patches ************************/
 	
@@ -636,13 +636,13 @@ var PdObjects = {
 					this.sendmessage(0, this.value);
 				}
 			} else {
-			    //inlet two sets the value
-			    var atoms = this.toarray(message);
+				//inlet two sets the value
+				var atoms = this.toarray(message);
 				var firstfloat = parseFloat(atoms[0]);
 				if(isNaN(firstfloat)){
-				    this.pd.log("error: float: right inlet no method for'" + atoms[0] + "'"); 
+					this.pd.log("error: float: right inlet no method for'" + atoms[0] + "'"); 
 				} else{
-				    this.value = firstfloat;
+					this.value = firstfloat;
 				}	
 			}
 		}
@@ -861,7 +861,7 @@ var PdObjects = {
 	
 	//frequency to midi in the dsp domain
 	"ftom~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Converts frequency to midi pitch values.",
 		"outletTypes": ["dsp"],
@@ -982,7 +982,7 @@ var PdObjects = {
 	
 	// dsp cosine
 	"cos~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Returns the cosine of the input.",
 		"outletTypes": ["dsp"],
@@ -997,13 +997,13 @@ var PdObjects = {
 	
 	//dsp absolute value
 	"abs~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Returns the absolute value of the input.",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
-		    var i1 = this.inletbuffer[0];
+			var i1 = this.inletbuffer[0];
 			for (var i=0; i < this.pd.bufferSize; i++) {
 				var f = i1[i % i1.length];
 				this.outletbuffer[0][i] = (f >= 0 ? f : -f);
@@ -1013,7 +1013,7 @@ var PdObjects = {
 	
 	// dsp wrap
 	"wrap~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Wraps a signal value between 0 and 1.",
 		"outletTypes": ["dsp"],
@@ -1021,7 +1021,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i<this.outletbuffer[0].length; i++) {
-			    f = i1[i % i1.length];
+				f = i1[i % i1.length];
 				k = Math.floor(f);
 				this.outletbuffer[0][i] = f - k;
 			}
@@ -1030,7 +1030,7 @@ var PdObjects = {
 	
 	// convert float to signal
 	"sig~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Convert a float to a signal.",
 		"outletTypes": ["dsp"],
@@ -1057,14 +1057,14 @@ var PdObjects = {
 			if (!isNaN(newconst)) {
 				this.sig = newconst;
 			} else {
-			    this.pd.log("error: sig~: no method for '" + atoms[0] + "'");
+				this.pd.log("error: sig~: no method for '" + atoms[0] + "'");
 			}	
 		},
 	},
 	
-    // dsp maximum object
-    "max~": {
-	    "defaultinlets":2,
+	// dsp maximum object
+	"max~": {
+		"defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"Outputs the greater of two signals.",
 		"outletTypes": ["dsp"],
@@ -1085,8 +1085,8 @@ var PdObjects = {
 	},
 	
 	// dsp minimum object
-    "min~": {
-	    "defaultinlets":2,
+	"min~": {
+		"defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"Outputs the lesser of two signals.",
 		"outletTypes": ["dsp"],
@@ -1108,7 +1108,7 @@ var PdObjects = {
 	
 	// dsp clip object
 	"clip~": {
-	    "defaultinlets":3,
+		"defaultinlets":3,
 		"defaultoutlets":1,
 		"description":"Clips a signal to a range.",
 		"outletTypes": ["dsp"],
@@ -1123,16 +1123,16 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i < this.pd.bufferSize; i++) {
-			    var f = i1[i % i1.length];
+				var f = i1[i % i1.length];
 				//var low = this.low;
 				//var hi = this.hi;
 				var out = f;
 				if (f<this.low){
-				    out = this.low;
+					out = this.low;
 				} else if (f>this.hi){
-				      out = this.hi;
+					  out = this.hi;
 				} else {
-				      out = f;
+					  out = f;
 				}	
 				this.outletbuffer[0][i] = out;
 			}
@@ -1151,39 +1151,39 @@ var PdObjects = {
 					if (!isNaN(newlow)) {
 						this.low = newlow;
 					} else {
-					    this.pd.log("error: clip~: no method for '" + partslow[0] + "'");
+						this.pd.log("error: clip~: no method for '" + partslow[0] + "'");
 					}	
 					if(!inNaN(newhi)){
-					    this.hi = newhi;
+						this.hi = newhi;
 					} else {
- 					    this.pd.log("error: sig~: no method for '" + partslow[1] + "'");
+ 						this.pd.log("error: sig~: no method for '" + partslow[1] + "'");
 					}	
 				} else if (inletnum == 2) {
-				    // get the individual pieces of the passed-in message
-				    var partshi = this.toarray(message);
+					// get the individual pieces of the passed-in message
+					var partshi = this.toarray(message);
 					// get the value out of the message
-				    var newhi = parseFloat(partshi[0]);
-			        // make sure the value is not bogus
-			        if (!isNaN(newhi)) {
-		  		        // bash our value to the value passed in
-				        this.hi = newhi;
+					var newhi = parseFloat(partshi[0]);
+					// make sure the value is not bogus
+					if (!isNaN(newhi)) {
+		  				// bash our value to the value passed in
+						this.hi = newhi;
 					} else {
- 					    this.pd.log("error: sig~: no method for '" + partshi[0] + "'");
+ 						this.pd.log("error: sig~: no method for '" + partshi[0] + "'");
 					}	
 				}
 			}
 		},
 	},
-     
+	 
 	 //  dsp exp object -- e to the power of input
 	"exp~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Returns e to the power of input.",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
-		    var i1 = this.inletbuffer[0];
+			var i1 = this.inletbuffer[0];
 			for (var i=0; i < this.pd.bufferSize; i++) {
 				this.outletbuffer[0][i] = Math.exp(i1[i % i1.length]);
 			}
@@ -1209,7 +1209,7 @@ var PdObjects = {
 				var f = i1[i % i1.length];
 				var g = i2[i % i2.length];
 				if (f > 0) {
-				    this.outletbuffer[0][i] = Math.pow(f, g);
+					this.outletbuffer[0][i] = Math.pow(f, g);
 					} else {
 					this.outletbuffer[0][i] = 0;
 					}
@@ -1219,7 +1219,7 @@ var PdObjects = {
 	
 	// dsp log e
 	"log~": {
-	    "defaultinlets":2,
+		"defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"computes the logarithm of the left inlet, to the base 'e' (about 2.718), or to another base specified by the inlet or a cration argument.",
 		"outletTypes": ["dsp"],
@@ -1239,12 +1239,12 @@ var PdObjects = {
 				var f = i1[i % i1.length];
 				var g = i2[i % i2.length];
 				if (f <= 0) {
-				    //rather than blow up, output a number
-				    this.outletbuffer[0][i] = -1000;
+					//rather than blow up, output a number
+					this.outletbuffer[0][i] = -1000;
 					} else if (g <= 0) {
-					    this.outletbuffer[0][i] = Math.log(f);
+						this.outletbuffer[0][i] = Math.log(f);
 					} else {
-					    this.outletbuffer[0][i] = (Math.log(f) / Math.log(g));
+						this.outletbuffer[0][i] = (Math.log(f) / Math.log(g));
 					}	
 			}
 		},
@@ -1252,10 +1252,10 @@ var PdObjects = {
 	
 	// dsp convert db to pow
 	"dbtopow~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Convert db to power. 100db = 1 Power",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
@@ -1275,10 +1275,10 @@ var PdObjects = {
 	
 	// dsp convert pow to db
 	"powtodb~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Convert power to db. 100db = 1 Power",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
@@ -1288,7 +1288,7 @@ var PdObjects = {
 					this.outletbuffer[0][i] = 0;
 				} else {
 					var g = 100 + (4.3429448190326 * Math.log(f));
-                    this.outletbuffer[0][i] = (g < 0 ? 0 : g);
+					this.outletbuffer[0][i] = (g < 0 ? 0 : g);
 				}
 			}
 		},
@@ -1296,10 +1296,10 @@ var PdObjects = {
 	
 	// dsp convert db to rms
 	"dbtorms~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Convert db to rms.",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
@@ -1319,10 +1319,10 @@ var PdObjects = {
 	
 	// dsp convert rms to db
 	"rmstodb~": {
-	    "defaultinlets":1,
+		"defaultinlets":1,
 		"defaultoutlets":1,
 		"description":"Convert rms to db.",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
@@ -1341,7 +1341,7 @@ var PdObjects = {
 	// generate noise from -1 to 1
 	"noise~":{
 	//TODO: convert to actual algorithm that Pure Data uses	
-	    "defaultinlets":0,
+		"defaultinlets":0,
 		"defaultoutlets":1,
 		"description":"White noise.",
 		"outletTypes": ["dsp"],
@@ -1356,29 +1356,29 @@ var PdObjects = {
 	
 	//  dsp sample and hold (triggered by a decrease in value)
 	"samphold~": {
-	    "defaultinlets":2,
+		"defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"Sample left inlet when right inlet decreases in value.",
 		"init": function() {
-		    this.lastin = 0;
+			this.lastin = 0;
 			this.lastout = 0;
 		},	
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0, 1],
-        "dsptick": function() {
-		    var i1 = this.inletbuffer[0];
+		"dsptick": function() {
+			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
 			for (var i=0; i < this.pd.bufferSize; i++) {
 			   var f = i1[i % i1.length];
 			   var g = i2[i % i2.length];
 			   if (g < this.lastin) {
-			       var out = f;
+				   var out = f;
 				   this.lastout = out;
 				} else {
 				   var out = this.lastout;
 				}   
-               this.outletbuffer[0][i] = out;
-               this.lastin = g;
+			   this.outletbuffer[0][i] = out;
+			   this.lastin = g;
 			}
 		},
 	},
@@ -1386,52 +1386,52 @@ var PdObjects = {
 
 	// 1-pole 1-zero hipass filter
 	"hip~": {
-	    "defaultinlets":2,
+		"defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"1-pole 1-zero hipass filter",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"init": function() {
 			// argument sets right inlet constant value
 			this.last = 0;
 			if (this.args.length >= 6) {
-			    this.hz = parseFloat(this.args[5]);
+				this.hz = parseFloat(this.args[5]);
 				var f = this.hz
 				f = (f > 0 ? f : 0);
 				this.coef = (1 - (f * ((2 * Math.PI) / this.pd.sampleRate)));
 				if (this.coef < 0) {
-				    this.coef = 0;
+					this.coef = 0;
 				} else if (this.coef > 1) {
-				    this.coef = 1;
-				}				    
+					this.coef = 1;
+				}					
 			}
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i < this.pd.bufferSize; i++) {
-			    if (this.coef < 1) {
-				        var next = (i1[i % i1.length]) + ((this.coef) * (this.last));
-					    this.outletbuffer[0][i] = (next - this.last);
-					    this.last = next;
-             	    if (this.last < .00000000001) {
-				        this.last = 0;
-				    }
-                } else {
-				    this.outletbuffer[0][i] = i1[i % i1.length];
+				if (this.coef < 1) {
+						var next = (i1[i % i1.length]) + ((this.coef) * (this.last));
+						this.outletbuffer[0][i] = (next - this.last);
+						this.last = next;
+			 		if (this.last < .00000000001) {
+						this.last = 0;
+					}
+				} else {
+					this.outletbuffer[0][i] = i1[i % i1.length];
 					this.last = 0;
-				    }
+					}
 			}
 		},	
 		"message": function(inletnum, message) {
-		    if (inletnum == 0) {
-			    var parts1 = this.toarray(message);
+			if (inletnum == 0) {
+				var parts1 = this.toarray(message);
 				if (parts1[0] == "clear"){
 				 this.last = 0;   
 				}
 			}	
 				
 			if (inletnum == 1) {
-			    // get the individual pieces of the passed-in message
+				// get the individual pieces of the passed-in message
 				var parts = this.toarray(message);
 				// check for single value
 				if (parts.length == 1) {
@@ -1441,62 +1441,62 @@ var PdObjects = {
 					if (!isNaN(newconst)) {
 						// bash our value to the value passed in
 						var f = newconst;
-				        f = (f > 0 ? f : 0);
-				        this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
-				        if (this.coef < 0) {
-				            this.coef = 0;
-				        } else if (this.coef > 1) {
-				            this.coef = 1;
-				        }	
-			        }
+						f = (f > 0 ? f : 0);
+						this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
+						if (this.coef < 0) {
+							this.coef = 0;
+						} else if (this.coef > 1) {
+							this.coef = 1;
+						}	
+					}
 				}
 			}	
 		},
 	},	
-			    
-    // 1-pole 1-zero lopass filter
+				
+	// 1-pole 1-zero lopass filter
 	"lop~": {
-	    "defaultinlets":2,
+		"defaultinlets":2,
 		"defaultoutlets":1,
 		"description":"1-pole 1-zero lopass filter",
-	    "outletTypes": ["dsp"],
+		"outletTypes": ["dsp"],
 		"dspinlets": [0],
 		"init": function() {
 			// argument sets right inlet constant value
 			this.last = 0;
 			if (this.args.length >= 6) {
-			    this.hz = parseFloat(this.args[5]);
+				this.hz = parseFloat(this.args[5]);
 				var f = this.hz
 				f = (f > 0 ? f : 0);
 				this.coef = (f * (2 * Math.PI) / this.pd.sampleRate);
 				if (this.coef < 0) {
-				    this.coef = 0;
+					this.coef = 0;
 				} else if (this.coef > 1) {
-				    this.coef = 1;
-				}				    
+					this.coef = 1;
+				}					
 			}
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i < this.pd.bufferSize; i++) {
 				var output = ((this.coef * i1[i % i1.length]) + ((1-this.coef) * this.last));
-			    this.outletbuffer[0][i] = output;
+				this.outletbuffer[0][i] = output;
 				this.last = output;
-                if (this.last < .00000000001) {
-			        this.last = 0;
-		        }
+				if (this.last < .00000000001) {
+					this.last = 0;
+				}
 			}
 		},	
 		"message": function(inletnum, message) {
-		    if (inletnum == 0) {
-			    var parts1 = this.toarray(message);
+			if (inletnum == 0) {
+				var parts1 = this.toarray(message);
 				if (parts1[0] == "clear"){
 				 this.last = 0;   
 				}
 			}	
 				
 			if (inletnum == 1) {
-			    // get the individual pieces of the passed-in message
+				// get the individual pieces of the passed-in message
 				var parts = this.toarray(message);
 				// check for single value
 				if (parts.length == 1) {
@@ -1506,14 +1506,14 @@ var PdObjects = {
 					if (!isNaN(newconst)) {
 						// bash our value to the value passed in
 						var f = newconst;
-				        f = (f > 0 ? f : 0);
-				        this.coef = (f * ((2 * 3.14159) / this.pd.sampleRate));
-				        if (this.coef < 0) {
-				            this.coef = 0;
-				        } else if (this.coef > 1) {
-				            this.coef = 1;
-				        }	
-			        }
+						f = (f > 0 ? f : 0);
+						this.coef = (f * ((2 * 3.14159) / this.pd.sampleRate));
+						if (this.coef < 0) {
+							this.coef = 0;
+						} else if (this.coef > 1) {
+							this.coef = 1;
+						}	
+					}
 				}
 			}	
 		},
@@ -1775,7 +1775,7 @@ var PdObjects = {
 				if (isNaN(div)) {
 					this.pd.log("error: /: no method for '" + parts[0] + "'");
 				} else {
-				    var result = (this.divisor ? (div/this.divisor) : 0);
+					var result = (this.divisor ? (div/this.divisor) : 0);
 					this.sendmessage(0, result);
 				}
 			}
@@ -1872,7 +1872,7 @@ var PdObjects = {
 				if (isNaN(div)) {
 					this.pd.log("error: mod: no method for '" + parts[0] + "'");
 				} else {
-				    var result = div % this.divisor;
+					var result = div % this.divisor;
 					if(result<0){
 						result=Math.ceil(result);
 					}
@@ -2057,18 +2057,18 @@ var PdObjects = {
 			}	
 		},
 		"message": function(inletnum, message) {
-		    // right inlet changes match values
+			// right inlet changes match values
 			if (inletnum == 1) {
-			    this.matches=message.split(' ');
+				this.matches=message.split(' ');
 			}
 			if(inletnum == 0){
 				var hits=0;
-			    for (var m=0; m<this.matches.length; m++) {
-				    var matchesindex = (this.matches.length - m - 1);
-				    if (this.matches[matchesindex] == message){
+				for (var m=0; m<this.matches.length; m++) {
+					var matchesindex = (this.matches.length - m - 1);
+					if (this.matches[matchesindex] == message){
 						hits++;
-					    this.sendmessage(matchesindex, "bang");
-				    }	
+						this.sendmessage(matchesindex, "bang");
+					}	
 				} 
 				if(hits==0){
 					this.sendmessage((this.matches.length), message);
@@ -2087,17 +2087,17 @@ var PdObjects = {
 			}	
 		},
 		"message": function(inletnum, message) {
-		    // right inlet changes match values
+			// right inlet changes match values
 			if (inletnum == 1) {
-			    this.matches=message.split(' ');
+				this.matches=message.split(' ');
 			}
 			if(inletnum == 0){				
 				var hits=0;
 				// break up our message into atoms
 				var parts = this.toarray(message);
-			    for (var m=0; m<this.matches.length; m++) {
-				    var matchesindex = (this.matches.length - m - 1);
-				    if (this.matches[matchesindex] == message){
+				for (var m=0; m<this.matches.length; m++) {
+					var matchesindex = (this.matches.length - m - 1);
+					if (this.matches[matchesindex] == message){
 						if(parts.length>1){
 							var out=this.parts.slice(1);
 						}
@@ -2105,8 +2105,8 @@ var PdObjects = {
 							var out="bang";
 						}	
 						hits++;
-					    this.sendmessage(matchesindex, out);
-				    }	
+						this.sendmessage(matchesindex, out);
+					}	
 				} 
 				if(hits==0){
 					this.sendmessage((this.matches.length), message);
@@ -2118,19 +2118,19 @@ var PdObjects = {
 	//switch object
 	"spigot": {
 		"defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"open and close a switch",
+			"defaultoutlets":1,
+			"description":"open and close a switch",
 		"outletTypes": ["message"],
 		"init": function() {
 		
 		// do i have a numeric argument
 			if (this.args.length >= 6) {
-			        var tmp= parseInt(this.args[5]);
-			        if(parseInt(this.args[5]) && this.args[5]!=0){this.state = 1;			
+					var tmp= parseInt(this.args[5]);
+					if(parseInt(this.args[5]) && this.args[5]!=0){this.state = 1;			
 			} else {
 				this.state=0;
 			}
-		    }
+			}
 		},
 		"message": function(inletnum, message) {
 		
@@ -2140,18 +2140,18 @@ var PdObjects = {
 		
 		if (inletnum == 1) {//set states
 		var state=parseFloat(message);
-		 if(!isNaN(state)){ //is a valid float	        
+		 if(!isNaN(state)){ //is a valid float			
 			if(state==0){
-		        this.state=0;
+				this.state=0;
 			}else{ //non-zero
-		        this.state=1;
+				this.state=1;
 			 }
 			}			
 			else{//it doesn't like bangs, etc
 			this.pd.log("error: inlet: expected float but got '" + message + "'");
 			}
-		     
-	           }
+			 
+			   }
 		}	
 			
 		},
@@ -2183,17 +2183,17 @@ var PdObjects = {
 			// left inlet outputs the random number
 			} 
 			else if (inletnum == 0) {
-		        var randomnum=Math.floor(Math.random()*this.max)
+				var randomnum=Math.floor(Math.random()*this.max)
 				this.sendmessage(0, randomnum);
 			}
 		},
 	},
-	
+		
 	//stores and outputs an integer
 	"int": {
-	        "defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"store and output an integer",
+		"defaultinlets":2,
+		"defaultoutlets":1,
+		"description":"store and output an integer",
 		"outletTypes": ["message"],
 		"init": function() {
 			this.value = parseInt(this.args[5]);
@@ -2227,8 +2227,8 @@ var PdObjects = {
 	//bang button object
 	"bang": {
 		"defaultinlets":1,
-	        "defaultoutlets":1,
-	        "description":"send a bang for any input",
+			"defaultoutlets":1,
+			"description":"send a bang for any input",
 		"outletTypes": ["message"],
 		"init": function() {
 		},
@@ -2241,8 +2241,8 @@ var PdObjects = {
 	//output 1 if inputs are equivalent
 	"==": {
 		"defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"output 1 if inputs are equivalent, and 0 if not",
+			"defaultoutlets":1,
+			"description":"output 1 if inputs are equivalent, and 0 if not",
 		"outletTypes": ["message"],
 		"init": function() {
 			// do i have a numeric argument
@@ -2282,8 +2282,8 @@ var PdObjects = {
 	//output 1 if inputs are not equivalent
 	"!=": {
 		"defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"output 1 if inputs are not equivalent, and 0 if they are",
+			"defaultoutlets":1,
+			"description":"output 1 if inputs are not equivalent, and 0 if they are",
 		"outletTypes": ["message"],
 		"init": function() {
 			// do i have a numeric argument
@@ -2323,8 +2323,8 @@ var PdObjects = {
 	//output 1 if left is greater than or equal to right
 	">=": {
 		"defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"left is greater than or equal to right",
+			"defaultoutlets":1,
+			"description":"left is greater than or equal to right",
 		"outletTypes": ["message"],
 		"init": function() {
 			// do i have a numeric argument
@@ -2364,8 +2364,8 @@ var PdObjects = {
 	//output 1 if left is less than or equal to right
 	"<=": {
 		"defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"left is less than or equal to right",
+			"defaultoutlets":1,
+			"description":"left is less than or equal to right",
 		"outletTypes": ["message"],
 		"init": function() {
 			// do i have a numeric argument
@@ -2405,8 +2405,8 @@ var PdObjects = {
 	//output 1 if left is greater than right
 	">": {
 		"defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"output 1 if left is greater than right",
+			"defaultoutlets":1,
+			"description":"output 1 if left is greater than right",
 		"outletTypes": ["message"],
 		"init": function() {
 			// do i have a numeric argument
@@ -2446,8 +2446,8 @@ var PdObjects = {
 	//output 1 if left is less than right
 	"<": {
 		"defaultinlets":2,
-	        "defaultoutlets":1,
-	        "description":"output 1 if left is less than right",
+			"defaultoutlets":1,
+			"description":"output 1 if left is less than right",
 		"outletTypes": ["message"],
 		"init": function() {
 			// do i have a numeric argument
@@ -2502,11 +2502,11 @@ var PdObjects = {
 					this.pd.log("error: toggle: no method for '" + message + "'");
 			}
 			else if(newnum==0){
-		        this.state=0;
+				this.state=0;
 				this.sendmessage(0, "0");
 			}
 			else{
-		        this.state=1;
+				this.state=1;
 				this.sendmessage(0, "1");
 			}
 			
