@@ -211,11 +211,47 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		this.listeners[name][this.listeners[name].length] = who;
 	}
 	
+	/** gets the absolute current logical elapsed time in milliseconds **/
+	this.getabstime = function() {
+		return this.frame * this.bufferSize / (this.sampleRate / 1000);
+	}
+	
 	/** Schedule a callback at a particular time - milliseconds **/
 	this.schedule = function(time, callback) {
-		if (!this.scheduled[time])
+		//var time = relativetime + this.getabstime();
+		if (this.scheduled[time] == null)
 			this.scheduled[time] = [];
 		this.scheduled[time].push(callback);
+		//this.log("schedule()");
+		//this.log("\tcurrent time: " + this.getabstime());
+		//this.log("\tall items scheduled: ");
+		//this.log_allscheduled();
+	}
+	
+	this.log_allscheduled = function() {
+		for (var s in this.scheduled) {
+			this.log("\t\t" + s + ": " + this.scheduled[s].length);
+			/*for (var i=0; i<this.scheduled[s].length; i++) {
+				this.log(this.scheduled[s][i]);
+			}*/
+		}
+	}
+	
+	/** Gets a list of all currently scheduled callbacks **/
+	this.getscheduled = function() {
+		var scheduled = [];
+		for (var s in this.scheduled) {
+			if (s <= this.getabstime()) {
+				scheduled.push(s);
+			}
+		}
+		// make sure the scheduled items get run in time order
+		scheduled.sort();
+		//this.log("getscheduled()");
+		//this.log("\tcurrent time: " + this.getabstime());
+		//this.log("\ttimes scheduled: " + scheduled);
+		//this.log("\tall items scheduled: " + this.allscheduled());
+		return scheduled;
 	}
 	
 	/**
@@ -295,26 +331,30 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 			if (this.overflow.length) {
 				this.fillbuffer(this.overflow);
 			} else {
-				// increase the frame count
-				this.frame += 1;
-				// do we have any scheduled callbacks for this frame?
-				var abstime = this.frame * this.bufferSize / this.sampleRate;
-				var removescheduled = [];
-				for (var s in this.scheduled) {
-					if (s <= abstime) {
-						// for every callback in the list to be run at this time
+				// run any pending scheduled callbacks in this frame
+				// keep doing so until there are no scheduled callbacks
+				var scheduled = [];
+				do {
+					// anything we want to remove from the list of scheduled callbacks this round
+					var removescheduled = [];
+					// get a list of all times that have callbacks attached to them that are due
+					scheduled = this.getscheduled();
+					// loop through each time
+					for (var si=0; si<scheduled.length; si++) {
+						var s = scheduled[si];
+						// for every callback to be run at this time
 						for (var c=0; c<this.scheduled[s].length; c++) {
 							// run it
-							this.scheduled[s][c]();
+							this.scheduled[s][c](parseFloat(s));
 						}
 						// add it to our list of times to remove callbacks for
 						removescheduled.push(s);
 					}
-				}
-				// remove any scheduled callbacks we've already run
-				for (var r=0; r<removescheduled.length; r++) {
-					delete this.scheduled[removescheduled[r]];
-				}
+					// remove any scheduled callbacks we've already run
+					for (var r=0; r<removescheduled.length; r++) {
+						delete this.scheduled[removescheduled[r]];
+					}
+				} while (scheduled.length);
 				// reset our output buffer (gets written to by dac~ objects)
 				for (var i=0; i<this.output.length; i++)
 					this.output[i] = 0;
@@ -327,6 +367,8 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 				this.fillbuffer(this.output);
 				// check we haven't run a ridiculous number of times
 				count++;
+				// increase the frame count
+				this.frame += 1;
 			}
 		}
 		
@@ -1340,7 +1382,7 @@ var PdObjects = {
 	
 	// generate noise from -1 to 1
 	"noise~":{
-	//TODO: convert to actual algorithm that Pure Data uses	
+		//TODO: convert to actual algorithm that Pure Data uses	
 		"defaultinlets":0,
 		"defaultoutlets":1,
 		"description":"White noise.",
@@ -2185,6 +2227,53 @@ var PdObjects = {
 			else if (inletnum == 0) {
 				var randomnum=Math.floor(Math.random()*this.max)
 				this.sendmessage(0, randomnum);
+			}
+		},
+	},
+	
+	"metro": {
+		"defaultinlet": 2,
+		"defaultoutlets": 1,
+		"description": "bangs with regularity",
+		"outletTypes": ["message"],
+		"init": function() {
+			// initialise the default delay time of this metro to one millisecond
+			this.deltime = parseFloat(this.args[5]);
+			if (isNaN(this.deltime))
+				this.deltime = 1;
+			// metro defaults to off
+			this.state = 0;
+			// closure to allow the anonymous function access to this
+			var me = this;
+			// the callback which will fire each tick
+			this.metrotick = function(triggertime) {
+				if (me.state) {
+					// send a bang now that we've been called
+					me.sendmessage(0, "bang");
+					// delay time is only actually updated at each metro tick
+					me.pd.schedule(triggertime + me.deltime, me.metrotick);
+				}
+			}
+		},
+		"message": function(inletnum, message) {
+			var atoms = this.toarray(message);
+			var firstint = parseInt(atoms[0]);
+			// if we get an on/off message from the left inlet
+			if (inletnum == 0) {
+				if (atoms[0] == "bang" || firstint == 1) {
+					// turn on this metro
+					this.state = 1;
+					// every time the metro is started it sends an initial bang
+					this.pd.schedule(this.pd.getabstime(), this.metrotick);
+				} else if (atoms[0] == "stop" || firstint == 0) {
+					// stop the metro from sending anything next tick around
+					this.state = 0;
+				}
+			} else if (inletnum == 1) {
+				// inlet two sets the delay time
+				if (!isNaN(firstint)) { this.deltime = firstint; }
+				// make sure the delay time doesn't go lower than 1 millisecond
+				if (this.deltime < 1) { this.deltime = 1; }
 			}
 		},
 	},
