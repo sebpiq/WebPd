@@ -29,6 +29,7 @@
 				'two-bad-objects',
 				//'connection-fanning-in',
 				'linebreaks',
+				'linebreaks-semicolons',
 				
 				// message objects
 				'loadbang-into-print',
@@ -89,6 +90,7 @@
 				'or',
 				'and',
 				'clip',
+				'metro',
 				
 				// dsp objects
 				'test-1-basic-osc',
@@ -156,7 +158,7 @@
 				contents.innerHTML = contents.innerHTML + "<h1>" + pdfile + "</h1><img src='unittests/" + pdfile + ".png'>";
 				
 				// create a new pd instance in debug-output mode
-				pd = new Pd(44100, 4410, true);
+				pd = new Pd(44100, 128, true);
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
 				pd.load("unittests/" + pdfile + ".pd", pd.play);
 				
