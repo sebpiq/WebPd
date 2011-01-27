@@ -84,7 +84,11 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 			this.log("error: " + name + ": no such object");
 		}
 	}
-	
+	/** send a message from inside the graph to a named receiver outside the graph **/
+	this.receive = function(name,callback){
+		pd.addlistener(name,{"message":function(d,val){callback(val);}});	
+	}
+	/** send a bang to all receive objects named "test" **/
 	this.testbang = function(){
 		this.send("test", "bang");
 	}	
@@ -1568,7 +1572,7 @@ var PdObjects = {
 	"receive": {
 		"outletTypes": ["message"],
 		"init": function() {
-			// listen out for messages from the either with the name of our argument
+			// listen out for messages from the ether with the name of our argument
 			if (this.args.length >= 6) {
 				this.pd.addlistener(this.args[5], this);
 			}
@@ -1579,6 +1583,25 @@ var PdObjects = {
 				this.sendmessage(0, val);
 		},
 	},
+	
+	// ordinary message sender
+	"send": {
+		"outletTypes": ["message"],
+		"init": function(){
+			if(this.args.length >=6){
+				this.id = this.args[5];
+			} else{
+				//TODO:cause lack of arg to create 2nd inlet
+				this.pd.log("error: must provide a name");	
+			}
+		},
+		"message": function(inletnum, val){
+			if(inletnum==0){
+				this.pd.send(this.id,val);
+			}
+		},
+	},
+	
 	
 	// pd trigger type - right to left
 	"trigger": {
@@ -3332,6 +3355,7 @@ var PdObjects = {
 
 // object name aliases
 PdObjects.r = PdObjects.receive;
+PdObjects.s = PdObjects.send;
 PdObjects.t = PdObjects.trigger;
 PdObjects.f = PdObjects.float;
 PdObjects.i = PdObjects.int;
