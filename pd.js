@@ -114,7 +114,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 			// if we've found a create token
 			if (tokens[0] == "#X") {
 				// is this an obj instantiation
-				if (tokens[1] == "obj" || tokens[1] == "msg") {
+				if (tokens[1] == "obj" || tokens[1] == "msg" || tokens[1] == "text") {
 					var proto = "";
 					// if this is a message object
 					if (tokens[1] == "msg") {
