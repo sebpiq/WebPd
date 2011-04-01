@@ -7,9 +7,15 @@
 	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
 ***/
 
-var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
-	// what type of javascript array do we want to use?
-	this.arrayType = arrayType || Array; // Float32Array
+var Pd = function Pd(sampleRate, bufferSize, debug) {
+	// use a Float32Array if we have it
+	if (typeof Float32Array != "undefined") {
+		this.arrayType = Float32Array;
+		this.arraySlice = function (b, i) { return b.subarray(i) };
+	} else {
+		this.arrayType = Array;
+		this.arraySlice = function (b, i) { return b.slice(i) };
+	}
 	// whether we are in debug mode (more verbose output
 	this.debugMode = debug;
 	// set my own sample rate
@@ -27,8 +33,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 	// the audio-filling interval id
 	this.interval = -1;
 	// if there is any overflow writing to the hardware buffer we store it here
-	this.overflow = new this.arrayType(0);
-	// arrays of receivers which are listening for messages
+	this.overflow = false;
 	// keys are receiver names
 	this.listeners = {};
 	// arrays of callbacks which are scheduled to run at some point in time
@@ -304,47 +309,51 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 		/** Checks if the hardware buffer is hungry for more **/
 		this.hungry = function() {
 			// are we a few buffers ahead?
-			return this.lastWritePosition < this.el.mozCurrentSampleOffset() + this.sampleRate / 2;
+			return (this.el.mozCurrentSampleOffset() + this.sampleRate / 2 - this.lastWritePosition) / this.bufferSize;
 		}
 		
 		/** Fills up the hardware buffer with the data from this.output **/
 		this.fillbuffer = function(buffer) {
 			// actually write the audio to the buffer
 			var written = this.el.mozWriteAudio(buffer);
-			if (written < buffer.length) {
-				// copy the data from all endpoints into the audio output
-				this.overflow = buffer.slice(written);
-			} else {
-				this.overflow.length = 0;
-			}
 			// update our last write position so we know where we're up to
 			this.lastWritePosition += written;
-			return this.overflow.length;
+			// check for unwritten data
+			if (written < buffer.length) {
+				// give back an array of unwritten data
+				return this.arraySlice(buffer, written);
+			} else {
+				// no overflow detected
+				return false;
+			}
 		}
 	// if not just write the output frames to the console
 	} else {
-		var runs = 0;
 		this.hungry = function() {
-			this.debug("Frame: " + runs++);
-			return runs < 5;
+			return 5 * this.blocksize;
 		}
 		
 		this.fillbuffer = function(buffer) {
 			// non-audio version, output the frame as text
 			this.log(buffer);
+			return false;
 		}
 	}
 	delete audioTest;
 	
 	/** Run each frame - check and fill up the buffer, as needed **/
 	this.write = function() {
-		var count = 0;
+		// how many blocks we should generate
+		var howmany = Math.ceil(this.hungry());
 		
-		// while we still need to add more to the buffer, do it - should usually do about two loops
-		while(this.hungry() && count < 100) {
-			if (this.overflow.length) {
-				this.fillbuffer(this.overflow);
-			} else {
+		if (howmany > 0) {
+			// we had some overflow last time, first append this to the buffer
+			if (this.overflow) {
+				this.overflow = this.fillbuffer(this.overflow);
+			}
+			
+			// while we still need to add more to the buffer, do it - should usually do about two loops
+			for (var block=0; block<howmany; block++) {
 				// run any pending scheduled callbacks in this frame
 				// keep doing so until there are no scheduled callbacks
 				var scheduled = [];
@@ -377,19 +386,11 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 					// dac~ objects will add their output to this.output
 					this.tick(this._graph.endpoints[e]);
 				}
-				// if we have some overflow, write that first
-				this.fillbuffer(this.output);
-				// check we haven't run a ridiculous number of times
-				count++;
+				// write the dsp data we have computed to the audio buffer
+				this.overflow = this.fillbuffer(this.output);
 				// increase the frame count
 				this.frame += 1;
 			}
-		}
-		
-		// things are not going well. stop the audio.
-		if (count >= 100) {
-			this.log("Overflowed 100 write() calls - your patch is probably too heavy.");
-			this.stop();
 		}
 	}
 	
@@ -419,9 +420,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug, arrayType) {
 			this.el = new Audio();
 			if (this.el.mozSetup) {
 				// initialise our audio output element
-				this.el.mozSetup(2, this.sampleRate, 1);
-				// initial buffer fill
-				this.write();
+				this.el.mozSetup(2, this.sampleRate);
 				// start a regular buffer fill
 				this.interval = setInterval(function() { me.write(); }, Math.floor(this.bufferSize / this.sampleRate));
 			} else {
