@@ -33,7 +33,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	// the audio-filling interval id
 	this.interval = -1;
 	// if there is any overflow writing to the hardware buffer we store it here
-	this.overflow = false;
+	this.overflow = null;
 	// keys are receiver names
 	this.listeners = {};
 	// arrays of callbacks which are scheduled to run at some point in time
@@ -321,10 +321,13 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 			// check for unwritten data
 			if (written < buffer.length) {
 				// give back an array of unwritten data
-				return this.arraySlice(buffer, written);
+				if (this.overflow == null)
+					this.overflow = buffer;
+				return false;
 			} else {
 				// no overflow detected
-				return false;
+				this.overflow = null;
+				return true;
 			}
 		}
 	// if not just write the output frames to the console
@@ -343,15 +346,15 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	
 	/** Run each frame - check and fill up the buffer, as needed **/
 	this.write = function() {
+		// we had some overflow last time, first append this to the buffer
+		if (this.overflow != null) {
+			this.fillbuffer(this.arraySlice(this.overflow, this.lastWritePosition % this.bufferSize));
+		}
+		
 		// how many blocks we should generate
 		var howmany = Math.ceil(this.hungry());
 		
-		if (howmany > 0) {
-			// we had some overflow last time, first append this to the buffer
-			if (this.overflow) {
-				this.overflow = this.fillbuffer(this.overflow);
-			}
-			
+		if (this.overflow == null && howmany > 0) {
 			// while we still need to add more to the buffer, do it - should usually do about two loops
 			for (var block=0; block<howmany; block++) {
 				// run any pending scheduled callbacks in this frame
@@ -387,7 +390,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 					this.tick(this._graph.endpoints[e]);
 				}
 				// write the dsp data we have computed to the audio buffer
-				this.overflow = this.fillbuffer(this.output);
+				this.fillbuffer(this.output);
 				// increase the frame count
 				this.frame += 1;
 			}
