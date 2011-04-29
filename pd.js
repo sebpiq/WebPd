@@ -7,33 +7,21 @@
 	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
 ***/
 
-var Pd = function Pd(sampleRate, bufferSize, debug) {
-	// use a Float32Array if we have it
-	if (typeof Float32Array != "undefined") {
-		this.arrayType = Float32Array;
-		this.arraySlice = function (b, i) { return b.subarray(i) };
-	} else {
-		this.arrayType = Array;
-		this.arraySlice = function (b, i) { return b.slice(i) };
-	}
+var Pd = function Pd(desiredSampleRate, blockSize, debug) {
+	// closure reference to this instantiation of Pd
+	var me = this;
+	// the size of our blocks
+	this.blockSize = blockSize || BLOCKSIZE;
+	// create the audio output driver
+	this.audio = new AudioDriver(desiredSampleRate, blockSize);
+	// fetch the actual samplerate from the audio driver
+	this.sampleRate = this.audio.getSampleRate();
+	// output buffer (stereo)
+	this.output = new this.audio.arrayType(blockSize * 2);
 	// whether we are in debug mode (more verbose output
 	this.debugMode = debug;
-	// set my own sample rate
-	this.sampleRate = sampleRate;
-	// output buffer (stereo)
-	this.output = new this.arrayType(bufferSize * 2);
-	// the audio element we'll use to make sound
-	this.el = null;
 	// how many frames have we run
 	this.frame = 0;
-	// the size of our buffers
-	this.bufferSize = bufferSize;
-	// the last position written to the audiobuffer
-	this.lastWritePosition = 0;
-	// the audio-filling interval id
-	this.interval = -1;
-	// if there is any overflow writing to the hardware buffer we store it here
-	this.overflow = null;
 	// keys are receiver names
 	this.listeners = {};
 	// arrays of callbacks which are scheduled to run at some point in time
@@ -42,8 +30,6 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	// arrays of float data - Pd's tables
 	// keys are table names
 	this.tables = {};
-	// closure reference to this object
-	var me = this;
 	
 	// internal representation of the DSP graph.
 	this._graph = {
@@ -172,7 +158,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 					this._graph.objects[obj.graphindex] = obj;
 					this.debug("Added " + obj.type + " to the graph at position " + obj.graphindex);
 					// this table needs a set of data
-					obj.data = new this.arrayType(parseInt(tokens[3]));
+					obj.data = new this.audio.arrayType(parseInt(tokens[3]));
 					// add this to our global list of tables
 					this.tables[tokens[2]] = obj;
 					lastTable = tokens[2];
@@ -232,7 +218,7 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	
 	/** gets the absolute current logical elapsed time in milliseconds **/
 	this.getabstime = function() {
-		return this.frame * this.bufferSize / (this.sampleRate / 1000);
+		return this.frame * this.blockSize / (this.sampleRate / 1000);
 	}
 	
 	/** Schedule a callback at a particular time - milliseconds **/
@@ -303,98 +289,44 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	
 	/******************** DSP stuff ************************/
 	
-	// do we actually have audio access?
-	var audioTest = new Audio();
-	if (audioTest.mozSetup) {
-		/** Checks if the hardware buffer is hungry for more **/
-		this.hungry = function() {
-			// are we a few buffers ahead?
-			return (this.el.mozCurrentSampleOffset() + this.sampleRate / 2 - this.lastWritePosition) / this.bufferSize;
-		}
-		
-		/** Fills up the hardware buffer with the data from this.output **/
-		this.fillbuffer = function(buffer) {
-			// actually write the audio to the buffer
-			var written = this.el.mozWriteAudio(buffer);
-			// update our last write position so we know where we're up to
-			this.lastWritePosition += written;
-			// check for unwritten data
-			if (written < buffer.length) {
-				// give back an array of unwritten data
-				if (this.overflow == null)
-					this.overflow = buffer;
-				return false;
-			} else {
-				// no overflow detected
-				this.overflow = null;
-				return true;
-			}
-		}
-	// if not just write the output frames to the console
-	} else {
-		this.hungry = function() {
-			return 5 * this.blocksize;
-		}
-		
-		this.fillbuffer = function(buffer) {
-			// non-audio version, output the frame as text
-			this.log(buffer);
-			return false;
-		}
-	}
-	delete audioTest;
-	
-	/** Run each frame - check and fill up the buffer, as needed **/
-	this.write = function() {
-		// we had some overflow last time, first append this to the buffer
-		if (this.overflow != null) {
-			this.fillbuffer(this.arraySlice(this.overflow, this.lastWritePosition % this.bufferSize));
-		}
-		
-		// how many blocks we should generate
-		var howmany = Math.ceil(this.hungry());
-		
-		if (this.overflow == null && howmany > 0) {
-			// while we still need to add more to the buffer, do it - should usually do about two loops
-			for (var block=0; block<howmany; block++) {
-				// run any pending scheduled callbacks in this frame
-				// keep doing so until there are no scheduled callbacks
-				var scheduled = [];
-				do {
-					// anything we want to remove from the list of scheduled callbacks this round
-					var removescheduled = [];
-					// get a list of all times that have callbacks attached to them that are due
-					scheduled = this.getscheduled();
-					// loop through each time
-					for (var si=0; si<scheduled.length; si++) {
-						var s = scheduled[si];
-						// for every callback to be run at this time
-						for (var c=0; c<this.scheduled[s].length; c++) {
-							// run it
-							this.scheduled[s][c](parseFloat(s));
-						}
-						// add it to our list of times to remove callbacks for
-						removescheduled.push(s);
-					}
-					// remove any scheduled callbacks we've already run
-					for (var r=0; r<removescheduled.length; r++) {
-						delete this.scheduled[removescheduled[r]];
-					}
-				} while (scheduled.length);
-				// reset our output buffer (gets written to by dac~ objects)
-				for (var i=0; i<this.output.length; i++)
-					this.output[i] = 0;
-				// run the dsp function on all endpoints to get data
-				for (var e in this._graph.endpoints) {
-					// dac~ objects will add their output to this.output
-					this.tick(this._graph.endpoints[e]);
+	/** Get a single frame of audio data from Pd **/
+	this.generateFrame = function() {
+		// run any pending scheduled callbacks in this frame
+		// keep doing so until there are no scheduled callbacks
+		var scheduled = [];
+		do {
+			// anything we want to remove from the list of scheduled callbacks this round
+			var removescheduled = [];
+			// get a list of all times that have callbacks attached to them that are due
+			scheduled = this.getscheduled();
+			// loop through each time
+			for (var si=0; si<scheduled.length; si++) {
+				var s = scheduled[si];
+				// for every callback to be run at this time
+				for (var c=0; c<this.scheduled[s].length; c++) {
+					// run it
+					this.scheduled[s][c](parseFloat(s));
 				}
-				// write the dsp data we have computed to the audio buffer
-				this.fillbuffer(this.output);
-				// increase the frame count
-				this.frame += 1;
+				// add it to our list of times to remove callbacks for
+				removescheduled.push(s);
 			}
+			// remove any scheduled callbacks we've already run
+			for (var r=0; r<removescheduled.length; r++) {
+				delete this.scheduled[removescheduled[r]];
+			}
+		} while (scheduled.length);
+		// reset our output buffer (gets written to by dac~ objects)
+		for (var i=0; i<this.output.length; i++)
+			this.output[i] = 0;
+		// run the dsp function on all endpoints to get data
+		for (var e in this._graph.endpoints) {
+			// dac~ objects will add their output to this.output
+			this.tick(this._graph.endpoints[e]);
 		}
+		// increase the frame count
+		this.frame += 1;
+		// return the contents of the dspbuffer
+		return this.output;
 	}
 	
 	/** Dsp tick function run on an object which makes sure the object's parents all get run before running it. **/
@@ -416,21 +348,11 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	
 	/** Starts this graph running **/
 	this.play = function() {
+		var context = this;
 		// check we're not already running
-		if (this.interval == -1) {
+		if (!this.audio.is_playing()) {
 			this.debug("Starting audio.");
-			// set up our audio element
-			this.el = new Audio();
-			if (this.el.mozSetup) {
-				// initialise our audio output element
-				this.el.mozSetup(2, this.sampleRate);
-				// start a regular buffer fill
-				this.interval = setInterval(function() { me.write(); }, Math.floor(this.bufferSize / this.sampleRate));
-			} else {
-				// generate a few test frames
-				this.debug("Generating a few test frames of data:")
-				this.write();
-			}
+			this.audio.play(function() { return context.generateFrame(); });
 			// reset the frame count
 			this.frame = 0;
 			// reset the frame count on all objects
@@ -445,15 +367,10 @@ var Pd = function Pd(sampleRate, bufferSize, debug) {
 	/** Stops this graph from running **/
 	this.stop = function() {
 		// if we're already running
-		if (this.interval != -1) {
+		if (this.audio.is_playing()) {
 			this.debug("Stopping audio.");
-			// clear the interval
-			clearInterval(this.interval);
 			// destroy the audio element
-			this.el = null;
-			this.interval = -1;
-			// reset our counter
-			this.lastWritePosition = 0;
+			this.audio.stop();
   		} else {
 			this.debug("Already stopped.");
 		}
@@ -518,7 +435,7 @@ var PdObject = function (proto, pd, type, args) {
 		// create the outlet buffers for this object
 		for (var o=0; o<this.outletTypes.length; o++) {
 			if (this.outletTypes[o] == "dsp") {
-				this.outletbuffer[o] = new this.pd.arrayType(this.pd.bufferSize);
+				this.outletbuffer[o] = new this.pd.audio.arrayType(this.pd.blockSize);
 			}
 		}
 	}
@@ -788,7 +705,7 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
 			// copy interleaved data from inlets to the graph's output buffer
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				this.pd.output[i * 2] += i1[i % i1.length];
 				this.pd.output[i * 2 + 1] += i2[i % i2.length];
 			}
@@ -809,7 +726,7 @@ var PdObjects = {
 			// mutiply our two buffers together
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] * i2[i % i2.length];
 			}
 		},
@@ -830,7 +747,7 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
 			var val2 = 0;
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				// return zero if denominator is zero
 				val2 = i2[i % i2.length];
 				this.outletbuffer[0][i] = (val2 ? i1[i % i1.length] / val2 : 0);
@@ -851,7 +768,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] + i2[i % i2.length];
 			}
 		},
@@ -870,7 +787,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] - i2[i % i2.length];
 			}
 		},
@@ -890,7 +807,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			// TODO: look this up in the Pd source and see if it behaves the same way on freq change
-			for (var i=0; i<this.pd.bufferSize; i++) {
+			for (var i=0; i<this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = this.sampCount;
 				this.sampCount = (this.sampCount + (i1[i % i1.length] / this.pd.sampleRate)) % 1;
 			}
@@ -903,7 +820,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= -1500) {
 					this.outletbuffer[0][i] = 0;
@@ -926,7 +843,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 					this.outletbuffer[0][i] = (f > 0 ? (17.3123405046 * Math.log(.12231220585 * f)) : -1500);
 			}
@@ -946,7 +863,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var length = this.table.data.length;
-			for (var i=0; i<this.pd.bufferSize; i++) {
+			for (var i=0; i<this.pd.blockSize; i++) {
 				//this.outletbuffer[0][i] = this.table.data[Math.min(length - 1, Math.max(0, Math.round(i1[i % i1.length])))];
 				//Not sure if this is faster -bj
 				var s = Math.floor(i1[i % i1.length])
@@ -975,15 +892,15 @@ var PdObjects = {
 		},
 		"dsptick_const": function() {
 			// write a constant value to our output buffer for every sample
-			for (var i=0; i<this.pd.bufferSize; i++) {
+			for (var i=0; i<this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = this.line;
 			}
 		},
 		"dsptick_line": function() {
 			// write this correct value of the line at each sample
-			for (var i=0; i<this.pd.bufferSize; i++) {
+			for (var i=0; i<this.pd.blockSize; i++) {
 				// how far along the line we are
-				var sample = (this.pd.frame * this.pd.bufferSize + i) - this.start;
+				var sample = (this.pd.frame * this.pd.blockSize + i) - this.start;
 				// if we've reached the end of our line, switch back to the constant method
 				if (sample >= this.length) {
 					// bash our value to the desired destination value
@@ -1023,7 +940,7 @@ var PdObjects = {
 					// make sure these values are not bogus
 					if (!isNaN(destination) && !isNaN(time)) {
 						// what sample do we start at - current frame
-						this.start = this.pd.frame * this.pd.bufferSize;
+						this.start = this.pd.frame * this.pd.blockSize;
 						// the value at the starting sample of the line
 						this.startval = this.line;
 						// remember our destination
@@ -1062,7 +979,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				this.outletbuffer[0][i] = (f >= 0 ? f : -f);
 			}
@@ -1101,7 +1018,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			// write a constant value to our output buffer for every sample
-			for (var i=0; i<this.pd.bufferSize; i++) {
+			for (var i=0; i<this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = this.sig;
 			}
 		},
@@ -1136,7 +1053,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = (i1[i % i1.length] > i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
 			}
 		},
@@ -1158,7 +1075,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = (i1[i % i1.length] < i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
 			}
 		},
@@ -1180,7 +1097,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				//var low = this.low;
 				//var hi = this.hi;
@@ -1242,7 +1159,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = Math.exp(i1[i % i1.length]);
 			}
 		},
@@ -1263,7 +1180,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				var g = i2[i % i2.length];
 				if (f > 0) {
@@ -1293,7 +1210,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				var g = i2[i % i2.length];
 				if (f <= 0) {
@@ -1317,7 +1234,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -1340,7 +1257,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -1361,7 +1278,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -1384,7 +1301,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -1426,7 +1343,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 			   var f = i1[i % i1.length];
 			   var g = i2[i % i2.length];
 			   if (g < this.lastin) {
@@ -1466,7 +1383,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				if (this.coef < 1) {
 						var next = (i1[i % i1.length]) + ((this.coef) * (this.last));
 						this.outletbuffer[0][i] = (next - this.last);
@@ -1536,7 +1453,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.bufferSize; i++) {
+			for (var i=0; i < this.pd.blockSize; i++) {
 				var output = ((this.coef * i1[i % i1.length]) + ((1-this.coef) * this.last));
 				this.outletbuffer[0][i] = output;
 				this.last = output;
@@ -3386,6 +3303,130 @@ PdObjects.i = PdObjects.int;
 PdObjects.sel = PdObjects.select;
 PdObjects.bng = PdObjects.bang;
 
+/****************************
+	Audio drivers for cross-browser playback.
+	This should probably go somewhere more generally useful to other projects too.
+	
+	TODO: mozAudio driver
+	TODO: chromium driver
+	TODO: flash driver
+	
+	Thanks to http://github.com/bfirsh/dynamicaudio.js
+	And https://github.com/gasman/jasmid
+ ****************************/
+
+function AudioDriver(desiredSampleRate, blockSize) {
+	// what sample rate we will operate at (might change depending on driver so use getSampleRate()
+	this.sampleRate = desiredSampleRate;
+	// closure
+	var me = this;
+	// the function used to generate new frames of audio
+	this.generator = null;
+	
+	// what basic data type to build our audio arrays from
+	// use a Float32Array if we have it
+	if (typeof Float32Array != "undefined") {
+		this.arrayType = Float32Array;
+		this.arraySlice = function (b, i) { return b.subarray(i) };
+	} else {
+		this.arrayType = Array;
+		this.arraySlice = function (b, i) { return b.slice(i) };
+	}
+	
+	/** fetch the current sample rate we are operating at **/
+	this.getSampleRate = function() {
+		return this.sampleRate;
+	}
+	
+	// actually create the audio element
+	this.el = new Audio();
+	// test for mozSetup
+	if (this.el && this.el.mozSetup) {		
+		// the audio-filling interval id
+		this.interval = -1;
+		// reset our counter
+		this.lastWritePosition = 0;
+		// if there is any overflow writing to the hardware buffer we store it here
+		this.overflow = null;
+		
+		/* Checks if the hardware buffer is hungry for more */
+		this.hungry = function() {
+			// are we a few buffers ahead?
+			return (this.el.mozCurrentSampleOffset() + this.sampleRate / 2 - this.lastWritePosition) / blockSize;
+		}
+		
+		/* Fills up the hardware buffer with the data */
+		this.fillbuffer = function(buffer) {
+			// actually write the audio to the buffer
+			var written = this.el.mozWriteAudio(buffer);
+			// update our last write position so we know where we're up to
+			this.lastWritePosition += written;
+			// check for unwritten data
+			if (written < buffer.length) {
+				// give back an array of unwritten data
+				if (this.overflow == null)
+					this.overflow = buffer;
+				return false;
+			} else {
+				// no overflow detected
+				this.overflow = null;
+				return true;
+			}
+		}
+		
+		/* On mozilla this is the mainloop that is called periodically to fill the buffers
+		using audio generated by the generator function (e.g. from Pd) */
+		this.mainloop = function() {
+			// if we had some overflow last time, first append this to the buffer
+			if (this.overflow != null) {
+				this.fillbuffer(this.arraySlice(this.overflow, this.lastWritePosition % blockSize));
+			}
+			
+			// how many blocks we should generate
+			var howmany = Math.ceil(this.hungry());
+			
+			if (this.overflow == null && howmany > 0 && this.generator) {
+				// while we still need to add more to the buffer, do it - should usually do about two loops
+				for (var block=0; block<howmany; block++) {
+					this.fillbuffer(this.generator());
+				}
+			}
+		}
+		
+		/** Stop the audio from playing **/
+		this.stop = function() {
+			// clear the interval
+			clearInterval(this.interval);
+			// reset the interval
+			this.interval = -1;
+			// destroy the audio element
+			this.el = null;
+			// reset our counter
+			this.lastWritePosition = 0;
+		}
+		
+		/** Start the audio playing with the supplied function as the audio-block generator **/
+		this.play = function(generator) {
+			if (generator) {
+				this.generator = generator;
+			}
+			if (!this.el) {
+				this.el = new Audio();
+			}
+			// initialise our audio output element
+			this.el.mozSetup(2, this.sampleRate);
+			// start a regular buffer fill
+			this.interval = setInterval(function() { me.mainloop(); }, Math.floor(blockSize / this.sampleRate));
+		}
+		
+		/** test whether this driver is currently playing audio **/
+		this.is_playing = function() {
+			return this.interval != -1;
+		}
+	} else {
+		delete this.el;
+	}
+}
 
 /********************************
 	Helper functions
