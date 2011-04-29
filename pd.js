@@ -37,7 +37,7 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 		"objects": [],
 		// an array of all of the end-points of the dsp graph
 		// (like dac~ or print~ or send~ or outlet~)
-		"endpoints": [],
+		"endpoints": []
 	};
 	
 	// callback which should fire once the entire patch is loaded
@@ -60,12 +60,12 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 		MakeRequest(url, this);
 		return this;
 	}
-		
+	
 	/** Initiate a load of a Pd source string **/
 	this.loadfromstring = function (string, callback) {
 		this.loadcallback = callback;
-		this.loadcomplete(string,{"status":200});
-		return string;
+		this.loadcomplete(string, {"status": 200});
+		return this;
 	}
 	
 	/** send a message from outside the graph to a named receiver inside the graph **/
@@ -82,6 +82,7 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 			this.log("error: " + name + ": no such object");
 		}
 	}
+	
 	/** send a message from inside the graph to a named receiver outside the graph **/
 	this.receive = function(name,callback){
 		pd.addlistener(name,{"message":function(d,val){callback(val);}});	
@@ -90,7 +91,8 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 	/** send a bang to all receive objects named "test" **/
 	this.testbang = function(){
 		this.send("test", "bang");
-	}	
+	}
+	
 	/********************* Dealing with patches ************************/
 	
 	/** Parses a Pd file and creates a new DSP graph from it **/
@@ -585,7 +587,7 @@ var PdObjects = {
 				this.name = this.args[2];
 			}
 			this.pd.debug(this.data);
-		},
+		}
 	},
 	
 	"float": {
@@ -709,7 +711,7 @@ var PdObjects = {
 				this.pd.output[i * 2] += i1[i % i1.length];
 				this.pd.output[i * 2 + 1] += i2[i % i2.length];
 			}
-		},
+		}
 	},
 	
 	// dsp multiply object
@@ -729,7 +731,7 @@ var PdObjects = {
 			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] * i2[i % i2.length];
 			}
-		},
+		}
 	},
 	
 	// dsp divide object (d_arithmetic.c line 454 - over_perform() )
@@ -752,7 +754,7 @@ var PdObjects = {
 				val2 = i2[i % i2.length];
 				this.outletbuffer[0][i] = (val2 ? i1[i % i1.length] / val2 : 0);
 			}
-		},
+		}
 	},
 	
 	// dsp addition object
@@ -771,7 +773,7 @@ var PdObjects = {
 			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] + i2[i % i2.length];
 			}
-		},
+		}
 	},
 	
 	// dsp subtraction object
@@ -790,7 +792,7 @@ var PdObjects = {
 			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] - i2[i % i2.length];
 			}
-		},
+		}
 	},
 	
 	// basic phasor (0 to 1)
@@ -811,7 +813,7 @@ var PdObjects = {
 				this.outletbuffer[0][i] = this.sampCount;
 				this.sampCount = (this.sampCount + (i1[i % i1.length] / this.pd.sampleRate)) % 1;
 			}
-		},
+		}
 	},
 	
 	// midi to frequency in the dsp domain
@@ -847,7 +849,7 @@ var PdObjects = {
 				var f = i1[i % i1.length];
 					this.outletbuffer[0][i] = (f > 0 ? (17.3123405046 * Math.log(.12231220585 * f)) : -1500);
 			}
-		},
+		}
 	},
 	
 	// read data from a table with no interpolation
@@ -869,7 +871,7 @@ var PdObjects = {
 				var s = Math.floor(i1[i % i1.length])
 				this.outletbuffer[0][i] = this.table.data[(s >= 0 ? (s > (length - 1) ? (length -1) : s) : 0)];
 			}
-		},
+		}
 	},
 	
 	// creates simple dsp lines
@@ -952,7 +954,7 @@ var PdObjects = {
 					}
 				}
 			}
-		},
+		}
 	},
 	
 	// dsp cosine
@@ -967,7 +969,7 @@ var PdObjects = {
 			for (var i=0; i<this.outletbuffer[0].length; i++) {
 				this.outletbuffer[0][i] = Math.cos(2 * Math.PI * (i1[i % i1.length]));
 			}
-		},
+		}
 	},
 	
 	//dsp absolute value
@@ -983,7 +985,7 @@ var PdObjects = {
 				var f = i1[i % i1.length];
 				this.outletbuffer[0][i] = (f >= 0 ? f : -f);
 			}
-		},
+		}
 	},
 	
 	// dsp wrap
@@ -1000,7 +1002,7 @@ var PdObjects = {
 				k = Math.floor(f);
 				this.outletbuffer[0][i] = f - k;
 			}
-		},
+		}
 	},
 	
 	// convert float to signal
@@ -1034,7 +1036,7 @@ var PdObjects = {
 			} else {
 				this.pd.log("error: sig~: no method for '" + atoms[0] + "'");
 			}	
-		},
+		}
 	},
 	
 	// dsp maximum object
@@ -1056,7 +1058,7 @@ var PdObjects = {
 			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = (i1[i % i1.length] > i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
 			}
-		},
+		}
 	},
 	
 	// dsp minimum object
@@ -1078,7 +1080,7 @@ var PdObjects = {
 			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = (i1[i % i1.length] < i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
 			}
-		},
+		}
 	},
 	
 	// dsp clip object
@@ -1147,7 +1149,7 @@ var PdObjects = {
 					}	
 				}
 			}
-		},
+		}
 	},
 	 
 	 //  dsp exp object -- e to the power of input
@@ -1162,9 +1164,9 @@ var PdObjects = {
 			for (var i=0; i < this.pd.blockSize; i++) {
 				this.outletbuffer[0][i] = Math.exp(i1[i % i1.length]);
 			}
-		},
+		}
 	},
-
+	
 	// dsp power object
 	"pow~": {
 		"outletTypes": ["dsp"],
@@ -1189,7 +1191,7 @@ var PdObjects = {
 					this.outletbuffer[0][i] = 0;
 					}
 			}
-		},
+		}
 	},
 	
 	// dsp log e
@@ -1222,7 +1224,7 @@ var PdObjects = {
 						this.outletbuffer[0][i] = (Math.log(f) / Math.log(g));
 					}	
 			}
-		},
+		}
 	},
 	
 	// dsp convert db to pow
@@ -1245,7 +1247,7 @@ var PdObjects = {
 					this.outletbuffer[0][i] = Math.exp(0.2302585092994 * (f-100));
 				}
 			}
-		},
+		}
 	},
 	
 	// dsp convert pow to db
@@ -1266,7 +1268,7 @@ var PdObjects = {
 					this.outletbuffer[0][i] = (g < 0 ? 0 : g);
 				}
 			}
-		},
+		}
 	},
 	
 	// dsp convert db to rms
@@ -1289,7 +1291,7 @@ var PdObjects = {
 					this.outletbuffer[0][i] = Math.exp(0.1151292546497 * (f - 100));
 				}
 			}
-		},
+		}
 	},
 	
 	// dsp convert rms to db
@@ -1310,7 +1312,7 @@ var PdObjects = {
 					this.outletbuffer[0][i] = (g < 0 ? 0 : g);
 				}
 			}
-		},
+		}
 	},
 	
 	// generate noise from -1 to 1
@@ -1325,9 +1327,8 @@ var PdObjects = {
 			for (var i=0; i<this.outletbuffer[0].length; i++) {
 				this.outletbuffer[0][i] = ((2 * Math.random()) - 1);
 			}
-		},
+		}
 	},
-	
 	
 	//  dsp sample and hold (triggered by a decrease in value)
 	"samphold~": {
@@ -1355,7 +1356,7 @@ var PdObjects = {
 			   this.outletbuffer[0][i] = out;
 			   this.lastin = g;
 			}
-		},
+		}
 	},
 	
 
@@ -1426,7 +1427,7 @@ var PdObjects = {
 					}
 				}
 			}	
-		},
+		}
 	},	
 				
 	// 1-pole 1-zero lopass filter
@@ -1491,10 +1492,9 @@ var PdObjects = {
 					}
 				}
 			}	
-		},
+		}
 	},	
 	
-		
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
@@ -1528,9 +1528,8 @@ var PdObjects = {
 			if(inletnum==0){
 				this.pd.send(this.id,val);
 			}
-		},
+		}
 	},
-	
 	
 	// pd trigger type - right to left
 	"trigger": {
@@ -1634,7 +1633,7 @@ var PdObjects = {
 					this.message(parts.length - i - 1, parts[parts.length - i - 1]);
 				}
 			}
-		},
+		}
 	},
 	
 	// unpacks a list of atoms to their correct types
@@ -1693,8 +1692,6 @@ var PdObjects = {
 		}
 	},
 	
-	
-	
 	// multiply two numbers together
 	"*": {
 		"outletTypes": ["message"],
@@ -1732,7 +1729,7 @@ var PdObjects = {
 					this.sendmessage(0, mul * this.multiplier);
 				}
 			}
-		},
+		}
 	},
 	
 	// divide two numbers 
@@ -1773,7 +1770,7 @@ var PdObjects = {
 					this.sendmessage(0, result);
 				}
 			}
-		},
+		}
 	},
 	
 	//integer divide two numbers 
@@ -1825,7 +1822,7 @@ var PdObjects = {
 					this.sendmessage(0, result);
 				}
 			}
-		},
+		}
 	},
 	
 	//integer modulo
@@ -1879,7 +1876,7 @@ var PdObjects = {
 					this.sendmessage(0, result);
 				}
 			}
-		},
+		}
 	},
 	
 	//raise left to right power
@@ -1928,7 +1925,7 @@ var PdObjects = {
 					this.sendmessage(0, out);
 				}
 			}
-		},
+		}
 	},
 	
 	// add two numbers together
@@ -1970,7 +1967,7 @@ var PdObjects = {
 					this.sendmessage(0, add + this.addition);
 				}
 			}
-		},
+		}
 	},
 	
 	// subtract two numbers 
@@ -2012,7 +2009,7 @@ var PdObjects = {
 					this.sendmessage(0, subt - this.subtraction);
 				}
 			}
-		},
+		}
 	},
 	
 	// loadbang (on launch it sends a bang)
@@ -2023,7 +2020,7 @@ var PdObjects = {
 			this.pd.schedule(0, function() {
 				me.sendmessage(0, "bang");
 			});
-		},
+		}
 	},
 	
 	// print objects
@@ -2038,11 +2035,11 @@ var PdObjects = {
 		},
 		"message": function(inletnum, message) {
 			this.pd.log(this.printname + ": " + message);
-		},
+		}
 	},
-
+	
 	//bang on a conditional match
-	"select":{
+	"select": {
 		"outletTypes": [],
 		"preinit": function() {
 			this.matches = this.args.slice(5);
@@ -2068,11 +2065,11 @@ var PdObjects = {
 					this.sendmessage((this.matches.length), message);
 				}	
 			}
-		},
+		}
 	},
 	
 	//route on a conditional match
-	"route":{
+	"route": {
 		"outletTypes": [],
 		"preinit": function() {
 			this.matches = this.args.slice(5);
@@ -2106,7 +2103,7 @@ var PdObjects = {
 					this.sendmessage((this.matches.length), message);
 				}	
 			}
-		},
+		}
 	},
 	
 	//switch object
@@ -2127,28 +2124,24 @@ var PdObjects = {
 			}
 		},
 		"message": function(inletnum, message) {
-		
-		if (inletnum == 0 && this.state!=0) {	//if its open, just send the message	
-			this.sendmessage(0, message);
+			if (inletnum == 0 && this.state!=0) {	//if its open, just send the message	
+				this.sendmessage(0, message);
 			}
-		
-		if (inletnum == 1) {//set states
-		var state=parseFloat(message);
-		 if(!isNaN(state)){ //is a valid float			
-			if(state==0){
-				this.state=0;
-			}else{ //non-zero
-				this.state=1;
-			 }
-			}			
-			else{//it doesn't like bangs, etc
-			this.pd.log("error: inlet: expected float but got '" + message + "'");
-			}
-			 
-			   }
-		}	
 			
-		},
+			if (inletnum == 1) { //set states
+				var state=parseFloat(message);
+				if(!isNaN(state)) { //is a valid float			
+					if(state==0) {
+						this.state=0;
+					} else { //non-zero
+						this.state=1;
+					}
+				} else { //it doesn't like bangs, etc
+					this.pd.log("error: inlet: expected float but got '" + message + "'");
+				}
+			}
+		}		
+	},
 		
 	//generate a random number
 	"random": {
@@ -2180,7 +2173,7 @@ var PdObjects = {
 				var randomnum=Math.floor(Math.random()*this.max)
 				this.sendmessage(0, randomnum);
 			}
-		},
+		}
 	},
 	
 	"metro": {
@@ -2227,7 +2220,7 @@ var PdObjects = {
 				// make sure the delay time doesn't go lower than 1 millisecond
 				if (this.deltime < 1) { this.deltime = 1; }
 			}
-		},
+		}
 	},
 		
 	//stores and outputs an integer
@@ -2581,11 +2574,11 @@ var PdObjects = {
 				}
 			}
 			else{
-				var newnum=parseFloat(parts[0]);
+				var newnum = parseFloat(parts[0]);
 				if (isNaN(newnum)) {
 					this.pd.log("error: change: no method for '" + val + "'");
-				}	
-				else if(newnum!=this.last){//it's new. send it 
+				}
+				else if(newnum != this.last) { //it's new. send it 
 					 this.sendmessage(0, newnum);
 					 this.last=newnum;
 				}
@@ -2617,7 +2610,7 @@ var PdObjects = {
 					this.sendmessage(0, out);
 				}
 			}
-		},
+		}
 	},
 	
 	//convert frequency to midi notes
@@ -2636,7 +2629,7 @@ var PdObjects = {
 				out = (input > 0 ? (17.3123405046 * Math.log(.12231220585 * input)) : -1500);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 	
 	//wrap bet 0 and 1
@@ -2655,7 +2648,7 @@ var PdObjects = {
 			out = input - Math.floor(input);
 			this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 	
 	//sine
@@ -2673,7 +2666,7 @@ var PdObjects = {
 				var out = Math.sin(input);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 	
 	//cosine
@@ -2691,7 +2684,7 @@ var PdObjects = {
 				var out = Math.cos(input);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 		
 	//tangent
@@ -2709,7 +2702,7 @@ var PdObjects = {
 				var out = Math.tan(input);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 		
 	//absolute value
@@ -2727,9 +2720,9 @@ var PdObjects = {
 				var out = Math.abs(input);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
-		
+	
 	//square root
 	"sqrt": {
 		"defaultinlets":1,
@@ -2751,7 +2744,7 @@ var PdObjects = {
 				}
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 		
 	//arc tangent
@@ -2769,7 +2762,7 @@ var PdObjects = {
 				var out = Math.atan(input);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 	
 	//arc tangent 2
@@ -2815,7 +2808,7 @@ var PdObjects = {
 					this.sendmessage(0, out);
 				}
 			}
-		},
+		}
 	},
 	
 	//power to decible conversion
@@ -2839,7 +2832,7 @@ var PdObjects = {
 				}
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 		
 	//decible to power conversion
@@ -2863,7 +2856,7 @@ var PdObjects = {
 				var out = Math.exp(0.2302585092994 * (input-100));
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 		
 	//root mean square to decible conversion
@@ -2887,9 +2880,9 @@ var PdObjects = {
 				}
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
-		
+	
 	//decible to root mean square conversion
 	"dbtorms": {
 		"defaultinlets":1,
@@ -2914,7 +2907,7 @@ var PdObjects = {
 				}
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 		
 	//log
@@ -2953,9 +2946,9 @@ var PdObjects = {
 				out = Math.exp(input);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
-		
+	
 	//maximum of 2 numbers
 	"max": {
 		"outletTypes": ["message"],
@@ -2996,7 +2989,7 @@ var PdObjects = {
 					this.sendmessage(0, out);
 				}
 			}
-		},
+		}
 	},
 	
 	//minimum of 2 numbers
@@ -3039,7 +3032,7 @@ var PdObjects = {
 					this.sendmessage(0, out);
 				}
 			}
-		},
+		}
 	},
 	
 	//part a stream of numbers
@@ -3081,7 +3074,7 @@ var PdObjects = {
 					}
 				}
 			}
-		},
+		}
 	},
 	
 	// reverse the order of two numbers
@@ -3119,7 +3112,7 @@ var PdObjects = {
 					this.sendmessage(0, this.rIn);
 				}
 			}
-		},
+		}
 	},
 	
 	//logical OR - outputs 1 if either inputs are non-zero
@@ -3223,6 +3216,7 @@ var PdObjects = {
 				this.hi=0;
 			}
 		},
+		
 		"message": function(inletnum, val) {
 			if (inletnum == 2) {
 				var hi = parseFloat(val);
@@ -3276,22 +3270,20 @@ var PdObjects = {
 				var out = (input<this.lo ? this.lo : (input>this.hi ? this.hi : input));
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 	
 	//text comments
-		"text": {
+	"text": {
 		"defaultinlets":0,
-	        "defaultoutlets":0,
-	        "description":"passive comments or instructions",
+		"defaultoutlets":0,
+		"description":"passive comments or instructions",
 		"outletTypes": ["message"],
 		"init": function() {
 		},
 		"message": function(inletnum, message) {
-			}
 		}
-	
-		
+	}
 };
 
 // object name aliases
