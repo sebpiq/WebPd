@@ -3451,7 +3451,7 @@ function AudioDriver(desiredSampleRate, blockSize) {
 		function write(data) {
 			// make an array of data in the correct format
 			var out = new Array(data.length);
-			for (var i = data.length-1; i != 0; i--) {
+			for (var i = data.length-1; i > -1; i--) {
 				out[i] = Math.floor(data[i] * 32768);
 			}
 			// horribly, it has to be sent as a giant string
