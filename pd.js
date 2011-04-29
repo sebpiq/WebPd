@@ -3315,6 +3315,11 @@ PdObjects.bng = PdObjects.bang;
 	And https://github.com/gasman/jasmid
  ****************************/
 
+// hack to find the full path of the currently executing script (pd.js)
+var scripts = document.getElementsByTagName("script");
+var src = scripts[scripts.length-1].src;
+var fullpath = src.substring(0, src.length - 5);
+
 function AudioDriver(desiredSampleRate, blockSize) {
 	// what sample rate we will operate at (might change depending on driver so use getSampleRate()
 	this.sampleRate = desiredSampleRate;
@@ -3435,11 +3440,11 @@ function AudioDriver(desiredSampleRate, blockSize) {
 		this.arraySlice = function (b, i) { return b.slice(i) };
 		
 		// milliseconds to buffer ahead TODO: make this configurable
-		var latency = 500;
+		var latency = 20;
 		
 		// Fall back to creating flash player in the document
 		var c = document.createElement('div');
-		c.innerHTML = '<embed type="application/x-shockwave-flash" id="da-swf" src="da.swf" width="8" height="8" allowScriptAccess="always" style="position: fixed; left:-10px;" />';
+		c.innerHTML = '<embed type="application/x-shockwave-flash" id="da-swf" src="' + fullpath + 'da.swf" width="8" height="8" allowScriptAccess="always" style="position: fixed; left:-10px;" />';
 		document.body.appendChild(c);
 		var swf = document.getElementById('da-swf');
 		
