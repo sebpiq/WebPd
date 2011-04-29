@@ -3323,16 +3323,6 @@ function AudioDriver(desiredSampleRate, blockSize) {
 	// the function used to generate new frames of audio
 	this.generator = null;
 	
-	// what basic data type to build our audio arrays from
-	// use a Float32Array if we have it
-	if (typeof Float32Array != "undefined") {
-		this.arrayType = Float32Array;
-		this.arraySlice = function (b, i) { return b.subarray(i) };
-	} else {
-		this.arrayType = Array;
-		this.arraySlice = function (b, i) { return b.slice(i) };
-	}
-	
 	/** fetch the current sample rate we are operating at **/
 	this.getSampleRate = function() {
 		return this.sampleRate;
@@ -3341,7 +3331,17 @@ function AudioDriver(desiredSampleRate, blockSize) {
 	// actually create the audio element
 	this.el = new Audio();
 	// test for mozSetup
-	if (this.el && this.el.mozSetup) {		
+	if (this.el && this.el.mozSetup && document.location.href.indexOf("useflash") == -1) {
+		// what basic data type to build our audio arrays from
+		// use a Float32Array if we have it
+		if (typeof Float32Array != "undefined") {
+			this.arrayType = Float32Array;
+			this.arraySlice = function (b, i) { return b.subarray(i) };
+		} else {
+			this.arrayType = Array;
+			this.arraySlice = function (b, i) { return b.slice(i) };
+		}
+		
 		// the audio-filling interval id
 		this.interval = -1;
 		// reset our counter
@@ -3424,7 +3424,81 @@ function AudioDriver(desiredSampleRate, blockSize) {
 			return this.interval != -1;
 		}
 	} else {
+		// we won't need the Audio() element
 		delete this.el;
+		
+		// flash is always 44100. pretty good, huh?
+		this.sampleRate = 44100;
+		
+		// flash always needs a regular typed array for .join(" ")
+		this.arrayType = Array;
+		this.arraySlice = function (b, i) { return b.slice(i) };
+		
+		// milliseconds to buffer ahead TODO: make this configurable
+		var latency = 500;
+		
+		// Fall back to creating flash player in the document
+		var c = document.createElement('div');
+		c.innerHTML = '<embed type="application/x-shockwave-flash" id="da-swf" src="da.swf" width="8" height="8" allowScriptAccess="always" style="position: fixed; left:-10px;" />';
+		document.body.appendChild(c);
+		var swf = document.getElementById('da-swf');
+		
+		// how far ahead do we want to buffer?
+		var minBufferDuration = latency * 1000;
+		var bufferFillLength = latency * this.sampleRate;
+		
+		// actually send the data to the flash applet
+		function write(data) {
+			// make an array of data in the correct format
+			var out = new Array(data.length);
+			for (var i = data.length-1; i != 0; i--) {
+				out[i] = Math.floor(data[i] * 32768);
+			}
+			// horribly, it has to be sent as a giant string
+			return swf.write(out.join(' '));
+		}
+		
+		// check whether the buffer is ready for us to write more to it
+		function checkBuffer() {
+			if (swf.bufferedDuration() < minBufferDuration) {
+				for (var block=0; block<bufferFillLength / blockSize; block++) {
+					write(me.generator());
+				}
+			}
+			
+			if (this.playing) {
+				setTimeout(checkBuffer, checkInterval);
+			}
+		}
+		
+		// wait until the swf is ready to rock and roll
+		function checkReady() {
+			if (swf.write) {
+				this.playing = true;
+				checkBuffer();
+			} else {
+				setTimeout(checkReady, 10);
+			}
+		}
+		
+		/** Stop the audio from playing **/
+		this.stop = function() {
+			swf.stop();
+			this.playing = false;
+		}
+		
+		/** Start the audio playing with the supplied function as the audio-block generator **/
+		this.play = function(generator) {
+			if (generator) {
+				this.generator = generator;
+			}
+			checkReady();
+		}
+		
+		/** test whether this driver is currently playing audio **/
+		this.is_playing = function() {
+			return this.playing;
+		}
 	}
 }
 
