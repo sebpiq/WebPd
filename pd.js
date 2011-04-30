@@ -382,12 +382,12 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 	
 	/** log a message to console **/
 	this.log = function(msg, debugconsole) {
-		if (window.console) {
+		if (typeof window.console != "undefined" && typeof console.log != "undefined") {
 			console.log(msg);
 		} else {
 			// log manually in HTML
 			var fakeconsole = document.getElementById(arguments.length == 2 ? "debug" : "console");
-			if (fakeconsole) fakeconsole.innerHTML += msg + "\n";
+			if (fakeconsole) fakeconsole.innerHTML += msg + "\r\n";
 		}
 	}
 
@@ -1510,7 +1510,7 @@ var PdObjects = {
 			// if we have received a message from the ether, send it to the listeners at our outlet
 			if (inletnum == -1)
 				this.sendmessage(0, val);
-		},
+		}
 	},
 	
 	// ordinary message sender
@@ -2926,7 +2926,7 @@ var PdObjects = {
 				out = (input > 0 ? Math.log(input) : -1000);
 				this.sendmessage(0, out);
 			}
-		},
+		}
 	},
 		
 	//exp
@@ -3326,7 +3326,11 @@ function AudioDriver(desiredSampleRate, blockSize) {
 	}
 	
 	// actually create the audio element
-	this.el = new Audio();
+	if (typeof Audio != "undefined") {
+		this.el = new Audio();
+	} else {
+		this.el = null;
+	}
 	// test for mozSetup
 	if (this.el && this.el.mozSetup && document.location.href.indexOf("useflash") == -1) {
 		// what basic data type to build our audio arrays from
