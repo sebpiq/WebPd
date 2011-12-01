@@ -8,6 +8,10 @@
 <img src='logo.png' id='logo'/>
 <div id='contents'>
 <!--#exec cgi="cgi-bin/contents.cgi" -->
+<?
+	include_once("markdown.php");
+	print Markdown(file_get_contents("README"));
+?>
 </div>
 
 <h2>Unimplemented objects</h2>
@@ -16,14 +20,7 @@
 <p>Implemented objects are prefixed with a '&gt;', whilst unimplemented objects are prefixed with a '&lt;'.</p>
 <pre>
 <!--#include file='OBJECTS.txt' -->
-</pre>
-</div>
-
-<h2>bzr log</h2>
-<a onclick='document.getElementById("bzrlog").style.display="block";' href='#bzrlog' name='bzrlog'>(show)</a>
-<div id='bzrlog'>
-<pre>
-<!--#exec cgi="cgi-bin/log.cgi" -->
+<?= file_get_contents("OBJECTS.txt") ?>;
 </pre>
 </div>
 

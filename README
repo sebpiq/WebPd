@@ -5,7 +5,7 @@ WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.h
 
 Here are the [test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need Firefox version 4. You can search for Firefox 4 and download it from the [Mozilla homepage](http://www.mozilla.org/). More information about the Firefox [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available.
 
-If you want to keep abreast of the latest changes, here is the WebPd Google Code page. You might also like to check [my blog](http://mccormick.cx/news).
+If you want to keep abreast of the latest changes, here is the [WebPd Google Code page](http://code.google.com/p/web-pure-data). You might also like to check [my blog](http://mccormick.cx/news).
 
 Copyright [Chris McCormick](http://mccormick.cx/), 2010. [Licensed under the terms of the AGPLv3 or a later version of that license](COPYING).
 
