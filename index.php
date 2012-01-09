@@ -10,7 +10,7 @@
 <!--#exec cgi="cgi-bin/contents.cgi" -->
 <?
 	include_once("markdown.php");
-	print Markdown(file_get_contents("README"));
+	print Markdown(file_get_contents("README.md"));
 ?>
 </div>
 

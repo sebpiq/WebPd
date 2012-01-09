@@ -387,7 +387,7 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 		} else {
 			// log manually in HTML
 			var fakeconsole = document.getElementById(arguments.length == 2 ? "debug" : "console");
-			if (fakeconsole) fakeconsole.innerHTML += msg + "\r\n";
+			if (fakeconsole) fakeconsole.innerHTML += msg + "<br/>\n";
 		}
 	}
 
