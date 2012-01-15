@@ -71,11 +71,12 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 	/** send a message from outside the graph to a named receiver inside the graph **/
 	this.send = function(name, val) {
 		this.debug("graph received: " + name + " " + val);
-		if (this.listeners[name]) {
-			for (var l=0; l<this.listeners[name].length; l++) {
-				if (this.listeners[name][l].message) {
+		var listeners = this.listeners[name];
+		if (listeners) {
+			for (var l=0; l<listeners.length; l++) {
+				if (listeners[l].message) {
 					// inletnum of -1 signifies it came from somewhere other than an inlet
-					this.listeners[name][l].message(-1, val);
+					listeners[l].message(-1, val);
 				}
 			}
 		} else {
@@ -112,7 +113,7 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 					// if this is a message object
 					if (tokens[1] == "msg") {
 						proto = "msg";
-					}else if (tokens[1] == "text") {
+					} else if (tokens[1] == "text") {
 						proto = "text";
 					} else {
 						// see if we know about this type of object yet
