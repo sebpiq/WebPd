@@ -1496,6 +1496,43 @@ var PdObjects = {
 		}
 	},	
 	
+	// basic oscillator
+	"readsf~": {
+		"outletTypes": ["dsp"],
+		"dspinlets": [0],
+		"preinit": function() {
+			if (this.args.length >= 6) {
+				// TODO: create multiple outlets
+			}
+		},
+		"init": function() {
+			this.sampCount = 0;
+            this.defaultFrame = [0.0];
+		},
+		"dsptick": function() {
+            if (this.audioSource) {
+			    for (var i=0; i < this.pd.blockSize; i++) {
+                    var frame = this.audioSource.readFrame() || this.defaultFrame;
+				    this.outletbuffer[0][i] = frame[0];
+			    }
+                //console.log("readsf~", this.outletbuffer[0]);
+            }
+		},
+		"message": function(inlet, message) {
+            console.log(message);
+			if (inlet == 0) {
+                var parts = this.toarray(message);
+                var part0 = parts[0];
+                // TODO: what behaviour if unknown msg ?
+                if (part0 == "open") {
+                    this.audioSource = new AudioSource(parts[1]);
+                } else if (part0 == "close") {
+                    this.audioSource = undefined;
+                }
+			}
+		}
+	},
+
 	/************************** Non-DSP objects ******************************/
 	
 	// ordinary message receiver
@@ -3303,6 +3340,8 @@ PdObjects.bng = PdObjects.bang;
 	TODO: mozAudio driver
 	TODO: chromium driver
 	TODO: flash driver
+    TODO: I'd change terminology here ... since playing can refer also to "reading audio", or should 
+    there be a AudioInput driver and an AudioOutput ?
 	
 	Thanks to http://github.com/bfirsh/dynamicaudio.js
 	And https://github.com/gasman/jasmid
@@ -3313,6 +3352,104 @@ var scripts = document.getElementsByTagName("script");
 var src = scripts[scripts.length-1].src;
 var fullpath = src.substring(0, src.length - 5);
 
+
+function AudioSource(url, bufferSize) {
+	// closure
+	var me = this;
+	// the audio file's sample rate
+	this.sampleRate = null;
+    // output buffer, where audio stream is written when available
+    this.buffer = null;
+    // the number of channels of the audio file
+    this.channels = null;
+    // the size of the output buffer, default 5 seconds stereo 
+    this.bufferSize = (bufferSize || 441000);
+
+	// actually create the audio element
+	if (typeof Audio != "undefined") {
+		this.el = new Audio(url);
+	} else {
+		this.el = null;
+	}
+
+	// test for mozSetup
+	if (this.el && this.el.mozSetup && document.location.href.indexOf("useflash") == -1) {
+        // TODO: factorize, cause it is present in other parts
+		// what basic data type to build our audio arrays from
+		// use a Float32Array if we have it
+		if (typeof Float32Array != "undefined") {
+			this.arrayType = Float32Array;
+			this.arraySlice = function (b, start, end) { return b.subarray(start, end) };
+		} else {
+			this.arrayType = Array;
+			this.arraySlice = function (b, start, end) { return b.slice(start, end) };
+		}
+
+        // our buffer is in fact a queue of buffers
+        this.buffer = [];
+		// position of the next sample to read in the current frameBuffer.
+		this.cursor = 0;
+
+        // main event loop
+        this.el.addEventListener("loadedmetadata", function(event) {
+
+            // save metadata
+            me.channels = me.el.mozChannels;
+            me.sampleRate = me.el.mozSampleRate;
+            me.frameBufferLength = me.el.mozFrameBufferLength;
+            console.log(me.channels, me.sampleRate); 
+
+            // set the "audio available" event listener
+            me.el.addEventListener("MozAudioAvailable", function(event) {
+                me.buffer.push(event.frameBuffer);
+                //console.log("Audio received", me.hungry());
+                if (me.hungry() <= 0) me.el.pause();
+            }, false);
+
+            // we don't wanna hear the sound played
+            me.el.muted = true;
+
+            // start receiving samples
+            me.el.play();
+
+        }, false);
+
+		/* Checks if the output buffer is hungry for more */
+		this.hungry = function() {
+            // buffersize - (total amount of samples) - samples read 
+			return (this.bufferSize
+                - (this.buffer.length * this.frameBufferLength)
+                - this.cursor);
+		}
+
+        /* Returns the next frame */
+        this.readFrame = function() {
+            // if there is something in the buffer
+            if (this.buffer.length >=1) {
+                // get the next frame from current frameBuffer
+                var frame = this.arraySlice(this.buffer[0],
+                    this.cursor, this.cursor + this.channels);
+                // increment cursor
+                this.cursor += this.channels;
+                // if frameBuffer is consumed
+                if (this.cursor == this.frameBufferLength) {
+                    // we forget it and switch on to next
+                    this.buffer.shift();
+                    this.cursor = 0;
+                    // if there is space in buffer, we dowload some more
+                    if (this.hungry() > 0) this.el.play();
+                }
+                return frame;
+            } else {
+                return null;
+            }
+        }
+
+    } else {
+    }
+}
+
+
 function AudioDriver(desiredSampleRate, blockSize) {
 	// what sample rate we will operate at (might change depending on driver so use getSampleRate()
 	this.sampleRate = desiredSampleRate;
@@ -3320,7 +3457,7 @@ function AudioDriver(desiredSampleRate, blockSize) {
 	var me = this;
 	// the function used to generate new frames of audio
 	this.generator = null;
-	
+
 	/** fetch the current sample rate we are operating at **/
 	this.getSampleRate = function() {
 		return this.sampleRate;
@@ -3425,6 +3562,7 @@ function AudioDriver(desiredSampleRate, blockSize) {
 		this.is_playing = function() {
 			return this.interval != -1;
 		}
+
 	} else {
 		// we won't need the Audio() element
 		delete this.el;
