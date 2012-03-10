@@ -14,8 +14,8 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 	this.blockSize = blockSize || BLOCKSIZE;
 	// create the audio output driver
 	this.audio = new AudioDriver(desiredSampleRate, blockSize);
-	// fetch the actual samplerate from the audio driver
-	this.sampleRate = this.audio.getSampleRate();
+	// the actual samplerate needs to be fetched from the audio driver
+	this.sampleRate;
 	// output buffer (stereo)
 	this.output = new this.audio.arrayType(blockSize * 2);
 	// whether we are in debug mode (more verbose output
@@ -357,6 +357,8 @@ var Pd = function Pd(desiredSampleRate, blockSize, debug) {
 		if (!this.audio.is_playing()) {
 			this.debug("Starting audio.");
 			this.audio.play(function() { return context.generateFrame(); });
+        	// fetch the actual samplerate from the audio driver
+	        this.sampleRate = this.audio.getSampleRate();
 			// reset the frame count
 			this.frame = 0;
 			// reset the frame count on all objects

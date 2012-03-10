@@ -17,6 +17,7 @@
         // what sample rate we will operate at (might change depending on driver so use getSampleRate()
         this._sampleRate = desiredSampleRate;
         this._blockSize = blockSize;
+        this._channelCount = 2;
     };
 
     extend(AudioDriverInterface.prototype, {
@@ -50,8 +51,7 @@
     var SinkAdapter = function(desiredSampleRate, blockSize) {
         AudioDriverInterface.prototype.constructor.apply(this, arguments);
         this._sink = null;
-	    // if there is any overflow writing to the hardware buffer we store it here
-	    this._overflow = null;
+        this._batchSize = 4;
     };
 
     extend(SinkAdapter.prototype, AudioDriverInterface.prototype, {
@@ -71,44 +71,28 @@
         play: function(generator) {
             var me = this;
 
-            this._sink = Sink(function(buffer, channelCount){
-                // this is the current writing position in buffer
+            // We set the buffer size to an exact number of blocks,
+            // that way we don't have to think about overflows
+            var bufferSize = this._blockSize * this._batchSize * this._channelCount;
+            var blockBufferSize = this._channelCount * me._blockSize;
+            // Sink(callback, channelCount, preBufferSize, sampleRate)
+            this._sink = Sink(null, this._channelCount, null, this._sampleRate);
+            var proxy = this._sink.createProxy(bufferSize);
+
+            // this callback takes generated blocks, and copy them directly
+            // to the buffer supplied by sink.js.
+            proxy.on('audioprocess', function(buffer){
                 var pos = 0;
 
-                // TODO: if we actually match Sink's buffer size to a multiple of block size,
-                // we shouldn't need to handle overflows
- 
-		        // if we had some overflow last time, first append this to the buffer
-                var overflow = me._overflow
-		        if (overflow !== null) {
-                    for (pos; pos<Math.min(overflow.length, buffer.length); pos++) {
-                        buffer[pos] = overflow[pos];
-                    }
-                    // if buffer is full, no need to go further
-                    if (pos === buffer.length) {
-                        if (pos !== overflow.length) me._overflow = null;
-                        else me._overflow = me.arraySlice(overflow, pos);
-                        return;
-                    }
-                    // else, we can discard the previous overflow
-                    me._overflow = null;
-		        }
-
 		        // how many blocks we should generate and add to the buffer
-		        var howmany = Math.ceil((buffer.length - pos) / (2*me._blockSize));
-		        for (var i=0; i<howmany; i++) {
+		        for (var i=0; i<me._batchSize; i++) {
                     var bPos = 0;
 			        var block = generator();
-                    for (pos, bPos; pos<buffer.length && bPos<block.length; pos++, bPos++) {
+                    for (pos, bPos; bPos<blockBufferSize; pos++, bPos++) {
                         buffer[pos] = block[bPos];
                     }
 		        }
-
-                // save the overflow for next time
-                if (bPos !== block.length) {
-                    me._overflow = me.arraySlice(block, bPos);
-                }
-            }, 2, 8192, this._sampleRate);
+            });
 
             // activating sink.js debugging 
             this._sink.on('error', function(e){
