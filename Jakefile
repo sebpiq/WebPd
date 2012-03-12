@@ -1,9 +1,11 @@
 var fs = require('fs');
 var path = require('path');
 var sys = require('sys');
+var jsp = require("uglify-js").parser;
+var pro = require("uglify-js").uglify;
 
 task('default', [], function () {
-    jake.Task['concat'].invoke();
+    jake.Task['minify'].invoke();
 });
 
 task('concat', [], function () {
@@ -15,7 +17,21 @@ task('concat', [], function () {
     files.forEach(function(fileName) {
         var fileName = path.join(pathName, fileName),
             contents = fs.readFileSync(fileName);
-        sys.puts('Read: ' + contents.length + ', written: ' + fs.writeSync(outFile, contents.toString()));
     });
-    fs.closeSync(outFile);    
+    fs.closeSync(outFile);
+    sys.puts('Written > pd.js');
+});
+
+task('minify', ['concat'], function() {
+    var pathName = '.',
+        outFile = fs.openSync('pd-min.js', 'w+');
+
+    var fileName = path.join(pathName, 'pd.js'),
+        contents = fs.readFileSync(fileName);
+    var ast = jsp.parse(contents.toString());
+    ast = pro.ast_mangle(ast);
+    ast = pro.ast_squeeze(ast);
+    fs.writeSync(outFile, pro.gen_code(ast));
+    fs.closeSync(outFile);
+    sys.puts('Written > pd-min.js');
 });

@@ -17,7 +17,8 @@ Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_docu
 Instructions for building pd.js
 --------------------------------
 
-`pd.js` can be built with [Jake](https://github.com/mde/jake). Follow the instructions to install *Jake*, then in WebPd's root folder run :
+To build `pd.js` you will need *node.js*, [Jake](https://github.com/mde/jake), and [UglifyJS](https://github.com/mishoo/UglifyJS/).
+Follow the instructions to install those, then in WebPd's root folder run :
 
     jake
 
