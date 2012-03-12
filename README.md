@@ -14,6 +14,13 @@ Documentation
 
 Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm) by Miller Puckette, the creator of Pure Data. Note: very little of the full Pure Data functionality has been implemented yet. Most things probably won't work.
 
+Instructions for building pd.js
+--------------------------------
+
+`pd.js` can be built with [Jake](https://github.com/mde/jake). Follow the instructions to install *Jake*, then in WebPd's root folder run :
+
+    jake
+
 Contributing
 ------------
 
