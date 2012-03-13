@@ -17,6 +17,7 @@ task('concat', [], function () {
     files.forEach(function(fileName) {
         var fileName = path.join(pathName, fileName),
             contents = fs.readFileSync(fileName);
+        fs.writeSync(outFile, contents.toString());
     });
     fs.closeSync(outFile);
     sys.puts('Written > pd.js');
