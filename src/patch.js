@@ -1,5 +1,214 @@
 (function(Pd){
 
+    Pd.Patch = function (graph, tables) {
+        // TODO: remove this, better API for dynamic patch
+        for (k in graph.objects) graph.objects[k].pd = this;
+        for (k in tables) tables[k].pd = this;
+
+        this.sampleRate = Pd.sampleRate;
+        this.blockSize = Pd.blockSize;
+	    // create the audio output driver
+	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
+	    // output buffer (stereo)
+	    this.output = new this.audio.arrayType(this.blockSize * 2);
+	    // how many frames have we run
+	    this.frame = 0;
+	    // keys are receiver names
+	    this.listeners = {};
+	    // arrays of callbacks which are scheduled to run at some point in time
+	    // keys are times
+	    this.scheduled = {};
+	    // arrays of float data - Pd's tables
+	    // keys are table names
+	    this.tables = (tables || {});
+	
+	    // internal representation of the DSP graph.
+	    this._graph = (graph || {
+		    // an array of every object we know about
+		    "objects": [],
+		    // an array of all of the end-points of the dsp graph
+		    // (like dac~ or print~ or send~ or outlet~)
+		    "endpoints": []
+	    });
+    };
+
+    Pd.extend(Pd.Patch.prototype, {
+
+	    // regular expression for finding dollarargs
+	    dollarmatch: /(?:\\{0,1}\$)(\d+)/g, //TODO: shouldn't be here
+	
+	    /** send a message from outside the graph to a named receiver inside the graph **/
+	    send: function(name, val) {
+		    Pd.debug("graph received: " + name + " " + val);
+		    var listeners = this.listeners[name];
+		    if (listeners) {
+			    for (var l=0; l<listeners.length; l++) {
+				    if (listeners[l].message) {
+					    // inletnum of -1 signifies it came from somewhere other than an inlet
+					    listeners[l].message(-1, val);
+				    }
+			    }
+		    } else {
+			    Pd.log("error: " + name + ": no such object");
+		    }
+	    },
+	
+	    /** send a message from inside the graph to a named receiver outside the graph **/
+	    receive: function(name,callback){
+		    pd.addlistener(name,{"message":function(d,val){callback(val);}});	
+	    },
+	
+	    /** send a bang to all receive objects named "test" **/
+	    testbang: function(){
+		    this.send("test", "bang");
+	    },
+	
+	    /******************** Internal methods ************************/
+	
+	    /** adds a new named listener to our graph **/
+	    addlistener: function(name, who) {
+		    if (!this.listeners[name])
+			    this.listeners[name] = [];
+		    this.listeners[name][this.listeners[name].length] = who;
+	    },
+	
+	    /** gets the absolute current logical elapsed time in milliseconds **/
+	    getabstime: function() {
+		    return this.frame * Pd.blockSize / (Pd.sampleRate / 1000);
+	    },
+	
+	    /** Schedule a callback at a particular time - milliseconds **/
+	    schedule: function(time, callback) {
+		    //var time = relativetime + this.getabstime();
+		    if (this.scheduled[time] == null)
+			    this.scheduled[time] = [];
+		    this.scheduled[time].push(callback);
+		    //Pd.log("schedule()");
+		    //Pd.log("\tcurrent time: " + this.getabstime());
+		    //Pd.log("\tall items scheduled: ");
+		    //Pd.log_allscheduled();
+	    },
+	
+	    log_allscheduled: function() {
+		    for (var s in this.scheduled) {
+			    Pd.log("\t\t" + s + ": " + this.scheduled[s].length);
+			    /*for (var i=0; i<this.scheduled[s].length; i++) {
+				    Pd.log(this.scheduled[s][i]);
+			    }*/
+		    }
+	    },
+	
+	    /** Gets a list of all currently scheduled callbacks **/
+	    getscheduled: function() {
+		    var scheduled = [];
+		    for (var s in this.scheduled) {
+			    if (s <= this.getabstime()) {
+				    scheduled.push(s);
+			    }
+		    }
+		    // make sure the scheduled items get run in time order
+		    scheduled.sort();
+		    //Pd.log("getscheduled()");
+		    //Pd.log("\tcurrent time: " + this.getabstime());
+		    //Pd.log("\ttimes scheduled: " + scheduled);
+		    //Pd.log("\tall items scheduled: " + this.allscheduled());
+		    return scheduled;
+	    },
+	
+	    /******************** DSP stuff ************************/
+	
+	    /** Get a single frame of audio data from Pd **/
+	    generateFrame: function() {
+		    // run any pending scheduled callbacks in this frame
+		    // keep doing so until there are no scheduled callbacks
+		    var scheduled = [];
+		    do {
+			    // anything we want to remove from the list of scheduled callbacks this round
+			    var removescheduled = [];
+			    // get a list of all times that have callbacks attached to them that are due
+			    scheduled = this.getscheduled();
+			    // loop through each time
+			    for (var si=0; si<scheduled.length; si++) {
+				    var s = scheduled[si];
+				    // for every callback to be run at this time
+				    for (var c=0; c<this.scheduled[s].length; c++) {
+					    // run it
+					    this.scheduled[s][c](parseFloat(s));
+				    }
+				    // add it to our list of times to remove callbacks for
+				    removescheduled.push(s);
+			    }
+			    // remove any scheduled callbacks we've already run
+			    for (var r=0; r<removescheduled.length; r++) {
+				    delete this.scheduled[removescheduled[r]];
+			    }
+		    } while (scheduled.length);
+		    // reset our output buffer (gets written to by dac~ objects)
+		    for (var i=0; i<this.output.length; i++) {
+			    this.output[i] = 0;
+            }
+		    // run the dsp function on all endpoints to get data
+		    for (var e in this._graph.endpoints) {
+			    // dac~ objects will add their output to this.output
+			    this.tick(this._graph.endpoints[e]);
+		    }
+		    // increase the frame count
+		    this.frame += 1;
+		    // return the contents of the dspbuffer
+		    return this.output;
+	    },
+	
+	    /** Dsp tick function run on an object which makes sure the object's parents all get run before running it. **/
+	    tick: function(obj) {
+		    // look at each inlet, and make sure that the previous objects have all run this frame
+		    for (var o in obj.inlets) {
+			    var inlet = obj.inlets[o][0];
+			    // run this inlet if it hasn't run yet
+			    if (inlet.frame < this.frame) {
+				    this.tick(inlet);
+			    }
+		    }
+		    // run this object's dsp process
+		    if (obj.dsptick)
+			    obj.dsptick();
+		    // update this objects' frame count
+		    obj.frame = this.frame;
+	    },
+	
+	    /** Starts this graph running **/
+	    play: function() {
+		    var context = this;
+		    // check we're not already running
+		    if (!this.audio.is_playing()) {
+			    Pd.debug("Starting audio.");
+			    this.audio.play(function() { return context.generateFrame(); });
+            	// fetch the actual samplerate from the audio driver
+	            Pd.sampleRate = this.audio.getSampleRate(); // TODO : shouldn't be here
+			    // reset the frame count
+			    this.frame = 0;
+			    // reset the frame count on all objects
+			    for (var o in this._graph.objects) {
+				    this._graph.objects[0].frame = 0;
+			    }
+		    } else {
+			    Pd.debug("Already started.");
+		    }
+	    },
+	
+	    /** Stops this graph from running **/
+	    stop: function() {
+		    // if we're already running
+		    if (this.audio.is_playing()) {
+			    Pd.debug("Stopping audio.");
+			    // destroy the audio element
+			    this.audio.stop();
+      		} else {
+			    Pd.debug("Already stopped.");
+		    }
+	    },
+    });
+
+
     // regular expression for finding valid lines of Pd in a file
     var lines_re = new RegExp("(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n", "gi");
 
@@ -112,246 +321,5 @@
 
         return [graph, tables];
     };
-
-    Pd.Patch = function (graph, tables) {
-        // TODO: remove this, better API for dynamic patch
-        for (k in graph.objects) graph.objects[k].pd = this;
-        for (k in tables) tables[k].pd = this;
-
-        this.sampleRate = Pd.sampleRate;
-        this.blockSize = Pd.blockSize;
-	    // create the audio output driver
-	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize); 
-	    // output buffer (stereo)
-	    this.output = new this.audio.arrayType(this.blockSize * 2);
-	    // how many frames have we run
-	    this.frame = 0;
-	    // keys are receiver names
-	    this.listeners = {};
-	    // arrays of callbacks which are scheduled to run at some point in time
-	    // keys are times
-	    this.scheduled = {};
-	    // arrays of float data - Pd's tables
-	    // keys are table names
-	    this.tables = (tables || {});
-	
-	    // internal representation of the DSP graph.
-	    this._graph = (graph || {
-		    // an array of every object we know about
-		    "objects": [],
-		    // an array of all of the end-points of the dsp graph
-		    // (like dac~ or print~ or send~ or outlet~)
-		    "endpoints": []
-	    });
-    };
-
-
-    Pd.extend(Pd.Patch.prototype, {
-
-	    // regular expression for finding dollarargs
-	    dollarmatch: /(?:\\{0,1}\$)(\d+)/g,
-	    // regular expression for delimiting messages
-	    messages_re: /\\{0,1};/,
-	    // regular expression for delimiting comma separated messages
-	    parts_re: /\\{0,1},/,
-	
-	    /** send a message from outside the graph to a named receiver inside the graph **/
-	    send: function(name, val) {
-		    Pd.debug("graph received: " + name + " " + val);
-		    var listeners = this.listeners[name];
-		    if (listeners) {
-			    for (var l=0; l<listeners.length; l++) {
-				    if (listeners[l].message) {
-					    // inletnum of -1 signifies it came from somewhere other than an inlet
-					    listeners[l].message(-1, val);
-				    }
-			    }
-		    } else {
-			    Pd.log("error: " + name + ": no such object");
-		    }
-	    },
-	
-	    /** send a message from inside the graph to a named receiver outside the graph **/
-	    receive: function(name,callback){
-		    pd.addlistener(name,{"message":function(d,val){callback(val);}});	
-	    },
-	
-	    /** send a bang to all receive objects named "test" **/
-	    testbang: function(){
-		    this.send("test", "bang");
-	    },
-	
-	    /******************** Internal methods ************************/
-	
-	    /** adds a new named listener to our graph **/
-	    addlistener: function(name, who) {
-		    if (!this.listeners[name])
-			    this.listeners[name] = [];
-		    this.listeners[name][this.listeners[name].length] = who;
-	    },
-	
-	    /** gets the absolute current logical elapsed time in milliseconds **/
-	    getabstime: function() {
-		    return this.frame * Pd.blockSize / (Pd.sampleRate / 1000);
-	    },
-	
-	    /** Schedule a callback at a particular time - milliseconds **/
-	    schedule: function(time, callback) {
-		    //var time = relativetime + this.getabstime();
-		    if (this.scheduled[time] == null)
-			    this.scheduled[time] = [];
-		    this.scheduled[time].push(callback);
-		    //Pd.log("schedule()");
-		    //Pd.log("\tcurrent time: " + this.getabstime());
-		    //Pd.log("\tall items scheduled: ");
-		    //Pd.log_allscheduled();
-	    },
-	
-	    log_allscheduled: function() {
-		    for (var s in this.scheduled) {
-			    Pd.log("\t\t" + s + ": " + this.scheduled[s].length);
-			    /*for (var i=0; i<this.scheduled[s].length; i++) {
-				    Pd.log(this.scheduled[s][i]);
-			    }*/
-		    }
-	    },
-	
-	    /** Gets a list of all currently scheduled callbacks **/
-	    getscheduled: function() {
-		    var scheduled = [];
-		    for (var s in this.scheduled) {
-			    if (s <= this.getabstime()) {
-				    scheduled.push(s);
-			    }
-		    }
-		    // make sure the scheduled items get run in time order
-		    scheduled.sort();
-		    //Pd.log("getscheduled()");
-		    //Pd.log("\tcurrent time: " + this.getabstime());
-		    //Pd.log("\ttimes scheduled: " + scheduled);
-		    //Pd.log("\tall items scheduled: " + this.allscheduled());
-		    return scheduled;
-	    },
-	
-	    /**
-		    Tokenizes a complex message with atoms, commas, and semicolons.
-		    Returns an array of arrays of strings. (array of lists of comma separated messages).
-	     **/
-	    messagetokenizer: function(message) {
-		    var result = [];
-		    var messages = message.split(this.messages_re);
-		    for (var m=0; m<messages.length; m++) {
-			    var submessagelist = [];
-			    // TODO: replace $N with item N-1 from the incoming message
-			    var submessages = messages[m].split(this.parts_re);
-			    for (var s=0; s<submessages.length; s++) {
-				    var atoms = submessages[s].split(" ");
-				    var resultatoms = [];
-				    for (var a=0; a<atoms.length; a++) {
-					    if (atoms[a] != "") {
-						    resultatoms.push(atoms[a]);
-					    }
-				    }
-				    if (resultatoms.length)
-					    submessagelist.push(resultatoms.join(" "));
-			    }
-			    if (submessagelist.length)
-				    result.push(submessagelist);
-		    }
-		    return result;
-	    },
-	
-	    /******************** DSP stuff ************************/
-	
-	    /** Get a single frame of audio data from Pd **/
-	    generateFrame: function() {
-		    // run any pending scheduled callbacks in this frame
-		    // keep doing so until there are no scheduled callbacks
-		    var scheduled = [];
-		    do {
-			    // anything we want to remove from the list of scheduled callbacks this round
-			    var removescheduled = [];
-			    // get a list of all times that have callbacks attached to them that are due
-			    scheduled = this.getscheduled();
-			    // loop through each time
-			    for (var si=0; si<scheduled.length; si++) {
-				    var s = scheduled[si];
-				    // for every callback to be run at this time
-				    for (var c=0; c<this.scheduled[s].length; c++) {
-					    // run it
-					    this.scheduled[s][c](parseFloat(s));
-				    }
-				    // add it to our list of times to remove callbacks for
-				    removescheduled.push(s);
-			    }
-			    // remove any scheduled callbacks we've already run
-			    for (var r=0; r<removescheduled.length; r++) {
-				    delete this.scheduled[removescheduled[r]];
-			    }
-		    } while (scheduled.length);
-		    // reset our output buffer (gets written to by dac~ objects)
-		    for (var i=0; i<this.output.length; i++) {
-			    this.output[i] = 0;
-            }
-		    // run the dsp function on all endpoints to get data
-		    for (var e in this._graph.endpoints) {
-			    // dac~ objects will add their output to this.output
-			    this.tick(this._graph.endpoints[e]);
-		    }
-		    // increase the frame count
-		    this.frame += 1;
-		    // return the contents of the dspbuffer
-		    return this.output;
-	    },
-	
-	    /** Dsp tick function run on an object which makes sure the object's parents all get run before running it. **/
-	    tick: function(obj) {
-		    // look at each inlet, and make sure that the previous objects have all run this frame
-		    for (var o in obj.inlets) {
-			    var inlet = obj.inlets[o][0];
-			    // run this inlet if it hasn't run yet
-			    if (inlet.frame < this.frame) {
-				    this.tick(inlet);
-			    }
-		    }
-		    // run this object's dsp process
-		    if (obj.dsptick)
-			    obj.dsptick();
-		    // update this objects' frame count
-		    obj.frame = this.frame;
-	    },
-	
-	    /** Starts this graph running **/
-	    play: function() {
-		    var context = this;
-		    // check we're not already running
-		    if (!this.audio.is_playing()) {
-			    Pd.debug("Starting audio.");
-			    this.audio.play(function() { return context.generateFrame(); });
-            	// fetch the actual samplerate from the audio driver
-	            Pd.sampleRate = this.audio.getSampleRate();
-			    // reset the frame count
-			    this.frame = 0;
-			    // reset the frame count on all objects
-			    for (var o in this._graph.objects) {
-				    this._graph.objects[0].frame = 0;
-			    }
-		    } else {
-			    Pd.debug("Already started.");
-		    }
-	    },
-	
-	    /** Stops this graph from running **/
-	    stop: function() {
-		    // if we're already running
-		    if (this.audio.is_playing()) {
-			    Pd.debug("Stopping audio.");
-			    // destroy the audio element
-			    this.audio.stop();
-      		} else {
-			    Pd.debug("Already stopped.");
-		    }
-	    },
-    });
 
 })(this.Pd);

@@ -60,4 +60,37 @@
 	    }
     };
 
+    // regular expression for delimiting messages
+    var messages_re = /\\{0,1};/;
+    // regular expression for delimiting comma separated messages
+    var parts_re = /\\{0,1},/;
+
+    /**
+        Tokenizes a complex message with atoms, commas, and semicolons.
+        Returns an array of arrays of strings. (array of lists of comma separated messages).
+     **/
+    Pd.messagetokenizer = function(message) {
+	    var result = [];
+	    var messages = message.split(messages_re);
+	    for (var m=0; m<messages.length; m++) {
+		    var submessagelist = [];
+		    // TODO: replace $N with item N-1 from the incoming message
+		    var submessages = messages[m].split(parts_re);
+		    for (var s=0; s<submessages.length; s++) {
+			    var atoms = submessages[s].split(' ');
+			    var resultatoms = [];
+			    for (var a=0; a<atoms.length; a++) {
+				    if (atoms[a] != '') {
+					    resultatoms.push(atoms[a]);
+				    }
+			    }
+			    if (resultatoms.length)
+				    submessagelist.push(resultatoms.join(' '));
+		    }
+		    if (submessagelist.length)
+			    result.push(submessagelist);
+	    }
+	    return result;
+    };
+
 }).call(this);

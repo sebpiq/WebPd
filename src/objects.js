@@ -86,7 +86,7 @@ var PdObjects = {
 				// get our atoms
 				var incoming = this.toarray(message);
 				// turn our value into it's constituent messages and sub-messages
-				var messages = this.pd.messagetokenizer(this.value);
+				var messages = Pd.messagetokenizer(this.value);
 				for (var m=0; m<messages.length; m++) {
 					// comma separated submessages
 					var submessages = messages[m];
