@@ -19,21 +19,9 @@
         play: function(generator) { Pd.notImplemented(); },
 
         /** test whether this driver is currently playing audio **/
-        is_playing: function() { Pd.notImplemented(); },
+        is_playing: function() { Pd.notImplemented(); }
 
-        arrayType: Array,
-
-	    arraySlice: function (array, start) { return array.slice(start) }
     });
-
-    // use a Float32Array if we have it
-    if (typeof Float32Array != "undefined") {
-        Pd.extend(AudioDriverInterface.prototype, {
-	        arrayType: Float32Array,
-	        arraySlice: function (array, start) { return array.subarray(start) }
-        });
-    }
-
 
     var SinkAdapter = function(desiredSampleRate, blockSize) {
         AudioDriverInterface.prototype.constructor.apply(this, arguments);
@@ -45,7 +33,11 @@
 
         /** fetch the current sample rate we are operating at **/
         getSampleRate: function() { 
-            return (this._sink ? this._sink.sampleRate : this._sampleRate); 
+            if (this._sink) return this._sink.sampleRate;
+            else {
+                var sink = Sink(null, this._channelCount, null, this._sampleRate);
+                return sink.sampleRate;
+            } 
         },
 
         /** Stop the audio from playing **/

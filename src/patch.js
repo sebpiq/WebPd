@@ -1,22 +1,28 @@
 (function(Pd){
 
-    Pd.Patch = function (graph) {
+    Pd.Patch = function () {
         var me = this;
-	    // internal representation of the DSP graph.
-	    this._graph = graph || (new _Graph());
-        // TODO: remove this, better API for dynamic patches
-        this._graph.mapObjects(function(obj) { 
-            obj.pd = me;
-            obj.setupdsp();
-		    if (obj.init) obj.init();
-        });
 
+        // setting up the graph
+	    this._graph = {
+		    // an array of every object we know about
+		    objects: [],
+		    // an array of all of the end-points of the dsp graph
+		    // (like dac~ or print~ or send~ or outlet~)
+		    endpoints: []
+	    };
+	    // arrays of float data - Pd's tables
+	    // keys are table names
+        this._tables = {};
+
+        // sample rate at which this patch runs
         this.sampleRate = Pd.sampleRate;
+        // block size of this patch
         this.blockSize = Pd.blockSize;
 	    // create the audio output driver
 	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
 	    // output buffer (stereo)
-	    this.output = new this.audio.arrayType(this.blockSize * 2);
+	    this.output = new Pd.arrayType(this.blockSize * 2);
 	    // how many frames have we run
 	    this.frame = 0;
 	    // keys are receiver names
@@ -143,7 +149,7 @@
 			    this.output[i] = 0;
             }
 		    // run the dsp function on all endpoints to get data
-		    this._graph.mapEndpoints(function(obj) { me.tick(obj); });
+		    this.mapEndpoints(function(obj) { me.tick(obj); });
 		    // increase the frame count
 		    this.frame += 1;
 		    // return the contents of the dspbuffer
@@ -179,7 +185,7 @@
 			    // reset the frame count
 			    this.frame = 0;
 			    // reset the frame count on all objects
-			    this._graph.mapObjects(function(obj) { obj.frame = 0; });
+			    this.mapObjects(function(obj) { obj.frame = 0; });
 		    } else {
 			    Pd.debug('Already started.');
 		    }
@@ -195,31 +201,14 @@
       		} else {
 			    Pd.debug('Already stopped.');
 		    }
-	    }
-    });
+	    },
 
-
-    var _Graph = function() {
-
-	    this._graph = {
-		    // an array of every object we know about
-		    objects: [],
-		    // an array of all of the end-points of the dsp graph
-		    // (like dac~ or print~ or send~ or outlet~)
-		    endpoints: []
-	    };
-
-	    // arrays of float data - Pd's tables
-	    // keys are table names
-        this._tables = {};
-
-    };
-
-    Pd.extend(_Graph.prototype, {
+	    /******************** Graph methods ************************/
 
         addObject: function(obj) {
-            var ind = this._getIndex();
+            var ind = this._generateIndex();
             obj.graphindex = ind;
+            obj.pd = this;
             this._graph.objects[ind] = obj;
 		    // if it's an endpoint, add it to the graph's list of known endpoints
 		    if (obj.endpoint) this._graph.endpoints.push(obj);
@@ -238,14 +227,17 @@
             return ind;
         },
 
+        getTableByName: function(name) {
+            return (this._tables[name] || null);
+        },
+
         mapObjects: function(iterator) {
-            var objects = this._graph.objects;
-            for (var i=0; i<objects.length; i++) iterator(objects[i]);
+            this._map(this._graph.objects, iterator);
+
         },
 
         mapEndpoints: function(iterator) {
-            var objects = this._graph.endpoints;
-            for (var i=0; i<objects.length; i++) iterator(objects[i]);
+            this._map(this._graph.endpoints, iterator);
         },
 
         connect: function(sourceInd, sourceOutlet, sinkInd, sinkInlet) {
@@ -265,11 +257,16 @@
 		    }
         },
 
-        _getIndex: function() {
+        _map: function(array, iterator) {
+            for (var i=0; i<array.length; i++) iterator(array[i]);
+        },
+
+        // TODO: not good for dynamic patching since this is not unique
+        _generateIndex: function() {
 		    return this._graph.objects.length;
         }
-
     });
+
 
     // regular expression for finding valid lines of Pd in a file
     var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n', 'gi');
@@ -277,13 +274,9 @@
     /** Parses a Pd file and creates a new DSP graph from it
     ref : http://puredata.info/docs/developer/PdFileFormat 
     **/
-    // TODO: Graph object with methods for easier graph manipulation
-    Pd.parse = function(txt) {
+    Pd.parse = function(txt, pd) {
 	    // last table name to add samples to
 	    var lastTable = null;
-
-        // parsed graph
-        var graph = new _Graph();
 
 	    // use our regular expression to match instances of valid Pd lines
 	    while (pdline = linesRe.exec(txt)) {
@@ -316,13 +309,13 @@
 				    // instantiate this dsp object
 				    var obj = new Pd.Object(PdObjects[proto], this, proto, tokens);
 				    // put it in our graph of known objects
-				    graph.addObject(obj);
+				    pd.addObject(obj);
 				    // run the pre-init function which runs on an object before graph setup
 				    if (obj.preinit) obj.preinit();
 
 			    } else if (elementType == 'connect') {
 
-                    graph.connect(parseInt(tokens[2]), parseInt(tokens[3]), 
+                    pd.connect(parseInt(tokens[2]), parseInt(tokens[3]), 
                                     parseInt(tokens[4]), parseInt(tokens[5]));
 
 			    } else if (elementType == 'array') {
@@ -331,10 +324,10 @@
 				    // instantiate this dsp object
 				    var obj = new Pd.Object(PdObjects['table'], this, 'table', tokens);
 				    // this table needs a set of data
-				    obj.data = new Pd.AudioDriver.prototype.arrayType(parseInt(tokens[3]));
+				    obj.data = new Pd.arrayType(parseInt(tokens[3]));
                     lastTable = obj;
                     lastTable.name = arrayName; // TODO: arrayName as argument
-                    graph.addTable(obj);
+                    pd.addTable(obj);
 
 			    } else if (elementType == 'restore') {
 				    // end the current table
@@ -357,10 +350,14 @@
 		    }
 	    }
 
+        pd.mapObjects(function(obj) { 
+            obj.setupdsp();
+		    if (obj.init) obj.init();
+        });
+
 	    // output a message with our graph
 	    Pd.debug('Graph:');
-	    Pd.debug(graph);
-        return graph;
+	    Pd.debug(pd);
     };
 
 })(this.Pd);

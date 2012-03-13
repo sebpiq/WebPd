@@ -5,8 +5,16 @@
     var Pd = this.Pd = {
         sampleRate: 44100,
         blockSize: 128,
-        debugMode: false 
+        debugMode: false,
+        arrayType: Array,
+	    arraySlice: function (array, start) { return array.slice(start) }
     };
+
+    // use a Float32Array if we have it
+    if (typeof Float32Array != "undefined") {
+        Pd.arrayType = Float32Array;
+	    Pd.arraySlice = function (array, start) { return array.subarray(start) };
+    }
 
     /*
     Simple prototype inheritance. Used like so ::

@@ -163,8 +163,8 @@
 				
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
 				$.get("unittests/"+pdfile+".pd", function(data) {
-                    var graph = Pd.parse(data);
-				    pd = new Pd.Patch(graph);
+				    pd = new Pd.Patch();
+                    Pd.parse(data, pd);
                     pd.play();
                 });
 			} else {

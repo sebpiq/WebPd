@@ -308,7 +308,7 @@ var PdObjects = {
 		"init": function() {
 			// argument sets the name of the table to read from
 			if (this.args.length >= 6) {
-				this.table = this.pd._graph._tables[this.args[5]]; //TODO: bad
+				this.table = this.pd.getTableByName(this.args[5]);
 			}
 		},
 		"dsptick": function() {

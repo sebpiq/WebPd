@@ -28,7 +28,7 @@
 		    // create the outlet buffers for this object
 		    for (var o=0; o<this.outletTypes.length; o++) {
 			    if (this.outletTypes[o] == "dsp") {
-				    this.outletbuffer[o] = new Pd.AudioDriver.prototype.arrayType(Pd.blockSize);
+				    this.outletbuffer[o] = new Pd.arrayType(Pd.blockSize);
 			    }
 		    }
 	    }
