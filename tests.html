@@ -20,6 +20,7 @@
 	<script src='pd.js'></script>
     <script src='http://code.jquery.com/jquery-1.7.1.min.js'></script>
 	<script>
+        Pd.debugMode = true;
 		var pd = null;
 		function launch() {
 			tests = [
@@ -162,8 +163,8 @@
 				
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
 				$.get("unittests/"+pdfile+".pd", function(data) {
-                    var parsed = Pd.parse(data);
-				    pd = new Pd.Patch(parsed[0], parsed[1]);
+                    var graph = Pd.parse(data);
+				    pd = new Pd.Patch(graph);
                     pd.play();
                 });
 			} else {

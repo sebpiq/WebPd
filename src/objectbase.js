@@ -22,9 +22,7 @@
 	    this.outletbuffer = [];
 	
 	    // copy properties from the right type of thing
-	    for (var m in proto) {
-		    this[m] = proto[m];
-	    }
+	    for (var m in proto) this[m] = proto[m];
 	
 	    if (this.outletTypes) {
 		    // create the outlet buffers for this object

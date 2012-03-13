@@ -1,9 +1,15 @@
 (function(Pd){
 
-    Pd.Patch = function (graph, tables) {
-        // TODO: remove this, better API for dynamic patch
-        for (k in graph.objects) graph.objects[k].pd = this;
-        for (k in tables) tables[k].pd = this;
+    Pd.Patch = function (graph) {
+        var me = this;
+	    // internal representation of the DSP graph.
+	    this._graph = graph || (new _Graph());
+        // TODO: remove this, better API for dynamic patches
+        this._graph.mapObjects(function(obj) { 
+            obj.pd = me;
+            obj.setupdsp();
+		    if (obj.init) obj.init();
+        });
 
         this.sampleRate = Pd.sampleRate;
         this.blockSize = Pd.blockSize;
@@ -18,18 +24,6 @@
 	    // arrays of callbacks which are scheduled to run at some point in time
 	    // keys are times
 	    this.scheduled = {};
-	    // arrays of float data - Pd's tables
-	    // keys are table names
-	    this.tables = (tables || {});
-	
-	    // internal representation of the DSP graph.
-	    this._graph = (graph || {
-		    // an array of every object we know about
-		    "objects": [],
-		    // an array of all of the end-points of the dsp graph
-		    // (like dac~ or print~ or send~ or outlet~)
-		    "endpoints": []
-	    });
     };
 
     Pd.extend(Pd.Patch.prototype, {
@@ -39,7 +33,7 @@
 	
 	    /** send a message from outside the graph to a named receiver inside the graph **/
 	    send: function(name, val) {
-		    Pd.debug("graph received: " + name + " " + val);
+		    Pd.debug('graph received: ' + name + ' ' + val);
 		    var listeners = this.listeners[name];
 		    if (listeners) {
 			    for (var l=0; l<listeners.length; l++) {
@@ -49,18 +43,18 @@
 				    }
 			    }
 		    } else {
-			    Pd.log("error: " + name + ": no such object");
+			    Pd.log('error: ' + name + ': no such object');
 		    }
 	    },
 	
 	    /** send a message from inside the graph to a named receiver outside the graph **/
 	    receive: function(name,callback){
-		    pd.addlistener(name,{"message":function(d,val){callback(val);}});	
+		    pd.addlistener(name,{'message':function(d,val){callback(val);}});	
 	    },
 	
-	    /** send a bang to all receive objects named "test" **/
+	    /** send a bang to all receive objects named 'test' **/
 	    testbang: function(){
-		    this.send("test", "bang");
+		    this.send('test', 'bang');
 	    },
 	
 	    /******************** Internal methods ************************/
@@ -83,15 +77,15 @@
 		    if (this.scheduled[time] == null)
 			    this.scheduled[time] = [];
 		    this.scheduled[time].push(callback);
-		    //Pd.log("schedule()");
-		    //Pd.log("\tcurrent time: " + this.getabstime());
-		    //Pd.log("\tall items scheduled: ");
+		    //Pd.log('schedule()');
+		    //Pd.log('\tcurrent time: ' + this.getabstime());
+		    //Pd.log('\tall items scheduled: ');
 		    //Pd.log_allscheduled();
 	    },
 	
 	    log_allscheduled: function() {
 		    for (var s in this.scheduled) {
-			    Pd.log("\t\t" + s + ": " + this.scheduled[s].length);
+			    Pd.log('\t\t' + s + ': ' + this.scheduled[s].length);
 			    /*for (var i=0; i<this.scheduled[s].length; i++) {
 				    Pd.log(this.scheduled[s][i]);
 			    }*/
@@ -108,10 +102,10 @@
 		    }
 		    // make sure the scheduled items get run in time order
 		    scheduled.sort();
-		    //Pd.log("getscheduled()");
-		    //Pd.log("\tcurrent time: " + this.getabstime());
-		    //Pd.log("\ttimes scheduled: " + scheduled);
-		    //Pd.log("\tall items scheduled: " + this.allscheduled());
+		    //Pd.log('getscheduled()');
+		    //Pd.log('\tcurrent time: ' + this.getabstime());
+		    //Pd.log('\ttimes scheduled: ' + scheduled);
+		    //Pd.log('\tall items scheduled: ' + this.allscheduled());
 		    return scheduled;
 	    },
 	
@@ -119,6 +113,7 @@
 	
 	    /** Get a single frame of audio data from Pd **/
 	    generateFrame: function() {
+            var me = this;
 		    // run any pending scheduled callbacks in this frame
 		    // keep doing so until there are no scheduled callbacks
 		    var scheduled = [];
@@ -148,10 +143,7 @@
 			    this.output[i] = 0;
             }
 		    // run the dsp function on all endpoints to get data
-		    for (var e in this._graph.endpoints) {
-			    // dac~ objects will add their output to this.output
-			    this.tick(this._graph.endpoints[e]);
-		    }
+		    this._graph.mapEndpoints(function(obj) { me.tick(obj); });
 		    // increase the frame count
 		    this.frame += 1;
 		    // return the contents of the dspbuffer
@@ -180,18 +172,16 @@
 		    var context = this;
 		    // check we're not already running
 		    if (!this.audio.is_playing()) {
-			    Pd.debug("Starting audio.");
+			    Pd.debug('Starting audio.');
 			    this.audio.play(function() { return context.generateFrame(); });
             	// fetch the actual samplerate from the audio driver
 	            Pd.sampleRate = this.audio.getSampleRate(); // TODO : shouldn't be here
 			    // reset the frame count
 			    this.frame = 0;
 			    // reset the frame count on all objects
-			    for (var o in this._graph.objects) {
-				    this._graph.objects[0].frame = 0;
-			    }
+			    this._graph.mapObjects(function(obj) { obj.frame = 0; });
 		    } else {
-			    Pd.debug("Already started.");
+			    Pd.debug('Already started.');
 		    }
 	    },
 	
@@ -199,127 +189,178 @@
 	    stop: function() {
 		    // if we're already running
 		    if (this.audio.is_playing()) {
-			    Pd.debug("Stopping audio.");
+			    Pd.debug('Stopping audio.');
 			    // destroy the audio element
 			    this.audio.stop();
       		} else {
-			    Pd.debug("Already stopped.");
+			    Pd.debug('Already stopped.');
 		    }
-	    },
+	    }
     });
 
 
-    // regular expression for finding valid lines of Pd in a file
-    var lines_re = new RegExp("(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n", "gi");
+    var _Graph = function() {
 
-    /** Parses a Pd file and creates a new DSP graph from it **/
+	    this._graph = {
+		    // an array of every object we know about
+		    objects: [],
+		    // an array of all of the end-points of the dsp graph
+		    // (like dac~ or print~ or send~ or outlet~)
+		    endpoints: []
+	    };
+
+	    // arrays of float data - Pd's tables
+	    // keys are table names
+        this._tables = {};
+
+    };
+
+    Pd.extend(_Graph.prototype, {
+
+        addObject: function(obj) {
+            var ind = this._getIndex();
+            obj.graphindex = ind;
+            this._graph.objects[ind] = obj;
+		    // if it's an endpoint, add it to the graph's list of known endpoints
+		    if (obj.endpoint) this._graph.endpoints.push(obj);
+		    Pd.debug('Added ' + obj.type + ' to the graph at position ' + ind);
+            return ind;
+        },
+
+        getObject: function(ind) {
+            return (this._graph.objects[ind] || null);
+        },
+
+        addTable: function(table) {
+            this._tables[table.name] = table;
+            var ind = this.addObject(table);
+            Pd.debug("Added " + table.type + " to the graph at position " + ind);
+            return ind;
+        },
+
+        mapObjects: function(iterator) {
+            var objects = this._graph.objects;
+            for (var i=0; i<objects.length; i++) iterator(objects[i]);
+        },
+
+        mapEndpoints: function(iterator) {
+            var objects = this._graph.endpoints;
+            for (var i=0; i<objects.length; i++) iterator(objects[i]);
+        },
+
+        connect: function(sourceInd, sourceOutlet, sinkInd, sinkInlet) {
+		    var source = this.getObject(sourceInd);
+		    var sink = this.getObject(sinkInd);
+
+		    if (source.outletTypes) {
+                var outletType = source.outletTypes[sourceOutlet];
+			    if (outletType == 'dsp') {
+				    sink.inlets[sinkInlet] = [source, sourceOutlet];
+			    } else if (outletType == 'message') {
+				    source.outlets[sourceOutlet] = [sink, sinkInlet];
+			    }
+			    Pd.debug(outletType + ' connection ' + source.type +
+                    ' [' + sourceOutlet + '] to ' + sink.type +
+                    ' [' + sinkInlet + ']');
+		    }
+        },
+
+        _getIndex: function() {
+		    return this._graph.objects.length;
+        }
+
+    });
+
+    // regular expression for finding valid lines of Pd in a file
+    var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n', 'gi');
+
+    /** Parses a Pd file and creates a new DSP graph from it
+    ref : http://puredata.info/docs/developer/PdFileFormat 
+    **/
+    // TODO: Graph object with methods for easier graph manipulation
     Pd.parse = function(txt) {
 	    // last table name to add samples to
 	    var lastTable = null;
 
-        var graph = {
-            objects: [],
-            endpoints: []
-        };
-
-        var tables = {};
+        // parsed graph
+        var graph = new _Graph();
 
 	    // use our regular expression to match instances of valid Pd lines
-	    while (pdline = lines_re.exec(txt)) {
+	    while (pdline = linesRe.exec(txt)) {
 		    // split this found line into tokens (on space and line break)
 		    var tokens = pdline[1].split(/ |\r\n?|\n/);
-		    Pd.debug("" + tokens);
+            var chunkType = tokens[0];
+		    Pd.debug(tokens.toString());
+
 		    // if we've found a create token
-		    if (tokens[0] == "#X") {
+		    if (chunkType == '#X') {
+                var elementType = tokens[1];
+
 			    // is this an obj instantiation
-			    if (tokens[1] == "obj" || tokens[1] == "msg" || tokens[1] == "text") {
-				    var proto = "";
-				    // if this is a message object
-				    if (tokens[1] == "msg") {
-					    proto = "msg";
-				    } else if (tokens[1] == "text") {
-					    proto = "text";
-				    } else {
+			    if (elementType == 'obj' || elementType == 'msg' || elementType == 'text') {
+
+                    // we get the object's prototype name
+				    var proto;
+				    if (elementType == 'msg') proto = 'msg';
+				    else if (elementType == 'text') proto = 'text';
+				    else {
 					    // see if we know about this type of object yet
 					    proto = tokens[4];
-					    if (!PdObjects[proto]) {
-						    proto = "null";
+					    if (!PdObjects.hasOwnProperty(proto)) {
 						    // TODO: see if we can load this from a url and queue it to be loaded up after parsing
-						    Pd.log(" " + tokens[4]);
-						    Pd.log("... couldn't create");
+						    Pd.log(' ' + proto + '\n... couldn\'t create');
+						    proto = 'null';
 					    }
 				    }
+
 				    // instantiate this dsp object
 				    var obj = new Pd.Object(PdObjects[proto], this, proto, tokens);
 				    // put it in our graph of known objects
-				    obj.graphindex = graph.objects.length;
-				    graph.objects[obj.graphindex] = obj;
-				    Pd.debug("Added " + obj.type + " to the graph at position " + obj.graphindex);
-				    // if it's an endpoint, add it to the graph's list of known endpoints
-				    if (obj.endpoint) {
-					    graph.endpoints.push(obj);
-				    }
+				    graph.addObject(obj);
 				    // run the pre-init function which runs on an object before graph setup
-				    if (obj.preinit)
-					    obj.preinit();
-			    } else if (tokens[1] == "connect") {
-				    // connect objects together
-				    var destination = graph.objects[parseInt(tokens[4])];
-				    var destination_inlet = parseInt(tokens[5]);
-				    var source = graph.objects[parseInt(tokens[2])];
-				    var source_outlet = parseInt(tokens[3]);
-				    if (source.outletTypes) {
-					    if (source.outletTypes[source_outlet] == "dsp") {
-						    destination.inlets[destination_inlet] = [source, source_outlet];
-						    Pd.debug("dsp connection " + source.type + " [" + source_outlet + "] to " + destination.type + " [" + destination_inlet + "]");
-					    } else if (source.outletTypes[source_outlet] == "message") {
-						    source.outlets[source_outlet] = [destination, destination_inlet];
-						    Pd.debug("msg connection " + source.type + " [" + source_outlet + "] to " + destination.type + " [" + destination_inlet + "]");
-					    }
-				    }
-			    } else if (tokens[1] == "array") {
+				    if (obj.preinit) obj.preinit();
+
+			    } else if (elementType == 'connect') {
+
+                    graph.connect(parseInt(tokens[2]), parseInt(tokens[3]), 
+                                    parseInt(tokens[4]), parseInt(tokens[5]));
+
+			    } else if (elementType == 'array') {
+
+                    var arrayName = tokens[2];
 				    // instantiate this dsp object
-				    var obj = new Pd.Object(PdObjects["table"], this, "table", tokens);
-				    // put it in our graph of known objects
-				    obj.graphindex = graph.objects.length;
-				    graph.objects[obj.graphindex] = obj;
-				    Pd.debug("Added " + obj.type + " to the graph at position " + obj.graphindex);
+				    var obj = new Pd.Object(PdObjects['table'], this, 'table', tokens);
 				    // this table needs a set of data
 				    obj.data = new Pd.AudioDriver.prototype.arrayType(parseInt(tokens[3]));
-				    // add this to our global list of tables
-				    tables[tokens[2]] = obj;
-				    lastTable = tokens[2];
-			    } else if (tokens[1] == "restore") {
+                    lastTable = obj;
+                    lastTable.name = arrayName; // TODO: arrayName as argument
+                    graph.addTable(obj);
+
+			    } else if (elementType == 'restore') {
 				    // end the current table
 				    lastTable = null;
 			    }
-		    } else if (tokens[0] == "#A") {
+
+		    } else if (chunkType == '#A') {
 			    // reads in part of an array/table of data, starting at the index specified in this line
-			    // name of the array/table comes from the the "#X array" and "#X restore" matches above
+			    // name of the array/table comes from the the '#X array' and '#X restore' matches above
 			    var idx = parseInt(tokens[1]);
 			    if (lastTable) {
-				    for (var t=2; t<tokens.length; t++) {
-					    tables[lastTable].data[idx] = parseFloat(tokens[t]);
-					    idx += 1;
+				    for (var t=2; t<tokens.length; t++, idx++) {
+					    lastTable.data[idx] = parseFloat(tokens[t]);
 				    }
-				    Pd.debug("read " + (tokens.length - 1) + " floats into table '" + lastTable + "'");
+				    Pd.debug('read ' + (tokens.length - 1) +
+                        ' floats into table "' + lastTable.name + '"');
 			    } else {
-				    Pd.log("Error: got table data outside of a table.");
+				    Pd.log('Error: got table data outside of a table.');
 			    }
 		    }
 	    }
-	
-	    // After we have established our graph additionally set up the correct dsp eating inlet functions
-	    for (var o in graph.objects) {
-		    graph.objects[o].setupdsp();
-		    if (graph.objects[o].init) graph.objects[o].init();
-	    }
 
 	    // output a message with our graph
-	    Pd.debug("Graph:");
-	    Pd.debug(graph, tables);
-
-        return [graph, tables];
+	    Pd.debug('Graph:');
+	    Pd.debug(graph);
+        return graph;
     };
 
 })(this.Pd);

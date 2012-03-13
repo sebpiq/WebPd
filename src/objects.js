@@ -35,7 +35,7 @@ var PdObjects = {
 			if (this.args.length >= 4) {
 				this.name = this.args[2];
 			}
-			this.pd.debug(this.data);
+			Pd.debug(this.data);
 		}
 	},
 	
@@ -55,7 +55,7 @@ var PdObjects = {
 					this.sendmessage(0, this.value);
 				// if it gets some other symbol, throws an error
 				} else if (isNaN(firstfloat)) {
-					this.pd.log("error: float: no method for '" + atoms[0] + "'");
+					Pd.log("error: float: no method for '" + atoms[0] + "'");
 				// if it gets a new value then it sets and outputs that value
 				} else {
 					this.value = firstfloat;
@@ -66,7 +66,7 @@ var PdObjects = {
 				var atoms = this.toarray(message);
 				var firstfloat = parseFloat(atoms[0]);
 				if(isNaN(firstfloat)){
-					this.pd.log("error: float: right inlet no method for'" + atoms[0] + "'"); 
+					Pd.log("error: float: right inlet no method for'" + atoms[0] + "'"); 
 				} else{
 					this.value = firstfloat;
 				}	
@@ -105,7 +105,7 @@ var PdObjects = {
 									sendme = sendme.replace(dollarargs[v], incoming[argnum]);
 								} else {
 									// throws an error and replaces arg with zero
-									this.pd.log("error: $" + (argnum + 1) + ": argument number out of range");
+									Pd.log("error: $" + (argnum + 1) + ": argument number out of range");
 									sendme = sendme.replace(dollarargs[v], "0");
 								}
 							}
@@ -308,7 +308,7 @@ var PdObjects = {
 		"init": function() {
 			// argument sets the name of the table to read from
 			if (this.args.length >= 6) {
-				this.table = this.pd.tables[this.args[5]];
+				this.table = this.pd._graph._tables[this.args[5]]; //TODO: bad
 			}
 		},
 		"dsptick": function() {
@@ -483,7 +483,7 @@ var PdObjects = {
 			if (!isNaN(newconst)) {
 				this.sig = newconst;
 			} else {
-				this.pd.log("error: sig~: no method for '" + atoms[0] + "'");
+				Pd.log("error: sig~: no method for '" + atoms[0] + "'");
 			}	
 		}
 	},
@@ -577,12 +577,12 @@ var PdObjects = {
 					if (!isNaN(newlow)) {
 						this.low = newlow;
 					} else {
-						this.pd.log("error: clip~: no method for '" + partslow[0] + "'");
+						Pd.log("error: clip~: no method for '" + partslow[0] + "'");
 					}	
 					if(!inNaN(newhi)){
 						this.hi = newhi;
 					} else {
- 						this.pd.log("error: sig~: no method for '" + partslow[1] + "'");
+ 						Pd.log("error: sig~: no method for '" + partslow[1] + "'");
 					}	
 				} else if (inletnum == 2) {
 					// get the individual pieces of the passed-in message
@@ -594,7 +594,7 @@ var PdObjects = {
 		  				// bash our value to the value passed in
 						this.hi = newhi;
 					} else {
- 						this.pd.log("error: sig~: no method for '" + partshi[0] + "'");
+ 						Pd.log("error: sig~: no method for '" + partshi[0] + "'");
 					}	
 				}
 			}
@@ -1007,7 +1007,7 @@ var PdObjects = {
 				this.id = this.args[5];
 			} else{
 				//TODO:cause lack of arg to create 2nd inlet
-				this.pd.log("error: must provide a name");	
+				Pd.log("error: must provide a name");	
 			}
 		},
 		"message": function(inletnum, val){
@@ -1063,7 +1063,7 @@ var PdObjects = {
 				// if it's neither
 				} else {
 					// throw an error
-					this.pd.log("error: pack: " + this.slots[t] + ": bad type");
+					Pd.log("error: pack: " + this.slots[t] + ": bad type");
 					// make it a float
 					this.slottypes.push("f");
 					this.vals.push(isNaN(num) ? 0 : num);
@@ -1085,9 +1085,9 @@ var PdObjects = {
 					if (isNaN(newnum)) {
 						// inlet zero error is handled differently in Pd because of accepting type of any
 						if (inletnum)
-							this.pd.log("error: inlet: expected 'float' but got 'symbol'");	
+							Pd.log("error: inlet: expected 'float' but got 'symbol'");	
 						else
-							this.pd.log("error: pack_symbol: wrong type");
+							Pd.log("error: pack_symbol: wrong type");
 						errorthrow = true;
 					} else {
 						// we found a float, set our output vals to that
@@ -1099,9 +1099,9 @@ var PdObjects = {
 					if (!isNaN(newnum)) {
 						// inlet zero error is handled differently in Pd because of accepting type of any
 						if (inletnum)
-							this.pd.log("error: inlet: expected 'symbol' but got 'float'");
+							Pd.log("error: inlet: expected 'symbol' but got 'float'");
 						else
-							this.pd.log("error: pack_float: wrong type");
+							Pd.log("error: pack_float: wrong type");
 						errorthrow = true;
 					} else {
 						// we found a symbol, set our output vals to that
@@ -1139,7 +1139,7 @@ var PdObjects = {
 				// if it's neither
 				} else {
 					// throw an error
-					this.pd.log("error: unpack: " + this.slots[t] + ": bad type");
+					Pd.log("error: unpack: " + this.slots[t] + ": bad type");
 					// make it a float
 					this.outletTypes.push("message");
 					this.slottypes.push("f");
@@ -1157,13 +1157,13 @@ var PdObjects = {
 					// this is a float emitting slot
 					var out = parseFloat(parts[slotindex]);
 					if (isNaN(out)) {
-						this.pd.log("error: unpack: type mismatch");
+						Pd.log("error: unpack: type mismatch");
 						out = "";
 					}
 				} else {
 					// if it's a number throw an error
 					if (!isNaN(parseFloat(parts[slotindex]))) {
-						this.pd.log("error: unpack: type mismatch");
+						Pd.log("error: unpack: type mismatch");
 						out = "";
 					} else {
 						// this is a symbol emitting slot
@@ -1195,7 +1195,7 @@ var PdObjects = {
 				var multiplier = parseFloat(val);
 				// if this is a valid number, set our multiplier
 				if (isNaN(multiplier)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.multiplier = multiplier;
 				}
@@ -1210,7 +1210,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a multiplication
 				if (isNaN(mul)) {
-					this.pd.log("error: *: no method for '" + parts[0] + "'");
+					Pd.log("error: *: no method for '" + parts[0] + "'");
 				} else {
 					this.sendmessage(0, mul * this.multiplier);
 				}
@@ -1235,7 +1235,7 @@ var PdObjects = {
 				var divisor = parseFloat(val);
 				// if this is a valid number, set our divisor
 				if (isNaN(divisor)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.divisor = divisor;
 				}
@@ -1250,7 +1250,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a division
 				if (isNaN(div)) {
-					this.pd.log("error: /: no method for '" + parts[0] + "'");
+					Pd.log("error: /: no method for '" + parts[0] + "'");
 				} else {
 					var result = (this.divisor ? (div/this.divisor) : 0);
 					this.sendmessage(0, result);
@@ -1275,7 +1275,7 @@ var PdObjects = {
 			if (inletnum == 1) {
 				var n2 = parseFloat(val);
 				if (isNaN(n2)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					n2 = (n2 ? n2 : 1);
 					n2 = (n2<0 ? -n2 : n2);//abs value
@@ -1292,7 +1292,7 @@ var PdObjects = {
 				}
 				var n1 = parseFloat(parts[0]);
 				if (isNaN(n1)) {
-					this.pd.log("error: div: no method for '" + parts[0] + "'");
+					Pd.log("error: div: no method for '" + parts[0] + "'");
 				} 
 				else {
 					if(n1<0){
@@ -1328,7 +1328,7 @@ var PdObjects = {
 				var divisor = parseFloat(val);
 				// if this is a valid number, set our divisor
 				if (isNaN(divisor)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					divisor = (divisor ? divisor : 1);//avoid div by 0
 					divisor = (divisor<0 ? -divisor : divisor);//abs value
@@ -1347,7 +1347,7 @@ var PdObjects = {
 				var div = parseFloat(parts[0]);
 				// if it's a valid float, use it to output a division
 				if (isNaN(div)) {
-					this.pd.log("error: mod: no method for '" + parts[0] + "'");
+					Pd.log("error: mod: no method for '" + parts[0] + "'");
 				} else {
 					var result = div % this.divisor;
 					if(result<0){
@@ -1382,7 +1382,7 @@ var PdObjects = {
 				var addto = parseFloat(val);
 				// if this is a valid number, set our addto
 				if (isNaN(addto)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.addition = addto;
 				}
@@ -1399,7 +1399,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a multiplication
 				if (isNaN(add)) {
-					this.pd.log("error: +: no method for '" + parts[0] + "'");
+					Pd.log("error: +: no method for '" + parts[0] + "'");
 				} else {
 					if(add<0){
 						var out = 0;
@@ -1431,7 +1431,7 @@ var PdObjects = {
 				var addto = parseFloat(val);
 				// if this is a valid number, set our addto
 				if (isNaN(addto)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.addition = addto;
 				}
@@ -1448,7 +1448,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a multiplication
 				if (isNaN(add)) {
-					this.pd.log("error: +: no method for '" + parts[0] + "'");
+					Pd.log("error: +: no method for '" + parts[0] + "'");
 				} else {
 					this.sendmessage(0, add + this.addition);
 				}
@@ -1473,7 +1473,7 @@ var PdObjects = {
 				var subtract = parseFloat(val);
 				// if this is a valid number, set our subtract
 				if (isNaN(subtract)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.subtraction = subtract;
 				}
@@ -1490,7 +1490,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a subtraction
 				if (isNaN(subt)) {
-					this.pd.log("error: -: no method for '" + parts[0] + "'");
+					Pd.log("error: -: no method for '" + parts[0] + "'");
 				} else {
 					this.sendmessage(0, subt - this.subtraction);
 				}
@@ -1520,7 +1520,7 @@ var PdObjects = {
 			}
 		},
 		"message": function(inletnum, message) {
-			this.pd.log(this.printname + ": " + message);
+			Pd.log(this.printname + ": " + message);
 		}
 	},
 	
@@ -1623,7 +1623,7 @@ var PdObjects = {
 						this.state=1;
 					}
 				} else { //it doesn't like bangs, etc
-					this.pd.log("error: inlet: expected float but got '" + message + "'");
+					Pd.log("error: inlet: expected float but got '" + message + "'");
 				}
 			}
 		}		
@@ -1649,7 +1649,7 @@ var PdObjects = {
 				var max = parseFloat(val);
 				// if this is a valid number, set our max
 				if (isNaN(max)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.max = max;
 				}
@@ -1729,7 +1729,7 @@ var PdObjects = {
 					this.sendmessage(0, this.value);
 				// if it gets some other symbol, throws an error
 				} else if (isNaN(firstint)) {
-					this.pd.log("error: int: no method for '" + atoms[0] + "'");
+					Pd.log("error: int: no method for '" + atoms[0] + "'");
 				// if it gets a new value then it sets and outputs that value
 				} else {
 					this.value = firstint;
@@ -1777,7 +1777,7 @@ var PdObjects = {
 				if (inletnum == 1) {	
 					var newnum=parseFloat(val);
 					if (isNaN(newnum)) {
-						this.pd.log("error: ==: no method for '" + val + "'");
+						Pd.log("error: ==: no method for '" + val + "'");
 					}	
 					else {
 					this.right=newnum;
@@ -1787,7 +1787,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				 var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: ==: no method for '" + val + "'");
+					Pd.log("error: ==: no method for '" + val + "'");
 				}	
 				else if(newnum==this.right){//if it's equal, send 1 
 					 this.sendmessage(0, "1");
@@ -1818,7 +1818,7 @@ var PdObjects = {
 				if (inletnum == 1) {	
 					var newnum=parseFloat(val);
 					if (isNaN(newnum)) {
-						this.pd.log("error: !=: no method for '" + val + "'");
+						Pd.log("error: !=: no method for '" + val + "'");
 					}	
 					else {
 					this.right=newnum;
@@ -1828,7 +1828,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				 var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: !=: no method for '" + val + "'");
+					Pd.log("error: !=: no method for '" + val + "'");
 				}	
 				else if(newnum!=this.right){//if it's not equal, send 1 
 					 this.sendmessage(0, "1");
@@ -1859,7 +1859,7 @@ var PdObjects = {
 				if (inletnum == 1) {	
 					var newnum=parseFloat(val);
 					if (isNaN(newnum)) {
-						this.pd.log("error: >=: no method for '" + val + "'");
+						Pd.log("error: >=: no method for '" + val + "'");
 					}	
 					else {
 					this.right=newnum;
@@ -1869,7 +1869,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				 var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: !=: no method for '" + val + "'");
+					Pd.log("error: !=: no method for '" + val + "'");
 				}	
 				else if(newnum>=this.right){
 					 this.sendmessage(0, "1");
@@ -1900,7 +1900,7 @@ var PdObjects = {
 				if (inletnum == 1) {	
 					var newnum=parseFloat(val);
 					if (isNaN(newnum)) {
-						this.pd.log("error: <=: no method for '" + val + "'");
+						Pd.log("error: <=: no method for '" + val + "'");
 					}	
 					else {
 					this.right=newnum;
@@ -1910,7 +1910,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				 var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: <=: no method for '" + val + "'");
+					Pd.log("error: <=: no method for '" + val + "'");
 				}	
 				else if(newnum<=this.right){
 					 this.sendmessage(0, "1");
@@ -1941,7 +1941,7 @@ var PdObjects = {
 				if (inletnum == 1) {	
 					var newnum=parseFloat(val);
 					if (isNaN(newnum)) {
-						this.pd.log("error: >: no method for '" + val + "'");
+						Pd.log("error: >: no method for '" + val + "'");
 					}	
 					else {
 					this.right=newnum;
@@ -1951,7 +1951,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				 var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: >: no method for '" + val + "'");
+					Pd.log("error: >: no method for '" + val + "'");
 				}	
 				else if(newnum>this.right){
 					 this.sendmessage(0, "1");
@@ -1982,7 +1982,7 @@ var PdObjects = {
 				if (inletnum == 1) {	
 					var newnum=parseFloat(val);
 					if (isNaN(newnum)) {
-						this.pd.log("error: <: no method for '" + val + "'");
+						Pd.log("error: <: no method for '" + val + "'");
 					}	
 					else {
 					this.right=newnum;
@@ -1992,7 +1992,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				 var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: <: no method for '" + val + "'");
+					Pd.log("error: <: no method for '" + val + "'");
 				}	
 				else if(newnum<this.right){//if it's not equal, send 1 
 					 this.sendmessage(0, "1");
@@ -2019,7 +2019,7 @@ var PdObjects = {
 				this.sendmessage(0, this.state);
 			}
 			else if (isNaN(newnum)) {
-					this.pd.log("error: toggle: no method for '" + message + "'");
+					Pd.log("error: toggle: no method for '" + message + "'");
 			}
 			else if(newnum==0){
 				this.state=0;
@@ -2053,7 +2053,7 @@ var PdObjects = {
 			if(parts[0]=="set"){
 				var setLast = parseFloat(parts[1]);
 				if (isNaN(setLast)) {
-					this.pd.log("error: change: must set to a float");
+					Pd.log("error: change: must set to a float");
 				}
 				else{
 					this.last=setLast;
@@ -2062,7 +2062,7 @@ var PdObjects = {
 			else{
 				var newnum = parseFloat(parts[0]);
 				if (isNaN(newnum)) {
-					this.pd.log("error: change: no method for '" + val + "'");
+					Pd.log("error: change: no method for '" + val + "'");
 				}
 				else if(newnum != this.last) { //it's new. send it 
 					 this.sendmessage(0, newnum);
@@ -2082,7 +2082,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out = 0;
 			if(isNaN(input)){
-				this.pd.log("error: mtof: no method for '" + message + "'");
+				Pd.log("error: mtof: no method for '" + message + "'");
 			}
 			else{
 				if(input<=-1500){
@@ -2109,7 +2109,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out = 0;
 			if(isNaN(input)){
-				this.pd.log("error: ftom: no method for '" + message + "'");
+				Pd.log("error: ftom: no method for '" + message + "'");
 			}
 			else{
 				out = (input > 0 ? (17.3123405046 * Math.log(.12231220585 * input)) : -1500);
@@ -2128,7 +2128,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out = 0;
 			if(isNaN(input)){
-				this.pd.log("error: wrap: no method for '" + message + "'");
+				Pd.log("error: wrap: no method for '" + message + "'");
 			}
 			else{
 			out = input - Math.floor(input);
@@ -2146,7 +2146,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			var input = parseFloat(message);
 			if(isNaN(input)){
-				this.pd.log("error: sin: no method for '" + message + "'");
+				Pd.log("error: sin: no method for '" + message + "'");
 			}
 			else{
 				var out = Math.sin(input);
@@ -2164,7 +2164,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			var input = parseFloat(message);
 			if(isNaN(input)){
-				this.pd.log("error: cosine: no method for '" + message + "'");
+				Pd.log("error: cosine: no method for '" + message + "'");
 			}
 			else{
 				var out = Math.cos(input);
@@ -2182,7 +2182,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			var input = parseFloat(message);
 			if(isNaN(input)){
-				this.pd.log("error: tan: no method for '" + message + "'");
+				Pd.log("error: tan: no method for '" + message + "'");
 			}
 			else{
 				var out = Math.tan(input);
@@ -2200,7 +2200,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			var input = parseFloat(message);
 			if(isNaN(input)){
-				this.pd.log("error: abs: no method for '" + message + "'");
+				Pd.log("error: abs: no method for '" + message + "'");
 			}
 			else{
 				var out = Math.abs(input);
@@ -2219,7 +2219,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out=0;
 			if(isNaN(input)){
-				this.pd.log("error: sqrt: no method for '" + message + "'");
+				Pd.log("error: sqrt: no method for '" + message + "'");
 			}
 			else{
 				if(input<=0){
@@ -2242,7 +2242,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			var input = parseFloat(message);
 			if(isNaN(input)){
-				this.pd.log("error: atan: no method for '" + message + "'");
+				Pd.log("error: atan: no method for '" + message + "'");
 			}
 			else{
 				var out = Math.atan(input);
@@ -2268,7 +2268,7 @@ var PdObjects = {
 				var multiplier = parseFloat(val);
 				// if this is a valid number, set our multiplier
 				if (isNaN(multiplier)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.multiplier = multiplier;
 				}
@@ -2283,7 +2283,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a multiplication
 				if (isNaN(mul)) {
-					this.pd.log("error: *: no method for '" + parts[0] + "'");
+					Pd.log("error: *: no method for '" + parts[0] + "'");
 				} else {
 					if(mul==0 && this.multiplier==0){
 						var out = 0;
@@ -2306,7 +2306,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			var input = parseFloat(message);
 			if(isNaN(input)){
-				this.pd.log("error: powtodb: no method for '" + message + "'");
+				Pd.log("error: powtodb: no method for '" + message + "'");
 			}
 			else{
 				if(input<0){
@@ -2330,7 +2330,7 @@ var PdObjects = {
 		"message": function(inletnum, message) {
 			var input = parseFloat(message);
 			if(isNaN(input)){
-				this.pd.log("error: powtodb: no method for '" + message + "'");
+				Pd.log("error: powtodb: no method for '" + message + "'");
 			}
 			else{
 				if(input<0){
@@ -2355,7 +2355,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out = 0;
 			if(isNaN(input)){
-				this.pd.log("error: rmstodb: no method for '" + message + "'");
+				Pd.log("error: rmstodb: no method for '" + message + "'");
 			}
 			else{
 				if(input<=0){
@@ -2379,7 +2379,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out = 0;
 			if(isNaN(input)){
-				this.pd.log("error: dbtorms: no method for '" + message + "'");
+				Pd.log("error: dbtorms: no method for '" + message + "'");
 			}
 			else{
 				if(input<0){
@@ -2406,7 +2406,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out = 0;
 			if(isNaN(input)){
-				this.pd.log("error: log: no method for '" + message + "'");
+				Pd.log("error: log: no method for '" + message + "'");
 			}
 			else{
 				out = (input > 0 ? Math.log(input) : -1000);
@@ -2425,7 +2425,7 @@ var PdObjects = {
 			var input = parseFloat(message);
 			var out = 0;
 			if(isNaN(input)){
-				this.pd.log("error: exp: no method for '" + message + "'");
+				Pd.log("error: exp: no method for '" + message + "'");
 			}
 			else{
 				input = (input>87.3365 ? 87.3365 : input);
@@ -2452,7 +2452,7 @@ var PdObjects = {
 				var addto = parseFloat(val);
 				// if this is a valid number, set our addto
 				if (isNaN(addto)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.addition = addto;
 				}
@@ -2469,7 +2469,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a multiplication
 				if (isNaN(add)) {
-					this.pd.log("error: +: no method for '" + parts[0] + "'");
+					Pd.log("error: +: no method for '" + parts[0] + "'");
 				} else {
 					var out = (add>this.addition ? add : this.addition)
 					this.sendmessage(0, out);
@@ -2495,7 +2495,7 @@ var PdObjects = {
 				var addto = parseFloat(val);
 				// if this is a valid number, set our addto
 				if (isNaN(addto)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.addition = addto;
 				}
@@ -2512,7 +2512,7 @@ var PdObjects = {
 				}
 				// if it's a valid float, use it to output a multiplication
 				if (isNaN(add)) {
-					this.pd.log("error: +: no method for '" + parts[0] + "'");
+					Pd.log("error: +: no method for '" + parts[0] + "'");
 				} else {
 					var out = (add<this.addition ? add : this.addition)
 					this.sendmessage(0, out);
@@ -2536,7 +2536,7 @@ var PdObjects = {
 			if (inletnum == 1) {
 				var split = parseFloat(val);
 				if (isNaN(split)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.splitter = split;
 				}
@@ -2549,7 +2549,7 @@ var PdObjects = {
 					this.splitter = parts[1];
 				}
 				if (isNaN(n1)) {
-					this.pd.log("error: moses: no method for '" + parts[0] + "'");
+					Pd.log("error: moses: no method for '" + parts[0] + "'");
 				} 
 				else {
 					if(n1<this.splitter){
@@ -2578,7 +2578,7 @@ var PdObjects = {
 			if (inletnum == 1) {
 				var r = parseFloat(val);
 				if (isNaN(split)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} else {
 					this.rIn = r;
 				}
@@ -2591,7 +2591,7 @@ var PdObjects = {
 					this.rIn = parts[1];
 				}
 				if (isNaN(l)) {
-					this.pd.log("error: swap: no method for '" + parts[0] + "'");
+					Pd.log("error: swap: no method for '" + parts[0] + "'");
 				} 
 				else {
 					this.sendmessage(1, l);
@@ -2620,7 +2620,7 @@ var PdObjects = {
 			if (inletnum == 1) {	
 				var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: ||: no method for '" + val + "'");
+					Pd.log("error: ||: no method for '" + val + "'");
 				}	
 				else {
 					this.right=newnum;
@@ -2630,7 +2630,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: ||: no method for '" + val + "'");
+					Pd.log("error: ||: no method for '" + val + "'");
 				}	
 				else if((newnum!=0) || (this.right!=0)){
 					this.sendmessage(0, "1");//if it's true, send 1 
@@ -2662,7 +2662,7 @@ var PdObjects = {
 			if (inletnum == 1) {	
 				var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: &&: no method for '" + val + "'");
+					Pd.log("error: &&: no method for '" + val + "'");
 				}	
 				else {
 					this.right=newnum;
@@ -2672,7 +2672,7 @@ var PdObjects = {
 			if (inletnum == 0) {	
 				var newnum=parseFloat(val);
 				if (isNaN(newnum)) {
-					this.pd.log("error: ||: no method for '" + val + "'");
+					Pd.log("error: ||: no method for '" + val + "'");
 				}	
 				else if((newnum!=0) && (this.right!=0)){
 					this.sendmessage(0, "1");//if it's true, send 1 
@@ -2707,7 +2707,7 @@ var PdObjects = {
 			if (inletnum == 2) {
 				var hi = parseFloat(val);
 				if (isNaN(hi)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} 
 				else {
 					this.hi = hi;
@@ -2717,7 +2717,7 @@ var PdObjects = {
 			//TODO: check for a list and use 2nd val for hi
 				var lo = parseFloat(val);
 				if (isNaN(lo)) {
-					this.pd.log("error: inlet: expected 'float' but got '" + val + "'");
+					Pd.log("error: inlet: expected 'float' but got '" + val + "'");
 				} 
 				else {
 					this.lo = lo;
@@ -2732,7 +2732,7 @@ var PdObjects = {
 					//set the low value
 					var loIn = parts[1];
 					if (isNaN(loIn)) {
-						this.pd.log("error: clip: no method for '" + parts[1] + "'");
+						Pd.log("error: clip: no method for '" + parts[1] + "'");
 					}
 					else{
 						this.lo=loIn;
@@ -2743,10 +2743,10 @@ var PdObjects = {
 					var loIn = parts[1];
 					var hiIn = parts[2];
 					if (isNaN(loIn)) {
-						this.pd.log("error: clip: no method for '" + parts[1] + "'");
+						Pd.log("error: clip: no method for '" + parts[1] + "'");
 					}
 					if (isNaN(hiIn)) {
-						this.pd.log("error: clip: no method for '" + parts[2] + "'");
+						Pd.log("error: clip: no method for '" + parts[2] + "'");
 					}
 					else{
 						this.lo=loIn;
