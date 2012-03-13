@@ -9,7 +9,13 @@ task('default', [], function () {
 });
 
 task('concat', [], function () {
-    var files = ['dependencies/sink.js', 'src/main.js', 'src/audiodriver.js', 'src/base.js', 'src/objects.js'],
+    var files = [
+            'dependencies/sink.js',
+            'src/main.js',
+            'src/audiodriver.js',
+            'src/objectbase.js',
+            'src/patch.js',
+            'src/objects.js'],
         filesLeft = files.length,
         pathName = '.',
         outFile = fs.openSync('pd.js', 'w+');

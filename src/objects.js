@@ -137,7 +137,7 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			for (var i=0; i<this.outletbuffer[0].length; i++) {
 				this.outletbuffer[0][i] = Math.cos(2 * Math.PI * (this.sampCount));
-				this.sampCount += i1[i % i1.length] / this.pd.sampleRate;
+				this.sampCount += i1[i % i1.length] / Pd.sampleRate;
 			}
 		},
 		"message": function(inlet, message) {
@@ -156,7 +156,7 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
 			// copy interleaved data from inlets to the graph's output buffer
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				this.pd.output[i * 2] += i1[i % i1.length];
 				this.pd.output[i * 2 + 1] += i2[i % i2.length];
 			}
@@ -177,7 +177,7 @@ var PdObjects = {
 			// mutiply our two buffers together
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] * i2[i % i2.length];
 			}
 		}
@@ -198,7 +198,7 @@ var PdObjects = {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
 			var val2 = 0;
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				// return zero if denominator is zero
 				val2 = i2[i % i2.length];
 				this.outletbuffer[0][i] = (val2 ? i1[i % i1.length] / val2 : 0);
@@ -219,7 +219,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] + i2[i % i2.length];
 			}
 		}
@@ -238,7 +238,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = i1[i % i1.length] - i2[i % i2.length];
 			}
 		}
@@ -258,9 +258,9 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			// TODO: look this up in the Pd source and see if it behaves the same way on freq change
-			for (var i=0; i<this.pd.blockSize; i++) {
+			for (var i=0; i<Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = this.sampCount;
-				this.sampCount = (this.sampCount + (i1[i % i1.length] / this.pd.sampleRate)) % 1;
+				this.sampCount = (this.sampCount + (i1[i % i1.length] / Pd.sampleRate)) % 1;
 			}
 		}
 	},
@@ -271,7 +271,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= -1500) {
 					this.outletbuffer[0][i] = 0;
@@ -294,7 +294,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 					this.outletbuffer[0][i] = (f > 0 ? (17.3123405046 * Math.log(.12231220585 * f)) : -1500);
 			}
@@ -314,7 +314,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var length = this.table.data.length;
-			for (var i=0; i<this.pd.blockSize; i++) {
+			for (var i=0; i<Pd.blockSize; i++) {
 				//this.outletbuffer[0][i] = this.table.data[Math.min(length - 1, Math.max(0, Math.round(i1[i % i1.length])))];
 				//Not sure if this is faster -bj
 				var s = Math.floor(i1[i % i1.length])
@@ -343,15 +343,15 @@ var PdObjects = {
 		},
 		"dsptick_const": function() {
 			// write a constant value to our output buffer for every sample
-			for (var i=0; i<this.pd.blockSize; i++) {
+			for (var i=0; i<Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = this.line;
 			}
 		},
 		"dsptick_line": function() {
 			// write this correct value of the line at each sample
-			for (var i=0; i<this.pd.blockSize; i++) {
+			for (var i=0; i<Pd.blockSize; i++) {
 				// how far along the line we are
-				var sample = (this.pd.frame * this.pd.blockSize + i) - this.start;
+				var sample = (this.pd.frame * Pd.blockSize + i) - this.start;
 				// if we've reached the end of our line, switch back to the constant method
 				if (sample >= this.length) {
 					// bash our value to the desired destination value
@@ -391,13 +391,13 @@ var PdObjects = {
 					// make sure these values are not bogus
 					if (!isNaN(destination) && !isNaN(time)) {
 						// what sample do we start at - current frame
-						this.start = this.pd.frame * this.pd.blockSize;
+						this.start = this.pd.frame * Pd.blockSize;
 						// the value at the starting sample of the line
 						this.startval = this.line;
 						// remember our destination
 						this.destination = destination;
 						// remember our length in samples
-						this.length = time * this.pd.sampleRate / 1000;
+						this.length = time * Pd.sampleRate / 1000;
 						// switch over to the line dsp method
 						this.dsptick = this.dsptick_line;
 					}
@@ -430,7 +430,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				this.outletbuffer[0][i] = (f >= 0 ? f : -f);
 			}
@@ -469,7 +469,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			// write a constant value to our output buffer for every sample
-			for (var i=0; i<this.pd.blockSize; i++) {
+			for (var i=0; i<Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = this.sig;
 			}
 		},
@@ -504,7 +504,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = (i1[i % i1.length] > i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
 			}
 		}
@@ -526,7 +526,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = (i1[i % i1.length] < i2[i % i2.length] ? i1[i % i1.length] : i2[i % i2.length]);
 			}
 		}
@@ -548,7 +548,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				//var low = this.low;
 				//var hi = this.hi;
@@ -610,7 +610,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				this.outletbuffer[0][i] = Math.exp(i1[i % i1.length]);
 			}
 		}
@@ -631,7 +631,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				var g = i2[i % i2.length];
 				if (f > 0) {
@@ -661,7 +661,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				var g = i2[i % i2.length];
 				if (f <= 0) {
@@ -685,7 +685,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -708,7 +708,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -729,7 +729,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -752,7 +752,7 @@ var PdObjects = {
 		"dspinlets": [0],
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var f = i1[i % i1.length];
 				if (f <= 0) {
 					this.outletbuffer[0][i] = 0;
@@ -793,7 +793,7 @@ var PdObjects = {
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
 			var i2 = this.inletbuffer[1];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 			   var f = i1[i % i1.length];
 			   var g = i2[i % i2.length];
 			   if (g < this.lastin) {
@@ -823,7 +823,7 @@ var PdObjects = {
 				this.hz = parseFloat(this.args[5]);
 				var f = this.hz
 				f = (f > 0 ? f : 0);
-				this.coef = (1 - (f * ((2 * Math.PI) / this.pd.sampleRate)));
+				this.coef = (1 - (f * ((2 * Math.PI) / Pd.sampleRate)));
 				if (this.coef < 0) {
 					this.coef = 0;
 				} else if (this.coef > 1) {
@@ -833,7 +833,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				if (this.coef < 1) {
 						var next = (i1[i % i1.length]) + ((this.coef) * (this.last));
 						this.outletbuffer[0][i] = (next - this.last);
@@ -867,7 +867,7 @@ var PdObjects = {
 						// bash our value to the value passed in
 						var f = newconst;
 						f = (f > 0 ? f : 0);
-						this.coef = (1 - (f * ((2 * 3.14159) / this.pd.sampleRate)));
+						this.coef = (1 - (f * ((2 * 3.14159) / Pd.sampleRate)));
 						if (this.coef < 0) {
 							this.coef = 0;
 						} else if (this.coef > 1) {
@@ -893,7 +893,7 @@ var PdObjects = {
 				this.hz = parseFloat(this.args[5]);
 				var f = this.hz
 				f = (f > 0 ? f : 0);
-				this.coef = (f * (2 * Math.PI) / this.pd.sampleRate);
+				this.coef = (f * (2 * Math.PI) / Pd.sampleRate);
 				if (this.coef < 0) {
 					this.coef = 0;
 				} else if (this.coef > 1) {
@@ -903,7 +903,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
 			var i1 = this.inletbuffer[0];
-			for (var i=0; i < this.pd.blockSize; i++) {
+			for (var i=0; i < Pd.blockSize; i++) {
 				var output = ((this.coef * i1[i % i1.length]) + ((1-this.coef) * this.last));
 				this.outletbuffer[0][i] = output;
 				this.last = output;
@@ -932,7 +932,7 @@ var PdObjects = {
 						// bash our value to the value passed in
 						var f = newconst;
 						f = (f > 0 ? f : 0);
-						this.coef = (f * ((2 * 3.14159) / this.pd.sampleRate));
+						this.coef = (f * ((2 * 3.14159) / Pd.sampleRate));
 						if (this.coef < 0) {
 							this.coef = 0;
 						} else if (this.coef > 1) {
@@ -959,7 +959,7 @@ var PdObjects = {
 		},
 		"dsptick": function() {
             if (this.audioSource) {
-			    for (var i=0; i < this.pd.blockSize; i++) {
+			    for (var i=0; i < Pd.blockSize; i++) {
                     var frame = this.audioSource.readFrame() || this.defaultFrame;
 				    this.outletbuffer[0][i] = frame[0];
 			    }
@@ -2780,52 +2780,4 @@ PdObjects.f = PdObjects.float;
 PdObjects.i = PdObjects.int;
 PdObjects.sel = PdObjects.select;
 PdObjects.bng = PdObjects.bang;
-
-
-/********************************
-	Helper functions
- ********************************/
-
-function MakeRequest(url, caller)
-{
-	var http_request = false;
-	var requestComplete = false;
-	
-	// Create the XML RPC object
-	if (window.XMLHttpRequest) // Free browsers
-	{
-		http_request = new XMLHttpRequest();
-	}
-	else if (window.ActiveXObject) // Internet explorer
-	{
-		http_request = new ActiveXObject("Microsoft.XMLHTTP");
-	}
-	
-	// When we receive a message back from an XML RPC request
-	http_request.onreadystatechange = function()
-	{
-		if (typeof http_request != "undefined")
-		{
-			// reponse 4 = 'request complete'
-			if (http_request.readyState == 4)
-			{
-				response = http_request.responseText
-				if (response != "")
-				{
-					caller.loadcomplete(response, http_request);
-				}
-				requestComplete = true;
-			}
-		}
-		else
-		{
-			http_request = false;
-			requestComplete = true;
-		}
-	};
-	
-	// asynchronous request
-	http_request.open("GET", url, true);
-	http_request.send(null);
-};
 
