@@ -1,17 +1,4 @@
-(function(){
-
-    var extend = function(obj) {
-        var sources = Array.prototype.slice.call(arguments, 1);
-        for(var i=0; i<sources.length; i++) {
-            var source = sources[i];
-            for (var prop in source) {
-                obj[prop] = source[prop];
-            }
-        }
-        return obj;
-    };
-
-    var notImplemented = function() { throw new Error('Not implemented !'); };
+(function(Pd){
 
     var AudioDriverInterface = function(desiredSampleRate, blockSize) {
         // what sample rate we will operate at (might change depending on driver so use getSampleRate()
@@ -20,19 +7,19 @@
         this._channelCount = 2;
     };
 
-    extend(AudioDriverInterface.prototype, {
+    Pd.extend(AudioDriverInterface.prototype, {
 
         /** fetch the current sample rate we are operating at **/
-        getSampleRate: function() { notImplemented(); },
+        getSampleRate: function() { Pd.notImplemented(); },
 
         /** Stop the audio from playing **/
-        stop: function() { notImplemented(); },
+        stop: function() { Pd.notImplemented(); },
 
         /** Start the audio playing with the supplied function as the audio-block generator **/
-        play: function(generator) { notImplemented(); },
+        play: function(generator) { Pd.notImplemented(); },
 
         /** test whether this driver is currently playing audio **/
-        is_playing: function() { notImplemented(); },
+        is_playing: function() { Pd.notImplemented(); },
 
         arrayType: Array,
 
@@ -41,7 +28,7 @@
 
     // use a Float32Array if we have it
     if (typeof Float32Array != "undefined") {
-        extend(AudioDriverInterface.prototype, {
+        Pd.extend(AudioDriverInterface.prototype, {
 	        arrayType: Float32Array,
 	        arraySlice: function (array, start) { return array.subarray(start) }
         });
@@ -54,7 +41,7 @@
         this._batchSize = 4;
     };
 
-    extend(SinkAdapter.prototype, AudioDriverInterface.prototype, {
+    Pd.extend(SinkAdapter.prototype, AudioDriverInterface.prototype, {
 
         /** fetch the current sample rate we are operating at **/
         getSampleRate: function() { 
@@ -107,7 +94,7 @@
 
     });
 
-    this.AudioDriver = SinkAdapter;
+    Pd.AudioDriver = SinkAdapter;
 
-}).call(this);
+})(this.Pd);
 
