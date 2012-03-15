@@ -17,12 +17,12 @@
 			color: red;
 		}
 	</style>
-	<script src='pd.js'></script>
-    <script src='http://code.jquery.com/jquery-1.7.1.min.js'></script>
+	<script src="pd.js"></script>
+    <script src="test/lib/jquery-1.7.1.js"></script>
 	<script>
         Pd.debugMode = true;
 		var pd = null;
-		function launch() {
+		$(function() {
 			tests = [
 				// basic functionality tests
 				'bang-button',
@@ -153,8 +153,11 @@
                 link.appendTo(container);
                 container.appendTo($('#index'));
 			}
-			
-			var pdfile = document.location.href.split("?")[1];
+			$('input[value=play]').click(function(){pd.play();});
+			$('input[value=pause]').click(function(){pd.stop();});
+			$('input[value=bang]').click(function(){pd.testbang();});
+
+			var pdfile = document.location.href.split('?')[1];
 			if (pdfile) {
                 $('#unittest h1').html(pdfile);
                 $('#unittest img').attr({src: 'unittests/'+pdfile+'.png'})
@@ -162,7 +165,7 @@
                 $('#index').hide();
 				
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
-				$.get("unittests/"+pdfile+".pd", function(data) {
+				$.get('unittests/'+pdfile+'.pd', function(data) {
 				    pd = new Pd.Patch();
                     Pd.parse(data, pd);
                     pd.play();
@@ -171,25 +174,25 @@
 			    $('#unittest').hide();
                 $('#index').show();
             }
-		}
+		});
 	</script>
 </head>
-<body onLoad='var l = launch();'>
+<body>
 	<h1>WebPd</h1>
 	<p>Copyright Chris McCormick, 2010.</p>
-	<p><a href='COPYING'>AGPLv3 Licensed.</a></p>
-	<p>You will need Firefox's "Audio Data API" builds from <a href='https://wiki.mozilla.org/Audio_Data_API#Obtaining_Code_and_Builds'>here</a>.</p>
+	<p><a href="COPYING">AGPLv3 Licensed.</a></p>
+	<p>You will need Firefox's "Audio Data API" builds from <a href="https://wiki.mozilla.org/Audio_Data_API#Obtaining_Code_and_Builds">here</a>.</p>
 
-	<div id='index'></div>
-	<div id='unittest'>
+	<div id="index"></div>
+	<div id="unittest">
         <h1></h1>
-        <img src='' />
-        <input type='button' value='play' onclick='javascript: pd.play();' />
-        <input type='button' value='pause' onclick='javascript: pd.stop();' />
-        <input type='button' value='bang' onclick='javascript: pd.testbang();' />
+        <img src="" />
+        <input type="button" value="play" />
+        <input type="button" value="pause" />
+        <input type="button" value="bang" />
     </div>
-	<pre id='console'></pre>
-	<pre id='golden'></pre>
-	<pre id='debug'></pre>
+	<pre id="console"></pre>
+	<pre id="golden"></pre>
+	<pre id="debug"></pre>
 </body>
 </html>

@@ -9,7 +9,8 @@
 		    objects: [],
 		    // an array of all of the end-points of the dsp graph
 		    // (like dac~ or print~ or send~ or outlet~)
-		    endpoints: []
+		    endpoints: [],
+            connections: [],
 	    };
 	    // arrays of float data - Pd's tables
 	    // keys are table names
@@ -149,7 +150,7 @@
 			    this.output[i] = 0;
             }
 		    // run the dsp function on all endpoints to get data
-		    this.mapEndpoints(function(obj) { me.tick(obj); });
+		    this.mapEndPoints(function(obj) { me.tick(obj); });
 		    // increase the frame count
 		    this.frame += 1;
 		    // return the contents of the dspbuffer
@@ -236,13 +237,14 @@
 
         },
 
-        mapEndpoints: function(iterator) {
+        mapEndPoints: function(iterator) {
             this._map(this._graph.endpoints, iterator);
         },
 
-        connect: function(sourceInd, sourceOutlet, sinkInd, sinkInlet) {
-		    var source = this.getObject(sourceInd);
-		    var sink = this.getObject(sinkInd);
+        connect: function(sourceId, sourceOutlet, sinkId, sinkInlet) {
+		    var source = this.getObject(sourceId);
+		    var sink = this.getObject(sinkId);
+            if (sink === null || source === null) return;
 
 		    if (source.outletTypes) {
                 var outletType = source.outletTypes[sourceOutlet];
@@ -251,10 +253,26 @@
 			    } else if (outletType == 'message') {
 				    source.outlets[sourceOutlet] = [sink, sinkInlet];
 			    }
+                this._graph.connections.push([sourceId, sourceOutlet, 
+                                                    sinkId, sinkInlet]);
 			    Pd.debug(outletType + ' connection ' + source.type +
                     ' [' + sourceOutlet + '] to ' + sink.type +
                     ' [' + sinkInlet + ']');
 		    }
+        },
+
+        // TODO: object-oriented connections ?
+        getConnections: function(sourceId, sinkId) {
+            var connections = this._graph.connections;
+            var results = [];
+            for (var i=0; i<connections.length; i++) {
+                var conn = connections[i];
+                if ((conn[0] === sourceId || sourceId == undefined)
+                    && (conn[2] === sinkId || sinkId == undefined)) {
+                    results.push(conn);
+                }
+            }
+            return results;
         },
 
         _map: function(array, iterator) {
