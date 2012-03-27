@@ -87,18 +87,11 @@
 		    if (this.scheduled[time] == null)
 			    this.scheduled[time] = [];
 		    this.scheduled[time].push(callback);
-		    //Pd.log('schedule()');
-		    //Pd.log('\tcurrent time: ' + this.getabstime());
-		    //Pd.log('\tall items scheduled: ');
-		    //Pd.log_allscheduled();
 	    },
 	
 	    log_allscheduled: function() {
 		    for (var s in this.scheduled) {
 			    Pd.log('\t\t' + s + ': ' + this.scheduled[s].length);
-			    /*for (var i=0; i<this.scheduled[s].length; i++) {
-				    Pd.log(this.scheduled[s][i]);
-			    }*/
 		    }
 	    },
 	
@@ -112,10 +105,6 @@
 		    }
 		    // make sure the scheduled items get run in time order
 		    scheduled.sort();
-		    //Pd.log('getscheduled()');
-		    //Pd.log('\tcurrent time: ' + this.getabstime());
-		    //Pd.log('\ttimes scheduled: ' + scheduled);
-		    //Pd.log('\tall items scheduled: ' + this.allscheduled());
 		    return scheduled;
 	    },
 	
@@ -179,11 +168,16 @@
 	
 	    /** Starts this graph running **/
 	    play: function() {
-		    var context = this;
+		    var me = this;
+
 		    // check we're not already running
 		    if (!this.audio.is_playing()) {
+                this.mapObjects(function(obj) { 
+                    obj.setupdsp();
+		            obj.init();
+                });
 			    Pd.debug('Starting audio.');
-			    this.audio.play(function() { return context.generateFrame(); });
+			    this.audio.play(function() { return me.generateFrame(); });
             	// fetch the actual samplerate from the audio driver
 	            Pd.sampleRate = this.audio.getSampleRate(); // TODO : shouldn't be here
 			    // reset the frame count
@@ -311,9 +305,8 @@
     var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n', 'gi');
     var tokensRe = new RegExp(' |\r\n?|\n');
 
-    /** Parses a Pd file and creates a new DSP graph from it
-    ref : http://puredata.info/docs/developer/PdFileFormat 
-    **/
+    // Parses a Pd file and creates a new DSP graph from it
+    // ref : http://puredata.info/docs/developer/PdFileFormat 
     Pd.parse = function(txt, pd) {
 	    // last table name to add samples to
 	    var lastTable = null;
@@ -332,32 +325,32 @@
 
 			    // is this an obj instantiation
 			    if (elementType == 'obj' || elementType == 'msg' || elementType == 'text') {
-				    var proto;
+				    var proto;  // the lookup to use in the `Pd.objects` hash
+                    var args;   // the construction args for the object
 
-				    if (elementType == 'msg') proto = 'msg';
-				    else if (elementType == 'text') proto = 'text';
-				    else {
-					    // see if we know about this type of object yet
+				    if (elementType == 'msg') {
+                        proto = 'msg';
+                        args = tokens.slice(4);
+                    } else if (elementType == 'text') {
+                        proto = 'text';
+                        args = tokens.slice(4);
+                    } else {
 					    proto = tokens[4];
-					    if (!PdObjects.hasOwnProperty(proto)) {
+                        args = tokens.slice(5);
+					    if (!Pd.objects.hasOwnProperty(proto)) {
 						    // TODO: see if we can load this from a url and queue it to be loaded up after parsing
 						    Pd.log(' ' + proto + '\n... couldn\'t create');
 						    proto = 'null';
 					    }
 				    }
 
-				    var obj = new Pd.Object(PdObjects[proto], this, proto, tokens);
-				    pd.addObject(obj);
-				    if (obj.preinit) obj.preinit();
+                    var obj = new Pd.objects[proto](pd, args);
 
 			    } else if (elementType == 'array') {
                     var arrayName = tokens[2];
                     var arraySize = parseInt(tokens[3]);
 
-				    var obj = new Pd.Object(PdObjects['table'], this, 'table', tokens);
-                    pd.addTable(obj);
-                    obj.name = arrayName; // TODO: arrayName as argument
-				    obj.data = new Pd.arrayType(arraySize); // TODO: move array instantiation to constructor
+				    var obj = new Pd.objects['table'](pd, [arrayName, arraySize]);
                     // remind the last table for handling correctly 
                     // the table related instructions which might follow.
                     lastTable = obj;
@@ -386,11 +379,6 @@
 			    }
 		    }
 	    }
-
-        pd.mapObjects(function(obj) { 
-            obj.setupdsp();
-		    if (obj.init) obj.init();
-        });
 
 	    // output a message with our graph
 	    Pd.debug('Graph:');

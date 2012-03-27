@@ -1,16 +1,12 @@
 (function(Pd){
 
-    Pd.Object = function (proto, pd, type, args) {
+    Pd.Object = function (pd, args) {
         // the patch this object belong to
         this.pd = pd || null;
         // id of the object in this patch
         this._id = null;
-	    // let this object know what type of thing it is
-	    this.type = type;
 	    // frame counter - how many frames have we run for
 	    this.frame = 0;
-	    // initialisation arguments
-	    this.args = args;
 	
 	    // create the inlets and outlets array for this object
 	    // array holds 2-tuple entries of [src-object, src-outlet-number]
@@ -24,9 +20,6 @@
 	    // (array of two buffers)
 	    this.outletbuffer = [];
 	
-	    // copy properties from the right type of thing
-	    for (var m in proto) this[m] = proto[m];
-	
 	    if (this.outletTypes) {
 		    // create the outlet buffers for this object
 		    for (var o=0; o<this.outletTypes.length; o++) {
@@ -35,6 +28,16 @@
 			    }
 		    }
 	    }
+
+        // pre-initializes the object, handling the creation arguments
+        // TODO: if there's any reason the object needs to know his patch,
+        // then this doesn't belong here
+	    this.preinit.apply(this, args);
+        // if object was created in a patch, we add it to the graph
+	    if (this.pd) {
+            if (this.type === 'table') this.pd.addTable(obj);
+            else this.pd.addObject(this);
+        }
     };
 	
     Pd.extend(Pd.Object.prototype, {
@@ -113,7 +116,6 @@
 			    for (var i=0; i<this.dspinlets.length; i++) {
 				    // which inlet is supposed to be dsp friendly?
 				    var idx = this.dspinlets[i];
-				    //console.log(this.type + " " + idx);
 				    // TODO: check for multiple incoming dsp data buffers and sum them
 				    // see if the outlet that is connected to our inlet is of type 'dsp'
 				    if (this.inlets[idx] && this.inlets[idx][0].outletTypes[this.inlets[idx][1]] == "dsp") {
@@ -157,7 +159,23 @@
 	    /******************** Graph methods ************************/
         getId: function() {
             return this._id;
-        }
+        },
+
+	    /******************** Object life-cycle ************************/
+        preinit: function() {},
+        init: function() {}
+
     });
+
+    // Convenience function for making it easier to extend Pd.Object
+    Pd.Object.extend = function() {
+        var sources = Array.prototype.slice.call(arguments, 0);
+        var parent = this;
+        var child = function() {parent.apply(this, arguments);}
+        Pd.extend.apply(this, [child.prototype, parent.prototype].concat(sources));
+        child.extend = this.extend;
+        return child;
+    };
+
 
 })(this.Pd);
