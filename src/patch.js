@@ -12,6 +12,9 @@
 		    endpoints: [],
             connections: [],
 	    };
+        // counter used internally to assign a unique id to objects
+        // this counter should never be decremented to ensure the id unicity
+        this._idCounter = -1;
 	    // arrays of float data - Pd's tables
 	    // keys are table names
         this._tables = {};
@@ -206,41 +209,48 @@
 
 	    /******************** Graph methods ************************/
 
+        // Adds an object to the patch.
+        // This also causes the patch to automatically assign an id to that object.
+        // This id can be used to uniquely identify the object in the patch.
         addObject: function(obj) {
-            var ind = this._generateIndex();
-            obj.graphindex = ind;
+            var id = this._generateId();
+            obj._id = id;
             obj.pd = this;
-            this._graph.objects[ind] = obj;
-		    // if it's an endpoint, add it to the graph's list of known endpoints
+            this._graph.objects[id] = obj;
 		    if (obj.endpoint) this._graph.endpoints.push(obj);
-		    Pd.debug('Added ' + obj.type + ' to the graph at position ' + ind);
-            return ind;
+		    Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);
         },
 
-        getObject: function(ind) {
-            return (this._graph.objects[ind] || null);
+        // Returns an object given its id in the patch, or `null` if an object
+        // with such an id doesn't exist.
+        getObject: function(id) {
+            return (this._graph.objects[id] || null);
         },
 
+        // Adds a table to the patch. See `addObject`
         addTable: function(table) {
             this._tables[table.name] = table;
-            var ind = this.addObject(table);
-            Pd.debug("Added " + table.type + " to the graph at position " + ind);
-            return ind;
+            this.addObject(table);
+            Pd.debug("Added " + table.type + " to the graph at position " + table.getId());
         },
 
+        // Returns a table given its name, or `null` if such a table doesn't exist.
         getTableByName: function(name) {
             return (this._tables[name] || null);
         },
 
+        // Calls the function `iterator(obj)` on all the patch's objects. 
         mapObjects: function(iterator) {
             this._map(this._graph.objects, iterator);
 
         },
 
+        // Calls the function `iterator(obj)` on all the patch's end points. 
         mapEndPoints: function(iterator) {
             this._map(this._graph.endpoints, iterator);
         },
 
+        // Connects two objects.
         connect: function(sourceId, sourceOutlet, sinkId, sinkInlet) {
 		    var source = this.getObject(sourceId);
 		    var sink = this.getObject(sinkId);
@@ -261,8 +271,16 @@
 		    }
         },
 
+        // Query and returns the graph's connections.
+        // available filters are :
+        //  - `sourceId` : keeps only connections from object with id `sourceId`
+        //  - `sinkId` : keeps only connections from object with id `sinkId`
         // TODO: object-oriented connections ?
-        getConnections: function(sourceId, sinkId) {
+        getConnections: function(filters) {
+            filters = filters || {};
+            var sourceId = filters.sourceId;
+            var sinkId = filters.sinkId;
+
             var connections = this._graph.connections;
             var results = [];
             for (var i=0; i<connections.length; i++) {
@@ -275,19 +293,23 @@
             return results;
         },
 
+        // this method calls the function `iterator` on every element of `array`
         _map: function(array, iterator) {
             for (var i=0; i<array.length; i++) iterator(array[i]);
         },
 
-        // TODO: not good for dynamic patching since this is not unique
-        _generateIndex: function() {
-		    return this._graph.objects.length;
+        // every time it is called, this method returns a new unique id
+        // for a graph object.
+        _generateId: function() {
+            this._idCounter++;
+		    return this._idCounter;
         }
     });
 
 
     // regular expression for finding valid lines of Pd in a file
     var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n', 'gi');
+    var tokensRe = new RegExp(' |\r\n?|\n');
 
     /** Parses a Pd file and creates a new DSP graph from it
     ref : http://puredata.info/docs/developer/PdFileFormat 
@@ -295,11 +317,12 @@
     Pd.parse = function(txt, pd) {
 	    // last table name to add samples to
 	    var lastTable = null;
+        var counter = 0;
+        var line;
 
 	    // use our regular expression to match instances of valid Pd lines
-	    while (pdline = linesRe.exec(txt)) {
-		    // split this found line into tokens (on space and line break)
-		    var tokens = pdline[1].split(/ |\r\n?|\n/);
+	    while (line = linesRe.exec(txt)) {
+		    var tokens = line[1].split(tokensRe);
             var chunkType = tokens[0];
 		    Pd.debug(tokens.toString());
 
@@ -309,9 +332,8 @@
 
 			    // is this an obj instantiation
 			    if (elementType == 'obj' || elementType == 'msg' || elementType == 'text') {
-
-                    // we get the object's prototype name
 				    var proto;
+
 				    if (elementType == 'msg') proto = 'msg';
 				    else if (elementType == 'text') proto = 'text';
 				    else {
@@ -324,33 +346,30 @@
 					    }
 				    }
 
-				    // instantiate this dsp object
 				    var obj = new Pd.Object(PdObjects[proto], this, proto, tokens);
-				    // put it in our graph of known objects
 				    pd.addObject(obj);
-				    // run the pre-init function which runs on an object before graph setup
 				    if (obj.preinit) obj.preinit();
 
-			    } else if (elementType == 'connect') {
-
-                    pd.connect(parseInt(tokens[2]), parseInt(tokens[3]), 
-                                    parseInt(tokens[4]), parseInt(tokens[5]));
-
 			    } else if (elementType == 'array') {
-
                     var arrayName = tokens[2];
-				    // instantiate this dsp object
+                    var arraySize = parseInt(tokens[3]);
+
 				    var obj = new Pd.Object(PdObjects['table'], this, 'table', tokens);
-				    // this table needs a set of data
-				    obj.data = new Pd.arrayType(parseInt(tokens[3]));
-                    lastTable = obj;
-                    lastTable.name = arrayName; // TODO: arrayName as argument
                     pd.addTable(obj);
+                    obj.name = arrayName; // TODO: arrayName as argument
+				    obj.data = new Pd.arrayType(arraySize); // TODO: move array instantiation to constructor
+                    // remind the last table for handling correctly 
+                    // the table related instructions which might follow.
+                    lastTable = obj;
 
 			    } else if (elementType == 'restore') {
 				    // end the current table
 				    lastTable = null;
-			    }
+
+			    } else if (elementType == 'connect') {
+                    pd.connect(parseInt(tokens[2]), parseInt(tokens[3]), 
+                                    parseInt(tokens[4]), parseInt(tokens[5]));
+                }
 
 		    } else if (chunkType == '#A') {
 			    // reads in part of an array/table of data, starting at the index specified in this line

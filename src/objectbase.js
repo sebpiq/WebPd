@@ -1,7 +1,10 @@
 (function(Pd){
 
     Pd.Object = function (proto, pd, type, args) {
-        this.pd = pd;
+        // the patch this object belong to
+        this.pd = pd || null;
+        // id of the object in this patch
+        this._id = null;
 	    // let this object know what type of thing it is
 	    this.type = type;
 	    // frame counter - how many frames have we run for
@@ -116,7 +119,7 @@
 				    if (this.inlets[idx] && this.inlets[idx][0].outletTypes[this.inlets[idx][1]] == "dsp") {
 					    // use that outlet's buffer as our inlet buffer
 					    this.inletbuffer[idx] = this.inlets[idx][0].outletbuffer[this.inlets[idx][1]];
-					    Pd.debug(this.graphindex + " (" + this.type + ") at inlet " + idx + " dsp inlet real buffer");
+					    Pd.debug(this.getId() + " (" + this.type + ") at inlet " + idx + " dsp inlet real buffer");
 				    } else {
 					    // otherwise it's a message inlet and if we get a float we want to use that instead
 					    // create a new single-valued buffer, initialised to 0
@@ -145,11 +148,16 @@
 					
 					    // replace our message function 
 					    this.message = makeMessageFunc(idx);
-					    Pd.debug(this.graphindex + " (" + this.type + ") dsp inlet " + idx + " single val buffer");
+					    Pd.debug(this.getId() + " (" + this.type + ") dsp inlet " + idx + " single val buffer");
 				    }
 			    }
 		    }
-	    }
+	    },
+
+	    /******************** Graph methods ************************/
+        getId: function() {
+            return this._id;
+        }
     });
 
 })(this.Pd);
