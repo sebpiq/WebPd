@@ -14,6 +14,14 @@ Documentation
 
 Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm) by Miller Puckette, the creator of Pure Data. Note: very little of the full Pure Data functionality has been implemented yet. Most things probably won't work.
 
+Instructions for building pd.js
+--------------------------------
+
+To build `pd.js` and `pd-min.js` you will need *node.js*, [Jake](https://github.com/mde/jake), and [UglifyJS](https://github.com/mishoo/UglifyJS/).
+Follow the instructions to install those, then in WebPd's root folder run :
+
+    jake
+
 Contributing
 ------------
 

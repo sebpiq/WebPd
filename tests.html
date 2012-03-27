@@ -17,10 +17,12 @@
 			color: red;
 		}
 	</style>
-	<script src='pd.js' type='text/javascript'></script>
-	<script type='text/javascript'>
+	<script src="pd.js"></script>
+    <script src="test/lib/jquery-1.7.1.js"></script>
+	<script>
+        Pd.debugMode = true;
 		var pd = null;
-		function launch() {
+		$(function() {
 			tests = [
 				// basic functionality tests
 				'bang-button',
@@ -138,64 +140,59 @@
 				'hip~msg',
 				'lop~',
 				'lop~msg',
+				'readsf~',
 				'snapshot~'
 			];
-			var body = document.getElementsByTagName("body")[0];
-			var contents = document.getElementById('contents');
-			var buttons = document.getElementById('buttons');
-			
-			/** Handle the unit tests's expected output file **/
-			function expected() {
-				
+
+			for (t in tests){
+                var testName = tests[t];
+				var container = $('<span>', {'class': 'test'});
+                var link = $('<a>', {href: '?'+testName});
+                $('<p>').html(testName).appendTo(link);
+                $('<img>', {src: 'unittests/'+testName+'.png'}).appendTo(link);
+                link.appendTo(container);
+                container.appendTo($('#index'));
 			}
-			
-			var pdfile = document.location.href.split("?")[1];
+			$('input[value=play]').click(function(){pd.play();});
+			$('input[value=pause]').click(function(){pd.stop();});
+			$('input[value=bang]').click(function(){pd.testbang();});
+
+			var pdfile = document.location.href.split('?')[1];
 			if (pdfile) {
-				// add play an pause buttons
-				buttons.innerHTML += "<input type='button' value='play' onclick='javascript: pd.play();' /> <input type='button' value='pause' onclick='javascript: pd.stop();' /> <input type='button' value='bang' onclick='javascript: pd.testbang();' />";
+                $('#unittest h1').html(pdfile);
+                $('#unittest img').attr({src: 'unittests/'+pdfile+'.png'})
+				$('#unittest').show();
+                $('#index').hide();
 				
-				// information and graphic about this patch
-				contents.innerHTML = contents.innerHTML + "<h1>" + pdfile + "</h1><img src='unittests/" + pdfile + ".png'>";
-				
-				// create a new pd instance in debug-output mode
-				pd = new Pd(44100, 128, true);
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
-				pd.load("unittests/" + pdfile + ".pd", pd.play);
-				
-				// trigger the load of the expected unit tests output
-				MakeRequest("unittests/" + pdfile + ".txt", {"loadcomplete": function(result, request) {
-						if (request.status != 404) {
-							document.getElementById("golden").innerHTML = "---EXPECTED OUTPUT---\n" + result;
-						}
-					}
-				});
-				
-				// trigger the load of the interface html (if it exists)
-				MakeRequest("unittests/" + pdfile + ".html", {"loadcomplete": function(result, request) {
-						if (request.status != 404) {
-							document.getElementById("interface").innerHTML = result;
-						}
-					}
-				});
+				$.get('unittests/'+pdfile+'.pd', function(data) {
+				    pd = new Pd.Patch();
+                    Pd.parse(data, pd);
+                    pd.play();
+                });
 			} else {
-				for (t in tests){
-					contents.innerHTML = contents.innerHTML + "<span class='test'><a href='?" + tests[t] + "'><p>" + tests[t] + "</p><img src='unittests/" + tests[t] +  ".png'></a></span>";
-				}
-			}
-		}
+			    $('#unittest').hide();
+                $('#index').show();
+            }
+		});
 	</script>
 </head>
-<body onLoad='var l = launch();'>
+<body>
 	<h1>WebPd</h1>
 	<p>Copyright Chris McCormick, 2010.</p>
-	<p><a href='COPYING'>AGPLv3 Licensed.</a></p>
-	<p>You will need Firefox's "Audio Data API" builds from <a href='https://wiki.mozilla.org/Audio_Data_API#Obtaining_Code_and_Builds'>here</a>.</p>
-	
-	<div id='contents'></div>
-	<div id='interface'></div>
-	<div id='buttons'></div>
-	<pre id='console'></pre>
-	<pre id='golden'></pre>
-	<pre id='debug'></pre>
+	<p><a href="COPYING">AGPLv3 Licensed.</a></p>
+	<p>You will need Firefox's "Audio Data API" builds from <a href="https://wiki.mozilla.org/Audio_Data_API#Obtaining_Code_and_Builds">here</a>.</p>
+
+	<div id="index"></div>
+	<div id="unittest">
+        <h1></h1>
+        <img src="" />
+        <input type="button" value="play" />
+        <input type="button" value="pause" />
+        <input type="button" value="bang" />
+    </div>
+	<pre id="console"></pre>
+	<pre id="golden"></pre>
+	<pre id="debug"></pre>
 </body>
 </html>
