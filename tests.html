@@ -166,10 +166,11 @@
 				
 				// Load up the particular patch, and play it when the patch-is-loaded callback fires
 				$.get('unittests/'+pdfile+'.pd', function(data) {
-				    pd = new Pd.Patch();
-                    Pd.parse(data, pd);
-                    pd.play();
-                });
+			            pd = new Pd.Patch();
+                        Pd.parse(data, pd);
+                        pd.play();
+                    },
+                'text');
 			} else {
 			    $('#unittest').hide();
                 $('#index').show();

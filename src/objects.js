@@ -75,7 +75,7 @@
 			    var inBuff = dspInlet.getBuffer();
                 var J = 2 * Math.PI / Pd.sampleRate;
 			    for (var i=0; i<outBuff.length; i++) {
-				    outBuff[i] = Math.cos(J * inBuff[i % inBuff.length] * this.sampCount);
+				    outBuff[i] = Math.cos(J * inBuff[i] * this.sampCount);
 				    this.sampCount++;
 			    }
             } else {
@@ -106,8 +106,8 @@
 			var inBuff2 = this.inlets[1].getBuffer();
 			// copy interleaved data from inlets to the graph's output buffer
 			for (var i=0; i < Pd.blockSize; i++) {
-				this.pd.output[i * 2] += inBuff1[i % inBuff1.length];
-				this.pd.output[i * 2 + 1] += inBuff2[i % inBuff2.length];
+				this.pd.output[i * 2] += inBuff1[i];
+				this.pd.output[i * 2 + 1] += inBuff2[i];
 			}
 		}
 	});
