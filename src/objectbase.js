@@ -1,5 +1,6 @@
 (function(Pd){
 
+    /******************** Base Object *****************/
     Pd.Object = function (pd, args) {
         // the patch this object belong to
         this.pd = pd || null;
@@ -13,20 +14,14 @@
 	    this.inlets = [];
 	    // array holds 2-tuple entries of [dest-object, dest-inlet-number]
 	    this.outlets = [];
-	    // holds a pointer to an existing outlet buffer, or a small buffer with a constant value
-	    // (array of buffers)
-	    this.inletbuffer = [];
-	    // holds actual output buffers
-	    // (array of two buffers)
-	    this.outletbuffer = [];
-	
-	    if (this.outletTypes) {
-		    // create the outlet buffers for this object
-		    for (var o=0; o<this.outletTypes.length; o++) {
-			    if (this.outletTypes[o] == "dsp") {
-				    this.outletbuffer[o] = new Pd.arrayType(Pd.blockSize);
-			    }
-		    }
+	    // create inlets and outlets specified in the object's proto
+        var outletTypes = this.outletTypes;
+        var inletTypes = this.inletTypes;
+	    for (var i=0; i<outletTypes.length; i++) {
+		    this.outlets[i] = new Pd[outletTypes[i]](this, i);
+	    }
+	    for (var i=0; i<inletTypes.length; i++) {
+		    this.inlets[i] = new Pd[inletTypes[i]](this, i);
 	    }
 
         // pre-initializes the object, handling the creation arguments
@@ -35,19 +30,41 @@
 	    this.preinit.apply(this, args);
         // if object was created in a patch, we add it to the graph
 	    if (this.pd) {
-            if (this.type === 'table') this.pd.addTable(obj);
+            // TODO: ugly check shouldn't be there ... most likely in the table subclass
+            if (this instanceof Pd.objects['table']) this.pd.addTable(obj);
             else this.pd.addObject(this);
         }
     };
 	
     Pd.extend(Pd.Object.prototype, {
 
+	    /******************** Methods to implement *****************/
+		// set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
+		endPoint: false,
+
+        // 'dsp'/'message'
+		outletTypes: [],
+
+        // Beware, inlet type doesn't have the exact same meaning as
+        // outlet type, cause dsp capable inlets also take messages.  
+		inletTypes: [],
+
+        preinit: function() {},
+
+        init: function() {},
+
+        // method which runs every frame for this object
+		dspTick: function() {},
+
+        // method which runs when this object receives a message at any inlet
+		message: function(inletnumber, message) {},
+
+
+	    /******************** Common methods *********************/
 	    /** Converts a Pd message to a float **/
-	    tofloat: function(data) {
+	    toFloat: function(data) {
 		    // first check if we just got an actual float, return it if so
-		    if (!isNaN(data)) {
-			    return data;
-		    }
+		    if (!isNaN(data)) return data;
 		    // otherwise parse this thing
 		    var element = data.split(" ")[0];
 		    var foundfloat = parseFloat(element);
@@ -63,7 +80,7 @@
 	    },
 	
 	    /** Converts a Pd message to a symbol **/
-	    tosymbol: function(data) {
+	    toSymbol: function(data) {
 		    var element = data.split(" ")[0];
 		    if (!isNaN(parseFloat(element))) {
 			    element = "symbol float";
@@ -77,12 +94,12 @@
 	    },
 	
 	    /** Convert a Pd message to a bang **/
-	    tobang: function(data) {
+	    toBang: function(data) {
 		    return "bang";
 	    },
 	
 	    /** Convert a Pd message to a javascript array **/
-	    toarray: function(msg) {
+	    toArray: function(msg) {
 		    var type = typeof(msg);
 		    // if it's a string, split the atom
 		    if (type == "string") {
@@ -100,82 +117,152 @@
 	    },
 	
 	    /** Sends a message to a particular outlet **/
-	    sendmessage: function(outletnum, msg) {
-		    if (this.outlets[outletnum]) {
-			    // propagate this message to my outlet
-			    this.outlets[outletnum][0].message(this.outlets[outletnum][1], msg);
-		    } else {
-			    // pd silently drops these messages into the ether
-			    Pd.debug(this.type + ": No outlet #" + outletnum);
-		    }
-	    },
-	
-	    /** Run after the graph is created to set up DSP inlets specially (accept floats if not dsp) **/
-	    setupdsp: function() {
-		    if (this.dspinlets) {
-			    for (var i=0; i<this.dspinlets.length; i++) {
-				    // which inlet is supposed to be dsp friendly?
-				    var idx = this.dspinlets[i];
-				    // TODO: check for multiple incoming dsp data buffers and sum them
-				    // see if the outlet that is connected to our inlet is of type 'dsp'
-				    if (this.inlets[idx] && this.inlets[idx][0].outletTypes[this.inlets[idx][1]] == "dsp") {
-					    // use that outlet's buffer as our inlet buffer
-					    this.inletbuffer[idx] = this.inlets[idx][0].outletbuffer[this.inlets[idx][1]];
-					    Pd.debug(this.getId() + " (" + this.type + ") at inlet " + idx + " dsp inlet real buffer");
-				    } else {
-					    // otherwise it's a message inlet and if we get a float we want to use that instead
-					    // create a new single-valued buffer, initialised to 0
-					    this.inletbuffer[idx] = [0];
-					
-					    // override the existing message input to check for incoming floats
-					    // and use them to set the buffer value
-					    // (remember the old message func so we can stack it on the end of the new one
-					    // this is slightly complicated but oh well)
-					    if (this.message) {
-						    this["message_" + idx] = this.message;
-					    }
-					
-					    // returns a new message function to replace the old one
-					    function makeMessageFunc(myidx) {
-						    return function (inletnum, msg) {
-							    if (inletnum == myidx && !isNaN(parseFloat(msg))) {
-								    // set our constant-buffer value to the incoming float value
-								    this.inletbuffer[myidx][0] = parseFloat(msg);
-							    }
-							    // chain our old message function onto the end of this new one
-							    if (this["message_" + myidx])
-								    this["message_" + myidx](inletnum, msg);
-						    }
-					    }
-					
-					    // replace our message function 
-					    this.message = makeMessageFunc(idx);
-					    Pd.debug(this.getId() + " (" + this.type + ") dsp inlet " + idx + " single val buffer");
-				    }
-			    }
+	    sendMessage: function(outletnum, msg) {
+		    if (this.outlets[outletnum]) this.outlets[outletnum].message(msg);
+		    else {
+			    throw (new Error("object has no outlet #" + outletnum));
 		    }
 	    },
 
 	    /******************** Graph methods ************************/
+    	// Returns the a unique identifier of the object in its current patch.
+        // This id is assigned automatically when the object is added to the patch.
         getId: function() {
             return this._id;
-        },
-
-	    /******************** Object life-cycle ************************/
-        preinit: function() {},
-        init: function() {}
+        }
 
     });
 
     // Convenience function for making it easier to extend Pd.Object
-    Pd.Object.extend = function() {
-        var sources = Array.prototype.slice.call(arguments, 0);
-        var parent = this;
-        var child = function() {parent.apply(this, arguments);}
-        Pd.extend.apply(this, [child.prototype, parent.prototype].concat(sources));
-        child.extend = this.extend;
-        return child;
-    };
+    Pd.Object.extend = Pd.chainExtend;
 
+
+    /******************** Inlets/outlets *****************/
+    var BasePortlet = function(obj, id) {
+        this.obj = obj;
+        this.id = id;
+        this.init();
+    };
+    Pd.extend(BasePortlet.prototype, {
+
+        init: function() { Pd.notImplemented(); },
+
+        connect: function(other) { Pd.notImplemented(); }
+
+    });
+    BasePortlet.extend = Pd.chainExtend;
+
+    var BaseInlet = BasePortlet.extend({
+
+        init: function() {
+            this.sources = [];
+        },
+
+        connect: function(source) {
+            this.sources.push(source);
+        },
+
+        // message received callback
+        message: function(msg) {
+	        this.obj.message(this.id, msg);
+        },
+
+        // Returns a buffer to read dsp data from.
+        getBuffer: function() { Pd.notImplemented(); },
+
+        // Returns true if the inlet has dsp sources, false otherwise
+        hasDspSources: function() { Pd.notImplemented(); }
+
+    });
+
+    var BaseOutlet = BasePortlet.extend({
+
+        init: function() {
+            this.sinks = [];
+        },
+
+        connect: function(sink) {
+            this.sinks.push(sink);
+        },
+
+        // Returns a buffer to write dsp data to.
+        getBuffer: function() { Pd.notImplemented(); },
+
+        // Sends a message to all sinks
+        sendMessage: function(msg) { Pd.notImplemented(); }
+
+    });
+
+
+    // message inlet. Simply receives messages and dispatches them to
+    // the inlet's object.
+    Pd['inlet'] = BaseInlet.extend({
+
+        getBuffer: function() {
+            throw (new Error ('No dsp buffer on a message inlet'));
+        },
+
+        hasDspSources: function() {
+            throw (new Error ('A message inlet cannot have dsp sources'));
+        }
+
+    });
+
+    // dsp inlet. Pulls dsp data from all sources. Also accepts messages.
+    Pd['inlet~'] = BaseInlet.extend({
+
+        init: function() {
+            BaseInlet.prototype.init.apply(this, arguments);
+            this.dspSources = [];
+        },
+
+        // TODO: sum input from multiple connections
+        getBuffer: function() {
+            return this.sources[0].buffer;
+        },
+
+        connect: function(source) {
+            BaseInlet.prototype.connect.apply(this, arguments);
+            if (source instanceof Pd['outlet~']) this.dspSources.push(source);  
+        },
+
+        hasDspSources: function() {
+            return this.dspSources.length > 0;
+        }
+
+    });
+
+    // message outlet. Dispatches messages to all the sinks
+    Pd['outlet'] = BaseOutlet.extend({
+
+        getBuffer: function() {
+            throw (new Error ('No dsp buffer on a message outlet'));
+        },
+
+        sendMessage: function(msg) {
+            for (var i=0; i<this.sinks.length; i++) {
+                this.sinks[i].message(msg);
+            }
+        }
+
+    });
+
+    // dsp outlet. Only contains a buffer, written to by the outlet's object.
+    Pd['outlet~'] = BaseOutlet.extend({
+
+        init: function() {
+            BaseOutlet.prototype.init.apply(this, arguments);
+            this.buffer = new Pd.arrayType(Pd.blockSize);
+        },
+
+        getBuffer: function() {
+            return this.buffer;
+        },
+
+        sendMessage: function() {
+            throw (new Error ('message received on dsp outlet, pas bon'));
+        }
+
+    });
 
 })(this.Pd);

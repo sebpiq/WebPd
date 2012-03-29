@@ -98,31 +98,31 @@ $(document).ready(function() {
         deepEqual([ep2.objName, ep2.checked], ['ep2', true]);
     });
 
-    test('graphiness : connect/getConnections', function() {
-        var MyOtherObject = MyObject.extend({outletTypes: ['dsp', 'message']});
-        var obj1 = new MyOtherObject(null, ['obj1']);
-        var obj2 = new MyObject(null, ['obj2']);
-        patch.addObject(obj1);
-        patch.addObject(obj2);
+    test('graphiness : connect', function() {
+        var SomeSource = MyObject.extend({outletTypes: ['outlet~', 'outlet']});
+        var SomeSink = MyObject.extend({inletTypes: ['inlet~', 'inlet']});
+        var obj1 = new SomeSource(patch, ['obj1']);
+        var obj2 = new SomeSink(patch, ['obj2']);
         var ind1 = obj1.getId();
         var ind2 = obj2.getId();
         var unknownInd = 781863726392839;
 
         patch.connect(ind1, 0, ind2, 0);
-        deepEqual(obj2.inlets, [[obj1, 0]]);
-        deepEqual(patch.getConnections({sourceId: ind1, sinkId: ind2}), [[ind1, 0, ind2, 0]]);
-        deepEqual(patch.getConnections({sinkId: ind2}), [[ind1, 0, ind2, 0]]);
-        deepEqual(patch.getConnections({sourceId: ind1}), [[ind1, 0, ind2, 0]]);
-        deepEqual(patch.getConnections({sourceId: ind2, sinkId: ind1}), []);
+        equal(obj1.outlets[0].sinks.length, 1);
+        equal(obj2.inlets[0].sources.length, 1);
+        equal(obj1.outlets[0].sinks[0], obj2.inlets[0]);
+        equal(obj2.inlets[0].sources[0], obj1.outlets[0]);
 
         patch.connect(ind1, 1, ind2, 1);
-        deepEqual(obj1.outlets, [undefined, [obj2, 1]]);
-        deepEqual(patch.getConnections({sourceId: ind1, sinkId: ind2}), [[ind1, 0, ind2, 0], [ind1, 1, ind2, 1]]);
+        equal(obj1.outlets[1].sinks.length, 1);
+        equal(obj2.inlets[1].sources.length, 1);
+        equal(obj1.outlets[1].sinks[0], obj2.inlets[1]);
+        equal(obj2.inlets[1].sources[0], obj1.outlets[1]);
 
+        // unknown object, nothing happens
         patch.connect(unknownInd, 0, ind2, 0);
-        deepEqual(obj2.inlets, [[obj1, 0]]);
-        deepEqual(obj1.outlets, [undefined, [obj2, 1]]);
-        deepEqual(patch.getConnections({sourceId: ind1, sinkId: ind2}), [[ind1, 0, ind2, 0], [ind1, 1, ind2, 1]]);
+        equal(obj2.inlets[0].sources.length, 1);
+        equal(obj2.inlets[0].sources[0], obj1.outlets[0]);
     });
 
     test('parse : simple loadbang into print', function() {
@@ -132,9 +132,14 @@ $(document).ready(function() {
             + '#X connect 0 0 1 0;\n';
         Pd.parse(patchStr, patch);
 
-        deepEqual(patch.getConnections(), [[0, 0, 1, 0]])
-        equal(patch.getObject(0).type, 'loadbang');
-        equal(patch.getObject(1).type, 'print');
+        var loadbang = patch.getObject(0);
+        var print = patch.getObject(1);
+        ok(loadbang instanceof Pd.objects['loadbang']);
+        ok(print instanceof Pd.objects['print']);
+        equal(loadbang.outlets[0].sinks.length, 1);
+        equal(print.inlets[0].sources.length, 1);
+        equal(loadbang.outlets[0].sinks[0], print.inlets[0]);
+        equal(print.inlets[0].sources[0], loadbang.outlets[0]);
     });
 
 });

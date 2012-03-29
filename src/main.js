@@ -21,7 +21,7 @@
         
         var ChildObject = function() {};
 
-        Pd._extend({ChildObject.prototype, ParentObject.prototype,
+        Pd.extend(ChildObject.prototype, ParentObject.prototype, {
 
             anOverridenMethod: function() {
                 ParentObject.prototype.anOverridenMethod.apply(this, arguments);
@@ -43,6 +43,15 @@
             }
         }
         return obj;
+    };
+
+    Pd.chainExtend = function() {
+        var sources = Array.prototype.slice.call(arguments, 0);
+        var parent = this;
+        var child = function() {parent.apply(this, arguments);}
+        Pd.extend.apply(this, [child.prototype, parent.prototype].concat(sources));
+        child.extend = this.extend;
+        return child;
     };
 
     Pd.notImplemented = function() { throw new Error('Not implemented !'); };

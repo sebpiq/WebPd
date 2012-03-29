@@ -7,42 +7,30 @@
 	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
 ***/
 
-/**********************************************************************************************
-	This object contains a prototype for every type of Pd object implemented so far.
-	
-	properties:
-		endpoint = set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
-		outletTypes = dsp/message
-		dspinlets = which inlet numbers can do dsp
-	
-	methods:
-		preinit = method which runs after object creation, but before the graph has been instantiated
-		init = method which runs after the graph has been instantiated
-		dsptick = method which runs every frame for this object
-		message(inletnumber, message) = method which runs when this object receives a message at any inlet
- **********************************************************************************************/
 (function(Pd){
 
     Pd.objects = {
 	// null placeholder object for objects which don't exist
         'null': {},
         'cnv': {}
-    };	
+    };
 
     Pd.objects['loadbang'] = Pd.Object.extend({
 
-        outletTypes: ['message'],
+        outletTypes: ['outlet'],
 
         init: function() {
             var me = this;
             this.pd.schedule(0, function() {
-                me.sendmessage(0, 'bang');
+                me.sendMessage(0, 'bang');
             });
         }
 
     });
 
     Pd.objects['print'] = Pd.Object.extend({
+
+		inletTypes: ['inlet'],
 
         preinit: function(printName) {
             this.printName = (printName || 'print');
@@ -69,30 +57,39 @@
 	// basic oscillator
 	Pd.objects['osc~'] = Pd.Object.extend({
 
-		outletTypes: ['dsp'],
-		dspinlets: [0],
+		outletTypes: ['outlet~'],
+		inletTypes: ['inlet~', 'inlet'],
 
 		preinit: function(freq) {
-			this.initFreq = freq;
+			this.freq = freq || 0;
 			this.sampCount = 0;
 		},
 
-        init: function() {
-            if (this.initFreq) this.inletbuffer[0][0] = this.initFreq;
-        },
+		dspTick: function() {
+            var dspInlet = this.inlets[0];
+            var outBuff = this.outlets[0].getBuffer();
 
-		dsptick: function() {
-			var i1 = this.inletbuffer[0];
-			for (var i=0; i<this.outletbuffer[0].length; i++) {
-				this.outletbuffer[0][i] = Math.cos(2 * Math.PI * (this.sampCount));
-				this.sampCount += i1[i % i1.length] / Pd.sampleRate;
-			}
+            // We listen to the first inlet for frequency, only
+            // if there's actually a dsp source connected to it.
+            if (dspInlet.hasDspSources()) {
+			    var inBuff = dspInlet.getBuffer();
+                var J = 2 * Math.PI / Pd.sampleRate;
+			    for (var i=0; i<outBuff.length; i++) {
+				    outBuff[i] = Math.cos(J * inBuff[i % inBuff.length] * this.sampCount);
+				    this.sampCount++;
+			    }
+            } else {
+                var K = 2 * Math.PI * this.freq / Pd.sampleRate;
+			    for (var i=0; i<outBuff.length; i++) {
+				    outBuff[i] = Math.cos(K * this.sampCount);
+				    this.sampCount++;
+			    }
+            }
 		},
 
-		message: function(inlet, message) {
-			if (inlet == 1) {
-				// TODO: 2nd inlet receives phase message
-			}
+		// TODO: 2nd inlet receives phase message
+		message: function(inlet, msg) {
+			if (inlet === 0) this.freq = this.toFloat(msg);
 		}
 
 	});
@@ -100,17 +97,17 @@
 	// digital to analogue converter (sound output)
 	Pd.objects['dac~'] = Pd.Object.extend({
 
-		endpoint: true,
+		endPoint: true,
 		outletTypes: [],
-		dspinlets: [0, 1],
+		inletTypes: ['inlet~', 'inlet~'],
 
-		dsptick: function() {
-			var i1 = this.inletbuffer[0];
-			var i2 = this.inletbuffer[1];
+		dspTick: function() {
+			var inBuff1 = this.inlets[0].getBuffer();
+			var inBuff2 = this.inlets[1].getBuffer();
 			// copy interleaved data from inlets to the graph's output buffer
 			for (var i=0; i < Pd.blockSize; i++) {
-				this.pd.output[i * 2] += i1[i % i1.length];
-				this.pd.output[i * 2 + 1] += i2[i % i2.length];
+				this.pd.output[i * 2] += inBuff1[i % inBuff1.length];
+				this.pd.output[i * 2 + 1] += inBuff2[i % inBuff2.length];
 			}
 		}
 	});
