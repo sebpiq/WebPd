@@ -21,7 +21,7 @@
 
         init: function() {
             var me = this;
-            this.pd.schedule(0, function() {
+            this.getPatch().schedule(0, function() {
                 me.sendMessage(0, 'bang');
             });
         }
@@ -104,10 +104,11 @@
 		dspTick: function() {
 			var inBuff1 = this.inlets[0].getBuffer();
 			var inBuff2 = this.inlets[1].getBuffer();
+            var output = this.getPatch().output;
 			// copy interleaved data from inlets to the graph's output buffer
 			for (var i=0; i < Pd.blockSize; i++) {
-				this.pd.output[i * 2] += inBuff1[i];
-				this.pd.output[i * 2 + 1] += inBuff2[i];
+				output[i * 2] += inBuff1[i];
+				output[i * 2 + 1] += inBuff2[i];
 			}
 		}
 	});

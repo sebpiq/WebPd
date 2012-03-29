@@ -6,7 +6,7 @@ $(document).ready(function() {
         }
     });
     var MyEndPointObject = MyObject.extend({
-        endpoint: true,
+        endPoint: true
     });
 
     var patch;
@@ -90,7 +90,7 @@ $(document).ready(function() {
         patch.addObject(ep2);
 
         patch.mapEndPoints(function(obj) {
-            obj.checked = true
+            obj.checked = true;
         });
 
         deepEqual([obj1.objName, obj1.checked], ['obj1', undefined]);

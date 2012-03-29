@@ -89,6 +89,7 @@
 	
 	    // Runs all the callbacks for which scheduled
         // time has passed, and delete them once they have run.
+        // TODO: what's the use ?
 	    _runScheduled: function() {
 		    var times = [];
             var time;
@@ -114,15 +115,16 @@
 	    // Get a single frame of audio data from Pd
 	    generateFrame: function() {
             var me = this;
+            var output = this.output;
             this._runScheduled();
 		    // reset our output buffer (gets written to by dac~ objects)
-		    for (var i=0; i<this.output.length; i++) {
-			    this.output[i] = 0;
+		    for (var i=0; i<output.length; i++) {
+			    output[i] = 0;
             }
 		    // run the dsp function on all endpoints to get data
 		    this.mapEndPoints(function(obj) { me.tick(obj); });
-		    this.frame += 1;
-		    return this.output;
+		    this.frame++;
+		    return output;
 	    },
 	
 	    // Dsp tick function. Pulls dsp data from `obj` and all its parents.
@@ -136,7 +138,7 @@
 		        // recursively triggers tick on all parent objects
 		        for (var i=0; i<inlets.length; i++) {
 			        sources = inlets[i].sources;
-                    for (var j=0; j<sources.length; j++) this.tick(sources[j].obj);
+                    for (var j=0; j<sources.length; j++) this.tick(sources[j].getObject());
 		        }
 		        // once all parents have run their dsp process,
                 // we can proceed with the current object.
@@ -146,6 +148,7 @@
 	    },
 	
 	    // Starts this graph running
+        // TODO: improve lifecycle : instead of obj.preinit, obj.init -> obj.init, obj.load ; obj.load called in `play`, graph leaf-to-root
 	    play: function() {
 		    var me = this;
 
@@ -179,8 +182,8 @@
         // This id can be used to uniquely identify the object in the patch.
         addObject: function(obj) {
             var id = this._generateId();
-            obj._id = id;
-            obj.pd = this;
+            obj.setId(id);
+            obj.setPatch(this);
             this._graph.objects[id] = obj;
 		    if (obj.endPoint) this._graph.endPoints.push(obj);
 		    Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);

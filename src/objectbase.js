@@ -2,10 +2,11 @@
 
     /******************** Base Object *****************/
     Pd.Object = function (pd, args) {
+        args = args || [];
         // the patch this object belong to
-        this.pd = pd || null;
+        this.setPatch((pd || null));
         // id of the object in this patch
-        this._id = null;
+        this.setId(null);
 	    // frame counter - how many frames have we run for
 	    this.frame = 0;
 	
@@ -29,10 +30,10 @@
         // then this doesn't belong here
 	    this.preinit.apply(this, args);
         // if object was created in a patch, we add it to the graph
-	    if (this.pd) {
+	    if (pd) {
             // TODO: ugly check shouldn't be there ... most likely in the table subclass
-            if (this instanceof Pd.objects['table']) this.pd.addTable(obj);
-            else this.pd.addObject(this);
+            if (this instanceof Pd.objects['table']) pd.addTable(obj);
+            else pd.addObject(this);
         }
     };
 	
@@ -124,11 +125,23 @@
 		    }
 	    },
 
-	    /******************** Graph methods ************************/
+	    /******************** Accessors ************************/
     	// Returns the a unique identifier of the object in its current patch.
         // This id is assigned automatically when the object is added to the patch.
         getId: function() {
             return this._id;
+        },
+
+        setId: function(id) {
+            this._id = id
+        },
+
+        getPatch: function(pd) {
+            return this._pd;
+        },
+
+        setPatch: function(pd) {
+            this._pd = pd;
         }
 
     });
@@ -139,15 +152,19 @@
 
     /******************** Inlets/outlets *****************/
     var BasePortlet = function(obj, id) {
-        this.obj = obj;
-        this.id = id;
+        this._obj = obj;
+        this._id = id;
         this.init();
     };
     Pd.extend(BasePortlet.prototype, {
 
         init: function() { Pd.notImplemented(); },
 
-        connect: function(other) { Pd.notImplemented(); }
+        connect: function(other) { Pd.notImplemented(); },
+
+        getId: function() { return this._id; },
+
+        getObject: function() { return this._obj; }
 
     });
     BasePortlet.extend = Pd.chainExtend;
@@ -164,7 +181,7 @@
 
         // message received callback
         message: function(msg) {
-	        this.obj.message(this.id, msg);
+	        this.getObject().message(this.getId(), msg);
         },
 
         // Returns a buffer to read dsp data from.
@@ -213,21 +230,48 @@
 
         init: function() {
             BaseInlet.prototype.init.apply(this, arguments);
-            this.dspSources = [];
+            this._dspSources = [];
+            this._buffer = new Pd.arrayType(Pd.blockSize);
+            this._zerosBuffer = new Pd.arrayType(Pd.blockSize);
+            for (var i; i<this._zerosBuffer.length; i++) {
+                this._zerosBuffer[i] = 0;
+            }
         },
 
-        // TODO: sum input from multiple connections
         getBuffer: function() {
-            return this.sources[0].buffer;
+            var dspSources = this._dspSources;
+
+            // if more than one dsp source, we have to sum the signals.
+            if (dspSources.length > 1) {
+                var buffer = this._buffer;
+                var sourceBuff;
+                for (var i=0; i<buffer.length; i++) buffer[i] = 0;
+
+                for (var i=0; i<dspSources.length; i++) {
+                    sourceBuff = dspSources[i].getBuffer();
+                    for (var j=0; j<buffer.length; j++) {
+                        buffer[j] += sourceBuff[j];
+                    }
+                }
+                return buffer;
+
+            // if only one dsp source, we can pass the signal as is.
+            } else if (dspSources.length == 1) {
+                return dspSources[0].getBuffer();
+
+            // if no dsp source, just pass some zeros
+            } else {
+                return this._zerosBuffer;
+            }
         },
 
         connect: function(source) {
             BaseInlet.prototype.connect.apply(this, arguments);
-            if (source instanceof Pd['outlet~']) this.dspSources.push(source);  
+            if (source instanceof Pd['outlet~']) this._dspSources.push(source);  
         },
 
         hasDspSources: function() {
-            return this.dspSources.length > 0;
+            return this._dspSources.length > 0;
         }
 
     });
@@ -252,11 +296,11 @@
 
         init: function() {
             BaseOutlet.prototype.init.apply(this, arguments);
-            this.buffer = new Pd.arrayType(Pd.blockSize);
+            this._buffer = new Pd.arrayType(Pd.blockSize);
         },
 
         getBuffer: function() {
-            return this.buffer;
+            return this._buffer;
         },
 
         sendMessage: function() {

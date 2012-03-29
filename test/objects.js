@@ -61,21 +61,21 @@ $(document).ready(function() {
         var cos = Math.cos;
         // no frequency (=0)
         var osc = new Pd.objects['osc~'](null);
-        var buffer = osc.outlets[0].buffer;
+        var buffer = osc.outlets[0].getBuffer();
 
         deepEqual(toArray(buffer), [0, 0, 0, 0]);
-        osc.dsptick();
+        osc.dspTick();
         deepEqual(toArray(buffer), [1, 1, 1, 1]);        
 
         // frequency argument 
         var osc = new Pd.objects['osc~'](null, [440]);
         var k = 2*Math.PI*440/Pd.sampleRate
-        var buffer = osc.outlets[0].buffer;
+        var buffer = osc.outlets[0].getBuffer();
 
         deepEqual(toArray(buffer), [0, 0, 0, 0]);
-        osc.dsptick();
+        osc.dspTick();
         deepEqual(roundArray(buffer, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
-        osc.dsptick();
+        osc.dspTick();
         deepEqual(roundArray(buffer, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
 
         // receive frequency message
@@ -83,7 +83,7 @@ $(document).ready(function() {
 
         osc.inlets[0].message('660');
         deepEqual(roundArray(buffer, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
-        osc.dsptick();
+        osc.dspTick();
         deepEqual(roundArray(buffer, 4), roundArray([cos(k2*8), cos(k2*9), cos(k2*10), cos(k2*11)], 4));
 
         // receive frequency signal
@@ -92,10 +92,10 @@ $(document).ready(function() {
         osc.inlets[0].testBuffer = inBuff;
 
         inBuff[0] = 770; inBuff[1] = 550; inBuff[2] = 330; inBuff[3] = 110;
-        osc.dsptick();
+        osc.dspTick();
         deepEqual(roundArray(buffer, 4), roundArray([cos(m*770*12), cos(m*550*13), cos(m*330*14), cos(m*110*15)], 4));
-        inBuff[0] = 880; inBuff[1] = 440; inBuff.pop(); inBuff.pop();
-        osc.dsptick();
+        inBuff[0] = 880; inBuff[1] = 440; inBuff[2] = 880; inBuff[3] = 440;
+        osc.dspTick();
         deepEqual(roundArray(buffer, 4), roundArray([cos(m*880*16), cos(m*440*17), cos(m*880*18), cos(m*440*19)], 4));
     });
 
