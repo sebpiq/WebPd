@@ -19,11 +19,8 @@
 
         outletTypes: ['outlet'],
 
-        init: function() {
-            var me = this;
-            this.getPatch().schedule(0, function() {
-                me.sendMessage(0, 'bang');
-            });
+        load: function() {
+            this.outlets[0].sendMessage('bang');
         }
 
     });
@@ -32,7 +29,7 @@
 
 		inletTypes: ['inlet'],
 
-        preinit: function(printName) {
+        init: function(printName) {
             this.printName = (printName || 'print');
         },
 
@@ -44,7 +41,7 @@
 
     Pd.objects['table'] = Pd.Object.extend({
 
-        preinit: function(name, size) {
+        init: function(name, size) {
             this.name = name || null;
             this.size = size;
             this.data = new Pd.arrayType(size);
@@ -60,7 +57,7 @@
 		outletTypes: ['outlet~'],
 		inletTypes: ['inlet~', 'inlet'],
 
-		preinit: function(freq) {
+		init: function(freq) {
 			this.freq = freq || 0;
 			this.sampCount = 0;
 		},

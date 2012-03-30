@@ -1,7 +1,7 @@
 $(document).ready(function() {
 
     var MyObject = Pd.Object.extend({
-        preinit: function(objName) {
+        init: function(objName) {
             this.objName = objName;
         }
     });
@@ -76,7 +76,7 @@ $(document).ready(function() {
         patch.addObject(obj2);
 
         patch.mapObjects(function(obj) {
-            obj.checked = true
+            obj.checked = true;
         });
 
         deepEqual([obj1.objName, obj1.checked], ['obj1', true]);
@@ -119,8 +119,7 @@ $(document).ready(function() {
         equal(obj1.outlets[1].sinks[0], obj2.inlets[1]);
         equal(obj2.inlets[1].sources[0], obj1.outlets[1]);
 
-        // unknown object, nothing happens
-        patch.connect(unknownInd, 0, ind2, 0);
+        raises(function() { patch.connect(unknownInd, 0, ind2, 0); });
         equal(obj2.inlets[0].sources.length, 1);
         equal(obj2.inlets[0].sources[0], obj1.outlets[0]);
     });

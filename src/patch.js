@@ -30,9 +30,6 @@
 	    this.frame = 0;
 	    // keys are receiver names
 	    this.listeners = {};
-	    // hash of callbacks which are scheduled to run at some point in time
-	    // keys are times, values are arrays of callbacks
-	    this.scheduled = {};
     };
 
     Pd.extend(Pd.Patch.prototype, {
@@ -79,44 +76,11 @@
 		    return this.frame * Pd.blockSize / (Pd.sampleRate / 1000);
 	    },
 	
-	    // Schedule a callback at a particular time - milliseconds
-	    schedule: function(time, callback) {
-		    //var time = relativetime + this.getAbsTime();
-		    if (!this.scheduled.hasOwnProperty(time))
-			    this.scheduled[time] = [];
-		    this.scheduled[time].push(callback);
-	    },
-	
-	    // Runs all the callbacks for which scheduled
-        // time has passed, and delete them once they have run.
-        // TODO: what's the use ?
-	    _runScheduled: function() {
-		    var times = [];
-            var time;
-		    for (time in this.scheduled) {
-			    if (time <= this.getAbsTime()) {
-				    times.push(time);
-			    }
-		    }
-		    // make sure the scheduled items get run in time order
-		    times.sort();
-            var callbacks;
-		    for (var i=0; i<times.length; i++) {
-			    time = times[i];
-                callbacks = this.scheduled[time];
-			    for (var j=0; j<callbacks.length; j++) {
-				    callbacks[j](parseFloat(time));
-			    }
-			    delete this.scheduled[time];
-		    }
-	    },
-	
 	    /******************** DSP stuff ************************/
 	    // Get a single frame of audio data from Pd
 	    generateFrame: function() {
             var me = this;
             var output = this.output;
-            this._runScheduled();
 		    // reset our output buffer (gets written to by dac~ objects)
 		    for (var i=0; i<output.length; i++) {
 			    output[i] = 0;
@@ -148,13 +112,14 @@
 	    },
 	
 	    // Starts this graph running
-        // TODO: improve lifecycle : instead of obj.preinit, obj.init -> obj.init, obj.load ; obj.load called in `play`, graph leaf-to-root
 	    play: function() {
 		    var me = this;
 
 		    if (!this.audio.is_playing()) {
 			    Pd.debug('Starting audio.');
-                this.mapObjects(function(obj) { obj.init(); });
+                // TODO: should load called with post-order traversal,
+                //        to ensure all children gets loaded before their parents ? 
+                this.mapObjects(function(obj) { obj.load(); });
 			    this.audio.play(function() { return me.generateFrame(); });
             	// fetch the actual samplerate from the audio driver
 	            Pd.sampleRate = this.audio.getSampleRate(); // TODO : shouldn't be here
@@ -182,8 +147,8 @@
         // This id can be used to uniquely identify the object in the patch.
         addObject: function(obj) {
             var id = this._generateId();
-            obj.setId(id);
-            obj.setPatch(this);
+            obj._setId(id);
+            obj._setPatch(this);
             this._graph.objects[id] = obj;
 		    if (obj.endPoint) this._graph.endPoints.push(obj);
 		    Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);
@@ -210,7 +175,6 @@
         // Calls the function `iterator(obj)` on all the patch's objects. 
         mapObjects: function(iterator) {
             this._map(this._graph.objects, iterator);
-
         },
 
         // Calls the function `iterator(obj)` on all the patch's end points. 
@@ -218,15 +182,16 @@
             this._map(this._graph.endPoints, iterator);
         },
 
-        // Connects two objects. If one of the objects doesn't exist,
-        // nothing happens.
-        // TODO: should it raise error ?
-        connect: function(sourceId, outletId, sinkId, inletId) {
-		    var source = this.getObject(sourceId);
-		    var sink = this.getObject(sinkId);
-            if (sink === null || source === null) return;
+        // Connects two objects.
+        connect: function(source, outletId, sink, inletId) {
+            if (!(source instanceof Pd.Object)) {
+		        var source = this.getObject(source);
+            }
+            if (!(sink instanceof Pd.Object)) {
+		        var sink = this.getObject(sink);
+            }
+            if (sink === null || source === null) throw (new Error('Cannot connect an unknown object !'));
             source.outlets[outletId].connect(sink.inlets[inletId]);
-            sink.inlets[inletId].connect(source.outlets[outletId]);
         },
 
         // this method calls the function `iterator` on every element of `array`
@@ -281,7 +246,6 @@
 					    proto = tokens[4];
                         args = tokens.slice(5);
 					    if (!Pd.objects.hasOwnProperty(proto)) {
-						    // TODO: see if we can load this from a url and queue it to be loaded up after parsing
 						    Pd.log(' ' + proto + '\n... couldn\'t create');
 						    proto = 'null';
 					    }

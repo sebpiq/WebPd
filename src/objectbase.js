@@ -4,9 +4,9 @@
     Pd.Object = function (pd, args) {
         args = args || [];
         // the patch this object belong to
-        this.setPatch((pd || null));
+        this._setPatch((pd || null));
         // id of the object in this patch
-        this.setId(null);
+        this._setId(null);
 	    // frame counter - how many frames have we run for
 	    this.frame = 0;
 	
@@ -26,9 +26,7 @@
 	    }
 
         // pre-initializes the object, handling the creation arguments
-        // TODO: if there's any reason the object needs to know his patch,
-        // then this doesn't belong here
-	    this.preinit.apply(this, args);
+	    this.init.apply(this, args);
         // if object was created in a patch, we add it to the graph
 	    if (pd) {
             // TODO: ugly check shouldn't be there ... most likely in the table subclass
@@ -50,9 +48,12 @@
         // outlet type, cause dsp capable inlets also take messages.  
 		inletTypes: [],
 
-        preinit: function() {},
-
+        // This method is called when the object is created.
+        // At this stage, the object can belong to a patch or not.
         init: function() {},
+
+        // This method is called by the patch when it starts playing.
+        load: function() {},
 
         // method which runs every frame for this object
 		dspTick: function() {},
@@ -62,7 +63,7 @@
 
 
 	    /******************** Common methods *********************/
-	    /** Converts a Pd message to a float **/
+	    // Converts a Pd message to a float
 	    toFloat: function(data) {
 		    // first check if we just got an actual float, return it if so
 		    if (!isNaN(data)) return data;
@@ -80,7 +81,7 @@
 		    return element;
 	    },
 	
-	    /** Converts a Pd message to a symbol **/
+	    // Converts a Pd message to a symbol
 	    toSymbol: function(data) {
 		    var element = data.split(" ")[0];
 		    if (!isNaN(parseFloat(element))) {
@@ -94,12 +95,12 @@
 		    return element;
 	    },
 	
-	    /** Convert a Pd message to a bang **/
+	    // Convert a Pd message to a bang
 	    toBang: function(data) {
 		    return "bang";
 	    },
 	
-	    /** Convert a Pd message to a javascript array **/
+	    // Convert a Pd message to a javascript array
 	    toArray: function(msg) {
 		    var type = typeof(msg);
 		    // if it's a string, split the atom
@@ -117,7 +118,7 @@
 		    }
 	    },
 	
-	    /** Sends a message to a particular outlet **/
+	    // Sends a message to a particular outlet
 	    sendMessage: function(outletnum, msg) {
 		    if (this.outlets[outletnum]) this.outlets[outletnum].message(msg);
 		    else {
@@ -132,15 +133,16 @@
             return this._id;
         },
 
-        setId: function(id) {
-            this._id = id
-        },
-
+        // Returns the patch the object belongs to, or null.
         getPatch: function(pd) {
             return this._pd;
         },
 
-        setPatch: function(pd) {
+        _setId: function(id) {
+            this._id = id
+        },
+
+        _setPatch: function(pd) {
             this._pd = pd;
         }
 
@@ -176,7 +178,9 @@
         },
 
         connect: function(source) {
+            if (this.sources.indexOf(source) != -1) return;
             this.sources.push(source);
+            source.connect(this);
         },
 
         // message received callback
@@ -199,7 +203,9 @@
         },
 
         connect: function(sink) {
+            if (this.sinks.indexOf(sink) != -1) return;
             this.sinks.push(sink);
+            sink.connect(this);
         },
 
         // Returns a buffer to write dsp data to.
@@ -265,9 +271,10 @@
             }
         },
 
+        // TODO: prevent duplicate connections
         connect: function(source) {
             BaseInlet.prototype.connect.apply(this, arguments);
-            if (source instanceof Pd['outlet~']) this._dspSources.push(source);  
+            if (source instanceof Pd['outlet~']) this._dspSources.push(source);
         },
 
         hasDspSources: function() {
