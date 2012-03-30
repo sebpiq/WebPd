@@ -1,6 +1,8 @@
 WebPd
 =====
 
+**Note: most hacking on WebPd is now occurring at [Sébastien Piquemal's GitHub Fork](https://github.com/sebpiq/WebPd/)**
+
 WebPd aims to allow a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) audio patches to run in the browser without plugins. Right now the focus is on DSP objects, to enable you to mock up audio engines in Pd, put them on the web, and control them with Javascript.
 
 Here are the [test pages](tests) (i.e. examples of Pd patches which run in a webpage on Firefox). To run these, you will need Firefox version 4. You can search for Firefox 4 and download it from the [Mozilla homepage](http://www.mozilla.org/). More information about the Firefox [Audio Data API](https://wiki.mozilla.org/Audio_Data_API) is available.
