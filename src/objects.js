@@ -59,8 +59,7 @@
 
 		init: function(freq) {
 			this.freq = freq || 0;
-			this.sampCount = 0;
-this.test = true;
+			this.phase = 0;
 		},
 
 		dspTick: function() {
@@ -73,29 +72,22 @@ this.test = true;
 			    var inBuff = dspInlet.getBuffer();
                 var J = 2 * Math.PI / this.getPatch().getSampleRate();
 			    for (var i=0; i<outBuff.length; i++) {
-				    outBuff[i] = Math.cos(J * inBuff[i] * this.sampCount);
-/*if (this.test && inBuff[1] != 440) {
-    console.log('fukc', J * inBuff[i] * this.sampCount, inBuff[i], J, this.sampCount, this.getPatch().getSampleRate(), Pd.sampleRate);
-}*/
-				    this.sampCount++;
+				    outBuff[i] = Math.cos(this.phase);
+                    this.phase += J * inBuff[i];
 			    }
             } else {
                 var K = 2 * Math.PI * this.freq / this.getPatch().getSampleRate();
 			    for (var i=0; i<outBuff.length; i++) {
-				    outBuff[i] = Math.cos(K * this.sampCount);
-				    this.sampCount++;
+				    outBuff[i] = Math.cos(this.phase);
+                    this.phase += K;
 			    }
             }
-/*if (this.test && inBuff[1] != 440) {
-    this.test = false;
-}*/
-
-
 		},
 
+        // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
 			if (inletId === 0) this.freq = this.toFloat(msg);
-            else if (inletId === 1 && msg == 'bang') this.sampCount = 0;
+            else if (inletId === 1 && msg == 'bang') this.phase = 0;
 		}
 
 	});
@@ -121,6 +113,7 @@ this.test = true;
 	});
 
 
+    // Baseclass for tabwrite~, tabread~ and others ...
     var BaseTabRW = Pd.Object.extend({
 
         init: function(tableName) {
@@ -180,6 +173,7 @@ this.test = true;
     Pd.objects['tabwrite~'] = BaseTabRW.extend({
 
         inletTypes: ['inlet~'],
+        endPoint: true,
 
         init: function(tableName) {
             BaseTabRW.prototype.init.call(this, tableName);

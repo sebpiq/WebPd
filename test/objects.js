@@ -72,6 +72,7 @@ $(document).ready(function() {
         var osc = new Pd.objects['osc~'](null);
         osc._setPatch(dummyPatch);
         var outBuff = osc.outlets[0].getBuffer();
+        var expected = [];
 
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         osc.dspTick();
@@ -85,6 +86,7 @@ $(document).ready(function() {
 
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         osc.dspTick();
+
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
@@ -93,20 +95,22 @@ $(document).ready(function() {
         var k2 = 2*Math.PI*660/Pd.sampleRate;
 
         osc.inlets[0].message('660');
-        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
+        expected = roundArray([cos(osc.phase), cos(osc.phase+1*k2), cos(osc.phase+2*k2), cos(osc.phase+3*k2)], 4);
         osc.dspTick();
-        deepEqual(roundArray(outBuff, 4), roundArray([cos(k2*8), cos(k2*9), cos(k2*10), cos(k2*11)], 4));
+        deepEqual(roundArray(outBuff, 4), expected);
 
         // receive frequency signal
         var m = 2*Math.PI/Pd.sampleRate;
         var inlet0 = osc.inlets[0];
 
         inlet0.testBuffer = [770, 550, 330, 110];
+        expected = [cos(osc.phase), cos(osc.phase+m*770), cos(osc.phase+m*770+m*550), cos(osc.phase+m*770+m*550+m*330)]
         osc.dspTick();
-        deepEqual(roundArray(outBuff, 4), roundArray([cos(m*770*12), cos(m*550*13), cos(m*330*14), cos(m*110*15)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray(expected, 4));
         inlet0.testBuffer = [880, 440, 880, 440];
+        expected = [cos(osc.phase), cos(osc.phase+m*880), cos(osc.phase+m*880+m*440), cos(osc.phase+m*880+m*440+m*880)]
         osc.dspTick();
-        deepEqual(roundArray(outBuff, 4), roundArray([cos(m*880*16), cos(m*440*17), cos(m*880*18), cos(m*440*19)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray(expected, 4));
 
         // reset phase
         var k2 = 2*Math.PI*440/Pd.sampleRate;
