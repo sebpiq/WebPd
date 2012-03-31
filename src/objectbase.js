@@ -165,7 +165,7 @@
     };
     Pd.extend(BasePortlet.prototype, {
 
-        init: function() { Pd.notImplemented(); },
+        init: function() {},
 
         connect: function(other) { Pd.notImplemented(); },
 

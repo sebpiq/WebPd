@@ -104,22 +104,33 @@ $(document).ready(function() {
         var SomeSink = MyObject.extend({inletTypes: ['inlet~', 'inlet']});
         var obj1 = new SomeSource(patch, ['obj1']);
         var obj2 = new SomeSink(patch, ['obj2']);
+        var obj3 = new SomeSink(patch, ['obj3']);
         var ind1 = obj1.getId();
         var ind2 = obj2.getId();
         var unknownInd = 781863726392839;
 
+        // dsp connection
         patch.connect(ind1, 0, ind2, 0);
         equal(obj1.outlets[0].sinks.length, 1);
         equal(obj2.inlets[0].sources.length, 1);
         equal(obj1.outlets[0].sinks[0], obj2.inlets[0]);
         equal(obj2.inlets[0].sources[0], obj1.outlets[0]);
 
+        // message connection
         patch.connect(ind1, 1, ind2, 1);
         equal(obj1.outlets[1].sinks.length, 1);
         equal(obj2.inlets[1].sources.length, 1);
         equal(obj1.outlets[1].sinks[0], obj2.inlets[1]);
         equal(obj2.inlets[1].sources[0], obj1.outlets[1]);
 
+        // works also by passing object instances
+        patch.connect(obj1, 1, obj3, 1);
+        equal(obj1.outlets[1].sinks.length, 2);
+        equal(obj3.inlets[1].sources.length, 1);
+        equal(obj1.outlets[1].sinks[1], obj3.inlets[1]);
+        equal(obj3.inlets[1].sources[0], obj1.outlets[1]);
+
+        // unknown object
         raises(function() { patch.connect(unknownInd, 0, ind2, 0); });
         equal(obj2.inlets[0].sources.length, 1);
         equal(obj2.inlets[0].sources[0], obj1.outlets[0]);

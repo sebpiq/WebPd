@@ -42,4 +42,20 @@ $(document).ready(function() {
         equal(noBuffer.length, 0);
     });
 
+    test('chainExtend', function() {
+        A = function() {};
+        A.extend = Pd.chainExtend;
+        A.prototype.blo = 456;
+        A.prototype.bli = 987;
+
+        var B = A.extend({'bla': 113, 'bli': 654});
+        var b = new B();
+
+        ok(b instanceof B);
+        ok(b instanceof A);
+        equal(b.bla, 113);
+        equal(b.bli, 654);
+        equal(b.blo, 456);
+    });
+
 });

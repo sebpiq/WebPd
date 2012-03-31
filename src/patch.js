@@ -189,7 +189,8 @@
             this._map(this._graph.endPoints, iterator);
         },
 
-        // Connects two objects.
+        // Connects two objects. `source` and `sink` can be either the object instances,
+        // or their id in the graph. 
         connect: function(source, outletId, sink, inletId) {
             if (!(source instanceof Pd.Object)) {
 		        var source = this.getObject(source);
