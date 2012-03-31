@@ -30,7 +30,7 @@
         // if object was created in a patch, we add it to the graph
 	    if (pd) {
             // TODO: ugly check shouldn't be there ... most likely in the table subclass
-            if (this instanceof Pd.objects['table']) pd.addTable(obj);
+            if (this instanceof Pd.objects['table']) pd.addTable(this);
             else pd.addObject(this);
         }
     };
@@ -64,17 +64,18 @@
 
 	    /******************** Common methods *********************/
 	    // Converts a Pd message to a float
+        // TODO: scientific notation, e.g. 2.999e-5
 	    toFloat: function(data) {
 		    // first check if we just got an actual float, return it if so
 		    if (!isNaN(data)) return data;
 		    // otherwise parse this thing
-		    var element = data.split(" ")[0];
+		    var element = data.split(' ')[0];
 		    var foundfloat = parseFloat(element);
 		    if (!isNaN(foundfloat)) {
 			    element = foundfloat;
-		    } else if (element != "symbol") {
+		    } else if (element != 'symbol') {
 			    Pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
-			    element = "";
+			    element = '';
 		    } else {
 			    element = 0;
 		    }
@@ -83,34 +84,32 @@
 	
 	    // Converts a Pd message to a symbol
 	    toSymbol: function(data) {
-		    var element = data.split(" ")[0];
+		    var element = data.split(' ')[0];
 		    if (!isNaN(parseFloat(element))) {
-			    element = "symbol float";
-		    } else if (element != "symbol") {
+			    element = 'symbol float';
+		    } else if (element != 'symbol') {
 			    Pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
-			    element = "";
+			    element = '';
 		    } else {
-			    element = "symbol " + data.split(" ")[1];
+			    element = 'symbol ' + data.split(' ')[1];
 		    }
 		    return element;
 	    },
 	
 	    // Convert a Pd message to a bang
 	    toBang: function(data) {
-		    return "bang";
+		    return 'bang';
 	    },
 	
 	    // Convert a Pd message to a javascript array
 	    toArray: function(msg) {
-		    var type = typeof(msg);
 		    // if it's a string, split the atom
-		    if (type == "string") {
-			    var parts = msg.split(" ");
-			    if (parts[0] == "list")
-				    parts.shift();
+		    if (typeof msg == 'string') {
+			    var parts = msg.split(' ');
+			    if (parts[0] == 'list') parts.shift();
 			    return parts;
 		    // if it's an int, make a single valued array
-		    } else if (type == "number") {
+		    } else if (typeof msg == 'number') {
 			    return [msg];
 		    // otherwise it's proably an object/array and should stay that way
 		    } else {
@@ -122,7 +121,7 @@
 	    sendMessage: function(outletnum, msg) {
 		    if (this.outlets[outletnum]) this.outlets[outletnum].message(msg);
 		    else {
-			    throw (new Error("object has no outlet #" + outletnum));
+			    throw (new Error('object has no outlet #' + outletnum));
 		    }
 	    },
 
@@ -237,11 +236,9 @@
         init: function() {
             BaseInlet.prototype.init.apply(this, arguments);
             this._dspSources = [];
-            this._buffer = new Pd.arrayType(Pd.blockSize);
-            this._zerosBuffer = new Pd.arrayType(Pd.blockSize);
-            for (var i; i<this._zerosBuffer.length; i++) {
-                this._zerosBuffer[i] = 0;
-            }
+            this._buffer = Pd.newBuffer();
+            this._zerosBuffer = Pd.newBuffer();
+            Pd.fillWithZeros(this._zerosBuffer);
         },
 
         getBuffer: function() {
@@ -303,7 +300,7 @@
 
         init: function() {
             BaseOutlet.prototype.init.apply(this, arguments);
-            this._buffer = new Pd.arrayType(Pd.blockSize);
+            this._buffer = Pd.newBuffer();
         },
 
         getBuffer: function() {

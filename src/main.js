@@ -16,24 +16,22 @@
 	    Pd.arraySlice = function (array, start) { return array.subarray(start) };
     }
 
-    /*
-    Simple prototype inheritance. Used like so ::
-        
-        var ChildObject = function() {};
-
-        Pd.extend(ChildObject.prototype, ParentObject.prototype, {
-
-            anOverridenMethod: function() {
-                ParentObject.prototype.anOverridenMethod.apply(this, arguments);
-                // do more stuff ...
-            },
-
-            aNewMethod: function() {
-                // do stuff ...
-            }
-
-        });
-    */
+    // Simple prototype inheritance. Used like so ::
+    //    
+    //    var ChildObject = function() {};
+    //
+    //    Pd.extend(ChildObject.prototype, ParentObject.prototype, {
+    //
+    //        anOverridenMethod: function() {
+    //            ParentObject.prototype.anOverridenMethod.apply(this, arguments);
+    //            // do more stuff ...
+    //        },
+    //
+    //        aNewMethod: function() {
+    //            // do stuff ...
+    //        }
+    //
+    //    });
     Pd.extend = function(obj) {
         var sources = Array.prototype.slice.call(arguments, 1);
         for(var i=0; i<sources.length; i++) {
@@ -56,7 +54,7 @@
 
     Pd.notImplemented = function() { throw new Error('Not implemented !'); };
 
-    /** log a message to console **/
+    // log a message to console
 	Pd.log = function(msg, debugconsole) {
 	    if (typeof window.console != 'undefined' && typeof console.log != 'undefined') {
 		    console.log(msg);
@@ -67,7 +65,7 @@
 	    }
     };
 
-    /** logs only when debug mode is set. **/
+    // logs only when debug mode is set.
     Pd.debug = function(msg) {
 	    if (Pd.debugMode) {
 		    if (typeof(msg) == 'string')
@@ -82,10 +80,8 @@
     // regular expression for delimiting comma separated messages
     var parts_re = /\\{0,1},/;
 
-    /**
-        Tokenizes a complex message with atoms, commas, and semicolons.
-        Returns an array of arrays of strings. (array of lists of comma separated messages).
-     **/
+    // Tokenizes a complex message with atoms, commas, and semicolons.
+    // Returns an array of arrays of strings. (array of lists of comma separated messages).
     Pd.messagetokenizer = function(message) {
 	    var result = [];
 	    var messages = message.split(messages_re);
@@ -109,5 +105,18 @@
 	    }
 	    return result;
     };
+
+    // Fills array with zeros
+    Pd.fillWithZeros = function(array) {
+        for (var i=0; i<array.length; i++) {
+            array[i] = 0;
+        }
+    }
+
+    // Returns a brand, new, clean, buffer
+    Pd.newBuffer = function(channels) {
+        if (channels == undefined) var channels = 1
+        return new Pd.arrayType(Pd.blockSize * channels);
+    }
 
 }).call(this);

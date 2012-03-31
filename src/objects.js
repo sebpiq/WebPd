@@ -34,7 +34,7 @@
         },
 
         message: function(inletnum, message) {
-            Pd.log(this.printname + ": " + message);
+            Pd.log(this.printname + ': ' + message);
         }
 
     });
@@ -45,11 +45,11 @@
             this.name = name || null;
             this.size = size;
             this.data = new Pd.arrayType(size);
-        }
+        },
 
     });
 
-	/************************** DSP objects ******************************/
+/************************** DSP objects ******************************/
 	
 	// basic oscillator
 	Pd.objects['osc~'] = Pd.Object.extend({
@@ -84,9 +84,9 @@
             }
 		},
 
-		// TODO: 2nd inlet receives phase message
-		message: function(inlet, msg) {
-			if (inlet === 0) this.freq = this.toFloat(msg);
+		message: function(inletId, msg) {
+			if (inletId === 0) this.freq = this.toFloat(msg);
+            else if (inletId === 1 && msg == 'bang') this.sampCount = 0;
 		}
 
 	});
@@ -109,6 +109,57 @@
 			}
 		}
 	});
+
+    // read data from a table with no interpolation
+    Pd.objects['tabread~'] = Pd.Object.extend({
+
+        outletTypes: ['outlet~'],
+        inletTypes: ['inlet~'],
+
+        init: function(tableName) {
+            this.tableName = tableName;
+            this.table = null;
+        },
+
+        load: function() {
+            this.setTableName(this.tableName);
+        },
+
+        dspTick: function() {
+            var outBuff = this.outlets[0].getBuffer();
+            if (this.table) {
+                var inBuff = this.inlets[0].getBuffer();
+                var tableMax = this.table.size - 1;
+                var tableData = this.table.data;
+                var s;
+                // cf. pd : Incoming values are truncated to the next lower integer,
+                // and values out of bounds get the nearest (first or last) point.
+                for (var i=0; i<outBuff.length; i++) {
+                    s = Math.floor(inBuff[i]);
+                    outBuff[i] = tableData[(s >= 0 ? (s > tableMax ? tableMax : s) : 0)];
+                }
+            } else {
+                Pd.fillWithZeros(outBuff);
+            }
+        },
+
+        message: function(inletId, msg) {
+			if (inletId === 0) {
+                var parts = this.toArray(msg);
+                if (parts[0] == 'set') this.setTableName(parts[1]);
+            }
+        },
+
+        setTableName: function(name) {
+            this.tableName = name;
+            var pd = this.getPatch();
+            if (pd) {
+                var table = pd.getTableByName(name);
+                if (!table) throw (new Error('table with name ' + name + ' doesn\'t exist'));
+                this.table = table;
+            }
+        }
+    });
 
     // Let each object know of what type it is
     var proto;

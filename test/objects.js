@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-// some test utilities
+/******************** some test utilities ************************/
 
     // turns an array or Float32 into an array
     var toArray = function(arrayish) {
@@ -51,6 +51,8 @@ $(document).ready(function() {
         }
     }
 
+/******************** tests ************************/
+
     module('Pd.objects', {
         setup: function() {
             Pd.blockSize = 4;
@@ -61,42 +63,79 @@ $(document).ready(function() {
         var cos = Math.cos;
         // no frequency (=0)
         var osc = new Pd.objects['osc~'](null);
-        var buffer = osc.outlets[0].getBuffer();
+        var outBuff = osc.outlets[0].getBuffer();
 
-        deepEqual(toArray(buffer), [0, 0, 0, 0]);
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         osc.dspTick();
-        deepEqual(toArray(buffer), [1, 1, 1, 1]);        
+        deepEqual(toArray(outBuff), [1, 1, 1, 1]);        
 
         // frequency argument 
         var osc = new Pd.objects['osc~'](null, [440]);
         var k = 2*Math.PI*440/Pd.sampleRate
-        var buffer = osc.outlets[0].getBuffer();
+        var outBuff = osc.outlets[0].getBuffer();
 
-        deepEqual(toArray(buffer), [0, 0, 0, 0]);
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         osc.dspTick();
-        deepEqual(roundArray(buffer, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
         osc.dspTick();
-        deepEqual(roundArray(buffer, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
 
         // receive frequency message
         var k2 = 2*Math.PI*660/Pd.sampleRate;
 
         osc.inlets[0].message('660');
-        deepEqual(roundArray(buffer, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
         osc.dspTick();
-        deepEqual(roundArray(buffer, 4), roundArray([cos(k2*8), cos(k2*9), cos(k2*10), cos(k2*11)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k2*8), cos(k2*9), cos(k2*10), cos(k2*11)], 4));
 
         // receive frequency signal
         var m = 2*Math.PI/Pd.sampleRate;
-        var inBuff = [];
-        osc.inlets[0].testBuffer = inBuff;
+        var inlet0 = osc.inlets[0];
 
-        inBuff[0] = 770; inBuff[1] = 550; inBuff[2] = 330; inBuff[3] = 110;
+        inlet0.testBuffer = [770, 550, 330, 110];
         osc.dspTick();
-        deepEqual(roundArray(buffer, 4), roundArray([cos(m*770*12), cos(m*550*13), cos(m*330*14), cos(m*110*15)], 4));
-        inBuff[0] = 880; inBuff[1] = 440; inBuff[2] = 880; inBuff[3] = 440;
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(m*770*12), cos(m*550*13), cos(m*330*14), cos(m*110*15)], 4));
+        inlet0.testBuffer = [880, 440, 880, 440];
         osc.dspTick();
-        deepEqual(roundArray(buffer, 4), roundArray([cos(m*880*16), cos(m*440*17), cos(m*880*18), cos(m*440*19)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(m*880*16), cos(m*440*17), cos(m*880*18), cos(m*440*19)], 4));
+
+        // reset phase
+        var k2 = 2*Math.PI*440/Pd.sampleRate;
+        inlet0.testBuffer = null;
+
+        osc.inlets[0].message('440');
+        osc.inlets[1].message('bang');
+        osc.dspTick();
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
+    });
+
+    test('tabread~', function() {
+        var patch = new Pd.Patch();
+        var tabread = new Pd.objects['tabread~'](patch, ['table1']);
+        var table1 = new Pd.objects['table'](patch, ['table1', 10]);
+        var table2 = new Pd.objects['table'](patch, ['table2', 10]);
+        tabread.load();
+        
+        // setting tabread's table
+        equal(tabread.table, table1);
+        tabread.setTableName('table2');
+        equal(tabread.table, table2);
+        raises(function() { tabread.setTableName('unknown table'); });
+        equal(tabread.table, table2);
+        tabread.message(0, 'set table1');
+        equal(tabread.table, table1);
+
+        table1.data = [11, 22, 33, 44, 55, 66, 77, 88, 99, 100];
+        var inlet0 = tabread.inlets[0];
+        var outBuff = tabread.outlets[0].getBuffer();
+        // normal read
+        inlet0.testBuffer = [0, 1, 2, 3];
+        tabread.dspTick()
+        deepEqual(toArray(outBuff), [11, 22, 33, 44]);
+        // read above and below table bounds
+        inlet0.testBuffer = [-10, 9, 10, 1];
+        tabread.dspTick()
+        deepEqual(toArray(outBuff), [11, 100, 100, 22]);
     });
 
     test('loadbang', function() {

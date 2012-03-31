@@ -25,7 +25,7 @@
 	    // create the audio output driver
 	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
 	    // output buffer (stereo)
-	    this.output = new Pd.arrayType(this.blockSize * 2);
+	    this.output = Pd.newBuffer(2);
 	    // how many frames have we run
 	    this.frame = 0;
 	    // keys are receiver names
@@ -63,7 +63,9 @@
 		    this.send('test', 'bang');
 	    },
 	
-	    /******************** Internal methods ************************/
+
+    /******************** Internal methods ************************/
+
 	    // adds a new named listener to our graph
 	    addListener: function(name, who) {
 		    if (!this.listeners[name])
@@ -76,15 +78,15 @@
 		    return this.frame * Pd.blockSize / (Pd.sampleRate / 1000);
 	    },
 	
-	    /******************** DSP stuff ************************/
+
+    /******************** DSP stuff ************************/
+
 	    // Get a single frame of audio data from Pd
 	    generateFrame: function() {
             var me = this;
             var output = this.output;
 		    // reset our output buffer (gets written to by dac~ objects)
-		    for (var i=0; i<output.length; i++) {
-			    output[i] = 0;
-            }
+            Pd.fillWithZeros(output);
 		    // run the dsp function on all endpoints to get data
 		    this.mapEndPoints(function(obj) { me.tick(obj); });
 		    this.frame++;
@@ -141,7 +143,8 @@
 		    }
 	    },
 
-	    /******************** Graph methods ************************/
+    /******************** Graph methods ************************/
+
         // Adds an object to the patch.
         // This also causes the patch to automatically assign an id to that object.
         // This id can be used to uniquely identify the object in the patch.
@@ -209,6 +212,7 @@
 
 
     /******************** Patch parsing ************************/
+
     // regular expression for finding valid lines of Pd in a file
     var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n', 'gi');
     var tokensRe = new RegExp(' |\r\n?|\n');

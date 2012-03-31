@@ -42,8 +42,8 @@ $(document).ready(function() {
         var ind2 = obj2.getId();
         ok(ind2 != undefined);
         ok(ind2 != ind1);
-        deepEqual(patch.getObject(ind1), obj1);
-        deepEqual(patch.getObject(ind2), obj2);
+        equal(patch.getObject(ind1), obj1);
+        equal(patch.getObject(ind2), obj2);
 
         equal(patch.getObject(8888009098080879), null);
     });
@@ -59,8 +59,8 @@ $(document).ready(function() {
         var ind2 = table2.getId();
         ok(ind2 != undefined);
         ok(ind2 != ind1);
-        deepEqual(patch.getObject(ind1), table1);
-        deepEqual(patch.getObject(ind2), table2);
+        equal(patch.getObject(ind1), table1);
+        equal(patch.getObject(ind2), table2);
     });
 
     test('graphiness : addTable / getTableByName', function() {
@@ -68,7 +68,8 @@ $(document).ready(function() {
         patch.addTable(table1);
         var ind = table1.getId();
         ok(ind != undefined);
-        deepEqual(patch.getTableByName('table1'), table1);
+        equal(patch.getTableByName('table1'), table1);
+        equal(patch.getTableByName('unknown name'), null);
     });
 
     test('graphiness : mapObjects', function() {

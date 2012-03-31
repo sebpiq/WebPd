@@ -18,4 +18,28 @@ $(document).ready(function() {
 
     });
 
+    test('fillWithZeros', function() {
+        var array = [];
+
+        Pd.fillWithZeros(array);
+        deepEqual(array, []);
+        
+        array = [1, 2, 3, 4];
+        Pd.fillWithZeros(array);
+        deepEqual(array, [0, 0, 0, 0]);
+
+    });
+
+    test('newBuffer', function() {
+        Pd.blockSize = 10;
+        var monoBuffer = Pd.newBuffer();
+        equal(monoBuffer.length, 10);
+
+        var stereoBuffer = Pd.newBuffer(2);
+        equal(stereoBuffer.length, 20);
+
+        var noBuffer = Pd.newBuffer(0);
+        equal(noBuffer.length, 0);
+    });
+
 });
