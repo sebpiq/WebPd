@@ -185,6 +185,8 @@ this.test = true;
             BaseTabRW.prototype.init.call(this, tableName);
             this.pos = 0;
             this.toDspTickNoOp();
+            // callbaks to execute when the object stop's recording for any reason
+            this._onStopCbs = [];
         },
 
         dspTickWriting: function() {
@@ -194,6 +196,7 @@ this.test = true;
                 this.table.data[this.pos] = inBuff[i];
                 if (this.pos == tableSize) {
                     this.toDspTickNoOp();
+                    this._execOnStop();
                     break;
                 }
             }
@@ -220,6 +223,7 @@ this.test = true;
                     this.toDspTickWriting(0);
                 } else if (method == 'stop') {
                     this.toDspTickNoOp();
+                    this._execOnStop();
                 }
             }
         },
@@ -229,6 +233,16 @@ this.test = true;
         toDspTickWriting: function(start) { 
             this.dspTick = this.dspTickWriting;
             this.pos = start;
+        },
+
+        onStop: function(callback) {
+            this._onStopCbs.push(callback);
+        },
+
+        _execOnStop: function() {
+            var callbacks = this._onStopCbs;
+            callbacks.reverse();
+            while(callbacks.length) callbacks.pop().call(this);
         }
     });
 

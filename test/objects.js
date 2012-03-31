@@ -164,37 +164,45 @@ $(document).ready(function() {
         // idle
         deepEqual(toArray(table.data), [0, 0, 0, 0, 0]);
         inlet0.testBuffer = [0, 1, 2, 3];
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [0, 0, 0, 0, 0]);
         // bang
         tabwrite.inlets[0].message('bang');
         inlet0.testBuffer = [4, 1, 2, 3];
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [4, 1, 2, 3, 0]);
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [4, 1, 2, 3, 4]);
         // start
         tabwrite.inlets[0].message('start');
         inlet0.testBuffer = [5, 6, 7, 8];
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 8, 4]);
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 8, 5]);
         // start + pos
         tabwrite.inlets[0].message('start 3');
         inlet0.testBuffer = [9, 10, 11, 12];
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 9, 10]);
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 9, 10]);
         // stop
         tabwrite.inlets[0].message('bang');
         inlet0.testBuffer = [1, 2, 3, 4];
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [1, 2, 3, 4, 10]);
         tabwrite.inlets[0].message('stop');
-        tabwrite.dspTick()
+        tabwrite.dspTick();
         deepEqual(toArray(table.data), [1, 2, 3, 4, 10]);
+        // onStop callback
+        var bla = 0;
+        tabwrite.inlets[0].message('bang');
+        tabwrite.onStop(function() {bla = this.tableName;});
+        tabwrite.dspTick();
+        equal(bla, 0);
+        tabwrite.dspTick();
+        equal(bla, 'table1');
     });
 
     test('line~', function() {
