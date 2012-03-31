@@ -43,10 +43,14 @@ $(document).ready(function() {
             var outletTypes = proto.outletTypes;
             var inletTypes = proto.inletTypes;
             for (var i=0; i<outletTypes.length; i++) {
-                outletTypes[i] = 'test' + outletTypes[i];
+                if (outletTypes[i].indexOf('test') == -1) {
+                    outletTypes[i] = 'test' + outletTypes[i];
+                }
             }
             for (var i=0; i<inletTypes.length; i++) {
-                inletTypes[i] = 'test' + inletTypes[i];
+                if (inletTypes[i].indexOf('test') == -1) {
+                    inletTypes[i] = 'test' + inletTypes[i];
+                }
             }
         }
     }
@@ -120,6 +124,102 @@ $(document).ready(function() {
         osc.inlets[1].message('bang');
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
+    });
+
+    test('*~', function() {
+        var mult = new Pd.objects['*~'](null, [2]);
+        var outBuff = mult.outlets[0].getBuffer();
+        var inlet0 = mult.inlets[0];
+        var inlet1 = mult.inlets[1];
+
+        inlet0.testBuffer = [0, 0, 0, 0];
+        mult.dspTick();
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
+        // constant value as creation arg
+        inlet0.testBuffer = [1, 2, 3, 4];
+        mult.dspTick();
+        deepEqual(toArray(outBuff), [2, 4, 6, 8]);
+        // dsp right inlet
+        inlet1.testBuffer = [4, 3, 2, 1];
+        mult.dspTick();
+        deepEqual(toArray(outBuff), [4, 6, 6, 4]);
+        // send message right inlet
+        inlet1.testBuffer = null;
+        inlet1.message('3');
+        mult.dspTick();
+        deepEqual(toArray(outBuff), [3, 6, 9, 12]);
+    });
+
+    test('+~', function() {
+        var add = new Pd.objects['+~'](null, [11]);
+        var outBuff = add.outlets[0].getBuffer();
+        var inlet0 = add.inlets[0];
+        var inlet1 = add.inlets[1];
+
+        inlet0.testBuffer = [0, 0, 0, 0];
+        add.dspTick();
+        deepEqual(toArray(outBuff), [11, 11, 11, 11]);
+        // constant value as creation arg
+        inlet0.testBuffer = [1, 2, 3, 4];
+        add.dspTick();
+        deepEqual(toArray(outBuff), [12, 13, 14, 15]);
+        // dsp right inlet
+        inlet1.testBuffer = [4.5, 3.5, 2.5, 1.5];
+        add.dspTick();
+        deepEqual(toArray(outBuff), [5.5, 5.5, 5.5, 5.5]);
+        // send message right inlet
+        inlet1.testBuffer = null;
+        inlet1.message('21');
+        add.dspTick();
+        deepEqual(toArray(outBuff), [22, 23, 24, 25]);
+    });
+
+    test('-~', function() {
+        var subs = new Pd.objects['-~'](null, [1]);
+        var outBuff = subs.outlets[0].getBuffer();
+        var inlet0 = subs.inlets[0];
+        var inlet1 = subs.inlets[1];
+
+        inlet0.testBuffer = [0, 0, 0, 0];
+        subs.dspTick();
+        deepEqual(roundArray(outBuff, 4), [-1, -1, -1, -1]);
+        // constant value as creation arg
+        inlet0.testBuffer = [2.4, 1.4, 0.45, -3];
+        subs.dspTick();
+        deepEqual(roundArray(outBuff, 4), [1.4, 0.4, -0.55, -4]);
+        // dsp right inlet
+        inlet1.testBuffer = [2.5, 1, 0.45, -4];
+        subs.dspTick();
+        deepEqual(roundArray(outBuff, 4), [-0.1, 0.4, 0, 1]);
+        // send message right inlet
+        inlet1.testBuffer = null;
+        inlet1.message(-1.5);
+        subs.dspTick();
+        deepEqual(roundArray(outBuff, 4), [3.9, 2.9, 1.95, -1.5]);
+    });
+
+    test('/~', function() {
+        var divid = new Pd.objects['/~'](null, [3]);
+        var outBuff = divid.outlets[0].getBuffer();
+        var inlet0 = divid.inlets[0];
+        var inlet1 = divid.inlets[1];
+
+        inlet0.testBuffer = [0, 0, 0, 0];
+        divid.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0, 0, 0, 0]);
+        // constant value as creation arg
+        inlet0.testBuffer = [3, 33, -9.9, 12];
+        divid.dspTick();
+        deepEqual(roundArray(outBuff, 4), [1, 11, -3.3, 4]);
+        // dsp right inlet
+        inlet1.testBuffer = [1, 33, 0, 10];
+        divid.dspTick();
+        deepEqual(roundArray(outBuff, 4), [3, 1, 0, 1.2]);
+        // send message right inlet
+        inlet1.testBuffer = null;
+        inlet1.message(0.1);
+        divid.dspTick();
+        deepEqual(roundArray(outBuff, 4), [30, 330, -99, 120]);
     });
 
     test('common : tabread~, tabwrite~', function() {

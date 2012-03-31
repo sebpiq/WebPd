@@ -54,8 +54,8 @@
 	// basic oscillator
 	Pd.objects['osc~'] = Pd.Object.extend({
 
-		outletTypes: ['outlet~'],
 		inletTypes: ['inlet~', 'inlet'],
+		outletTypes: ['outlet~'],
 
 		init: function(freq) {
 			this.freq = freq || 0;
@@ -91,13 +91,116 @@
 		}
 
 	});
+
 	
+    var DSPArithmBase = Pd.Object.extend({
+
+		inletTypes: ['inlet~', 'inlet~'],
+		outletTypes: ['outlet~'],
+
+		init: function(val) {
+			this.val = (val || 0);
+		},
+
+        message: function(inletId, msg) {
+            if (inletId == 1) {
+                var val = this.toFloat(msg);
+                if(!isNaN(val)) this.val = val;
+            } 
+        }
+
+    });
+
+
+	// dsp multiply object
+	Pd.objects['*~'] = DSPArithmBase.extend({
+
+		dspTick: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            if (this.inlets[1].hasDspSources()) {
+                var inBuff2 = this.inlets[1].getBuffer();
+			    for (var i=0; i < outBuff.length; i++) {
+				    outBuff[i] = inBuff1[i] * inBuff2[i];
+			    }
+            } else {
+			    for (var i=0; i < outBuff.length; i++) {
+				    outBuff[i] = inBuff1[i] * this.val;
+			    }
+            }
+		}
+
+	});
+
+
+	// dsp divide object (d_arithmetic.c line 454 - over_perform() )
+	Pd.objects['/~'] = DSPArithmBase.extend({
+
+		dspTick: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            var val2;
+			// return zero if denominator is zero
+            if (this.inlets[1].hasDspSources()) {
+                var inBuff2 = this.inlets[1].getBuffer();
+			    for (var i=0; i < outBuff.length; i++) {
+                    val2 = inBuff2[i];
+				    outBuff[i] = (val2 ? inBuff1[i] / inBuff2[i] : 0);
+			    }
+            } else {
+			    for (var i=0; i < outBuff.length; i++) {
+				    outBuff[i] = (this.val ? inBuff1[i] / this.val : 0);
+			    }
+            }
+		}
+
+	});
+	
+
+	// dsp addition object
+	Pd.objects['+~'] = DSPArithmBase.extend({
+
+		dspTick: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            if (this.inlets[1].hasDspSources()) {
+                var inBuff2 = this.inlets[1].getBuffer();
+			    for (var i=0; i < outBuff.length; i++) {
+				    outBuff[i] = inBuff1[i] + inBuff2[i];
+			    }
+            } else {
+			    for (var i=0; i < outBuff.length; i++) {
+				    outBuff[i] = inBuff1[i] + this.val;
+			    }
+            }
+		}
+
+	});
+
+	// dsp substraction object
+	Pd.objects['-~'] = DSPArithmBase.extend({
+
+		dspTick: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            if (this.inlets[1].hasDspSources()) {
+                var inBuff2 = this.inlets[1].getBuffer();
+			    for (var i=0; i < outBuff.length; i++) {
+				    outBuff[i] = inBuff1[i] - inBuff2[i];
+			    }
+            } else {
+			    for (var i=0; i < outBuff.length; i++) {
+				    outBuff[i] = inBuff1[i] - this.val;
+			    }
+            }
+		}
+
+	});
 
 	// digital to analogue converter (sound output)
 	Pd.objects['dac~'] = Pd.Object.extend({
 
 		endPoint: true,
-		outletTypes: [],
 		inletTypes: ['inlet~', 'inlet~'],
 
 		dspTick: function() {
@@ -114,7 +217,7 @@
 
 
     // Baseclass for tabwrite~, tabread~ and others ...
-    var BaseTabRW = Pd.Object.extend({
+    var DSPTabBase = Pd.Object.extend({
 
         init: function(tableName) {
             this.tableName = tableName;
@@ -137,10 +240,10 @@
     });
 
     // read data from a table with no interpolation
-    Pd.objects['tabread~'] = BaseTabRW.extend({
+    Pd.objects['tabread~'] = DSPTabBase.extend({
 
-        outletTypes: ['outlet~'],
         inletTypes: ['inlet~'],
+        outletTypes: ['outlet~'],
 
         dspTick: function() {
             var outBuff = this.outlets[0].getBuffer();
@@ -170,13 +273,13 @@
 
 
     // read data from a table with no interpolation
-    Pd.objects['tabwrite~'] = BaseTabRW.extend({
+    Pd.objects['tabwrite~'] = DSPTabBase.extend({
 
         inletTypes: ['inlet~'],
         endPoint: true,
 
         init: function(tableName) {
-            BaseTabRW.prototype.init.call(this, tableName);
+            DSPTabBase.prototype.init.call(this, tableName);
             this.pos = 0;
             this.toDspTickNoOp();
             // callbaks to execute when the object stop's recording for any reason
@@ -244,8 +347,8 @@
 	// creates simple dsp lines
 	Pd.objects['line~'] = Pd.Object.extend({
 
-		outletTypes: ['outlet~'],
 		inletTypes: ['inlet'],
+		outletTypes: ['outlet~'],
 
 		init: function() {
 			// what the value was at the start of the line

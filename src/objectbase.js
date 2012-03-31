@@ -253,8 +253,8 @@
             // if more than one dsp source, we have to sum the signals.
             if (dspSources.length > 1) {
                 var buffer = this._buffer;
+                Pd.fillWithZeros(buffer);
                 var sourceBuff;
-                for (var i=0; i<buffer.length; i++) buffer[i] = 0;
 
                 for (var i=0; i<dspSources.length; i++) {
                     sourceBuff = dspSources[i].getBuffer();
