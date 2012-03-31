@@ -60,6 +60,7 @@
 		init: function(freq) {
 			this.freq = freq || 0;
 			this.sampCount = 0;
+this.test = true;
 		},
 
 		dspTick: function() {
@@ -73,6 +74,9 @@
                 var J = 2 * Math.PI / this.getPatch().getSampleRate();
 			    for (var i=0; i<outBuff.length; i++) {
 				    outBuff[i] = Math.cos(J * inBuff[i] * this.sampCount);
+/*if (this.test && inBuff[1] != 440) {
+    console.log('fukc', J * inBuff[i] * this.sampCount, inBuff[i], J, this.sampCount, this.getPatch().getSampleRate(), Pd.sampleRate);
+}*/
 				    this.sampCount++;
 			    }
             } else {
@@ -82,6 +86,11 @@
 				    this.sampCount++;
 			    }
             }
+/*if (this.test && inBuff[1] != 440) {
+    this.test = false;
+}*/
+
+
 		},
 
 		message: function(inletId, msg) {
@@ -112,11 +121,7 @@
 	});
 
 
-    // read data from a table with no interpolation
-    Pd.objects['tabread~'] = Pd.Object.extend({
-
-        outletTypes: ['outlet~'],
-        inletTypes: ['inlet~'],
+    var BaseTabRW = Pd.Object.extend({
 
         init: function(tableName) {
             this.tableName = tableName;
@@ -126,6 +131,23 @@
         load: function() {
             this.setTableName(this.tableName);
         },
+
+        setTableName: function(name) {
+            this.tableName = name;
+            var pd = this.getPatch();
+            if (pd) {
+                var table = pd.getTableByName(name);
+                if (!table) throw (new Error('table with name ' + name + ' doesn\'t exist'));
+                this.table = table;
+            }
+        }
+    });
+
+    // read data from a table with no interpolation
+    Pd.objects['tabread~'] = BaseTabRW.extend({
+
+        outletTypes: ['outlet~'],
+        inletTypes: ['inlet~'],
 
         dspTick: function() {
             var outBuff = this.outlets[0].getBuffer();
@@ -150,16 +172,63 @@
                 var parts = this.toArray(msg);
                 if (parts[0] == 'set') this.setTableName(parts[1]);
             }
+        }
+    });
+
+
+    // read data from a table with no interpolation
+    Pd.objects['tabwrite~'] = BaseTabRW.extend({
+
+        inletTypes: ['inlet~'],
+
+        init: function(tableName) {
+            BaseTabRW.prototype.init.call(this, tableName);
+            this.pos = 0;
+            this.toDspTickNoOp();
         },
 
-        setTableName: function(name) {
-            this.tableName = name;
-            var pd = this.getPatch();
-            if (pd) {
-                var table = pd.getTableByName(name);
-                if (!table) throw (new Error('table with name ' + name + ' doesn\'t exist'));
-                this.table = table;
+        dspTickWriting: function() {
+            var inBuff = this.inlets[0].getBuffer();
+            var tableSize = this.table.size;
+            for (var i=0; i<inBuff.length; i++, this.pos++) {
+                this.table.data[this.pos] = inBuff[i];
+                if (this.pos == tableSize) {
+                    this.toDspTickNoOp();
+                    break;
+                }
             }
+        },
+
+        dspTickNoOp: function() {},
+
+        message: function(inletId, msg) {
+			if (inletId === 0) {
+                var parts = this.toArray(msg);
+                var method = parts[0];
+                if (method == 'set') {
+                    this.setTableName(parts[1]);
+                    this.toDspTickNoOp();
+                } else if (method == 'start') {
+                    var pos = 0;
+                    if (parts.length > 1) {
+                        var pos = this.toFloat(parts[1]);
+                        if (isNaN(pos)) throw (new Error('invalid start position'));
+                        pos = Math.floor(pos);
+                    }
+                    this.toDspTickWriting(pos);
+                } else if (msg == 'bang') {
+                    this.toDspTickWriting(0);
+                } else if (method == 'stop') {
+                    this.toDspTickNoOp();
+                }
+            }
+        },
+
+        toDspTickNoOp: function() { this.dspTick = this.dspTickNoOp; },
+
+        toDspTickWriting: function(start) { 
+            this.dspTick = this.dspTickWriting;
+            this.pos = start;
         }
     });
 

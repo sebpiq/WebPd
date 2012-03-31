@@ -118,7 +118,7 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
     });
 
-    test('tabread~', function() {
+    test('common : tabread~, tabwrite~', function() {
         var patch = new Pd.Patch();
         var tabread = new Pd.objects['tabread~'](patch, ['table1']);
         var table1 = new Pd.objects['table'](patch, ['table1', 10]);
@@ -133,8 +133,15 @@ $(document).ready(function() {
         equal(tabread.table, table2);
         tabread.message(0, 'set table1');
         equal(tabread.table, table1);
+    });
 
-        table1.data = [11, 22, 33, 44, 55, 66, 77, 88, 99, 100];
+    test('tabread~', function() {
+        var patch = new Pd.Patch();
+        var tabread = new Pd.objects['tabread~'](patch, ['table1']);
+        var table = new Pd.objects['table'](patch, ['table1', 10]);
+        tabread.load();
+
+        table.data = [11, 22, 33, 44, 55, 66, 77, 88, 99, 100];
         var inlet0 = tabread.inlets[0];
         var outBuff = tabread.outlets[0].getBuffer();
         // normal read
@@ -145,6 +152,49 @@ $(document).ready(function() {
         inlet0.testBuffer = [-10, 9, 10, 1];
         tabread.dspTick()
         deepEqual(toArray(outBuff), [11, 100, 100, 22]);
+    });
+
+    test('tabwrite~', function() {
+        var patch = new Pd.Patch();
+        var tabwrite = new Pd.objects['tabwrite~'](patch, ['table1']);
+        var table = new Pd.objects['table'](patch, ['table1', 5]);
+        tabwrite.load();
+
+        var inlet0 = tabwrite.inlets[0];
+        // idle
+        deepEqual(toArray(table.data), [0, 0, 0, 0, 0]);
+        inlet0.testBuffer = [0, 1, 2, 3];
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [0, 0, 0, 0, 0]);
+        // bang
+        tabwrite.inlets[0].message('bang');
+        inlet0.testBuffer = [4, 1, 2, 3];
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [4, 1, 2, 3, 0]);
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [4, 1, 2, 3, 4]);
+        // start
+        tabwrite.inlets[0].message('start');
+        inlet0.testBuffer = [5, 6, 7, 8];
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [5, 6, 7, 8, 4]);
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [5, 6, 7, 8, 5]);
+        // start + pos
+        tabwrite.inlets[0].message('start 3');
+        inlet0.testBuffer = [9, 10, 11, 12];
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [5, 6, 7, 9, 10]);
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [5, 6, 7, 9, 10]);
+        // stop
+        tabwrite.inlets[0].message('bang');
+        inlet0.testBuffer = [1, 2, 3, 4];
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [1, 2, 3, 4, 10]);
+        tabwrite.inlets[0].message('stop');
+        tabwrite.dspTick()
+        deepEqual(toArray(table.data), [1, 2, 3, 4, 10]);
     });
 
     test('line~', function() {
