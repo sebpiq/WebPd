@@ -1,6 +1,8 @@
 (function(Pd){
 
     /******************** Base Object *****************/
+
+    // TODO: since many objects need sampleRate, wouldn't it make sense to make it an attribute (simpler testing better decoupling)?
     Pd.Object = function (pd, args) {
         args = args || [];
         // the patch this object belong to
@@ -37,7 +39,8 @@
 	
     Pd.extend(Pd.Object.prototype, {
 
-	    /******************** Methods to implement *****************/
+    /******************** Methods to implement *****************/
+
 		// set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
 		endPoint: false,
 
@@ -62,12 +65,13 @@
 		message: function(inletnumber, message) {},
 
 
-	    /******************** Common methods *********************/
+    /******************** Common methods *********************/
+
 	    // Converts a Pd message to a float
         // TODO: scientific notation, e.g. 2.999e-5
 	    toFloat: function(data) {
 		    // first check if we just got an actual float, return it if so
-		    if (!isNaN(data)) return data;
+		    if (!isNaN(data)) return parseFloat(data);
 		    // otherwise parse this thing
 		    var element = data.split(' ')[0];
 		    var foundfloat = parseFloat(element);
@@ -125,7 +129,8 @@
 		    }
 	    },
 
-	    /******************** Accessors ************************/
+    /******************** Accessors ************************/
+
     	// Returns the a unique identifier of the object in its current patch.
         // This id is assigned automatically when the object is added to the patch.
         getId: function() {
@@ -152,6 +157,7 @@
 
 
     /******************** Inlets/outlets *****************/
+
     var BasePortlet = function(obj, id) {
         this._obj = obj;
         this._id = id;

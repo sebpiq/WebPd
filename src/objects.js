@@ -33,7 +33,7 @@
             this.printName = (printName || 'print');
         },
 
-        message: function(inletnum, message) {
+        message: function(inletId, message) {
             Pd.log(this.printname + ': ' + message);
         }
 
@@ -70,13 +70,13 @@
             // if there's actually a dsp source connected to it.
             if (dspInlet.hasDspSources()) {
 			    var inBuff = dspInlet.getBuffer();
-                var J = 2 * Math.PI / Pd.sampleRate;
+                var J = 2 * Math.PI / this.getPatch().getSampleRate();
 			    for (var i=0; i<outBuff.length; i++) {
 				    outBuff[i] = Math.cos(J * inBuff[i] * this.sampCount);
 				    this.sampCount++;
 			    }
             } else {
-                var K = 2 * Math.PI * this.freq / Pd.sampleRate;
+                var K = 2 * Math.PI * this.freq / this.getPatch().getSampleRate();
 			    for (var i=0; i<outBuff.length; i++) {
 				    outBuff[i] = Math.cos(K * this.sampCount);
 				    this.sampCount++;
@@ -91,6 +91,7 @@
 
 	});
 	
+
 	// digital to analogue converter (sound output)
 	Pd.objects['dac~'] = Pd.Object.extend({
 
@@ -109,6 +110,7 @@
 			}
 		}
 	});
+
 
     // read data from a table with no interpolation
     Pd.objects['tabread~'] = Pd.Object.extend({
@@ -160,6 +162,81 @@
             }
         }
     });
+
+
+	// creates simple dsp lines
+	Pd.objects['line~'] = Pd.Object.extend({
+
+		outletTypes: ['outlet~'],
+		inletTypes: ['inlet'],
+
+		init: function() {
+			// what the value was at the start of the line
+			this.y0 = 0;
+			// the destination value we are aiming for
+			this.y1 = 0;
+            // this stores the current index 
+            this.n = 0;
+			// this stores the index max the line must reach
+			this.nMax = 0;
+			// we want to use the dsptick method that returns a constant value for now
+			this.toDspConst(this.y0);
+		},
+
+		// write a constant value to our output buffer for every sample
+		dspTickConst: function() {
+            var outBuff = this.outlets[0].getBuffer();
+			for (var i=0; i<outBuff.length; i++) outBuff[i] = this.y0;
+		},
+
+		// write this correct value of the line at each sample
+		dspTickLine: function() {
+            var outBuff = this.outlets[0].getBuffer();
+            var outBuffLength = outBuff.length;
+            var slope = this.slope;
+			for (var i=0; i<outBuffLength; i++, this.n++) {
+				// if we've reached the end of our line, we fill-in the rest of the buffer,
+                // break, and switch back to the constant method.
+				if (this.n >= this.nMax) {
+                    for (var j=i; j<outBuffLength; j++) outBuff[j] = this.y1;
+                    this.toDspConst(this.y1);
+                    break;
+				} else {
+					outBuff[i] = this.n * slope + this.y0;
+				}
+			}
+		},
+
+		message: function(inletId, message) {
+			if (inletId == 0) {
+				var parts = this.toArray(message);
+				// if this is a single valued message we want line~ to output a constant value,
+                // otherwise the message is taken as [targetY duration(
+				if (parts.length == 1) {
+					var y0 = this.toFloat(parts[0]);
+					if (!isNaN(y0)) this.toDspConst(y0);
+				} else if (parts.length >= 2){
+					var y1 = parseFloat(parts[0]);
+					var duration = parseFloat(parts[1]);
+					if (!isNaN(y1) && !isNaN(duration)) this.toDspLine(y1, duration)
+				}
+			}
+		},
+
+        toDspConst: function(val) {
+            this.y0 = val;
+			this.dspTick = this.dspTickConst;
+        },
+
+        toDspLine: function(val, duration) {
+			this.y1 = val;
+            this.n = 0;
+			this.nMax = duration * this.getPatch().getSampleRate() / 1000;
+            this.slope = (this.y1 - this.y0) / this.nMax;
+			this.dspTick = this.dspTickLine;
+        }
+	});
+
 
     // Let each object know of what type it is
     var proto;

@@ -19,7 +19,7 @@
         this._tables = {};
 
         // sample rate at which this patch runs
-        this.sampleRate = Pd.sampleRate;
+        this.sampleRate = null;
         // block size of this patch
         this.blockSize = Pd.blockSize;
 	    // create the audio output driver
@@ -78,6 +78,10 @@
 		    return this.frame * Pd.blockSize / (Pd.sampleRate / 1000);
 	    },
 	
+        // Gets the sample rate the patch is running at
+        getSampleRate: function() {
+            return (this.sampleRate || Pd.sampleRate);
+        },
 
     /******************** DSP stuff ************************/
 

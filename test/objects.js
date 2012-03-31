@@ -56,13 +56,21 @@ $(document).ready(function() {
     module('Pd.objects', {
         setup: function() {
             Pd.blockSize = 4;
+            this.sampleRate = Pd.sampleRate;
+        },
+        teardown: function() {
+            Pd.sampleRate = this.sampleRate;
         }
     });
 
     test('osc~', function() {
         var cos = Math.cos;
+        var dummyPatch = {
+            getSampleRate: function() {return Pd.sampleRate;}
+        };
         // no frequency (=0)
         var osc = new Pd.objects['osc~'](null);
+        osc._setPatch(dummyPatch);
         var outBuff = osc.outlets[0].getBuffer();
 
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
@@ -71,6 +79,7 @@ $(document).ready(function() {
 
         // frequency argument 
         var osc = new Pd.objects['osc~'](null, [440]);
+        osc._setPatch(dummyPatch);
         var k = 2*Math.PI*440/Pd.sampleRate
         var outBuff = osc.outlets[0].getBuffer();
 
@@ -136,6 +145,42 @@ $(document).ready(function() {
         inlet0.testBuffer = [-10, 9, 10, 1];
         tabread.dspTick()
         deepEqual(toArray(outBuff), [11, 100, 100, 22]);
+    });
+
+    test('line~', function() {
+        var dummyPatch = {
+            getSampleRate: function() {return 10;}
+        };
+        var line = new Pd.objects['line~']();
+        line._setPatch(dummyPatch);
+        
+        var outBuff = line.outlets[0].getBuffer();
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
+        line.dspTick();
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
+
+        // jump to value
+        line.message(0, '1345.99');
+        line.dspTick();
+        deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
+        line.dspTick();
+        deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
+
+        // jump to value
+        line.message(0, '1');
+        line.message(0, '2 1000'); // line to 2 in 1 millisecond
+        console.log(line);
+        line.dspTick();
+        deepEqual(roundArray(outBuff, 2), [1, 1.1, 1.2, 1.3]);
+        line.dspTick();
+        deepEqual(roundArray(outBuff, 2), [1.4, 1.5, 1.6, 1.7]);
+        line.dspTick();
+        deepEqual(roundArray(outBuff, 2), [1.8, 1.9, 2, 2]);
+        line.dspTick();
+        deepEqual(roundArray(outBuff, 2), [2, 2, 2, 2]);
+        line.message(0, '1 200');
+        line.dspTick();
+        deepEqual(roundArray(outBuff, 2), [2, 1.5, 1, 1]);
     });
 
     test('loadbang', function() {
