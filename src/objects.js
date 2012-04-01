@@ -72,14 +72,14 @@
 			    var inBuff = dspInlet.getBuffer();
                 var J = 2 * Math.PI / this.getPatch().getSampleRate();
 			    for (var i=0; i<outBuff.length; i++) {
-				    outBuff[i] = Math.cos(this.phase);
                     this.phase += J * inBuff[i];
+				    outBuff[i] = Math.cos(this.phase);
 			    }
             } else {
                 var K = 2 * Math.PI * this.freq / this.getPatch().getSampleRate();
 			    for (var i=0; i<outBuff.length; i++) {
-				    outBuff[i] = Math.cos(this.phase);
                     this.phase += K;
+				    outBuff[i] = Math.cos(this.phase);
 			    }
             }
 		},

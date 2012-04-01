@@ -91,15 +91,15 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         osc.dspTick();
 
-        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*1), cos(k*2), cos(k*3), cos(k*4)], 4));
         osc.dspTick();
-        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*4), cos(k*5), cos(k*6), cos(k*7)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*5), cos(k*6), cos(k*7), cos(k*8)], 4));
 
         // receive frequency message
         var k2 = 2*Math.PI*660/Pd.sampleRate;
 
         osc.inlets[0].message('660');
-        expected = roundArray([cos(osc.phase), cos(osc.phase+1*k2), cos(osc.phase+2*k2), cos(osc.phase+3*k2)], 4);
+        expected = roundArray([cos(osc.phase+1*k2), cos(osc.phase+2*k2), cos(osc.phase+3*k2), cos(osc.phase+4*k2)], 4);
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), expected);
 
@@ -108,11 +108,11 @@ $(document).ready(function() {
         var inlet0 = osc.inlets[0];
 
         inlet0.testBuffer = [770, 550, 330, 110];
-        expected = [cos(osc.phase), cos(osc.phase+m*770), cos(osc.phase+m*770+m*550), cos(osc.phase+m*770+m*550+m*330)]
+        expected = [cos(osc.phase+m*770), cos(osc.phase+m*770+m*550), cos(osc.phase+m*770+m*550+m*330), cos(osc.phase+m*770+m*550+m*330+m*110)]
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), roundArray(expected, 4));
         inlet0.testBuffer = [880, 440, 880, 440];
-        expected = [cos(osc.phase), cos(osc.phase+m*880), cos(osc.phase+m*880+m*440), cos(osc.phase+m*880+m*440+m*880)]
+        expected = [cos(osc.phase+m*880), cos(osc.phase+m*880+m*440), cos(osc.phase+m*880+m*440+m*880), cos(osc.phase+m*880+m*440+m*880+m*440)]
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), roundArray(expected, 4));
 
@@ -123,7 +123,7 @@ $(document).ready(function() {
         osc.inlets[0].message('440');
         osc.inlets[1].message('bang');
         osc.dspTick();
-        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*0), cos(k*1), cos(k*2), cos(k*3)], 4));
+        deepEqual(roundArray(outBuff, 4), roundArray([cos(k*1), cos(k*2), cos(k*3), cos(k*4)], 4));
     });
 
     test('*~', function() {
