@@ -329,11 +329,9 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
-
-        // jump to value
+        // ramp to value
         line.message(0, '1');
         line.message(0, '2 1000'); // line to 2 in 1 millisecond
-        console.log(line);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1, 1.1, 1.2, 1.3]);
         line.dspTick();
@@ -345,6 +343,14 @@ $(document).ready(function() {
         line.message(0, '1 200');
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [2, 1.5, 1, 1]);
+        // onStop callback
+        var bla = 0;
+        line.inlets[0].message('0 700');
+        line.onStop(function() {bla = 999;});
+        line.dspTick();
+        equal(bla, 0);
+        line.dspTick();
+        equal(bla, 999);
     });
 
 /******************** tests dsp objects ************************/

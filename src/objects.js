@@ -9,6 +9,31 @@
 
 (function(Pd){
 
+
+/************************** Mixins ******************************/
+
+    var StopEventMixin = {
+
+        init: function(tableName) {
+            // callbaks to execute when the object stop's recording for any reason
+            this._onStopCbs = [];
+        },
+        
+        onStop: function(callback) {
+            this._onStopCbs.push(callback);
+        },
+
+        _execOnStop: function() {
+            var callbacks = this._onStopCbs;
+            callbacks.reverse();
+            while(callbacks.length) callbacks.pop().call(this);
+        }
+
+    };
+
+
+/************************** Basic objects ******************************/
+
     Pd.objects = {
 	// null placeholder object for objects which don't exist
         'null': {},
@@ -273,17 +298,16 @@
 
 
     // read data from a table with no interpolation
-    Pd.objects['tabwrite~'] = DSPTabBase.extend({
+    Pd.objects['tabwrite~'] = DSPTabBase.extend(StopEventMixin, {
 
         inletTypes: ['inlet~'],
         endPoint: true,
 
         init: function(tableName) {
             DSPTabBase.prototype.init.call(this, tableName);
+            StopEventMixin.init.call(this);
             this.pos = 0;
             this.toDspTickNoOp();
-            // callbaks to execute when the object stop's recording for any reason
-            this._onStopCbs = [];
         },
 
         dspTickWriting: function() {
@@ -320,7 +344,6 @@
                     this.toDspTickWriting(0);
                 } else if (method == 'stop') {
                     this.toDspTickNoOp();
-                    this._execOnStop();
                 }
             }
         },
@@ -330,27 +353,18 @@
         toDspTickWriting: function(start) { 
             this.dspTick = this.dspTickWriting;
             this.pos = start;
-        },
-
-        onStop: function(callback) {
-            this._onStopCbs.push(callback);
-        },
-
-        _execOnStop: function() {
-            var callbacks = this._onStopCbs;
-            callbacks.reverse();
-            while(callbacks.length) callbacks.pop().call(this);
         }
     });
 
 
 	// creates simple dsp lines
-	Pd.objects['line~'] = Pd.Object.extend({
+	Pd.objects['line~'] = Pd.Object.extend(StopEventMixin, {
 
 		inletTypes: ['inlet'],
 		outletTypes: ['outlet~'],
 
 		init: function() {
+            StopEventMixin.init.call(this);
 			// what the value was at the start of the line
 			this.y0 = 0;
 			// the destination value we are aiming for
@@ -380,6 +394,7 @@
 				if (this.n >= this.nMax) {
                     for (var j=i; j<outBuffLength; j++) outBuff[j] = this.y1;
                     this.toDspConst(this.y1);
+                    this._execOnStop();
                     break;
 				} else {
 					outBuff[i] = this.n * slope + this.y0;
