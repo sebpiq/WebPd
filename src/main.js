@@ -43,6 +43,7 @@
         return obj;
     };
 
+    // TODO: automatically add a 'super' property
     Pd.chainExtend = function() {
         var sources = Array.prototype.slice.call(arguments, 0);
         var parent = this;

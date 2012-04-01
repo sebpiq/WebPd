@@ -34,7 +34,9 @@ $(document).ready(function() {
     });
     Pd['testinlet'] = Pd['inlet'];
     Pd['testoutlet~'] = Pd['outlet~'];
-    Pd['testoutlet'] = Pd['outlet'];
+    Pd['testoutlet'] = Pd['outlet'].extend({
+        sendMessage: function(msg) {this.receivedMessage = msg;}
+    });
 
     // replacing in all object prototypes, with our test inlets/outlets
     for (type in Pd.objects) {
@@ -55,9 +57,9 @@ $(document).ready(function() {
         }
     }
 
-/******************** tests ************************/
+/******************** tests dsp objects ************************/
 
-    module('Pd.objects', {
+    module('Pd.objects - dsp', {
         setup: function() {
             Pd.blockSize = 4;
             this.sampleRate = Pd.sampleRate;
@@ -344,6 +346,37 @@ $(document).ready(function() {
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [2, 1.5, 1, 1]);
     });
+
+/******************** tests dsp objects ************************/
+
+    module('Pd.objects - misc', {
+        setup: function() {
+            Pd.blockSize = 4;
+            this.sampleRate = Pd.sampleRate;
+        },
+        teardown: function() {
+            Pd.sampleRate = this.sampleRate;
+        }
+    });
+
+    test('mtof', function() {
+        var mtof = new Pd.objects['mtof'](null);
+
+        // < -1500
+        mtof.inlets[0].message('-1790');
+        equal(mtof.outlets[0].receivedMessage, 0);
+
+        // >= 1500
+        mtof.inlets[0].message(1500);
+        equal(round(mtof.outlets[0].receivedMessage), round(8.17579891564 * Math.exp(.0577622650 * 1499)));
+        mtof.inlets[0].message(2000);
+        equal(round(mtof.outlets[0].receivedMessage), round(8.17579891564 * Math.exp(.0577622650 * 1499)));
+
+        // -1500 < val < 1500
+        mtof.inlets[0].message(69);
+        equal(round(mtof.outlets[0].receivedMessage), 440);
+    });
+
 
     test('loadbang', function() {
         expect(0);

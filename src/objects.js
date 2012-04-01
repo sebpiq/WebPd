@@ -396,8 +396,8 @@
 					var y0 = this.toFloat(parts[0]);
 					if (!isNaN(y0)) this.toDspConst(y0);
 				} else if (parts.length >= 2){
-					var y1 = parseFloat(parts[0]);
-					var duration = parseFloat(parts[1]);
+					var y1 = this.toFloat(parts[0]);
+					var duration = this.toFloat(parts[1]);
 					if (!isNaN(y1) && !isNaN(duration)) this.toDspLine(y1, duration)
 				}
 			}
@@ -415,6 +415,31 @@
             this.slope = (this.y1 - this.y0) / this.nMax;
 			this.dspTick = this.dspTickLine;
         }
+	});
+
+
+/************************** Misc non-DSP ******************************/
+
+	//convert midi notes to frequency
+	Pd.objects['mtof'] = Pd.Object.extend({
+
+		inletTypes: ['inlet'],
+		outletTypes: ['outlet'],
+        maxMidi: 8.17579891564 * Math.exp(.0577622650 * 1499),
+
+        // TODO: round output ?
+		message: function(inletId, msg) {
+			var input = this.toFloat(msg);
+			var out = 0;
+			if (isNaN(input)) {
+				this.pd.log("error: mtof: no method for '" + msg + "'");
+			} else {
+				if (input <= -1500) out = 0;
+                else if (input > 1499) out = this.maxMidi;
+				else out = 8.17579891564 * Math.exp(.0577622650 * input);
+				this.outlets[0].sendMessage(out);
+			}
+		}
 	});
 
 

@@ -120,14 +120,7 @@
 			    return msg;
 		    }
 	    },
-	
-	    // Sends a message to a particular outlet
-	    sendMessage: function(outletnum, msg) {
-		    if (this.outlets[outletnum]) this.outlets[outletnum].message(msg);
-		    else {
-			    throw (new Error('object has no outlet #' + outletnum));
-		    }
-	    },
+
 
     /******************** Accessors ************************/
 
@@ -217,6 +210,7 @@
         getBuffer: function() { Pd.notImplemented(); },
 
         // Sends a message to all sinks
+        // TODO: uniformize names : 'sendMessage/message'
         sendMessage: function(msg) { Pd.notImplemented(); }
 
     });
