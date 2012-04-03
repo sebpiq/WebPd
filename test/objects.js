@@ -304,7 +304,7 @@ $(document).ready(function() {
         // onStop callback
         var bla = 0;
         tabwrite.inlets[0].message('bang');
-        tabwrite.onStop(function() {bla = this.tableName;});
+        tabwrite.onStop(function(obj) {bla = obj.tableName;});
         tabwrite.dspTick();
         equal(bla, 0);
         tabwrite.dspTick();
@@ -345,8 +345,9 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 2), [2, 1.5, 1, 1]);
         // onStop callback
         var bla = 0;
+        line.bla = 999;
         line.inlets[0].message('0 700');
-        line.onStop(function() {bla = 999;});
+        line.onStop(function(obj) {bla = obj.bla;});
         line.dspTick();
         equal(bla, 0);
         line.dspTick();

@@ -26,7 +26,7 @@
         _execOnStop: function() {
             var callbacks = this._onStopCbs;
             callbacks.reverse();
-            while(callbacks.length) callbacks.pop().call(this);
+            while(callbacks.length) callbacks.pop().call(this, this);
         }
 
     };

@@ -162,9 +162,28 @@
 
         connect: function(other) { Pd.notImplemented(); },
 
+        disconnect: function(other) { Pd.notImplemented(); },
+
         getId: function() { return this._id; },
 
-        getObject: function() { return this._obj; }
+        getObject: function() { return this._obj; },
+
+        // Generic function for connecting the calling portlet 
+        // with `otherPortlet`.
+        _genericConnect: function(allConn, otherPortlet) {
+            if (allConn.indexOf(otherPortlet) != -1) return;
+            allConn.push(otherPortlet);
+            otherPortlet.connect(this);
+        },
+
+        // Generic function for disconnecting the calling portlet 
+        // from  `otherPortlet`.
+        _genericDisconnect: function(allConn, otherPortlet) {
+            var connInd = allConn.indexOf(otherPortlet);
+            if (connInd == -1) return;
+            allConn.splice(connInd, 1);
+            otherPortlet.disconnect(this);
+        }
 
     });
     BasePortlet.extend = Pd.chainExtend;
@@ -175,10 +194,16 @@
             this.sources = [];
         },
 
+        // Connects the inlet to the outlet `source`. 
+        // If the connection already exists, nothing happens.
         connect: function(source) {
-            if (this.sources.indexOf(source) != -1) return;
-            this.sources.push(source);
-            source.connect(this);
+            this._genericConnect(this.sources, source);
+        },
+
+        // Disconnects the inlet from the outlet `source`.
+        // If the connection didn't exist, nothing happens.
+        disconnect: function(source) {
+            this._genericDisconnect(this.sources, source);
         },
 
         // message received callback
@@ -200,10 +225,16 @@
             this.sinks = [];
         },
 
+        // Connects the outlet to the inlet `sink`. 
+        // If the connection already exists, nothing happens.
         connect: function(sink) {
-            if (this.sinks.indexOf(sink) != -1) return;
-            this.sinks.push(sink);
-            sink.connect(this);
+            this._genericConnect(this.sinks, sink);
+        },
+
+        // Disconnects the outlet from the inlet `sink`.
+        // If the connection didn't exist, nothing happens.
+        disconnect: function(sink) {
+            this._genericDisconnect(this.sinks, sink);
         },
 
         // Returns a buffer to write dsp data to.

@@ -192,14 +192,25 @@
         // Connects two objects. `source` and `sink` can be either the object instances,
         // or their id in the graph. 
         connect: function(source, outletId, sink, inletId) {
-            if (!(source instanceof Pd.Object)) {
-		        var source = this.getObject(source);
-            }
-            if (!(sink instanceof Pd.Object)) {
-		        var sink = this.getObject(sink);
-            }
-            if (sink === null || source === null) throw (new Error('Cannot connect an unknown object !'));
+	        var source = this._toObject(source);
+	        var sink = this._toObject(sink);
             source.outlets[outletId].connect(sink.inlets[inletId]);
+        },
+
+        // Disconnects two objects. See `connect`.
+        disconnect: function(source, outletId, sink, inletId) {
+	        var source = this._toObject(source);
+	        var sink = this._toObject(sink);
+            source.outlets[outletId].disconnect(sink.inlets[inletId]);
+        },
+
+        // takes an object or an object id, and returns an object.
+        _toObject: function(objectOrId) {
+            if (!(objectOrId instanceof Pd.Object)) {
+		        var objectOrId = this.getObject(objectOrId);
+            }
+            if (objectOrId === null) throw (new Error('Unknown object ' + objectOrId));
+            return objectOrId;
         },
 
         // this method calls the function `iterator` on every element of `array`
