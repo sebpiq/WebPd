@@ -8,6 +8,7 @@
 ***/
 
 // TODO: message should take an array, instead of having to parse everything themselves.
+// TODO: generic event/callback system
 
 (function(Pd){
 
@@ -343,12 +344,12 @@
                 var table = pd.getTableByName(name);
                 if (!table) throw (new Error('table with name ' + name + ' doesn\'t exist'));
                 this.table = table;
+                this.tableChanged();
             }
         },
 
-        dspTickNoOp: function() {},
-
-        toDspTickNoOp: function() { this.dspTick = this.dspTickNoOp; }
+        // Hook for when a table was successfully loaded or changed
+        tableChanged: function() {}
     });
 
 
@@ -358,22 +359,27 @@
         inletTypes: ['inlet~'],
         outletTypes: ['outlet~'],
 
-        dspTick: function() {
+        init: function(tableName) {
+            DSPTabBase.prototype.init.call(this, tableName);
+            this.toDspTickZeros();
+        },
+
+        dspTickReading: function() {
             var outBuff = this.outlets[0].getBuffer();
-            if (this.table) {
-                var inBuff = this.inlets[0].getBuffer();
-                var tableMax = this.table.size - 1;
-                var tableData = this.table.data;
-                var s;
-                // cf. pd : Incoming values are truncated to the next lower integer,
-                // and values out of bounds get the nearest (first or last) point.
-                for (var i=0; i<outBuff.length; i++) {
-                    s = Math.floor(inBuff[i]);
-                    outBuff[i] = tableData[(s >= 0 ? (s > tableMax ? tableMax : s) : 0)];
-                }
-            } else {
-                Pd.fillWithZeros(outBuff);
+            var inBuff = this.inlets[0].getBuffer();
+            var tableMax = this.table.size - 1;
+            var tableData = this.table.data;
+            var s;
+            // cf. pd : Incoming values are truncated to the next lower integer,
+            // and values out of bounds get the nearest (first or last) point.
+            for (var i=0; i<outBuff.length; i++) {
+                s = Math.floor(inBuff[i]);
+                outBuff[i] = tableData[(s >= 0 ? (s > tableMax ? tableMax : s) : 0)];
             }
+        },
+
+        tableChanged: function() {
+            this.dspTick = this.dspTickReading;
         },
 
         message: function(inletId, msg) {
@@ -395,13 +401,22 @@
             DSPTabBase.prototype.init.call(this, tableName);
             StopEventMixin.init.call(this);
             this.pos = 0;
-            this.maxPos = 0;
-            this.toDspTickNoOp();
+            this.posMax = 0;        // the position after the last position to be read
+            this.toDspTickZeros();
         },
 
         dspTickReading: function() {
             var outBuff = this.outlets[0].getBuffer();
-            
+            var iMax = Math.min(outBuff.length, this.posMax - this.pos); // +1 cause comparing length to position
+            for (var i=0; i<iMax; i++, this.pos++) {
+                outBuff[i] = this.table.data[this.pos];
+            }
+            // If we've reached the last position, that's it
+            if (this.pos == this.posMax) {
+                for (var j=i; j<outBuff.length; j++) outBuff[j] = 0;
+                this.toDspTickZeros();
+                this._execOnStop();
+            }
         },
 
         message: function(inletId, msg) {
@@ -410,9 +425,9 @@
                 var method = parts[0];
                 if (method == 'set') {
                     this.setTableName(parts[1]);
-                    this.toDspTickNoOp();
+                    this.toDspTickZeros();
                 } else if (msg == 'bang') {
-                    this.toDspTickWriting(0);
+                    this.toDspTickReading(0);
                 } else if (parts.length == 1) {
                     var startPos = this.toFloat(parts[0]);
                     this.toDspTickReading(startPos);
@@ -425,10 +440,11 @@
         },
 
         toDspTickReading: function(startPos, sampleNum) {
-            var max
             if (startPos >= this.table.size - 1) return;
-            this.pos = sampleNum;
-            this.maxPos = Math.max(startPos + sampleNum, this.table.size - 1);
+            sampleNum = sampleNum || (this.table.size - startPos);
+            this.pos = startPos;
+            this.posMax = Math.min(startPos + sampleNum, this.table.size);
+            this.dspTick = this.dspTickReading;
         }
 
     });
@@ -449,8 +465,8 @@
 
         dspTickWriting: function() {
             var inBuff = this.inlets[0].getBuffer();
-            var maxPos = Math.min(inBuff.length, this.table.size - this.pos);
-            for (var i=0; i<maxPos; i++, this.pos++) {
+            var iMax = Math.min(inBuff.length, this.table.size - this.pos);
+            for (var i=0; i<iMax; i++, this.pos++) {
                 this.table.data[this.pos] = inBuff[i];
             }
             // If we reached table size, that's it

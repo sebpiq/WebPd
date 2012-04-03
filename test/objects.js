@@ -224,7 +224,7 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), [30, 330, -99, 120]);
     });
 
-    test('common : tabread~, tabwrite~', function() {
+    test('common : tabread~, tabwrite~, tabplay~', function() {
         var patch = new Pd.Patch();
         var tabread = new Pd.objects['tabread~'](patch, ['table1']);
         var table1 = new Pd.objects['table'](patch, ['table1', 10]);
@@ -252,12 +252,40 @@ $(document).ready(function() {
         var outBuff = tabread.outlets[0].getBuffer();
         // normal read
         inlet0.testBuffer = [0, 1, 2, 3];
-        tabread.dspTick()
+        tabread.dspTick();
         deepEqual(toArray(outBuff), [11, 22, 33, 44]);
         // read above and below table bounds
         inlet0.testBuffer = [-10, 9, 10, 1];
-        tabread.dspTick()
+        tabread.dspTick();
         deepEqual(toArray(outBuff), [11, 100, 100, 22]);
+    });
+
+    test('tabplay~', function() {
+        var patch = new Pd.Patch();
+        var tabplay = new Pd.objects['tabplay~'](patch, ['table1']);
+        var table = new Pd.objects['table'](patch, ['table1', 6]);
+        tabplay.load();
+
+        table.data = [11, 22, 33, 44, 55, 66];
+        var outBuff = tabplay.outlets[0].getBuffer();
+        // play all
+        tabplay.inlets[0].message('bang');
+        tabplay.dspTick();
+        deepEqual(toArray(outBuff), [11, 22, 33, 44]);
+        tabplay.dspTick();
+        deepEqual(toArray(outBuff), [55, 66, 0, 0]);
+        // play from position
+        tabplay.inlets[0].message(1);
+        tabplay.dspTick();
+        deepEqual(toArray(outBuff), [22, 33, 44, 55]);
+        tabplay.dspTick();
+        deepEqual(toArray(outBuff), [66, 0, 0, 0]);
+        // play from position n samples [1 2(
+        tabplay.inlets[0].message('2 2');
+        tabplay.dspTick();
+        deepEqual(toArray(outBuff), [33, 44, 0, 0]);
+        tabplay.dspTick();
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
     });
 
     test('tabwrite~', function() {

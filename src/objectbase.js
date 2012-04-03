@@ -141,7 +141,14 @@
 
         _setPatch: function(pd) {
             this._pd = pd;
-        }
+        },
+
+    /******************** Basic dspTicks ************************/
+        dspTickNoOp: function() {},
+        toDspTickNoOp: function() { this.dspTick = this.dspTickNoOp; },
+        
+        dspTickZeros: function() { Pd.fillWithZeros(this.outlets[0].getBuffer()); },
+        toDspTickZeros: function() { this.dspTick = this.dspTickZeros; }
 
     });
 
