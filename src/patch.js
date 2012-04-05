@@ -1,7 +1,9 @@
 (function(Pd){
 
     Pd.Patch = function () {
-        var me = this;
+        Pd.register(this);
+        this.sampleRate = Pd.sampleRate;
+        this.blockSize = Pd.blockSize;
 
         // setting up the graph
 	    this._graph = {
@@ -18,10 +20,6 @@
 	    // keys are table names
         this._tables = {};
 
-        // sample rate at which this patch runs
-        this.sampleRate = null;
-        // block size of this patch
-        this.blockSize = Pd.blockSize;
 	    // create the audio output driver
 	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
 	    // output buffer (stereo)
@@ -77,11 +75,6 @@
 	    getAbsTime: function() {
 		    return this.frame * Pd.blockSize / (Pd.sampleRate / 1000);
 	    },
-	
-        // Gets the sample rate the patch is running at
-        getSampleRate: function() {
-            return (this.sampleRate || Pd.sampleRate);
-        },
 
     /******************** DSP stuff ************************/
 
@@ -108,7 +101,7 @@
 		        // recursively triggers tick on all parent objects
 		        for (var i=0; i<inlets.length; i++) {
 			        sources = inlets[i].sources;
-                    for (var j=0; j<sources.length; j++) this.tick(sources[j].getObject());
+                    for (var j=0; j<sources.length; j++) this.tick(sources[j].obj);
 		        }
 		        // once all parents have run their dsp process,
                 // we can proceed with the current object.
@@ -121,14 +114,14 @@
 	    play: function() {
 		    var me = this;
 
-		    if (!this.audio.is_playing()) {
+		    if (!this.audio.isPlaying()) {
 			    Pd.debug('Starting audio.');
                 // TODO: should load called with post-order traversal,
                 //        to ensure all children gets loaded before their parents ? 
                 this.mapObjects(function(obj) { obj.load(); });
 			    this.audio.play(function() { return me.generateFrame(); });
             	// fetch the actual samplerate from the audio driver
-	            Pd.sampleRate = this.audio.getSampleRate(); // TODO : shouldn't be here
+	            this.sampleRate = this.audio.getSampleRate();
                 // reset frame counts
 			    this.frame = 0;
 			    this.mapObjects(function(obj) { obj.frame = 0; });
@@ -139,7 +132,7 @@
 	
 	    // Stops this graph from running
 	    stop: function() {
-		    if (this.audio.is_playing()) {
+		    if (this.audio.isPlaying()) {
 			    Pd.debug('Stopping audio.');
 			    this.audio.stop();
       		} else {
@@ -154,8 +147,8 @@
         // This id can be used to uniquely identify the object in the patch.
         addObject: function(obj) {
             var id = this._generateId();
-            obj._setId(id);
-            obj._setPatch(this);
+            obj.id = id;
+            obj.patch = this;
             this._graph.objects[id] = obj;
 		    if (obj.endPoint) this._graph.endPoints.push(obj);
 		    Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);
@@ -171,7 +164,7 @@
         addTable: function(table) {
             this._tables[table.name] = table;
             this.addObject(table);
-            Pd.debug("Added " + table.type + " to the graph at position " + table.getId());
+            Pd.debug("Added " + table.type + " to the graph at position " + table.id);
         },
 
         // Returns a table given its name, or `null` if such a table doesn't exist.

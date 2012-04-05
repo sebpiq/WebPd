@@ -1,5 +1,0 @@
-print: hello ping 23 pong
-error: trigger: can only convert 's' to 'b' or 'a'
-print: bang
-error: trigger: can only convert 's' to 'b' or 'a'
-print: hello ping 23 pong

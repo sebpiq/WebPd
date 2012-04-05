@@ -1,5 +1,0 @@
-#N canvas 339 125 450 300 10;
-#X obj 14 11 osc~ 440;
-#X obj 14 32 dac~;
-#X connect 0 0 1 0;
-#X connect 0 0 1 1;

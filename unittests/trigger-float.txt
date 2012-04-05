@@ -1,5 +1,0 @@
-print: 42
-print: 42
-print: bang
-print: symbol float
-print: 42

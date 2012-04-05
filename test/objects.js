@@ -35,7 +35,7 @@ $(document).ready(function() {
     Pd['testinlet'] = Pd['inlet'];
     Pd['testoutlet~'] = Pd['outlet~'];
     Pd['testoutlet'] = Pd['outlet'].extend({
-        sendMessage: function(msg) {this.receivedMessage = msg;}
+        message: function(msg) {this.receivedMessage = msg;}
     });
 
     // replacing in all object prototypes, with our test inlets/outlets
@@ -72,11 +72,11 @@ $(document).ready(function() {
     test('osc~', function() {
         var cos = Math.cos;
         var dummyPatch = {
-            getSampleRate: function() {return Pd.sampleRate;}
+            sampleRate: Pd.sampleRate
         };
         // no frequency (=0)
         var osc = new Pd.objects['osc~'](null);
-        osc._setPatch(dummyPatch);
+        osc.patch = dummyPatch;
         var outBuff = osc.outlets[0].getBuffer();
         var expected = [];
 
@@ -86,7 +86,7 @@ $(document).ready(function() {
 
         // frequency argument 
         var osc = new Pd.objects['osc~'](null, [440]);
-        osc._setPatch(dummyPatch);
+        osc.patch = dummyPatch;
         var k = 2*Math.PI*440/Pd.sampleRate
         var outBuff = osc.outlets[0].getBuffer();
 
@@ -341,10 +341,10 @@ $(document).ready(function() {
 
     test('line~', function() {
         var dummyPatch = {
-            getSampleRate: function() {return 10;}
+            sampleRate: 10
         };
         var line = new Pd.objects['line~']();
-        line._setPatch(dummyPatch);
+        line.patch = dummyPatch;
         
         var outBuff = line.outlets[0].getBuffer();
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);

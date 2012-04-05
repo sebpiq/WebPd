@@ -34,12 +34,12 @@ $(document).ready(function() {
     test('graphiness : addObject / getObject', function() {
 
         patch.addObject(obj1);
-        var ind1 = obj1.getId();
+        var ind1 = obj1.id;
         ok(ind1 != undefined);
         deepEqual(patch.getObject(ind1), obj1);
 
         patch.addObject(obj2);
-        var ind2 = obj2.getId();
+        var ind2 = obj2.id;
         ok(ind2 != undefined);
         ok(ind2 != ind1);
         equal(patch.getObject(ind1), obj1);
@@ -51,12 +51,12 @@ $(document).ready(function() {
     test('graphiness : addTable / getObject', function() {
 
         patch.addTable(table1);
-        var ind1 = table1.getId();
+        var ind1 = table1.id;
         ok(ind1 != undefined);
         deepEqual(patch.getObject(ind1), table1);
 
         patch.addTable(table2);
-        var ind2 = table2.getId();
+        var ind2 = table2.id;
         ok(ind2 != undefined);
         ok(ind2 != ind1);
         equal(patch.getObject(ind1), table1);
@@ -66,7 +66,7 @@ $(document).ready(function() {
     test('graphiness : addTable / getTableByName', function() {
 
         patch.addTable(table1);
-        var ind = table1.getId();
+        var ind = table1.id;
         ok(ind != undefined);
         equal(patch.getTableByName('table1'), table1);
         equal(patch.getTableByName('unknown name'), null);
@@ -105,8 +105,8 @@ $(document).ready(function() {
         var obj1 = new SomeSource(patch, ['obj1']);
         var obj2 = new SomeSink(patch, ['obj2']);
         var obj3 = new SomeSink(patch, ['obj3']);
-        var ind1 = obj1.getId();
-        var ind2 = obj2.getId();
+        var ind1 = obj1.id;
+        var ind2 = obj2.id;
         var unknownInd = 781863726392839;
 
         // dsp connection

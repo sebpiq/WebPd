@@ -1,12 +1,20 @@
 (function(){
 
-    // TODO: handle the fact that actual sampleRate can be different than
-    // desired sample rate
     var Pd = this.Pd = {
+
+        // Default sample rate to use for the patches. Beware, if the browser doesn't
+        // support this sample rate, the actual sample rate of a patch might be different. 
         sampleRate: 44100,
+
+        // Default block size to use for patches.
         blockSize: 128,
+
         debugMode: false,
+
+        // Array type to use. If the browser support Float arrays, this will be Float array type.
         arrayType: Array,
+
+        // Array slice function, to unify slicing float arrays and normal arrays.
 	    arraySlice: function (array, start) { return array.slice(start) }
     };
 
@@ -15,6 +23,14 @@
         Pd.arrayType = Float32Array;
 	    Pd.arraySlice = function (array, start) { return array.subarray(start) };
     }
+
+    // every new patch registers itself using this function
+    Pd.register = function(patch) {
+        if (this._patches.indexOf(patch) == -1) {
+            this._patches.push(patch);
+        }
+    };
+    Pd._patches = [];
 
     // Simple prototype inheritance. Used like so ::
     //    
@@ -43,7 +59,6 @@
         return obj;
     };
 
-    // TODO: automatically add a 'super' property
     Pd.chainExtend = function() {
         var sources = Array.prototype.slice.call(arguments, 0);
         var parent = this;

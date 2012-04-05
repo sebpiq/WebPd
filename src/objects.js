@@ -48,7 +48,7 @@
         outletTypes: ['outlet'],
 
         load: function() {
-            this.outlets[0].sendMessage('bang');
+            this.outlets[0].message('bang');
         }
 
     });
@@ -98,13 +98,13 @@
             // if there's actually a dsp source connected to it.
             if (dspInlet.hasDspSources()) {
 			    var inBuff = dspInlet.getBuffer();
-                var J = 2 * Math.PI / this.getPatch().getSampleRate();
+                var J = 2 * Math.PI / this.patch.sampleRate;
 			    for (var i=0; i<outBuff.length; i++) {
                     this.phase += J * inBuff[i];
 				    outBuff[i] = Math.cos(this.phase);
 			    }
             } else {
-                var K = 2 * Math.PI * this.freq / this.getPatch().getSampleRate();
+                var K = 2 * Math.PI * this.freq / this.patch.sampleRate;
 			    for (var i=0; i<outBuff.length; i++) {
                     this.phase += K;
 				    outBuff[i] = Math.cos(this.phase);
@@ -130,9 +130,9 @@
 		dspTick: function() {
 			var inBuff1 = this.inlets[0].getBuffer();
 			var inBuff2 = this.inlets[1].getBuffer();
-            var output = this.getPatch().output;
+            var output = this.patch.output;
 			// copy interleaved data from inlets to the graph's output buffer
-			for (var i=0; i < Pd.blockSize; i++) {
+			for (var i=0; i<output.length; i++) {
 				output[i * 2] += inBuff1[i];
 				output[i * 2 + 1] += inBuff2[i];
 			}
@@ -209,7 +209,7 @@
         toDspLine: function(val, duration) {
 			this.y1 = val;
             this.n = 0;
-			this.nMax = duration * this.getPatch().getSampleRate() / 1000;
+			this.nMax = duration * this.patch.sampleRate / 1000;
             this.slope = (this.y1 - this.y0) / this.nMax;
 			this.dspTick = this.dspTickLine;
         }
@@ -339,9 +339,8 @@
 
         setTableName: function(name) {
             this.tableName = name;
-            var pd = this.getPatch();
-            if (pd) {
-                var table = pd.getTableByName(name);
+            if (this.patch) {
+                var table = this.patch.getTableByName(name);
                 if (!table) throw (new Error('table with name ' + name + ' doesn\'t exist'));
                 this.table = table;
                 this.tableChanged();
@@ -520,12 +519,12 @@
 			var input = this.toFloat(msg);
 			var out = 0;
 			if (isNaN(input)) {
-				this.pd.log("error: mtof: no method for '" + msg + "'");
+				this.patch.log("error: mtof: no method for '" + msg + "'");
 			} else {
 				if (input <= -1500) out = 0;
                 else if (input > 1499) out = this.maxMidi;
 				else out = 8.17579891564 * Math.exp(.0577622650 * input);
-				this.outlets[0].sendMessage(out);
+				this.outlets[0].message(out);
 			}
 		}
 	});

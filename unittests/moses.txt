@@ -1,5 +1,0 @@
-
-left: -3
-left: 0
-right: 9.2
-right: 5

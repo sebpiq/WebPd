@@ -1,6 +1,0 @@
-
-print: 404.01
-print: 0
-print: 2.1025
-print: 0
-print: 2840.89

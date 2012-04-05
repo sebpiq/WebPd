@@ -1,8 +1,8 @@
 var fs = require('fs');
 var path = require('path');
 var sys = require('sys');
-var jsp = require("uglify-js").parser;
-var pro = require("uglify-js").uglify;
+var jsp = require('uglify-js').parser;
+var pro = require('uglify-js').uglify;
 
 task('default', [], function () {
     jake.Task['minify'].invoke();
@@ -13,6 +13,7 @@ task('concat', [], function () {
             'dependencies/sink.js',
             'src/main.js',
             'src/audiodriver.js',
+            'src/portlets.js',
             'src/objectbase.js',
             'src/patch.js',
             'src/objects.js'],

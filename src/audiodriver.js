@@ -9,17 +9,17 @@
 
     Pd.extend(AudioDriverInterface.prototype, {
 
-        /** fetch the current sample rate we are operating at **/
+        // fetch the current sample rate we are operating at
         getSampleRate: function() { Pd.notImplemented(); },
 
-        /** Stop the audio from playing **/
+        // Stop the audio from playing
         stop: function() { Pd.notImplemented(); },
 
-        /** Start the audio playing with the supplied function as the audio-block generator **/
+        // Start the audio playing with the supplied function as the audio-block generator
         play: function(generator) { Pd.notImplemented(); },
 
-        /** test whether this driver is currently playing audio **/
-        is_playing: function() { Pd.notImplemented(); }
+        // test whether this driver is currently playing audio
+        isPlaying: function() { Pd.notImplemented(); }
 
     });
 
@@ -31,7 +31,7 @@
 
     Pd.extend(SinkAdapter.prototype, AudioDriverInterface.prototype, {
 
-        /** fetch the current sample rate we are operating at **/
+        // fetch the current sample rate we are operating at
         getSampleRate: function() { 
             if (this._sink) return this._sink.sampleRate;
             else {
@@ -40,13 +40,13 @@
             } 
         },
 
-        /** Stop the audio from playing **/
+        // Stop the audio from playing
         stop: function() {
             this._sink.kill();
             this._sink = null;
         },
 
-        /** Start the audio playing with the supplied function as the audio-block generator **/
+        // Start the audio playing with the supplied function as the audio-block generator
         play: function(generator) {
             var me = this;
 
@@ -79,8 +79,8 @@
             });
         },
 
-        /** test whether this driver is currently playing audio **/
-        is_playing: function() {
+        // test whether this driver is currently playing audio
+        isPlaying: function() {
             return this._sink !== null;
         },
 

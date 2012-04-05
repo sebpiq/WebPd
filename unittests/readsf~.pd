@@ -1,9 +1,0 @@
-#N canvas 234 268 450 300 10;
-#X obj 158 154 readsf~;
-#X obj 158 208 dac~;
-#X msg 158 83 open unittests/assets/hello.wav;
-#X obj 158 39 loadbang;
-#X connect 0 0 1 0;
-#X connect 0 0 1 1;
-#X connect 2 0 0 0;
-#X connect 3 0 2 0;

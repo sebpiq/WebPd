@@ -1,8 +1,0 @@
-print: 25
-print: 6
-print: 15
-error: inlet: expected 'float' but got 'x'
-print: 39
-error: *: no method for 'x'
-print: 12
-print: 35
