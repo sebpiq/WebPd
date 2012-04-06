@@ -7,7 +7,6 @@
 	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
 ***/
 
-// TODO: message should take an array, instead of having to parse everything themselves.
 // TODO: generic event/callback system
 
 (function(Pd){
@@ -114,8 +113,10 @@
 
         // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
-			if (inletId === 0) this.freq = this.toFloat(msg);
-            else if (inletId === 1 && msg == 'bang') this.phase = 0;
+			if (inletId === 0) {
+                this.assertIsNumber(msg);
+                this.freq = msg;
+            } else if (inletId === 1 && msg === 'bang') this.phase = 0;
 		}
 
 	});
@@ -185,18 +186,16 @@
 			}
 		},
 
-		message: function(inletId, message) {
-			if (inletId == 0) {
-				var parts = this.toArray(message);
+		message: function(inletId, y1, duration) {
+			if (inletId === 0) {
 				// if this is a single valued message we want line~ to output a constant value,
                 // otherwise the message is taken as [targetY duration(
-				if (parts.length == 1) {
-					var y0 = this.toFloat(parts[0]);
-					if (!isNaN(y0)) this.toDspConst(y0);
-				} else if (parts.length >= 2){
-					var y1 = this.toFloat(parts[0]);
-					var duration = this.toFloat(parts[1]);
-					if (!isNaN(y1) && !isNaN(duration)) this.toDspLine(y1, duration)
+                this.assertIsNumber(y1, 'invalid value ' + y1);
+				if (duration != undefined) {
+                    this.assertIsNumber(duration, 'invalid duration ' + duration);
+					this.toDspLine(y1, duration)
+				} else {
+					this.toDspConst(y1);
 				}
 			}
 		},
@@ -227,10 +226,10 @@
 			this.val = (val || 0);
 		},
 
-        message: function(inletId, msg) {
-            if (inletId == 1) {
-                var val = this.toFloat(msg);
-                if(!isNaN(val)) this.val = val;
+        message: function(inletId, val) {
+            if (inletId === 1) {
+                this.assertIsNumber(val, 'invalid constant value ' + val);
+                this.val = val;
             } 
         }
 
@@ -240,6 +239,9 @@
 	// dsp multiply object
 	Pd.objects['*~'] = DSPArithmBase.extend({
 
+        // TODO: optimize those dp ticks ... i.e. when a 
+        // connection is made the object receives an event
+        // and changes dspTick method, same when disconnected
 		dspTick: function() {
             var inBuff1 = this.inlets[0].getBuffer();
             var outBuff = this.outlets[0].getBuffer();
@@ -381,10 +383,9 @@
             this.dspTick = this.dspTickReading;
         },
 
-        message: function(inletId, msg) {
+        message: function(inletId, method, arg) {
 			if (inletId === 0) {
-                var parts = this.toArray(msg);
-                if (parts[0] == 'set') this.setTableName(parts[1]);
+                if (method == 'set') this.setTableName(arg);
             }
         }
     });
@@ -418,22 +419,21 @@
             }
         },
 
-        message: function(inletId, msg) {
+        message: function(inletId, arg1, arg2) {
 			if (inletId === 0) {
-                var parts = this.toArray(msg);
-                var method = parts[0];
-                if (method == 'set') {
-                    this.setTableName(parts[1]);
+                if (arg1 == 'set') {
+                    this.setTableName(arg2);
                     this.toDspTickZeros();
-                } else if (msg == 'bang') {
+                } else if (arg1 == 'bang') {
                     this.toDspTickReading(0);
-                } else if (parts.length == 1) {
-                    var startPos = this.toFloat(parts[0]);
-                    this.toDspTickReading(startPos);
-                } else if (parts.length == 2) {
-                    var startPos = this.toFloat(parts[0]);
-                    var sampleNum = this.toFloat(parts[1]);
-                    this.toDspTickReading(startPos, sampleNum);
+                } else if (arg1 != undefined) {
+                    this.assertIsNumber(arg1, 'not a valid start position ' + arg1);
+                    if (arg2 != undefined) {
+                        this.assertIsNumber(arg2, 'not a valid sample number ' + arg2);
+                        this.toDspTickReading(arg1, arg2);
+                    } else {
+                        this.toDspTickReading(arg1);
+                    }
                 }
             }
         },
@@ -475,25 +475,22 @@
             }
         },
 
-        message: function(inletId, msg) {
+        message: function(inletId, command, arg) {
 			if (inletId === 0) {
-                var parts = this.toArray(msg);
-                var method = parts[0];
-                if (method == 'set') {
-                    this.setTableName(parts[1]);
+                if (command == 'bang') {
+                    this.toDspTickWriting(0);
+                } else if (command == 'stop') {
                     this.toDspTickNoOp();
-                } else if (method == 'start') {
+                } else if (command == 'set') {
+                    this.setTableName(arg);
+                    this.toDspTickNoOp();
+                } else if (command == 'start') {
                     var pos = 0;
-                    if (parts.length > 1) {
-                        var pos = this.toFloat(parts[1]);
-                        if (isNaN(pos)) throw (new Error('invalid start position'));
-                        pos = Math.floor(pos);
+                    if (arg != undefined) {
+                        this.assertIsNumber(arg, 'invalid start position ' + arg);
+                        pos = Math.floor(arg);
                     }
                     this.toDspTickWriting(pos);
-                } else if (msg == 'bang') {
-                    this.toDspTickWriting(0);
-                } else if (method == 'stop') {
-                    this.toDspTickNoOp();
                 }
             }
         },
@@ -512,20 +509,18 @@
 
 		inletTypes: ['inlet'],
 		outletTypes: ['outlet'],
-        maxMidi: 8.17579891564 * Math.exp(.0577622650 * 1499),
+        maxMidiNote: 8.17579891564 * Math.exp(.0577622650 * 1499),
 
         // TODO: round output ?
-		message: function(inletId, msg) {
-			var input = this.toFloat(msg);
-			var out = 0;
-			if (isNaN(input)) {
-				this.patch.log("error: mtof: no method for '" + msg + "'");
-			} else {
-				if (input <= -1500) out = 0;
-                else if (input > 1499) out = this.maxMidi;
-				else out = 8.17579891564 * Math.exp(.0577622650 * input);
-				this.outlets[0].message(out);
-			}
+		message: function(inletId, note) {
+            if (inletId === 0) {
+                this.assertIsNumber(note, 'invalid midi note ' + note);
+			    var out = 0;
+			    if (note <= -1500) out = 0;
+                else if (note > 1499) out = this.maxMidiNote;
+			    else out = 8.17579891564 * Math.exp(.0577622650 * note);
+			    this.outlets[0].message(out);
+            }
 		}
 	});
 

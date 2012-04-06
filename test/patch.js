@@ -159,21 +159,4 @@ $(document).ready(function() {
         equal(obj3.inlets[1].sources.length, 0);
     });
 
-    test('parse : simple loadbang into print', function() {
-        var patchStr = '#N canvas 778 17 450 300 10;\n'
-            + '#X obj 14 13 loadbang;\n'
-            + '#X obj 14 34 print;\n'
-            + '#X connect 0 0 1 0;\n';
-        Pd.parse(patchStr, patch);
-
-        var loadbang = patch.getObject(0);
-        var print = patch.getObject(1);
-        ok(loadbang instanceof Pd.objects['loadbang']);
-        ok(print instanceof Pd.objects['print']);
-        equal(loadbang.outlets[0].sinks.length, 1);
-        equal(print.inlets[0].sources.length, 1);
-        equal(loadbang.outlets[0].sinks[0], print.inlets[0]);
-        equal(print.inlets[0].sources[0], loadbang.outlets[0]);
-    });
-
 });

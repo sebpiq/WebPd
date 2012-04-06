@@ -38,8 +38,6 @@
 	
     Pd.extend(Pd.Object.prototype, {
 
-    /******************** Methods to implement *****************/
-
 		// set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
 		endPoint: false,
 
@@ -49,6 +47,8 @@
         // Beware, inlet type doesn't have the exact same meaning as
         // outlet type, cause dsp capable inlets also take messages.  
 		inletTypes: [],
+
+    /******************** Methods to implement *****************/
 
         // This method is called when the object is created.
         // At this stage, the object can belong to a patch or not.
@@ -63,62 +63,15 @@
         // method which runs when this object receives a message at any inlet
 		message: function(inletnumber, message) {},
 
+    /********************** Helper methods *********************/
 
-    /******************** Common methods *********************/
+        assertIsNumber: function(val, errorMsg) {
+            if (!(typeof val === 'number')) throw (new Error(errorMsg));
+        },
 
-	    // Converts a Pd message to a float
-        // TODO: scientific notation, e.g. 2.999e-5
-	    toFloat: function(data) {
-		    // first check if we just got an actual float, return it if so
-		    if (!isNaN(data)) return parseFloat(data);
-		    // otherwise parse this thing
-		    var element = data.split(' ')[0];
-		    var foundfloat = parseFloat(element);
-		    if (!isNaN(foundfloat)) {
-			    element = foundfloat;
-		    } else if (element != 'symbol') {
-			    Pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
-			    element = '';
-		    } else {
-			    element = 0;
-		    }
-		    return element;
-	    },
-	
-	    // Converts a Pd message to a symbol
-	    toSymbol: function(data) {
-		    var element = data.split(' ')[0];
-		    if (!isNaN(parseFloat(element))) {
-			    element = 'symbol float';
-		    } else if (element != 'symbol') {
-			    Pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
-			    element = '';
-		    } else {
-			    element = 'symbol ' + data.split(' ')[1];
-		    }
-		    return element;
-	    },
-	
-	    // Convert a Pd message to a bang
-	    toBang: function(data) {
-		    return 'bang';
-	    },
-	
-	    // Convert a Pd message to a javascript array
-	    toArray: function(msg) {
-		    // if it's a string, split the atom
-		    if (typeof msg == 'string') {
-			    var parts = msg.split(' ');
-			    if (parts[0] == 'list') parts.shift();
-			    return parts;
-		    // if it's an int, make a single valued array
-		    } else if (typeof msg == 'number') {
-			    return [msg];
-		    // otherwise it's proably an object/array and should stay that way
-		    } else {
-			    return msg;
-		    }
-	    },
+        assertIsArray: function(val, errorMsg) {
+            if (!Pd.isArray(val)) throw (new Error(errorMsg));
+        },
 
     /******************** Basic dspTicks ************************/
         dspTickNoOp: function() {},

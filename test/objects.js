@@ -100,7 +100,7 @@ $(document).ready(function() {
         // receive frequency message
         var k2 = 2*Math.PI*660/Pd.sampleRate;
 
-        osc.inlets[0].message('660');
+        osc.inlets[0].message(660);
         expected = roundArray([cos(osc.phase+1*k2), cos(osc.phase+2*k2), cos(osc.phase+3*k2), cos(osc.phase+4*k2)], 4);
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), expected);
@@ -122,7 +122,7 @@ $(document).ready(function() {
         var k2 = 2*Math.PI*440/Pd.sampleRate;
         inlet0.testBuffer = null;
 
-        osc.inlets[0].message('440');
+        osc.inlets[0].message(440);
         osc.inlets[1].message('bang');
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*1), cos(k*2), cos(k*3), cos(k*4)], 4));
@@ -147,7 +147,7 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [4, 6, 6, 4]);
         // send message right inlet
         inlet1.testBuffer = null;
-        inlet1.message('3');
+        inlet1.message(3);
         mult.dspTick();
         deepEqual(toArray(outBuff), [3, 6, 9, 12]);
     });
@@ -171,7 +171,7 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [5.5, 5.5, 5.5, 5.5]);
         // send message right inlet
         inlet1.testBuffer = null;
-        inlet1.message('21');
+        inlet1.message(21);
         add.dspTick();
         deepEqual(toArray(outBuff), [22, 23, 24, 25]);
     });
@@ -237,7 +237,7 @@ $(document).ready(function() {
         equal(tabread.table, table2);
         raises(function() { tabread.setTableName('unknown table'); });
         equal(tabread.table, table2);
-        tabread.message(0, 'set table1');
+        tabread.inlets[0].message('set', 'table1');
         equal(tabread.table, table1);
     });
 
@@ -281,7 +281,7 @@ $(document).ready(function() {
         tabplay.dspTick();
         deepEqual(toArray(outBuff), [66, 0, 0, 0]);
         // play from position n samples [1 2(
-        tabplay.inlets[0].message('2 2');
+        tabplay.inlets[0].message(2, 2);
         tabplay.dspTick();
         deepEqual(toArray(outBuff), [33, 44, 0, 0]);
         tabplay.dspTick();
@@ -315,7 +315,7 @@ $(document).ready(function() {
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 8, 5]);
         // start + pos
-        tabwrite.inlets[0].message('start 3');
+        tabwrite.inlets[0].message('start', 3);
         inlet0.testBuffer = [9, 10, 11, 12];
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 9, 10]);
@@ -352,14 +352,14 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
 
         // jump to value
-        line.message(0, '1345.99');
+        line.inlets[0].message(1345.99);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
         // ramp to value
-        line.message(0, '1');
-        line.message(0, '2 1000'); // line to 2 in 1 millisecond
+        line.inlets[0].message(1);
+        line.inlets[0].message(2, 1000); // line to 2 in 1 millisecond
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1, 1.1, 1.2, 1.3]);
         line.dspTick();
@@ -368,13 +368,13 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 2), [1.8, 1.9, 2, 2]);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [2, 2, 2, 2]);
-        line.message(0, '1 200');
+        line.inlets[0].message(1, 200);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [2, 1.5, 1, 1]);
         // onStop callback
         var bla = 0;
         line.bla = 999;
-        line.inlets[0].message('0 700');
+        line.inlets[0].message(0, 700);
         line.onStop(function(obj) {bla = obj.bla;});
         line.dspTick();
         equal(bla, 0);
@@ -398,7 +398,7 @@ $(document).ready(function() {
         var mtof = new Pd.objects['mtof'](null);
 
         // < -1500
-        mtof.inlets[0].message('-1790');
+        mtof.inlets[0].message(-1790);
         equal(mtof.outlets[0].receivedMessage, 0);
 
         // >= 1500

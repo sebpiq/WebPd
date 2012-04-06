@@ -16,7 +16,9 @@ task('concat', [], function () {
             'src/portlets.js',
             'src/objectbase.js',
             'src/patch.js',
-            'src/objects.js'],
+            'src/objects.js',
+            'src/compat.js',
+        ],
         filesLeft = files.length,
         pathName = '.',
         outFile = fs.openSync('pd.js', 'w+');

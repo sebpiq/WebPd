@@ -32,6 +32,11 @@
     };
     Pd._patches = [];
 
+    // Returns true if an object is an array, false otherwise 
+    Pd.isArray = Array.isArray || function(obj) {
+        return toString.call(obj) == '[object Array]';
+    };
+
     // Simple prototype inheritance. Used like so ::
     //    
     //    var ChildObject = function() {};
