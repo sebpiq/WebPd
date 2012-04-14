@@ -110,6 +110,8 @@ $(document).ready(function() {
         var inlet0 = osc.inlets[0];
 
         inlet0.testBuffer = [770, 550, 330, 110];
+        osc.onInletConnect();
+
         expected = [cos(osc.phase+m*770), cos(osc.phase+m*770+m*550), cos(osc.phase+m*770+m*550+m*330), cos(osc.phase+m*770+m*550+m*330+m*110)]
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), roundArray(expected, 4));
@@ -121,6 +123,7 @@ $(document).ready(function() {
         // reset phase
         var k2 = 2*Math.PI*440/Pd.sampleRate;
         inlet0.testBuffer = null;
+        osc.onInletDisconnect();
 
         osc.inlets[0].message(440);
         osc.inlets[1].message('bang');

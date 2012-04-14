@@ -72,4 +72,46 @@ $(document).ready(function() {
         equal(c.blo, 456);
     });
 
+    test('EventsBase', function() {
+        var TestEvent = function() {
+            this.initEvents();
+        };
+        Pd.extend(TestEvent.prototype, Pd.EventsBase);
+        var testObject = new TestEvent();
+        var context = {};        
+
+        var counter = 1;
+        var blaCallback = function() {
+            this.bla = counter;
+            counter ++;
+        };
+
+        // Test .on
+        testObject.on('bla', blaCallback, context);
+        testObject.trigger('bla');
+        equal(context.bla, 1);
+        testObject.trigger('bla');
+        equal(context.bla, 2);
+
+        // Test .off
+        testObject.off('bla', blaCallback);
+        testObject.trigger('bla');
+        equal(context.bla, 2);
+
+        // Test .one
+        testObject.one('bla', blaCallback, context);
+        equal(context.bla, 2);
+        testObject.trigger('bla');
+        equal(context.bla, 3);
+        testObject.trigger('bla');
+        equal(context.bla, 3);
+
+        // Test removing .one with .off
+        testObject.one('bla', blaCallback, context);
+        testObject.off('bla', blaCallback);
+        equal(context.bla, 3);
+        testObject.trigger('bla');
+        equal(context.bla, 3);
+    });
+
 });

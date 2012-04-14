@@ -43,12 +43,14 @@
         // If the connection already exists, nothing happens.
         connect: function(source) {
             this._genericConnect(this.sources, source);
+            this.obj.onInletConnect();
         },
 
         // Disconnects the inlet from the outlet `source`.
         // If the connection didn't exist, nothing happens.
         disconnect: function(source) {
             this._genericDisconnect(this.sources, source);
+            this.obj.onInletDisconnect();
         },
 
         // message received callback

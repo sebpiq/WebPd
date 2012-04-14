@@ -85,37 +85,64 @@
 		outletTypes: ['outlet~'],
 
 		init: function(freq) {
-			this.freq = freq || 0;
+			this.setFreq(freq || 0);
 			this.phase = 0;
+            this.dspTick = this.dspTickConstFreq;
 		},
 
-		dspTick: function() {
-            var dspInlet = this.inlets[0];
+        load: function() {
+            // TODO: this needs to be recalculated on sampleRate change
+            this.J = 2 * Math.PI / this.patch.sampleRate;
+        },
+
+        // Sets the frequency for the constant frequency dspTick method.
+        setFreq: function(freq) {
+            this.freq = freq;
+            this.K = 2 * Math.PI * this.freq / this.patch.sampleRate;
+        },
+
+        // Calculates the cos taking the frequency from dsp inlet
+		dspTickVariableFreq: function() {
+            var inBuff = this.inlets[0].getBuffer();
             var outBuff = this.outlets[0].getBuffer();
+            var J = this.J;
 
-            // We listen to the first inlet for frequency, only
-            // if there's actually a dsp source connected to it.
-            if (dspInlet.hasDspSources()) {
-			    var inBuff = dspInlet.getBuffer();
-                var J = 2 * Math.PI / this.patch.sampleRate;
-			    for (var i=0; i<outBuff.length; i++) {
-                    this.phase += J * inBuff[i];
-				    outBuff[i] = Math.cos(this.phase);
-			    }
-            } else {
-                var K = 2 * Math.PI * this.freq / this.patch.sampleRate;
-			    for (var i=0; i<outBuff.length; i++) {
-                    this.phase += K;
-				    outBuff[i] = Math.cos(this.phase);
-			    }
-            }
+		    for (var i=0; i<outBuff.length; i++) {
+                this.phase += J * inBuff[i];
+			    outBuff[i] = Math.cos(this.phase);
+		    }
 		},
+
+        // Calculates the cos with a constant frequency from first inlet
+        dspTickConstFreq: function() {
+            var outBuff = this.outlets[0].getBuffer();
+            var K = this.K;
+
+		    for (var i=0; i<outBuff.length; i++) {
+                this.phase += K;
+			    outBuff[i] = Math.cos(this.phase);
+		    }
+        },
+
+        // On inlet connection, we change dspTick method if appropriate
+        onInletConnect: function() {
+            if (this.inlets[0].hasDspSources()) {
+                this.dspTick = this.dspTickVariableFreq;
+            }
+        },
+
+        // On inlet disconnection, we change dspTick method if appropriate
+        onInletDisconnect: function() {
+            if (!this.inlets[0].hasDspSources()) {
+                this.dspTick = this.dspTickConstFreq;
+            }
+        },
 
         // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
 			if (inletId === 0) {
                 this.assertIsNumber(msg);
-                this.freq = msg;
+                this.setFreq(msg);
             } else if (inletId === 1 && msg === 'bang') this.phase = 0;
 		}
 

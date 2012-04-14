@@ -77,6 +77,69 @@
         return child;
     };
 
+    // Simple mixin to add event management to objects.
+    // To initialize the mixin, `initEvents` must be run at object initialization.
+    Pd.EventsBase = {
+
+        // Must be run to initialize event management on a new object.
+        initEvents: function() {
+            this._cbs = {};
+            this._cbsOne = {};
+        },
+
+        // Binds a `callback` to an `event`. Callback will be called in `context`.
+        on: function(event, callback, context) {
+            this._genericOn(this._cbs, event, callback, context);
+            return this;
+        },
+
+        // Binds a `callback` to an `event`. Callback will be called in `context`.
+        // Once the callback has been run one time, it is removed from the callback list.
+        one: function(event, callback, context) {
+            this._genericOn(this._cbsOne, event, callback, context);
+            return this;
+        },
+
+        // Helper function to bind a callback.
+        _genericOn: function(cbsArray, event, callback, context) {
+            if (!callback || !event) return this;
+            var eventCbs = cbsArray[event] || (cbsArray[event] = []);
+            eventCbs.push({callback: callback, context: context});
+            return this;
+        },
+
+        // Unbinds `callback` from `event`.
+        off: function(event, callback) {
+            if (!callback || !event) return this;
+            var cbObj;
+            var removeCbs = function(array) {
+                var i = 0;
+                while (i < array.length) {
+                    cbObj = array[i];
+                    if (cbObj.callback == callback) array.splice(i, 1);
+                    else i++;
+                }
+            };
+            removeCbs(this._cbs[event] || []);
+            removeCbs(this._cbsOne[event] || []);
+            return this;
+        },
+
+        // Triggers `event` on the calling object, thus calling the bound callbacks.
+        trigger: function(event) {
+            var allCbs = (this._cbs[event] || []).concat(this._cbsOne[event] || []);
+            var cbObj;
+            for (var i=0; i<allCbs.length; i++) {
+                cbObj = allCbs[i];
+                cbObj.callback.apply(cbObj.context);
+            }
+            delete this._cbsOne[event];
+            return this;
+        }
+
+    };
+
+
     Pd.notImplemented = function() { throw new Error('Not implemented !'); };
 
     // log a message to console

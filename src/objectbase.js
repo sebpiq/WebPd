@@ -57,11 +57,17 @@
         // This method is called by the patch when it starts playing.
         load: function() {},
 
-        // method which runs every frame for this object
+        // method run every frame for this object
 		dspTick: function() {},
 
-        // method which runs when this object receives a message at any inlet
+        // method run when this object receives a message at any inlet
 		message: function(inletnumber, message) {},
+
+        // methods run when a new connection is made to one of the object's inlets
+        onInletConnect: function() {},
+
+        // methods run when a connection is removed from one of the object's inlets
+        onInletDisconnect: function() {},
 
     /********************** Helper methods *********************/
 
