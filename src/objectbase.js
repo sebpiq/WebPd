@@ -26,6 +26,9 @@
 		    this.inlets[i] = new Pd[inletTypes[i]](this, i);
 	    }
 
+        // initializes event management system
+        this.initEvents();
+
         // pre-initializes the object, handling the creation arguments
 	    this.init.apply(this, args);
         // if object was created in a patch, we add it to the graph
@@ -36,7 +39,7 @@
         }
     };
 	
-    Pd.extend(Pd.Object.prototype, {
+    Pd.extend(Pd.Object.prototype, Pd.EventsBase, {
 
 		// set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
 		endPoint: false,

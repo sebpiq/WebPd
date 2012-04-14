@@ -12,28 +12,6 @@
 (function(Pd){
 
 
-/************************** Mixins ******************************/
-
-    var StopEventMixin = {
-
-        init: function(tableName) {
-            // callbaks to execute when the object stop's recording for any reason
-            this._onStopCbs = [];
-        },
-        
-        onStop: function(callback) {
-            this._onStopCbs.push(callback);
-        },
-
-        _execOnStop: function() {
-            var callbacks = this._onStopCbs;
-            callbacks.reverse();
-            while(callbacks.length) callbacks.pop().call(this, this);
-        }
-
-    };
-
-
 /************************** Basic objects ******************************/
 
     Pd.objects = {
@@ -85,12 +63,15 @@
 		outletTypes: ['outlet~'],
 
 		init: function(freq) {
-			this.setFreq(freq || 0);
+            this.setFreq(freq || 0);
 			this.phase = 0;
             this.dspTick = this.dspTickConstFreq;
+            this.on('inletConnect', this._onInletConnect, this);
+            this.on('inletDisconnect', this._onInletDisconnect, this);
 		},
 
         load: function() {
+			this.setFreq(this.freq);
             // TODO: this needs to be recalculated on sampleRate change
             this.J = 2 * Math.PI / this.patch.sampleRate;
         },
@@ -98,7 +79,8 @@
         // Sets the frequency for the constant frequency dspTick method.
         setFreq: function(freq) {
             this.freq = freq;
-            this.K = 2 * Math.PI * this.freq / this.patch.sampleRate;
+            // TODO: this needs to be recalculated on sampleRate change
+            if (this.patch) this.K = 2 * Math.PI * this.freq / this.patch.sampleRate;
         },
 
         // Calculates the cos taking the frequency from dsp inlet
@@ -124,27 +106,27 @@
 		    }
         },
 
-        // On inlet connection, we change dspTick method if appropriate
-        onInletConnect: function() {
-            if (this.inlets[0].hasDspSources()) {
-                this.dspTick = this.dspTickVariableFreq;
-            }
-        },
-
-        // On inlet disconnection, we change dspTick method if appropriate
-        onInletDisconnect: function() {
-            if (!this.inlets[0].hasDspSources()) {
-                this.dspTick = this.dspTickConstFreq;
-            }
-        },
-
         // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
 			if (inletId === 0) {
                 this.assertIsNumber(msg);
                 this.setFreq(msg);
             } else if (inletId === 1 && msg === 'bang') this.phase = 0;
-		}
+		},
+
+        // On inlet connection, we change dspTick method if appropriate
+        _onInletConnect: function() {
+            if (this.inlets[0].hasDspSources()) {
+                this.dspTick = this.dspTickVariableFreq;
+            }
+        },
+
+        // On inlet disconnection, we change dspTick method if appropriate
+        _onInletDisconnect: function() {
+            if (!this.inlets[0].hasDspSources()) {
+                this.dspTick = this.dspTickConstFreq;
+            }
+        }
 
 	});
 
@@ -169,13 +151,12 @@
 
 
 	// creates simple dsp lines
-	Pd.objects['line~'] = Pd.Object.extend(StopEventMixin, {
+	Pd.objects['line~'] = Pd.Object.extend({
 
 		inletTypes: ['inlet'],
 		outletTypes: ['outlet~'],
 
 		init: function() {
-            StopEventMixin.init.call(this);
 			// what the value was at the start of the line
 			this.y0 = 0;
 			// the destination value we are aiming for
@@ -205,7 +186,7 @@
 				if (this.n >= this.nMax) {
                     for (var j=i; j<outBuffLength; j++) outBuff[j] = this.y1;
                     this.toDspConst(this.y1);
-                    this._execOnStop();
+                    this.trigger('end');
                     break;
 				} else {
 					outBuff[i] = this.n * slope + this.y0;
@@ -266,9 +247,6 @@
 	// dsp multiply object
 	Pd.objects['*~'] = DSPArithmBase.extend({
 
-        // TODO: optimize those dp ticks ... i.e. when a 
-        // connection is made the object receives an event
-        // and changes dspTick method, same when disconnected
 		dspTick: function() {
             var inBuff1 = this.inlets[0].getBuffer();
             var outBuff = this.outlets[0].getBuffer();
@@ -419,14 +397,13 @@
 
 
     // play data from a table with no interpolation
-    Pd.objects['tabplay~'] = DSPTabBase.extend(StopEventMixin, {
+    Pd.objects['tabplay~'] = DSPTabBase.extend({
 
         inletTypes: ['inlet'],
         outletTypes: ['outlet~'],
 
         init: function(tableName) {
             DSPTabBase.prototype.init.call(this, tableName);
-            StopEventMixin.init.call(this);
             this.pos = 0;
             this.posMax = 0;        // the position after the last position to be read
             this.toDspTickZeros();
@@ -442,7 +419,7 @@
             if (this.pos == this.posMax) {
                 for (var j=i; j<outBuff.length; j++) outBuff[j] = 0;
                 this.toDspTickZeros();
-                this._execOnStop();
+                this.trigger('end');
             }
         },
 
@@ -477,14 +454,13 @@
 
 
     // read data from a table with no interpolation
-    Pd.objects['tabwrite~'] = DSPTabBase.extend(StopEventMixin, {
+    Pd.objects['tabwrite~'] = DSPTabBase.extend({
 
         inletTypes: ['inlet~'],
         endPoint: true,
 
         init: function(tableName) {
             DSPTabBase.prototype.init.call(this, tableName);
-            StopEventMixin.init.call(this);
             this.pos = 0;
             this.toDspTickNoOp();
         },
@@ -498,7 +474,7 @@
             // If we reached table size, that's it
             if (this.pos == this.table.size) {
                 this.toDspTickNoOp();
-                this._execOnStop();
+                this.trigger('end');
             }
         },
 

@@ -77,6 +77,7 @@ $(document).ready(function() {
         // no frequency (=0)
         var osc = new Pd.objects['osc~'](null);
         osc.patch = dummyPatch;
+        osc.load();
         var outBuff = osc.outlets[0].getBuffer();
         var expected = [];
 
@@ -87,6 +88,7 @@ $(document).ready(function() {
         // frequency argument 
         var osc = new Pd.objects['osc~'](null, [440]);
         osc.patch = dummyPatch;
+        osc.load();
         var k = 2*Math.PI*440/Pd.sampleRate
         var outBuff = osc.outlets[0].getBuffer();
 
@@ -110,7 +112,7 @@ $(document).ready(function() {
         var inlet0 = osc.inlets[0];
 
         inlet0.testBuffer = [770, 550, 330, 110];
-        osc.onInletConnect();
+        osc.trigger('inletConnect');
 
         expected = [cos(osc.phase+m*770), cos(osc.phase+m*770+m*550), cos(osc.phase+m*770+m*550+m*330), cos(osc.phase+m*770+m*550+m*330+m*110)]
         osc.dspTick();
@@ -123,7 +125,7 @@ $(document).ready(function() {
         // reset phase
         var k2 = 2*Math.PI*440/Pd.sampleRate;
         inlet0.testBuffer = null;
-        osc.onInletDisconnect();
+        osc.trigger('inletDisconnect');
 
         osc.inlets[0].message(440);
         osc.inlets[1].message('bang');
@@ -332,10 +334,10 @@ $(document).ready(function() {
         tabwrite.inlets[0].message('stop');
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [1, 2, 3, 4, 10]);
-        // onStop callback
+        // end callback
         var bla = 0;
         tabwrite.inlets[0].message('bang');
-        tabwrite.onStop(function(obj) {bla = obj.tableName;});
+        tabwrite.on('end', function(obj) {bla = tabwrite.tableName;});
         tabwrite.dspTick();
         equal(bla, 0);
         tabwrite.dspTick();
@@ -374,11 +376,11 @@ $(document).ready(function() {
         line.inlets[0].message(1, 200);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [2, 1.5, 1, 1]);
-        // onStop callback
+        // end callback
         var bla = 0;
         line.bla = 999;
         line.inlets[0].message(0, 700);
-        line.onStop(function(obj) {bla = obj.bla;});
+        line.on('end', function(obj) {bla = line.bla;});
         line.dspTick();
         equal(bla, 0);
         line.dspTick();
