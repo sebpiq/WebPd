@@ -232,6 +232,9 @@
 
 		init: function(val) {
 			this.val = (val || 0);
+            this.dspTick = this.dspTickConstant;
+            this.on('inletConnect', this._onInletConnect, this);
+            this.on('inletDisconnect', this._onInletDisconnect, this);
 		},
 
         message: function(inletId, val) {
@@ -239,28 +242,50 @@
                 this.assertIsNumber(val, 'invalid constant value ' + val);
                 this.val = val;
             } 
-        }
+        },
 
+        // This is the dspTick method used when there is a dsp connection in inlet 1
+        dspTickVariable: Pd.notImplemented,
+
+        // This is the dspTick method used when there is NO dsp connection in inlet 1
+        dspTickConstant: Pd.notImplemented,
+
+        // On inlet connection, we change dspTick method if appropriate
+        _onInletConnect: function() {
+            if (this.inlets[1].hasDspSources()) {
+                this.dspTick = this.dspTickVariable;
+            }
+        },
+
+        // On inlet disconnection, we change dspTick method if appropriate
+        _onInletDisconnect: function() {
+            if (!this.inlets[1].hasDspSources()) {
+                this.dspTick = this.dspTickConstant;
+            }
+        }
     });
 
 
 	// dsp multiply object
 	Pd.objects['*~'] = DSPArithmBase.extend({
 
-		dspTick: function() {
+        dspTickVariable: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] * inBuff2[i];
+		    }
+        },
+
+        dspTickConstant: function() {
             var inBuff1 = this.inlets[0].getBuffer();
             var outBuff = this.outlets[0].getBuffer();
-            if (this.inlets[1].hasDspSources()) {
-                var inBuff2 = this.inlets[1].getBuffer();
-			    for (var i=0; i < outBuff.length; i++) {
-				    outBuff[i] = inBuff1[i] * inBuff2[i];
-			    }
-            } else {
-			    for (var i=0; i < outBuff.length; i++) {
-				    outBuff[i] = inBuff1[i] * this.val;
-			    }
-            }
-		}
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] * val;
+		    }
+        }
 
 	});
 
@@ -268,23 +293,25 @@
 	// dsp divide object (d_arithmetic.c line 454 - over_perform() )
 	Pd.objects['/~'] = DSPArithmBase.extend({
 
-		dspTick: function() {
+        dspTickVariable: function() {
             var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
             var outBuff = this.outlets[0].getBuffer();
             var val2;
-			// return zero if denominator is zero
-            if (this.inlets[1].hasDspSources()) {
-                var inBuff2 = this.inlets[1].getBuffer();
-			    for (var i=0; i < outBuff.length; i++) {
-                    val2 = inBuff2[i];
-				    outBuff[i] = (val2 ? inBuff1[i] / inBuff2[i] : 0);
-			    }
-            } else {
-			    for (var i=0; i < outBuff.length; i++) {
-				    outBuff[i] = (this.val ? inBuff1[i] / this.val : 0);
-			    }
-            }
-		}
+		    for (var i=0; i < outBuff.length; i++) {
+                val2 = inBuff2[i];
+			    outBuff[i] = (val2 ? inBuff1[i] / val2 : 0);
+		    }
+        },
+
+        dspTickConstant: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = (val ? inBuff1[i] / val : 0);
+		    }
+        }
 
 	});
 	
@@ -292,20 +319,23 @@
 	// dsp addition object
 	Pd.objects['+~'] = DSPArithmBase.extend({
 
-		dspTick: function() {
+        dspTickVariable: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] + inBuff2[i];
+		    }
+        },
+
+        dspTickConstant: function() {
             var inBuff1 = this.inlets[0].getBuffer();
             var outBuff = this.outlets[0].getBuffer();
-            if (this.inlets[1].hasDspSources()) {
-                var inBuff2 = this.inlets[1].getBuffer();
-			    for (var i=0; i < outBuff.length; i++) {
-				    outBuff[i] = inBuff1[i] + inBuff2[i];
-			    }
-            } else {
-			    for (var i=0; i < outBuff.length; i++) {
-				    outBuff[i] = inBuff1[i] + this.val;
-			    }
-            }
-		}
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] + val;
+		    }
+        }
 
 	});
 
@@ -313,20 +343,23 @@
 	// dsp substraction object
 	Pd.objects['-~'] = DSPArithmBase.extend({
 
-		dspTick: function() {
+        dspTickVariable: function() {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] - inBuff2[i];
+		    }
+        },
+
+        dspTickConstant: function() {
             var inBuff1 = this.inlets[0].getBuffer();
             var outBuff = this.outlets[0].getBuffer();
-            if (this.inlets[1].hasDspSources()) {
-                var inBuff2 = this.inlets[1].getBuffer();
-			    for (var i=0; i < outBuff.length; i++) {
-				    outBuff[i] = inBuff1[i] - inBuff2[i];
-			    }
-            } else {
-			    for (var i=0; i < outBuff.length; i++) {
-				    outBuff[i] = inBuff1[i] - this.val;
-			    }
-            }
-		}
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] - val;
+		    }
+        }
 
 	});
 

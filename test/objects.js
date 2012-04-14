@@ -148,10 +148,12 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [2, 4, 6, 8]);
         // dsp right inlet
         inlet1.testBuffer = [4, 3, 2, 1];
+        mult.trigger('inletConnect');
         mult.dspTick();
         deepEqual(toArray(outBuff), [4, 6, 6, 4]);
         // send message right inlet
         inlet1.testBuffer = null;
+        mult.trigger('inletDisconnect');
         inlet1.message(3);
         mult.dspTick();
         deepEqual(toArray(outBuff), [3, 6, 9, 12]);
@@ -172,10 +174,12 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [12, 13, 14, 15]);
         // dsp right inlet
         inlet1.testBuffer = [4.5, 3.5, 2.5, 1.5];
+        add.trigger('inletConnect');
         add.dspTick();
         deepEqual(toArray(outBuff), [5.5, 5.5, 5.5, 5.5]);
         // send message right inlet
         inlet1.testBuffer = null;
+        add.trigger('inletDisconnect');
         inlet1.message(21);
         add.dspTick();
         deepEqual(toArray(outBuff), [22, 23, 24, 25]);
@@ -196,10 +200,12 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), [1.4, 0.4, -0.55, -4]);
         // dsp right inlet
         inlet1.testBuffer = [2.5, 1, 0.45, -4];
+        subs.trigger('inletConnect');
         subs.dspTick();
         deepEqual(roundArray(outBuff, 4), [-0.1, 0.4, 0, 1]);
         // send message right inlet
         inlet1.testBuffer = null;
+        subs.trigger('inletDisconnect');
         inlet1.message(-1.5);
         subs.dspTick();
         deepEqual(roundArray(outBuff, 4), [3.9, 2.9, 1.95, -1.5]);
@@ -220,10 +226,12 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), [1, 11, -3.3, 4]);
         // dsp right inlet
         inlet1.testBuffer = [1, 33, 0, 10];
+        divid.trigger('inletConnect');
         divid.dspTick();
         deepEqual(roundArray(outBuff, 4), [3, 1, 0, 1.2]);
         // send message right inlet
         inlet1.testBuffer = null;
+        divid.trigger('inletDisconnect');
         inlet1.message(0.1);
         divid.dspTick();
         deepEqual(roundArray(outBuff, 4), [30, 330, -99, 120]);
