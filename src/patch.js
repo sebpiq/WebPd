@@ -116,12 +116,12 @@
 
 		    if (!this.audio.isPlaying()) {
 			    Pd.debug('Starting audio.');
+            	// fetch the actual samplerate from the audio driver
+	            this.sampleRate = this.audio.getSampleRate();
                 // TODO: should load called with post-order traversal,
                 //        to ensure all children gets loaded before their parents ? 
                 this.mapObjects(function(obj) { obj.load(); });
 			    this.audio.play(function() { return me.generateFrame(); });
-            	// fetch the actual samplerate from the audio driver
-	            this.sampleRate = this.audio.getSampleRate();
                 // reset frame counts
 			    this.frame = 0;
 			    this.mapObjects(function(obj) { obj.frame = 0; });
