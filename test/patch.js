@@ -99,7 +99,15 @@ $(document).ready(function() {
         deepEqual([ep2.objName, ep2.checked], ['ep2', true]);
     });
 
-    test('graphiness : connect/disconnect', function() {
+    test('graphiness : getAllObjects', function() {
+        patch.addObject(obj1);
+        patch.addObject(obj2);
+        patch.addTable(table1);
+
+        deepEqual(patch.getAllObjects(), [obj1, obj2, table1]);
+    });
+
+    test('graphiness : connect/disconnect/getAllConnections', function() {
         var SomeSource = MyObject.extend({outletTypes: ['outlet~', 'outlet']});
         var SomeSink = MyObject.extend({inletTypes: ['inlet~', 'inlet']});
         var obj1 = new SomeSource(patch, ['obj1']);
@@ -115,11 +123,13 @@ $(document).ready(function() {
         equal(obj2.inlets[0].sources.length, 1);
         equal(obj1.outlets[0].sinks[0], obj2.inlets[0]);
         equal(obj2.inlets[0].sources[0], obj1.outlets[0]);
+        deepEqual(patch.getAllConnections(), [[obj1.outlets[0], obj2.inlets[0]]]);
 
         // connection exists, nothing happens
         patch.connect(ind1, 0, ind2, 0);
         equal(obj1.outlets[0].sinks.length, 1);
         equal(obj2.inlets[0].sources.length, 1);
+        deepEqual(patch.getAllConnections(), [[obj1.outlets[0], obj2.inlets[0]]]);
 
         // message connection
         patch.connect(ind1, 1, ind2, 1);
@@ -127,6 +137,10 @@ $(document).ready(function() {
         equal(obj2.inlets[1].sources.length, 1);
         equal(obj1.outlets[1].sinks[0], obj2.inlets[1]);
         equal(obj2.inlets[1].sources[0], obj1.outlets[1]);
+        deepEqual(patch.getAllConnections(), [
+            [obj1.outlets[0], obj2.inlets[0]],
+            [obj1.outlets[1], obj2.inlets[1]]
+        ]);
 
         // works also by passing object instances
         patch.connect(obj1, 1, obj3, 1);
@@ -134,6 +148,11 @@ $(document).ready(function() {
         equal(obj3.inlets[1].sources.length, 1);
         equal(obj1.outlets[1].sinks[1], obj3.inlets[1]);
         equal(obj3.inlets[1].sources[0], obj1.outlets[1]);
+        deepEqual(patch.getAllConnections(), [
+            [obj1.outlets[0], obj2.inlets[0]],
+            [obj1.outlets[1], obj2.inlets[1]],
+            [obj1.outlets[1], obj3.inlets[1]]
+        ]);
 
         // unknown object
         raises(function() { patch.connect(unknownInd, 0, ind2, 0); });
@@ -144,11 +163,19 @@ $(document).ready(function() {
         patch.disconnect(ind1, 0, ind2, 0);
         equal(obj1.outlets[0].sinks.length, 0); 
         equal(obj2.inlets[0].sources.length, 0);
+        deepEqual(patch.getAllConnections(), [
+            [obj1.outlets[1], obj2.inlets[1]],
+            [obj1.outlets[1], obj3.inlets[1]]
+        ]);
 
         // connection doesn't exists, nothing happens
         patch.disconnect(ind1, 0, ind2, 0);
         equal(obj1.outlets[0].sinks.length, 0); 
         equal(obj2.inlets[0].sources.length, 0);
+        deepEqual(patch.getAllConnections(), [
+            [obj1.outlets[1], obj2.inlets[1]],
+            [obj1.outlets[1], obj3.inlets[1]]
+        ]);
 
         // more disconnections
         patch.disconnect(ind1, 1, ind2, 1);
@@ -157,6 +184,7 @@ $(document).ready(function() {
         patch.disconnect(obj1, 1, obj3, 1);
         equal(obj1.outlets[1].sinks.length, 0);
         equal(obj3.inlets[1].sources.length, 0);
+        deepEqual(patch.getAllConnections(), []);
     });
 
 });

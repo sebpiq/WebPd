@@ -197,6 +197,28 @@
             source.outlets[outletId].disconnect(sink.inlets[inletId]);
         },
 
+        // Returns an array of all objects in the patch
+        getAllObjects: function() {
+            return this._graph.objects.slice(0);
+        },
+
+        // Returns all connections in the graph as an array
+        // of pairs `(inlet, outlet)`.
+        getAllConnections: function() {
+            var connections = [];
+            var allObjs = this.getAllObjects();
+            for (var i=0; i<allObjs.length; i++) {
+                var obj = allObjs[i];
+                for (var j=0; j<obj.outlets.length; j++) {
+                    var source = obj.outlets[j];
+                    for (var k=0; k<source.sinks.length; k++) {
+                        connections.push([source, source.sinks[k]]);
+                    }
+                }
+            }
+            return connections;
+        },
+
         // takes an object or an object id, and returns an object.
         _toObject: function(objectOrId) {
             if (!(objectOrId instanceof Pd.Object)) {
