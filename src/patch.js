@@ -146,12 +146,26 @@
         // This also causes the patch to automatically assign an id to that object.
         // This id can be used to uniquely identify the object in the patch.
         addObject: function(obj) {
-            var id = this._generateId();
-            obj.id = id;
-            obj.patch = this;
-            this._graph.objects[id] = obj;
-		    if (obj.endPoint) this._graph.endPoints.push(obj);
-		    Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);
+            if (this._graph.objects.indexOf(obj) == -1) {
+                var id = this._generateId();
+                obj.id = id;
+                obj.patch = this;
+                this._graph.objects[id] = obj;
+		        if (obj.endPoint) this._graph.endPoints.push(obj);
+		        Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);
+            }
+        },
+
+        // Remove the object from the patch.
+        // If the object is not in the patch, nothing happens.
+        removeObject: function(obj) {
+            var conns = this.getAllConnections(obj);
+            for (var i=0; i<conns.length; i++) {
+                this.disconnect(conns[i][0], conns[i][1]);
+            }
+            delete this._graph.objects[obj.id];
+            var ind = this._graph.endPoints.indexOf(obj);
+            if (ind != -1) this._graph.endPoints.splice(ind, 1);
         },
 
         // Returns an object given its id in the patch, or `null` if an object
@@ -174,7 +188,7 @@
 
         // Calls the function `iterator(obj)` on all the patch's objects. 
         mapObjects: function(iterator) {
-            this._map(this._graph.objects, iterator);
+            this._map(this.getAllObjects(), iterator);
         },
 
         // Calls the function `iterator(obj)` on all the patch's end points. 
@@ -198,21 +212,42 @@
 
         // Returns an array of all objects in the patch
         getAllObjects: function() {
-            return this._graph.objects.slice(0);
+            var objects = this._graph.objects;
+            var filtered = [];
+            var obj;
+            for (var i=0; i<objects.length; i++) {
+                if (objects[i]) filtered.push(objects[i]);
+            }
+            return filtered;
         },
 
         // Returns all connections in the graph as an array
         // of pairs `(inlet, outlet)`. If `obj` is provided, 
-        // this returns only the connections for `obj`.
+        // this returns only the connections from/to `obj`.
         getAllConnections: function(obj) {
             var connections = [];
-            var allObjs = obj ? [obj] : this.getAllObjects();
-            for (var i=0; i<allObjs.length; i++) {
-                var obj = allObjs[i];
+            if (obj == undefined) {
+                var allObjs = this.getAllObjects();
+                for (var i=0; i<allObjs.length; i++) {
+                    var obj = allObjs[i];
+                    for (var j=0; j<obj.outlets.length; j++) {
+                        var source = obj.o(j);
+                        for (var k=0; k<source.sinks.length; k++) {
+                            connections.push([source, source.sinks[k]]);
+                        }
+                    }
+                }
+            } else {
                 for (var j=0; j<obj.outlets.length; j++) {
-                    var source = obj.outlets[j];
+                    var source = obj.o(j);
                     for (var k=0; k<source.sinks.length; k++) {
                         connections.push([source, source.sinks[k]]);
+                    }
+                }
+                for (var j=0; j<obj.inlets.length; j++) {
+                    var sink = obj.i(j);
+                    for (var k=0; k<sink.sources.length; k++) {
+                        connections.push([sink.sources[k], sink]);
                     }
                 }
             }

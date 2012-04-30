@@ -33,11 +33,17 @@ $(document).ready(function() {
 
     test('graphiness : addObject / getObject', function() {
 
+        // Add an object
         patch.addObject(obj1);
         var ind1 = obj1.id;
         ok(ind1 != undefined);
         deepEqual(patch.getObject(ind1), obj1);
 
+        // Add same object
+        patch.addObject(obj1);
+        equal(ind1, obj1.id);
+
+        // Add second object
         patch.addObject(obj2);
         var ind2 = obj2.id;
         ok(ind2 != undefined);
@@ -45,7 +51,39 @@ $(document).ready(function() {
         equal(patch.getObject(ind1), obj1);
         equal(patch.getObject(ind2), obj2);
 
+        // Get unknown object
         equal(patch.getObject(8888009098080879), null);
+    });
+
+    test('graphiness : removeObject', function() {
+        var SomeSource = MyObject.extend({outletTypes: ['outlet~']});
+        var SomeSink = MyObject.extend({inletTypes: ['inlet~'], outletTypes: ['outlet~'], endPoint: true});
+        var SomeEndPoint = MyObject.extend({inletTypes: ['inlet~']});
+        var obj1 = new SomeSource(patch, ['obj1']);
+        var obj2 = new SomeSink(patch, ['obj2']);
+        var obj3 = new SomeEndPoint(patch, ['obj3']);
+        patch.addObject(obj1);
+        patch.addObject(obj2);
+        patch.addObject(obj3);
+        patch.connect(obj1.o(0), obj2.i(0));
+        patch.connect(obj2.o(0), obj3.i(0));
+
+        deepEqual(patch._graph.objects, [obj1, obj2, obj3]);
+        deepEqual(patch._graph.endPoints, [obj2]);
+        deepEqual(patch.getAllConnections(), [
+            [obj1.o(0), obj2.i(0)],
+            [obj2.o(0), obj3.i(0)]
+        ]);
+
+        patch.removeObject(obj3);
+        deepEqual(patch._graph.objects, [obj1, obj2, undefined]);
+        deepEqual(patch._graph.endPoints, [obj2]);
+        deepEqual(patch.getAllConnections(), [[obj1.o(0), obj2.i(0)]]);
+
+        patch.removeObject(obj1);
+        deepEqual(patch._graph.objects, [undefined, obj2, undefined]);
+        deepEqual(patch._graph.endPoints, [obj2]);
+        deepEqual(patch.getAllConnections(), []);
     });
 
     test('graphiness : addTable / getObject', function() {
@@ -102,8 +140,8 @@ $(document).ready(function() {
     test('graphiness : getAllObjects', function() {
         patch.addObject(obj1);
         patch.addObject(obj2);
+        deepEqual(patch.getAllObjects(), [obj1, obj2]);
         patch.addTable(table1);
-
         deepEqual(patch.getAllObjects(), [obj1, obj2, table1]);
     });
 
