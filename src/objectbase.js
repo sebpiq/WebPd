@@ -51,6 +51,18 @@
         // outlet type, cause dsp capable inlets also take messages.  
 		inletTypes: [],
 
+        // Returns inlet `id` if it exists.
+        i: function(id) {
+            if (id < this.inlets.length) return this.inlets[id];
+            else throw (new Error('invalid inlet ' + id));
+        },
+
+        // Returns outlet `id` if it exists.
+        o: function(id) {
+            if (id < this.outlets.length) return this.outlets[id];
+            else throw (new Error('invalid outlet ' + id));
+        },
+
     /******************** Methods to implement *****************/
 
         // This method is called when the object is created.
@@ -65,12 +77,6 @@
 
         // method run when this object receives a message at any inlet
 		message: function(inletnumber, message) {},
-
-        // methods run when a new connection is made to one of the object's inlets
-        onInletConnect: function() {},
-
-        // methods run when a connection is removed from one of the object's inlets
-        onInletDisconnect: function() {},
 
     /********************** Helper methods *********************/
 

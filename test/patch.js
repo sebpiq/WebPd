@@ -107,84 +107,136 @@ $(document).ready(function() {
         deepEqual(patch.getAllObjects(), [obj1, obj2, table1]);
     });
 
-    test('graphiness : connect/disconnect/getAllConnections', function() {
+    test('graphiness : connect', function() {
         var SomeSource = MyObject.extend({outletTypes: ['outlet~', 'outlet']});
         var SomeSink = MyObject.extend({inletTypes: ['inlet~', 'inlet']});
         var obj1 = new SomeSource(patch, ['obj1']);
         var obj2 = new SomeSink(patch, ['obj2']);
         var obj3 = new SomeSink(patch, ['obj3']);
-        var ind1 = obj1.id;
-        var ind2 = obj2.id;
-        var unknownInd = 781863726392839;
+        var obj4 = new SomeSink(null, ['obj3']);
 
         // dsp connection
-        patch.connect(ind1, 0, ind2, 0);
-        equal(obj1.outlets[0].sinks.length, 1);
-        equal(obj2.inlets[0].sources.length, 1);
-        equal(obj1.outlets[0].sinks[0], obj2.inlets[0]);
-        equal(obj2.inlets[0].sources[0], obj1.outlets[0]);
-        deepEqual(patch.getAllConnections(), [[obj1.outlets[0], obj2.inlets[0]]]);
+        patch.connect(obj1.o(0), obj2.i(0));
+        equal(obj1.o(0).sinks.length, 1);
+        equal(obj2.i(0).sources.length, 1);
+        equal(obj1.o(0).sinks[0], obj2.i(0));
+        equal(obj2.i(0).sources[0], obj1.o(0));
 
         // connection exists, nothing happens
-        patch.connect(ind1, 0, ind2, 0);
-        equal(obj1.outlets[0].sinks.length, 1);
-        equal(obj2.inlets[0].sources.length, 1);
-        deepEqual(patch.getAllConnections(), [[obj1.outlets[0], obj2.inlets[0]]]);
+        patch.connect(obj1.o(0), obj2.i(0));
+        equal(obj1.o(0).sinks.length, 1);
+        equal(obj2.i(0).sources.length, 1);
 
         // message connection
-        patch.connect(ind1, 1, ind2, 1);
-        equal(obj1.outlets[1].sinks.length, 1);
-        equal(obj2.inlets[1].sources.length, 1);
-        equal(obj1.outlets[1].sinks[0], obj2.inlets[1]);
-        equal(obj2.inlets[1].sources[0], obj1.outlets[1]);
-        deepEqual(patch.getAllConnections(), [
-            [obj1.outlets[0], obj2.inlets[0]],
-            [obj1.outlets[1], obj2.inlets[1]]
-        ]);
+        patch.connect(obj1.o(1), obj2.i(1));
+        equal(obj1.o(1).sinks.length, 1);
+        equal(obj2.i(1).sources.length, 1);
+        equal(obj1.o(1).sinks[0], obj2.i(1));
+        equal(obj2.i(1).sources[0], obj1.o(1));
 
         // works also by passing object instances
-        patch.connect(obj1, 1, obj3, 1);
-        equal(obj1.outlets[1].sinks.length, 2);
-        equal(obj3.inlets[1].sources.length, 1);
-        equal(obj1.outlets[1].sinks[1], obj3.inlets[1]);
-        equal(obj3.inlets[1].sources[0], obj1.outlets[1]);
-        deepEqual(patch.getAllConnections(), [
-            [obj1.outlets[0], obj2.inlets[0]],
-            [obj1.outlets[1], obj2.inlets[1]],
-            [obj1.outlets[1], obj3.inlets[1]]
-        ]);
+        patch.connect(obj1.o(1), obj3.i(1));
+        equal(obj1.o(1).sinks.length, 2);
+        equal(obj3.i(1).sources.length, 1);
+        equal(obj1.o(1).sinks[1], obj3.i(1));
+        equal(obj3.i(1).sources[0], obj1.o(1));
 
         // unknown object
-        raises(function() { patch.connect(unknownInd, 0, ind2, 0); });
-        equal(obj2.inlets[0].sources.length, 1);
-        equal(obj2.inlets[0].sources[0], obj1.outlets[0]);
+        raises(function() { patch.connect(obj4.o(0), obj2.i(0)); });
+        equal(obj2.i(0).sources.length, 1);
+        equal(obj2.i(0).sources[0], obj1.o(0));
 
         // disconnections
-        patch.disconnect(ind1, 0, ind2, 0);
-        equal(obj1.outlets[0].sinks.length, 0); 
-        equal(obj2.inlets[0].sources.length, 0);
-        deepEqual(patch.getAllConnections(), [
-            [obj1.outlets[1], obj2.inlets[1]],
-            [obj1.outlets[1], obj3.inlets[1]]
-        ]);
+        patch.disconnect(obj1.o(0), obj2.i(0));
+        equal(obj1.o(0).sinks.length, 0); 
+        equal(obj2.i(0).sources.length, 0);
 
         // connection doesn't exists, nothing happens
-        patch.disconnect(ind1, 0, ind2, 0);
-        equal(obj1.outlets[0].sinks.length, 0); 
-        equal(obj2.inlets[0].sources.length, 0);
-        deepEqual(patch.getAllConnections(), [
-            [obj1.outlets[1], obj2.inlets[1]],
-            [obj1.outlets[1], obj3.inlets[1]]
-        ]);
+        patch.disconnect(obj1.o(0), obj2.i(0));
+        equal(obj1.o(0).sinks.length, 0); 
+        equal(obj2.i(0).sources.length, 0);
 
         // more disconnections
-        patch.disconnect(ind1, 1, ind2, 1);
-        equal(obj1.outlets[1].sinks.length, 1);
-        equal(obj2.inlets[1].sources.length, 0);
-        patch.disconnect(obj1, 1, obj3, 1);
-        equal(obj1.outlets[1].sinks.length, 0);
-        equal(obj3.inlets[1].sources.length, 0);
-        deepEqual(patch.getAllConnections(), []);
+        patch.disconnect(obj1.o(1), obj2.i(1));
+        equal(obj1.o(1).sinks.length, 1);
+        equal(obj2.i(1).sources.length, 0);
+        patch.disconnect(obj1.o(1), obj3.i(1));
+        equal(obj1.o(1).sinks.length, 0);
+        equal(obj3.i(1).sources.length, 0);
+    });
+
+    test('graphiness : disconnect', function() {
+        var SomeSource = MyObject.extend({outletTypes: ['outlet~', 'outlet']});
+        var SomeSink = MyObject.extend({inletTypes: ['inlet~', 'inlet']});
+        var obj1 = new SomeSource(patch, ['obj1']);
+        var obj2 = new SomeSink(patch, ['obj2']);
+        var obj3 = new SomeSink(patch, ['obj3']);
+        var obj4 = new SomeSink(null, ['obj3']);
+
+        patch.connect(obj1.o(0), obj2.i(0));
+        patch.connect(obj1.o(1), obj2.i(1));
+        patch.connect(obj1.o(1), obj3.i(1));
+
+        // disconnections
+        patch.disconnect(obj1.o(0), obj2.i(0));
+        equal(obj1.o(0).sinks.length, 0); 
+        equal(obj2.i(0).sources.length, 0);
+
+        // connection doesn't exists, nothing happens
+        patch.disconnect(obj1.o(0), obj2.i(0));
+        equal(obj1.o(0).sinks.length, 0); 
+        equal(obj2.i(0).sources.length, 0);
+
+        // more disconnections
+        patch.disconnect(obj1.o(1), obj2.i(1));
+        equal(obj1.o(1).sinks.length, 1);
+        equal(obj2.i(1).sources.length, 0);
+        patch.disconnect(obj1.o(1), obj3.i(1));
+        equal(obj1.o(1).sinks.length, 0);
+        equal(obj3.i(1).sources.length, 0);
+    });
+
+    test('graphiness : getAllConnections', function() {
+        var SomeSource = MyObject.extend({outletTypes: ['outlet~', 'outlet']});
+        var SomeSink = MyObject.extend({inletTypes: ['inlet~', 'inlet']});
+        var obj1 = new SomeSource(patch, ['obj1']);
+        var obj2 = new SomeSink(patch, ['obj2']);
+        var obj3 = new SomeSink(patch, ['obj3']);
+        var obj4 = new SomeSource(patch, ['obj4']);
+
+        patch.connect(obj1.o(0), obj2.i(0));
+        deepEqual(patch.getAllConnections(), [[obj1.o(0), obj2.i(0)]]);
+        deepEqual(patch.getAllConnections(obj1), [[obj1.o(0), obj2.i(0)]]);
+
+        patch.connect(obj1.o(1), obj2.i(1));
+        deepEqual(patch.getAllConnections(), [
+            [obj1.o(0), obj2.i(0)],
+            [obj1.o(1), obj2.i(1)]
+        ]);
+
+        patch.connect(obj1.o(1), obj3.i(1));
+        deepEqual(patch.getAllConnections(), [
+            [obj1.o(0), obj2.i(0)],
+            [obj1.o(1), obj2.i(1)],
+            [obj1.o(1), obj3.i(1)]
+        ]);
+
+        patch.disconnect(obj1.o(0), obj2.i(0));
+        deepEqual(patch.getAllConnections(), [
+            [obj1.o(1), obj2.i(1)],
+            [obj1.o(1), obj3.i(1)]
+        ]);
+
+        patch.connect(obj4.o(0), obj2.i(0));
+        deepEqual(patch.getAllConnections(), [
+            [obj1.o(1), obj2.i(1)],
+            [obj1.o(1), obj3.i(1)],
+            [obj4.o(0), obj2.i(0)]
+        ]);
+        deepEqual(patch.getAllConnections(obj1), [
+            [obj1.o(1), obj2.i(1)],
+            [obj1.o(1), obj3.i(1)]
+        ]);
     });
 
 });

@@ -119,8 +119,9 @@
 				    lastTable = null;
 
 			    } else if (elementType == 'connect') {
-                    pd.connect(parseInt(tokens[2]), parseInt(tokens[3]), 
-                                    parseInt(tokens[4]), parseInt(tokens[5]));
+                    var obj1 = pd.getObject(parseInt(tokens[2]));
+                    var obj2 = pd.getObject(parseInt(tokens[4]));
+                    pd.connect(obj1.o(parseInt(tokens[3])), obj2.i(parseInt(tokens[5])));
                 }
 
 		    } else if (chunkType == '#A') {

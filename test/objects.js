@@ -78,7 +78,7 @@ $(document).ready(function() {
         var osc = new Pd.objects['osc~'](null);
         osc.patch = dummyPatch;
         osc.load();
-        var outBuff = osc.outlets[0].getBuffer();
+        var outBuff = osc.o(0).getBuffer();
         var expected = [];
 
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
@@ -90,7 +90,7 @@ $(document).ready(function() {
         osc.patch = dummyPatch;
         osc.load();
         var k = 2*Math.PI*440/Pd.sampleRate
-        var outBuff = osc.outlets[0].getBuffer();
+        var outBuff = osc.o(0).getBuffer();
 
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         osc.dspTick();
@@ -102,14 +102,14 @@ $(document).ready(function() {
         // receive frequency message
         var k2 = 2*Math.PI*660/Pd.sampleRate;
 
-        osc.inlets[0].message(660);
+        osc.i(0).message(660);
         expected = roundArray([cos(osc.phase+1*k2), cos(osc.phase+2*k2), cos(osc.phase+3*k2), cos(osc.phase+4*k2)], 4);
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), expected);
 
         // receive frequency signal
         var m = 2*Math.PI/Pd.sampleRate;
-        var inlet0 = osc.inlets[0];
+        var inlet0 = osc.i(0);
 
         inlet0.testBuffer = [770, 550, 330, 110];
         osc.trigger('inletConnect');
@@ -127,17 +127,17 @@ $(document).ready(function() {
         inlet0.testBuffer = null;
         osc.trigger('inletDisconnect');
 
-        osc.inlets[0].message(440);
-        osc.inlets[1].message('bang');
+        osc.i(0).message(440);
+        osc.i(1).message('bang');
         osc.dspTick();
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*1), cos(k*2), cos(k*3), cos(k*4)], 4));
     });
 
     test('*~', function() {
         var mult = new Pd.objects['*~'](null, [2]);
-        var outBuff = mult.outlets[0].getBuffer();
-        var inlet0 = mult.inlets[0];
-        var inlet1 = mult.inlets[1];
+        var outBuff = mult.o(0).getBuffer();
+        var inlet0 = mult.i(0);
+        var inlet1 = mult.i(1);
 
         inlet0.testBuffer = [0, 0, 0, 0];
         mult.dspTick();
@@ -161,9 +161,9 @@ $(document).ready(function() {
 
     test('+~', function() {
         var add = new Pd.objects['+~'](null, [11]);
-        var outBuff = add.outlets[0].getBuffer();
-        var inlet0 = add.inlets[0];
-        var inlet1 = add.inlets[1];
+        var outBuff = add.o(0).getBuffer();
+        var inlet0 = add.i(0);
+        var inlet1 = add.i(1);
 
         inlet0.testBuffer = [0, 0, 0, 0];
         add.dspTick();
@@ -187,9 +187,9 @@ $(document).ready(function() {
 
     test('-~', function() {
         var subs = new Pd.objects['-~'](null, [1]);
-        var outBuff = subs.outlets[0].getBuffer();
-        var inlet0 = subs.inlets[0];
-        var inlet1 = subs.inlets[1];
+        var outBuff = subs.o(0).getBuffer();
+        var inlet0 = subs.i(0);
+        var inlet1 = subs.i(1);
 
         inlet0.testBuffer = [0, 0, 0, 0];
         subs.dspTick();
@@ -213,9 +213,9 @@ $(document).ready(function() {
 
     test('/~', function() {
         var divid = new Pd.objects['/~'](null, [3]);
-        var outBuff = divid.outlets[0].getBuffer();
-        var inlet0 = divid.inlets[0];
-        var inlet1 = divid.inlets[1];
+        var outBuff = divid.o(0).getBuffer();
+        var inlet0 = divid.i(0);
+        var inlet1 = divid.i(1);
 
         inlet0.testBuffer = [0, 0, 0, 0];
         divid.dspTick();
@@ -250,7 +250,7 @@ $(document).ready(function() {
         equal(tabread.table, table2);
         raises(function() { tabread.setTableName('unknown table'); });
         equal(tabread.table, table2);
-        tabread.inlets[0].message('set', 'table1');
+        tabread.i(0).message('set', 'table1');
         equal(tabread.table, table1);
     });
 
@@ -261,8 +261,8 @@ $(document).ready(function() {
         tabread.load();
 
         table.data = [11, 22, 33, 44, 55, 66, 77, 88, 99, 100];
-        var inlet0 = tabread.inlets[0];
-        var outBuff = tabread.outlets[0].getBuffer();
+        var inlet0 = tabread.i(0);
+        var outBuff = tabread.o(0).getBuffer();
         // normal read
         inlet0.testBuffer = [0, 1, 2, 3];
         tabread.dspTick();
@@ -280,21 +280,21 @@ $(document).ready(function() {
         tabplay.load();
 
         table.data = [11, 22, 33, 44, 55, 66];
-        var outBuff = tabplay.outlets[0].getBuffer();
+        var outBuff = tabplay.o(0).getBuffer();
         // play all
-        tabplay.inlets[0].message('bang');
+        tabplay.i(0).message('bang');
         tabplay.dspTick();
         deepEqual(toArray(outBuff), [11, 22, 33, 44]);
         tabplay.dspTick();
         deepEqual(toArray(outBuff), [55, 66, 0, 0]);
         // play from position
-        tabplay.inlets[0].message(1);
+        tabplay.i(0).message(1);
         tabplay.dspTick();
         deepEqual(toArray(outBuff), [22, 33, 44, 55]);
         tabplay.dspTick();
         deepEqual(toArray(outBuff), [66, 0, 0, 0]);
         // play from position n samples [1 2(
-        tabplay.inlets[0].message(2, 2);
+        tabplay.i(0).message(2, 2);
         tabplay.dspTick();
         deepEqual(toArray(outBuff), [33, 44, 0, 0]);
         tabplay.dspTick();
@@ -307,44 +307,44 @@ $(document).ready(function() {
         var table = new Pd.objects['table'](patch, ['table1', 5]);
         tabwrite.load();
 
-        var inlet0 = tabwrite.inlets[0];
+        var inlet0 = tabwrite.i(0);
         // idle
         deepEqual(toArray(table.data), [0, 0, 0, 0, 0]);
         inlet0.testBuffer = [0, 1, 2, 3];
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [0, 0, 0, 0, 0]);
         // bang
-        tabwrite.inlets[0].message('bang');
+        tabwrite.i(0).message('bang');
         inlet0.testBuffer = [4, 1, 2, 3];
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [4, 1, 2, 3, 0]);
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [4, 1, 2, 3, 4]);
         // start
-        tabwrite.inlets[0].message('start');
+        tabwrite.i(0).message('start');
         inlet0.testBuffer = [5, 6, 7, 8];
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 8, 4]);
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 8, 5]);
         // start + pos
-        tabwrite.inlets[0].message('start', 3);
+        tabwrite.i(0).message('start', 3);
         inlet0.testBuffer = [9, 10, 11, 12];
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 9, 10]);
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [5, 6, 7, 9, 10]);
         // stop
-        tabwrite.inlets[0].message('bang');
+        tabwrite.i(0).message('bang');
         inlet0.testBuffer = [1, 2, 3, 4];
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [1, 2, 3, 4, 10]);
-        tabwrite.inlets[0].message('stop');
+        tabwrite.i(0).message('stop');
         tabwrite.dspTick();
         deepEqual(toArray(table.data), [1, 2, 3, 4, 10]);
         // end callback
         var bla = 0;
-        tabwrite.inlets[0].message('bang');
+        tabwrite.i(0).message('bang');
         tabwrite.on('end', function(obj) {bla = tabwrite.tableName;});
         tabwrite.dspTick();
         equal(bla, 0);
@@ -359,20 +359,20 @@ $(document).ready(function() {
         var line = new Pd.objects['line~']();
         line.patch = dummyPatch;
         
-        var outBuff = line.outlets[0].getBuffer();
+        var outBuff = line.o(0).getBuffer();
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         line.dspTick();
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
 
         // jump to value
-        line.inlets[0].message(1345.99);
+        line.i(0).message(1345.99);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1345.99, 1345.99, 1345.99, 1345.99]);
         // ramp to value
-        line.inlets[0].message(1);
-        line.inlets[0].message(2, 1000); // line to 2 in 1 millisecond
+        line.i(0).message(1);
+        line.i(0).message(2, 1000); // line to 2 in 1 millisecond
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [1, 1.1, 1.2, 1.3]);
         line.dspTick();
@@ -381,13 +381,13 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 2), [1.8, 1.9, 2, 2]);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [2, 2, 2, 2]);
-        line.inlets[0].message(1, 200);
+        line.i(0).message(1, 200);
         line.dspTick();
         deepEqual(roundArray(outBuff, 2), [2, 1.5, 1, 1]);
         // end callback
         var bla = 0;
         line.bla = 999;
-        line.inlets[0].message(0, 700);
+        line.i(0).message(0, 700);
         line.on('end', function(obj) {bla = line.bla;});
         line.dspTick();
         equal(bla, 0);
@@ -411,18 +411,18 @@ $(document).ready(function() {
         var mtof = new Pd.objects['mtof'](null);
 
         // < -1500
-        mtof.inlets[0].message(-1790);
-        equal(mtof.outlets[0].receivedMessage, 0);
+        mtof.i(0).message(-1790);
+        equal(mtof.o(0).receivedMessage, 0);
 
         // >= 1500
-        mtof.inlets[0].message(1500);
-        equal(round(mtof.outlets[0].receivedMessage), round(8.17579891564 * Math.exp(.0577622650 * 1499)));
-        mtof.inlets[0].message(2000);
-        equal(round(mtof.outlets[0].receivedMessage), round(8.17579891564 * Math.exp(.0577622650 * 1499)));
+        mtof.i(0).message(1500);
+        equal(round(mtof.o(0).receivedMessage), round(8.17579891564 * Math.exp(.0577622650 * 1499)));
+        mtof.i(0).message(2000);
+        equal(round(mtof.o(0).receivedMessage), round(8.17579891564 * Math.exp(.0577622650 * 1499)));
 
         // -1500 < val < 1500
-        mtof.inlets[0].message(69);
-        equal(round(mtof.outlets[0].receivedMessage), 440);
+        mtof.i(0).message(69);
+        equal(round(mtof.o(0).receivedMessage), 440);
     });
 
 

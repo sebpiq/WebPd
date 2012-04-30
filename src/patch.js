@@ -182,19 +182,18 @@
             this._map(this._graph.endPoints, iterator);
         },
 
-        // Connects two objects. `source` and `sink` can be either the object instances,
-        // or their id in the graph. 
-        connect: function(source, outletId, sink, inletId) {
-	        var source = this._toObject(source);
-	        var sink = this._toObject(sink);
-            source.outlets[outletId].connect(sink.inlets[inletId]);
+        // Connects an inlet to an outlet. If those are already connected, nothing happens
+        connect: function(inlet, outlet) {
+            this._checkContainsObj(inlet.obj);
+            this._checkContainsObj(outlet.obj);
+            outlet.connect(inlet);
         },
 
-        // Disconnects two objects. See `connect`.
-        disconnect: function(source, outletId, sink, inletId) {
-	        var source = this._toObject(source);
-	        var sink = this._toObject(sink);
-            source.outlets[outletId].disconnect(sink.inlets[inletId]);
+        // Disconnects two portlets. See `connect`.
+        disconnect: function(inlet, outlet) {
+            this._checkContainsObj(inlet.obj);
+            this._checkContainsObj(outlet.obj);
+            outlet.disconnect(inlet);
         },
 
         // Returns an array of all objects in the patch
@@ -203,10 +202,11 @@
         },
 
         // Returns all connections in the graph as an array
-        // of pairs `(inlet, outlet)`.
-        getAllConnections: function() {
+        // of pairs `(inlet, outlet)`. If `obj` is provided, 
+        // this returns only the connections for `obj`.
+        getAllConnections: function(obj) {
             var connections = [];
-            var allObjs = this.getAllObjects();
+            var allObjs = obj ? [obj] : this.getAllObjects();
             for (var i=0; i<allObjs.length; i++) {
                 var obj = allObjs[i];
                 for (var j=0; j<obj.outlets.length; j++) {
@@ -219,13 +219,11 @@
             return connections;
         },
 
-        // takes an object or an object id, and returns an object.
-        _toObject: function(objectOrId) {
-            if (!(objectOrId instanceof Pd.Object)) {
-		        var objectOrId = this.getObject(objectOrId);
+        // Throws an error if `obj` is not in the patch.
+        _checkContainsObj: function(obj) {
+            if (this._graph.objects.indexOf(obj) == -1) {
+                throw (new Error('this object is not in the patch'));
             }
-            if (objectOrId === null) throw (new Error('Unknown object ' + objectOrId));
-            return objectOrId;
         },
 
         // this method calls the function `iterator` on every element of `array`

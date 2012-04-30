@@ -13,10 +13,10 @@ $(document).ready(function() {
         var print = patch.getObject(1);
         ok(loadbang instanceof Pd.objects['loadbang']);
         ok(print instanceof Pd.objects['print']);
-        equal(loadbang.outlets[0].sinks.length, 1);
-        equal(print.inlets[0].sources.length, 1);
-        equal(loadbang.outlets[0].sinks[0], print.inlets[0]);
-        equal(print.inlets[0].sources[0], loadbang.outlets[0]);
+        equal(loadbang.o(0).sinks.length, 1);
+        equal(print.i(0).sources.length, 1);
+        equal(loadbang.o(0).sinks[0], print.i(0));
+        equal(print.i(0).sources[0], loadbang.o(0));
     });
 
     test('toArray', function() {
