@@ -196,17 +196,17 @@
             this._map(this._graph.endPoints, iterator);
         },
 
-        // Connects an inlet to an outlet. If those are already connected, nothing happens
-        connect: function(inlet, outlet) {
-            this._checkContainsObj(inlet.obj);
+        // Connects an outlet to an inlet. If those are already connected, nothing happens
+        connect: function(outlet, inlet) {
             this._checkContainsObj(outlet.obj);
+            this._checkContainsObj(inlet.obj);
             outlet.connect(inlet);
         },
 
         // Disconnects two portlets. See `connect`.
-        disconnect: function(inlet, outlet) {
-            this._checkContainsObj(inlet.obj);
+        disconnect: function(outlet, inlet) {
             this._checkContainsObj(outlet.obj);
+            this._checkContainsObj(inlet.obj);
             outlet.disconnect(inlet);
         },
 

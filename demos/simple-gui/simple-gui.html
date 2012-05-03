@@ -1,0 +1,435 @@
+<html>
+<head>
+	<title>Simple GUI</title>
+	<script src="../../pd.js"></script>
+    <script src="../../test/lib/jquery-1.7.1.js"></script>
+    <script src="../../test/lib/d3.v2.js"></script>
+	<script>
+        var portletWidth = 15;
+        var portletHeight = 10;
+        var getObjWidth = function(obj) {
+            var maxPortlet = Math.max(obj.inlets.length, obj.outlets.length);
+            var textLength = obj.__display__.text.length * 9;
+            return Math.max((maxPortlet-1) * 75, 75, textLength);
+        };
+        var objectHeight = 40;
+        var _makeGetPortletX = function(portlets) {
+            return function(portlet) {
+                var obj = portlet.obj;
+                var L = getObjWidth(obj);
+                var n = obj[portlets].length;
+                if (portlet.id == 0) return 0;
+                else if (portlet.id == n-1) return L - portletWidth;
+                else {
+                    // Space between portlets
+                    var a = (L-n*portletWidth) / (n-1);
+                    return portlet.id * (portletWidth + a);
+                }
+            };
+        };
+        var getInletX = _makeGetPortletX('inlets');
+        var getOutletX = _makeGetPortletX('outlets');
+        var _makeTranslate = function(x, y) {
+            return 'translate(' + x + ',' + y + ')';
+        };
+
+        var getInletAbsX = function(inlet) {
+            return getInletX(inlet) + inlet.obj.__display__.x;
+        };
+        var getOutletAbsX = function(outlet) {
+            return getOutletX(outlet) + outlet.obj.__display__.x;
+        };
+        var getInletAbsY = function(inlet) {return 0 + inlet.obj.__display__.y;} ;
+        var getOutletAbsY = function(outlet) {return objectHeight - portletHeight + outlet.obj.__display__.y;} ;
+
+        var connectionKey = function(conn) {
+            return ''+conn[0].obj.id+':'+conn[0].id+'-'
+                    +conn[1].obj.id+':'+conn[1].id;
+        };
+        var objectKey = function(obj) {
+            return obj.id;
+        };
+        var setConnectionXY = function(line) {
+            line.attr('x1', function(conn) {
+                    return getOutletAbsX(conn[0]) + portletWidth/2;
+                })
+                .attr('y1', function(conn) {
+                    return getOutletAbsY(conn[0]) + portletHeight;
+                })
+                .attr('x2', function(conn) {
+                    return getInletAbsX(conn[1]) + portletWidth/2;
+                })
+                .attr('y2', function(conn) {
+                    return getInletAbsY(conn[1]);
+                });
+        };
+
+        // variables used for establishing connections,
+        // and deleting objects and connections.
+        var outlet = null;
+        var hovered = [];
+        var selected = null;
+
+        var patch = new Pd.Patch();
+        //patch.play();
+
+        var chart;
+
+        $(function() {
+            chart = d3.select('svg').attr('class', 'canvas');
+            chart.on('click', function() {
+                selected = null;
+                d3.selectAll('line.connection')
+                    .classed('selected', false);
+                d3.selectAll('g.objectGroup')
+                    .classed('selected', false);
+            });
+
+        // Deletion of objects or connections
+            $('body').keyup(function(event) {
+                if (event.keyCode == 46 && selected) {
+                    if (selected.type == 'object') {
+                        patch.removeObject(selected.datum);
+                        chart.selectAll('g.objectGroup')
+                            .data(patch.getAllObjects(), objectKey)
+                            .exit().remove();
+                        chart.selectAll('line.connection')
+                            .data(patch.getAllConnections(), connectionKey)
+                            .exit().remove();
+                    } else if (selected.type == 'connection') {
+                        patch.disconnect(selected.datum[0], selected.datum[1]);
+                        chart.selectAll('line.connection')
+                            .data(patch.getAllConnections(), connectionKey)
+                            .exit().remove();
+                    }
+                }
+            });
+        });
+
+        function newObject(objType, args) {
+            // Creating object and adding it to the graph
+            var obj = new Pd.objects[objType](patch, args);
+            patch.addObject(obj);
+            
+            // Add `__display__` object to the graph objects
+            obj.__display__ = {
+                x: 0,
+                y: 0,
+                text: obj.type + ' ' + args.join(' ')
+            };
+
+            // Object group
+            var gsEnter = chart.selectAll('g')
+                .data(patch.getAllObjects(), objectKey)
+                .enter()
+                .append('g')
+                .attr('class', 'objectGroup')
+                .attr('transform', _makeTranslate(5, 5))
+                .on('click', function(obj) {
+                    selected = {
+                        datum: obj,
+                        elem: this,
+                        type: 'object'
+                    };
+                    d3.selectAll('line.connection')
+                        .classed('selected', false);
+                    d3.selectAll('g.objectGroup')
+                        .classed('selected', false);
+                    d3.select(this)
+                        .classed('selected', true);
+                    // Stop event propagation so that the canvas
+                    // doesn't receive the click.
+                    d3.event.stopPropagation();
+                });
+
+            // Object box
+            gsEnter.append('rect')
+                .attr('class', 'object')
+                .attr('width', getObjWidth)
+                .attr('height', objectHeight);
+
+            // Object text
+            gsEnter.append('text')
+                .attr('class', 'objectType')
+                .text(function(obj) {return obj.__display__.text;})
+                .attr('dy', objectHeight/2 + portletHeight/2)
+                .attr('dx', portletWidth);
+
+            // Inlets
+            gsEnter
+                .selectAll('rect.objectType') // TODO: why does this selector even work ???
+                .data(function(obj) {return obj.inlets})
+                .enter()
+                .append('rect')
+                .classed('inlet', true)
+                .classed('portlet', true)
+                .attr('width', portletWidth)
+                .attr('height', portletHeight)
+                .attr('x', getInletX);
+
+            // Outlets
+            gsEnter
+                .selectAll('rect.objectType')
+                .data(function(obj) {return obj.outlets})
+                .enter()
+                .append('rect')
+                .classed('outlet', true)
+                .classed('portlet', true)
+                .attr('width', portletWidth)
+                .attr('height', portletHeight)
+                .attr('x', getOutletX)
+                .attr('y', objectHeight - portletHeight)
+                .call(d3.behavior.drag()
+
+            // Creating new connections
+                    .on('dragstart', function(outlet) {
+                        // draw new connection
+                        d3.select(this).classed('connectPortlet', true);
+                        chart.selectAll('rect.inlet')
+                            .on('mouseover', function(inlet) {
+                                hovered.push(inlet);
+                                d3.select(this).classed('connectPortlet', true);
+                            })
+                            .on('mouseout', function(inlet) {
+                                var ind;
+                                if ((ind = hovered.indexOf(inlet)) != -1) hovered.splice(ind, 1);
+                                d3.select(this).classed('connectPortlet', false);
+                            });
+                        var x = getOutletAbsX(outlet);
+                        var y = getOutletAbsY(outlet);
+                        chart.append('line')
+                            .classed('connection', true)
+                            .classed('newConnection', true)
+                            .attr('x1', x + portletWidth/2)
+                            .attr('y1', y + portletHeight)
+                            .attr('x2', x + portletWidth/2)
+                            .attr('y2', y);
+                    })
+                    .on('drag', function(outlet) {
+                        // update new connection
+                        var conn = chart.select('line.newConnection');
+                        var x2 = parseInt(conn.attr('x2'), 10) + d3.event.dx;
+                        var y2 = parseInt(conn.attr('y2'), 10) + d3.event.dy;
+                        conn.attr('x2', x2);
+                        conn.attr('y2', y2);
+                    })
+                    .on('dragend', function(outlet) {
+                        // clean stuff set-up just for the new connection 
+                        chart.selectAll('rect.inlet')
+                            .on('mouseover', function(inlet) {})
+                            .on('mouseout', function(inlet) {});
+                        d3.select(this).classed('connectPortlet', false);
+                        chart.select('line.newConnection').remove();
+                        chart.selectAll('rect.inlet').classed('connectPortlet', false);
+                        // create the actual connection in the patch,
+                        // and update the display.
+                        if (hovered.length) {
+                            var inlet = hovered[0];
+                            patch.connect(outlet, inlet);
+                            lines = chart.selectAll('line.connection')
+                                .data(patch.getAllConnections(), connectionKey)
+                                .enter()
+                                .append('line')
+                                .attr('class', 'connection')
+                                .call(setConnectionXY)
+                                .on('click', function(conn) {
+                                    // Selecting the connection
+                                    selected = {
+                                        type: 'connection',
+                                        datum: conn,
+                                        elem: this
+                                    };
+                                    d3.selectAll('line.connection')
+                                        .classed('selected', false);
+                                    d3.selectAll('g.objectGroup')
+                                        .classed('selected', false);
+                                    d3.select(this)
+                                        .classed('selected', true);
+                                    // Stop event propagation so that the canvas
+                                    // doesn't receive the click.
+                                    d3.event.stopPropagation();
+                                });
+                            hovered = [];
+                        }
+                    })
+
+                )
+                .on('mousedown', function() {
+                    // Prevent bubbling so that drag and drop
+                    // of whole object doesn't occur when creating
+                    // a connection
+                    d3.event.stopPropagation();
+                });
+
+            // Dragging objects
+            gsEnter
+                .call(d3.behavior.drag()
+                    .on('dragstart', function(obj) {})
+                    .on('drag', function(obj) {
+                        var x = obj.__display__.x += d3.event.dx;
+                        var y = obj.__display__.y += d3.event.dy;
+                        d3.select(this).attr('transform', _makeTranslate(x, y));
+                        chart.selectAll('line.connection')
+                            .data(patch.getAllConnections(obj), connectionKey)
+                            .call(setConnectionXY);
+                    })
+                    .on('dragend', function(obj) {})
+                );
+
+        }
+
+        var toExpanded = function(li) {
+            $('.newObject').show();
+            $('.hideNewObject').hide();
+            $('.newObject', li).hide();
+            $('.hideNewObject', li).show();
+            $('form').hide();
+            $('form', li).show();
+            $(li).addClass('expanded');
+        };
+
+        var toCollapsed = function(li) {
+            $('.newObject', li).show();
+            $('.hideNewObject', li).hide();
+            $('form', li).hide();
+            $('input[type=text]', li).val('');
+            $(li).removeClass('expanded');
+        };
+
+        $(function() {
+            for (obj in Pd.objects) {
+                var objLiItem = $('<li class="objLiElem">'
+                    + '<a class="newObject" href="">+</a>'
+                    + '<a class="hideNewObject" href="">-</a>'
+                    + '<span class="objType">' + obj + '</span>'
+                    + '<form><input type="text" /><input type="submit" value="Create" /></form>'
+                    +'</li>');
+                $('#objectsAvailable').append(objLiItem);
+                toCollapsed(objLiItem);
+
+                $(objLiItem).click(function(event) {
+                    var objLiElem = $(event.currentTarget);
+                    if (objLiElem.hasClass('expanded')) {
+                        toCollapsed(objLiElem);
+                    } else {
+                        toExpanded(objLiElem);
+                    }
+                    event.preventDefault();
+                });
+
+                // closure to retain `obj`
+                var createObjFunc = (function(obj) {
+                    return function(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        var form = $(event.currentTarget).parent();
+                        var objLiElem = form.parent();
+                        var rawArgs = $('input[type=text]', form).val();
+                        rawArgs = '[' + rawArgs.split(' ').join(', ') + ']';
+                        newObject(obj, JSON.parse(rawArgs));
+                        toCollapsed(objLiElem);
+                    };
+                })(obj);
+                $('input', objLiItem).click(function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+                $('input[type=submit]', objLiItem).click(createObjFunc);
+            }
+        });
+	</script>
+	<style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+		.objLiElem .newObject, .objLiElem .hideNewObject {
+            font-size: 150%;
+            color: grey;
+            font-weight: bold;
+            text-decoration: none;
+            margin-right: 0.5em;
+            display: inline-block;
+            width: 0.5em;
+        }
+        .objLiElem .objType {
+            font-size: 125%;
+            display: inline-block;
+        }
+        .objLiElem .newObject:hover, .objLiElem .hideNewObject:hover {
+            color: LightGrey;
+        }
+        ul#objectsAvailable {
+            background-color: white;
+            padding-left: 0;
+            list-style: none;
+            padding-bottom: 0.1em;
+            padding-top: 0.1em;
+        }
+        #sidebar {
+            background-color: #eee;
+            height: 100%;
+            width: 15em;
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+        .objLiElem {
+            background-color: #eee;
+            margin-bottom: 0.1em;
+            padding-left: 0.5em;
+            padding-bottom: 0.3em;
+        }
+        .objLiElem:hover {
+            background-color: #ffe;
+        }
+        .objLiElem form {
+            margin-bottom: 0;
+        }
+
+
+        .canvas rect.object {
+            stroke: black;
+            fill: white;
+        }
+        .canvas rect.portlet {
+            stroke: #555;
+            fill: #555;
+        }
+        .canvas rect.outlet {
+            cursor: crosshair;
+        }
+        .canvas rect.connectPortlet {
+            fill: blue;
+        }
+        .canvas text {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .canvas line.connection {
+            stroke: black;
+            stroke-width: 2px;
+        }
+        .canvas line.newConnection {
+            stroke: blue;
+            stroke-width: 2px;
+        }
+        .canvas line.selected, .canvas g.selected {
+            stroke: blue;
+            stroke-width: 3px;
+        }
+	</style>
+</head>
+<body>
+    <svg>
+    </svg>
+    <div id="sidebar">
+        <ul id="objectsAvailable">
+        </ul>
+    </div>
+</body>
+</html>
