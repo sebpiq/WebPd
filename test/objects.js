@@ -407,6 +407,25 @@ $(document).ready(function() {
         }
     });
 
+    test('message', function() {
+        var msg = new Pd.objects['message'](null, [11]);
+        msg.i(0).message(22);
+        deepEqual(msg.o(0).receivedMessage, [11]);
+        msg.i(0).message('bang');
+        deepEqual(msg.o(0).receivedMessage, [11]);
+        msg.i(0).message(['bla', 123]);
+        deepEqual(msg.o(0).receivedMessage, [11]);
+
+        msg.setFilterMsg(['$1', 33, '$3']);
+        msg.i(0).message([22, 'bloblo', 44, 'blibli', 66]);
+        deepEqual(msg.o(0).receivedMessage, [22, 33, 44]);
+        msg.i(0).message(['bloblo', 'bleble', 'blybly']);
+        deepEqual(msg.o(0).receivedMessage, ['bloblo', 33, 'blybly']);
+        raises(function() { msg.i(0).message(['ouch', 'ich']); });
+        raises(function() { msg.i(0).message(11); });
+        raises(function() { msg.i(0).message('bang'); });
+    });
+
     test('mtof', function() {
         var mtof = new Pd.objects['mtof'](null);
 

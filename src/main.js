@@ -37,7 +37,17 @@
         return toString.call(obj) == '[object Array]';
     };
 
-    // Simple prototype inheritance. Used like so ::
+    // Returns true if an object is a number, false otherwise
+    Pd.isNumber = function(val) {
+        return typeof val === 'number';
+    },
+
+    // Returns true if an object is a string, false otherwise
+    Pd.isString = function(val) {
+        return typeof val === 'string';
+    },
+
+    // Simple prototype inheritance. Used like so :
     //    
     //    var ChildObject = function() {};
     //
@@ -163,35 +173,31 @@
 	    }
     };
 
-    // regular expression for delimiting messages
-    var messages_re = /\\{0,1};/;
-    // regular expression for delimiting comma separated messages
-    var parts_re = /\\{0,1},/;
+    var dollarVarRegExp = /^\$(\d+)$/;
 
-    // Tokenizes a complex message with atoms, commas, and semicolons.
-    // Returns an array of arrays of strings. (array of lists of comma separated messages).
-    Pd.messagetokenizer = function(message) {
-	    var result = [];
-	    var messages = message.split(messages_re);
-	    for (var m=0; m<messages.length; m++) {
-		    var submessagelist = [];
-		    // TODO: replace $N with item N-1 from the incoming message
-		    var submessages = messages[m].split(parts_re);
-		    for (var s=0; s<submessages.length; s++) {
-			    var atoms = submessages[s].split(' ');
-			    var resultatoms = [];
-			    for (var a=0; a<atoms.length; a++) {
-				    if (atoms[a] != '') {
-					    resultatoms.push(atoms[a]);
-				    }
-			    }
-			    if (resultatoms.length)
-				    submessagelist.push(resultatoms.join(' '));
-		    }
-		    if (submessagelist.length)
-			    result.push(submessagelist);
-	    }
-	    return result;
+    // Returns a function `filter(msg)`, that takes a message array as input, and returns 
+    // the filtered message. For example :
+    //
+    //     filter = Pd.makeMsgFilter([56, '$1', 'bla', '$2']);
+    //     filter([89, 'bli']); // [56, 89, 'bla', 'bli']
+    // TODO: $0
+    Pd.makeMsgFilter = function(filterMsg) {
+        var dollarVars = [];
+        for (var i=0; i<filterMsg.length; i++) {
+            var matched = dollarVarRegExp.exec(filterMsg[i]);
+            if (matched) dollarVars.push([i, parseInt(matched[1], 10)]);
+        }
+        return function(msg) {
+            filtered = filterMsg.slice(0);
+            var inInd, outInd;
+            for (var i=0; i<dollarVars.length; i++) {
+                outInd = dollarVars[i][0];
+                inInd = dollarVars[i][1] - 1;
+                if (inInd >= msg.length) throw new Error('$' + inInd + ': argument number out of range');
+                filtered[outInd] = msg[inInd];
+            }
+            return filtered;
+        }; 
     };
 
     // Fills array with zeros

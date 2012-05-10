@@ -2,20 +2,11 @@ $(document).ready(function() {
 
     module('Pd\'s global functionalities');
 
-    test('messageTokenizer', function() {
-
-		deepEqual(Pd.messagetokenizer('234'), [['234']]);
-        deepEqual(Pd.messagetokenizer('hello'), [['hello']]);
-        deepEqual(Pd.messagetokenizer('234;'), [['234']]);
-        deepEqual(Pd.messagetokenizer('hello;'), [['hello']]);
-        deepEqual(Pd.messagetokenizer('234; '), [['234']]);
-        deepEqual(Pd.messagetokenizer('2432, hello bing bong, 234; pants!'),
-            [['2432', 'hello bing bong', '234'], ['pants!']]);
-        deepEqual(Pd.messagetokenizer('2432, hello bing bong, 234; ffieo fwemio wmfo, wfmeiomio; fmieowmio'),
-            [['2432', 'hello bing bong', '234'], ['ffieo fwemio wmfo', 'wfmeiomio'], ['fmieowmio']]);
-        deepEqual(Pd.messagetokenizer('2432\\, hello bing bong\\, 234\\; ffieo fwemio wmfo\\, wfmeiomio\\; fmieowmio'),
-            [['2432', 'hello bing bong', '234'], ['ffieo fwemio wmfo', 'wfmeiomio'], ['fmieowmio']]);
-
+    test('makeMsgFilter', function() {
+        var filter = Pd.makeMsgFilter([1]);
+        deepEqual(filter([2, 'bla', 4]), [1]);
+        var filter = Pd.makeMsgFilter([1, '$1', 'bla', '$3']);
+        deepEqual(filter(['bli', 'bla', 4, 5]), [1, 'bli', 'bla', 4]);
     });
 
     test('fillWithZeros', function() {
@@ -112,6 +103,29 @@ $(document).ready(function() {
         equal(context.bla, 3);
         testObject.trigger('bla');
         equal(context.bla, 3);
+    });
+
+    test('isArray', function() {
+        ok(Pd.isArray([]));
+        ok(Pd.isArray([1, 'a']));
+        ok(Pd.isArray((new Array())));
+        ok(!Pd.isArray(1));
+        ok(!Pd.isArray('iop'));
+        ok(!Pd.isArray({}));
+    });
+
+    test('isNumber', function() {
+        ok(Pd.isNumber(1));
+        ok(Pd.isNumber(1.2));
+        ok(!Pd.isNumber([]));
+        ok(!Pd.isNumber('iop'));
+    });
+
+    test('isString', function() {
+        ok(Pd.isString('rt12'));
+        ok(Pd.isString(''));
+        ok(!Pd.isString([]));
+        ok(!Pd.isString(12));
     });
 
 });

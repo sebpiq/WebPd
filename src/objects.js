@@ -50,7 +50,35 @@
             this.name = name || null;
             this.size = size;
             this.data = new Pd.arrayType(size);
+        }
+
+    });
+
+    Pd.objects['message'] = Pd.Object.extend({
+
+        inletTypes: ['inlet'],
+        outletTypes: ['outlet'],
+
+        init: function(filterMsg) {
+            this.setFilterMsg(filterMsg);
         },
+
+        setFilterMsg: function(filterMsg) {
+            if (!Pd.isArray(filterMsg)) filterMsg = [filterMsg];
+            this.filterMsg = filterMsg;
+            this.filter = Pd.makeMsgFilter(filterMsg);
+        },
+
+		message: function(inletId, msg) {
+			if (inletId === 0) {
+                var filtered;
+                if (!Pd.isArray(msg)) msg = [msg];
+                // if a 'bang' is received $-vars don't work
+                if (msg.length == 1 && msg[0] == 'bang') filtered = this.filter([]);
+                else filtered = this.filter(msg);
+                this.outlets[0].message(filtered);
+            }
+		}
 
     });
 

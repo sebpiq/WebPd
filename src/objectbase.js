@@ -81,7 +81,7 @@
     /********************** Helper methods *********************/
 
         assertIsNumber: function(val, errorMsg) {
-            if (!(typeof val === 'number')) throw (new Error(errorMsg));
+            if (!Pd.isNumber(val)) throw (new Error(errorMsg));
         },
 
         assertIsArray: function(val, errorMsg) {
