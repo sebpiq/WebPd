@@ -71,7 +71,7 @@
         var selected = null;
 
         var patch = new Pd.Patch();
-        //patch.play();
+        patch.play();
 
         var chart;
 
@@ -275,6 +275,14 @@
                     })
                     .on('dragend', function(obj) {})
                 );
+
+            // Click message
+            if (objType == 'message') {
+                gsEnter
+                    .on('click', function(msgObj) {
+                        msgObj.i(0).message('bang');
+                    });
+            }
 
         }
 

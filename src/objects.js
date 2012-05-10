@@ -38,8 +38,8 @@
             this.printName = (printName || 'print');
         },
 
-        message: function(inletId, message) {
-            Pd.log(this.printname + ': ' + message);
+        message: function(inletId, msg) {
+            Pd.log(this.printName + ': ' + msg);
         }
 
     });
@@ -76,6 +76,7 @@
                 // if a 'bang' is received $-vars don't work
                 if (msg.length == 1 && msg[0] == 'bang') filtered = this.filter([]);
                 else filtered = this.filter(msg);
+                if (filtered.length == 1) filtered = filtered[0];
                 this.outlets[0].message(filtered);
             }
 		}
@@ -137,7 +138,7 @@
         // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
 			if (inletId === 0) {
-                this.assertIsNumber(msg);
+                this.assertIsNumber(msg, 'frequency must be a number');
                 this.setFreq(msg);
             } else if (inletId === 1 && msg === 'bang') this.phase = 0;
 		},

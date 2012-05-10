@@ -410,11 +410,19 @@ $(document).ready(function() {
     test('message', function() {
         var msg = new Pd.objects['message'](null, [11]);
         msg.i(0).message(22);
-        deepEqual(msg.o(0).receivedMessage, [11]);
+        equal(msg.o(0).receivedMessage, 11);
         msg.i(0).message('bang');
-        deepEqual(msg.o(0).receivedMessage, [11]);
+        equal(msg.o(0).receivedMessage, 11);
         msg.i(0).message(['bla', 123]);
-        deepEqual(msg.o(0).receivedMessage, [11]);
+        equal(msg.o(0).receivedMessage, 11);
+
+        msg.setFilterMsg([11, '22']);
+        msg.i(0).message('blibli');
+        deepEqual(msg.o(0).receivedMessage, [11, '22']);
+        msg.i(0).message('bang');
+        deepEqual(msg.o(0).receivedMessage, [11, '22']);
+        msg.i(0).message(['b', 56, 78]);
+        deepEqual(msg.o(0).receivedMessage, [11, '22']);
 
         msg.setFilterMsg(['$1', 33, '$3']);
         msg.i(0).message([22, 'bloblo', 44, 'blibli', 66]);

@@ -164,11 +164,10 @@
         },
 
         message: function() {
-            var args = [this.id].concat(Array.prototype.slice.call(arguments));
             var sink;
             for (var i=0; i<this.sinks.length; i++) {
                 sink = this.sinks[i];
-                sink.message.apply(sink, args);
+                sink.message.apply(sink, arguments);
             }
         }
 
