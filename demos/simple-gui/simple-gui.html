@@ -279,8 +279,16 @@
             // Click message
             if (objType == 'message') {
                 gsEnter
+                    .append('circle')
+                    .attr('class', 'sendMessage')
+                    .attr('cx', function(d) {
+                        return getObjWidth(d) + 20;
+                    })
+                    .attr('cy', objectHeight/2)
+                    .attr('r', 20)
                     .on('click', function(msgObj) {
                         msgObj.i(0).message('bang');
+                        d3.event.stopPropagation();
                     });
             }
 
@@ -433,6 +441,10 @@
         .canvas line.selected, .canvas g.selected {
             stroke: blue;
             stroke-width: 3px;
+        }
+        .canvas circle.sendMessage:hover {
+            cursor: pointer;
+            fill: blue;
         }
 	</style>
 </head>
