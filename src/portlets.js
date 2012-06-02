@@ -150,6 +150,12 @@
             if (source instanceof Pd['outlet~']) this._dspSources.push(source);
         },
 
+        disconnect: function(source) {
+            BaseInlet.prototype.disconnect.apply(this, arguments);
+            var ind = this._dspSources.indexOf(source);
+            if (ind != -1) this._dspSources.splice(ind, 1);
+        },
+
         hasDspSources: function() {
             return this._dspSources.length > 0;
         }

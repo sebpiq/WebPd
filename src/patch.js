@@ -80,12 +80,14 @@
 
 	    // Get a single frame of audio data from Pd
 	    generateFrame: function() {
-            var me = this;
+            var patch = this;
             var output = this.output;
+
 		    // reset our output buffer (gets written to by dac~ objects)
             Pd.fillWithZeros(output);
+
 		    // run the dsp function on all endpoints to get data
-		    this.mapEndPoints(function(obj) { me.tick(obj); });
+		    this.mapEndPoints(function(obj) { patch.tick(obj); });
 		    this.frame++;
 		    return output;
 	    },
@@ -98,11 +100,13 @@
             if (obj.frame < this.frame) {
                 var inlets = obj.inlets;
                 var sources;
+
 		        // recursively triggers tick on all parent objects
 		        for (var i=0; i<inlets.length; i++) {
 			        sources = inlets[i].sources;
                     for (var j=0; j<sources.length; j++) this.tick(sources[j].obj);
 		        }
+
 		        // once all parents have run their dsp process,
                 // we can proceed with the current object.
 		        if (obj.dspTick) obj.dspTick();
@@ -112,7 +116,7 @@
 	
 	    // Starts this graph running
 	    play: function() {
-		    var me = this;
+		    var patch = this;
 
 		    if (!this.audio.isPlaying()) {
 			    Pd.debug('Starting audio.');
@@ -121,7 +125,7 @@
                 // TODO: should load called with post-order traversal,
                 //        to ensure all children gets loaded before their parents ? 
                 this.mapObjects(function(obj) { obj.load(); });
-			    this.audio.play(function() { return me.generateFrame(); });
+			    this.audio.play(function() { return patch.generateFrame(); });
                 // reset frame counts
 			    this.frame = 0;
 			    this.mapObjects(function(obj) { obj.frame = 0; });
