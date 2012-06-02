@@ -38,8 +38,9 @@
             this.printName = (printName || 'print');
         },
 
-        message: function(inletId, msg) {
-            Pd.log(this.printName + ': ' + msg);
+        message: function(inletId) {
+            var msg = Array.prototype.slice.call(arguments, 1);
+            Pd.log(this.printName + ': ' + msg.join(' '));
         }
 
     });
@@ -59,10 +60,12 @@
         inletTypes: ['inlet'],
         outletTypes: ['outlet'],
 
-        init: function(filterMsg) {
-            this.setFilterMsg(filterMsg);
+        init: function() {
+            this.setFilterMsg(Array.prototype.slice.call(arguments));
         },
 
+        // Sets the message template, with constant values or $-vars that
+        // will be replaced when a message is received.
         setFilterMsg: function(filterMsg) {
             if (!Pd.isArray(filterMsg)) filterMsg = [filterMsg];
             this.filterMsg = filterMsg;
@@ -73,11 +76,15 @@
 			if (inletId === 0) {
                 var filtered;
                 if (!Pd.isArray(msg)) msg = [msg];
+
+                // Do the filtering of input message :
                 // if a 'bang' is received $-vars don't work
                 if (msg.length == 1 && msg[0] == 'bang') filtered = this.filter([]);
                 else filtered = this.filter(msg);
-                if (filtered.length == 1) filtered = filtered[0];
-                this.outlets[0].message(filtered);
+
+                // outputs the filtered message
+                var outlet = this.outlets[0]; 
+                outlet.message.apply(outlet, filtered);
             }
 		}
 

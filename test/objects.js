@@ -35,7 +35,7 @@ $(document).ready(function() {
     Pd['testinlet'] = Pd['inlet'];
     Pd['testoutlet~'] = Pd['outlet~'];
     Pd['testoutlet'] = Pd['outlet'].extend({
-        message: function(msg) {this.receivedMessage = msg;}
+        message: function() {this.receivedMessage = Array.prototype.slice.call(arguments);}
     });
 
     // replacing in all object prototypes, with our test inlets/outlets
@@ -410,11 +410,11 @@ $(document).ready(function() {
     test('message', function() {
         var msg = new Pd.objects['message'](null, [11]);
         msg.i(0).message(22);
-        equal(msg.o(0).receivedMessage, 11);
+        deepEqual(msg.o(0).receivedMessage, [11]);
         msg.i(0).message('bang');
-        equal(msg.o(0).receivedMessage, 11);
+        deepEqual(msg.o(0).receivedMessage, [11]);
         msg.i(0).message(['bla', 123]);
-        equal(msg.o(0).receivedMessage, 11);
+        deepEqual(msg.o(0).receivedMessage, [11]);
 
         msg.setFilterMsg([11, '22']);
         msg.i(0).message('blibli');
