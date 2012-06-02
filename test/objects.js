@@ -413,7 +413,7 @@ $(document).ready(function() {
         deepEqual(msg.o(0).receivedMessage, [11]);
         msg.i(0).message('bang');
         deepEqual(msg.o(0).receivedMessage, [11]);
-        msg.i(0).message(['bla', 123]);
+        msg.i(0).message('bla', 123);
         deepEqual(msg.o(0).receivedMessage, [11]);
 
         msg.setFilterMsg([11, '22']);
@@ -421,15 +421,15 @@ $(document).ready(function() {
         deepEqual(msg.o(0).receivedMessage, [11, '22']);
         msg.i(0).message('bang');
         deepEqual(msg.o(0).receivedMessage, [11, '22']);
-        msg.i(0).message(['b', 56, 78]);
+        msg.i(0).message('b', 56, 78);
         deepEqual(msg.o(0).receivedMessage, [11, '22']);
 
         msg.setFilterMsg(['$1', 33, '$3']);
-        msg.i(0).message([22, 'bloblo', 44, 'blibli', 66]);
+        msg.i(0).message(22, 'bloblo', 44, 'blibli', 66);
         deepEqual(msg.o(0).receivedMessage, [22, 33, 44]);
-        msg.i(0).message(['bloblo', 'bleble', 'blybly']);
+        msg.i(0).message('bloblo', 'bleble', 'blybly');
         deepEqual(msg.o(0).receivedMessage, ['bloblo', 33, 'blybly']);
-        raises(function() { msg.i(0).message(['ouch', 'ich']); });
+        raises(function() { msg.i(0).message('ouch', 'ich'); });
         raises(function() { msg.i(0).message(11); });
         raises(function() { msg.i(0).message('bang'); });
     });

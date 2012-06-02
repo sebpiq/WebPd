@@ -72,8 +72,9 @@
             this.filter = Pd.makeMsgFilter(filterMsg);
         },
 
-		message: function(inletId, msg) {
+		message: function(inletId) {
 			if (inletId === 0) {
+                var msg = Array.prototype.slice.call(arguments, 1);
                 var filtered;
                 if (!Pd.isArray(msg)) msg = [msg];
 
