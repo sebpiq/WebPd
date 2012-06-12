@@ -7,7 +7,6 @@
 	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
 ***/
 
-// TODO: generic event/callback system
 
 (function(Pd){
 

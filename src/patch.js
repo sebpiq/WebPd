@@ -118,7 +118,7 @@
 	    play: function() {
 		    var patch = this;
 
-		    if (!this.audio.isPlaying()) {
+		    if (!this.isPlaying()) {
 			    Pd.debug('Starting audio.');
             	// fetch the actual samplerate from the audio driver
 	            this.sampleRate = this.audio.getSampleRate();
@@ -136,7 +136,7 @@
 	
 	    // Stops this graph from running
 	    stop: function() {
-		    if (this.audio.isPlaying()) {
+		    if (this.isPlaying()) {
 			    Pd.debug('Stopping audio.');
 			    this.audio.stop();
       		} else {
@@ -144,11 +144,17 @@
 		    }
 	    },
 
+        // Returns true if the patch is playing, false otherwise.
+        isPlaying: function() {
+            return this.audio.isPlaying();
+        },
+
     /******************** Graph methods ************************/
 
         // Adds an object to the patch.
-        // This also causes the patch to automatically assign an id to that object.
+        // Also causes the patch to automatically assign an id to that object.
         // This id can be used to uniquely identify the object in the patch.
+        // Also, if the patch is playing, the `load` method of the object will be called.
         addObject: function(obj) {
             if (this._graph.objects.indexOf(obj) == -1) {
                 var id = this._generateId();
@@ -156,6 +162,7 @@
                 obj.patch = this;
                 this._graph.objects[id] = obj;
 		        if (obj.endPoint) this._graph.endPoints.push(obj);
+                if (this.isPlaying()) obj.load();
 		        Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);
             }
         },
