@@ -40,22 +40,19 @@ $(document).ready(function() {
         A.prototype.bli = 987;
         A.prototype.func = function() {return 'blabla'};
 
-        var B = A.extend({
-            'bla': 113, 'bli': 654,
-        });
+        var B = A.extend({'bla': 113, 'bli': 654});
         var b = new B();
 
         // instanceof
         ok(b instanceof B);
         ok(b instanceof A);
+
         // inheritance of props
         equal(b.bla, 113);
         equal(b.bli, 654);
         equal(b.blo, 456);
 
-        var C = B.extend({
-            'bla': 112,
-        });
+        var C = B.extend({'bla': 112});
         var c = new C();
 
         equal(c.bla, 112);

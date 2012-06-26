@@ -233,7 +233,7 @@
         },
 
         // Returns all connections in the graph as an array
-        // of pairs `(inlet, outlet)`. If `obj` is provided, 
+        // of pairs `(outlet, inlet)`. If `obj` is provided, 
         // this returns only the connections from/to `obj`.
         getAllConnections: function(obj) {
             var connections = [];
