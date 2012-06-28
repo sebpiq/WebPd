@@ -2,18 +2,21 @@
 <head>
 	<title>Simple GUI</title>
 	<script src="../../pd.js"></script>
-    <script src="../../test/lib/jquery-1.7.1.js"></script>
-    <script src="../../test/lib/d3.v2.js"></script>
-    <script type="text/javascript" src="http://balupton.github.com/jquery-syntaxhighlighter/scripts/jquery.syntaxhighlighter.min.js"></script>
-    <script type="text/javascript">$.SyntaxHighlighter.init();</script>
+    <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+    <script src="https://raw.github.com/mbostock/d3/master/d3.v2.min.js"></script>
+    <script src="http://balupton.github.com/jquery-syntaxhighlighter/scripts/jquery.syntaxhighlighter.min.js"></script>
+    <script src="https://raw.github.com/janl/mustache.js/0.4.x/mustache.min.js"></script>
 
 	<script>
         var objType, portletType, proto;
 
+
+        // Extend all the objects prototypes with gui methods
         for (objType in Pd.objects) {
             if (proto = Pd.objects[objType].prototype) {
                 Pd.extend(proto, {
 
+                    // Method to call after object creation to initialize gui data
                     initGui: function(args) {
                         this._guiData = {
                             x: 0,
@@ -22,40 +25,46 @@
                         };
                     },
 
+                    // Returns object's X in the canvas
                     getX: function() { return this._guiData.x; },
 
+                    // Returns object's Y in the canvas
                     getY: function() { return this._guiData.y; },
 
+                    // Sets object's position in the canvas
                     setPos: function(pos) {
                         // Update the saved position
                         var x = this._guiData.x = (pos.x || this._guiData.x);
                         var y = this._guiData.y = (pos.y || this._guiData.y);
                         // Update the display of the object and all its connections
                         this.d3().attr('transform', gui.translation(x, y));
-                        gui.chart.selectAll('line.connection')
+                        gui.canvas.selectAll('line.connection')
                             .data(gui.patch.getAllConnections(this), gui.connectionKey)
                             .call(gui.setConnectionXY);
                     },
 
+                    // Returns text to display on the object 
                     getText: function() { return this._guiData.text; },
 
+                    // Returns Y of the text in the object's root element 
                     getTextY: function() { return this.getH()/2 + gui.portletHeight/2; },
 
-                    // Returns the height of `obj` in pixels
+                    // Returns object's height
                     getH: function() { return 40; },
 
-                    // Returns the width of `obj` in pixels
+                    // Returns object's width
                     getW: function() {
                         var maxPortlet = Math.max(this.inlets.length, this.outlets.length);
                         var textLength = this.getText().length * 9;
                         return Math.max((maxPortlet-1) * 75, 75, textLength);
                     },
 
-                    // Helper to build a key for an object for d3
+                    // Returns object's unique key for helping d3 doing its data mapping
                     getKey: function() {
                         return this.id;
                     },
 
+                    // Returns object's root svg element
                     d3: function() {
                         return d3.selectAll('g.objectGroup').data([this], gui.f('getKey'));
                     }
@@ -64,19 +73,21 @@
             }
         }
 
+
+        // Expand all the objects prototypes with gui methods
         var portletCommon = {
 
-            // Returns the absolute X of the portlet.
+            // Returns portlet's X in the canvas
             getX: function() {
                 return this.getRelX() + this.obj.getX();
             },
 
-            // Returns the absolute Y of `outlet`.
+            // Returns portlet's Y in the canvas
             getY: function() {
                 return this.getRelY() + this.obj.getY();
             },
 
-            // Helper to build a key for a portlet for d3
+            // Returns portlet's unique key for helping d3 doing its data mapping
             getKey: function() {
                 return this.obj.getKey() + '-' + this.id;
             },
@@ -100,12 +111,12 @@
 
             Pd.extend(Pd[portletType].prototype, portletCommon, {
 
-                // Returns the X of `outlet` relative to its object.
+                // Returns outlet's X in the object's root element
                 getRelX: function() { 
                     return this._getPortletX('outlets');
                 },
 
-                // 
+                // Returns outlet's X in the object's root element
                 getRelY: function() {
                     return this.obj.getH() - gui.portletHeight;
                 }
@@ -117,12 +128,12 @@
 
             Pd.extend(Pd[portletType].prototype, portletCommon, {
 
-                // Returns the X of `inlet` relative to its object.
+                // Returns inlet's X in the object's root element
                 getRelX: function() {
                     return this._getPortletX('inlets');
                 },
 
-                // 
+                // Returns inlet's Y in the object's root element
                 getRelY: function() {
                     return 0;
                 }
@@ -136,24 +147,26 @@
             // The WebPd patch
             patch: null,
 
-            // The d3 chart
-            chart: null,
+            // The d3 canvas
+            canvas: null,
 
-            // The console to which stuff will be logged
-            console: console,
+            // The console to which API calls will be logged
+            commandLog: console,
 
             // Width and height - in pixels - of a portlet
             portletWidth: 15,
             portletHeight: 10,
 
+            // Makes a new connection between outlet and inlet. Adds the connection
+            // to the patch as well as to the svg canvas, and set-up user events. 
             newConnection: function(outlet, inlet) { 
-                gui.eval('patch.connect(sourceObj.o(sourceId), sinkObj.i(sinkId));', {
-                    sourceObj: outlet.obj,
-                    sourceId: outlet.id,
-                    sinkObj: inlet.obj,
-                    sinkId: inlet.id,
+                gui.eval('patch.connect(outletObj.o(outletId), inletObj.i(inletId));', {
+                    outletObj: outlet.obj,
+                    outletId: outlet.id,
+                    inletObj: inlet.obj,
+                    inletId: inlet.id,
                 });
-                var lines = gui.chart.selectAll('line.connection')
+                var lines = gui.canvas.selectAll('line.connection')
                     .data(gui.patch.getAllConnections(), gui.connectionKey)
                     .enter()
                     .append('line')
@@ -167,18 +180,23 @@
                     });
             },
 
-            removeConnection: function(source, sink) {
-                gui.eval('patch.disconnect(sourceObj.o(sourceId), sinkObj.i(sinkId));', {
-                    sinkObj: sink.obj,
-                    sourceObj: source.obj,
-                    sinkId: sink.id,
-                    sourceId: source.id
+            // Removes a connection between outlet and inlet from the patch and the canvas
+            removeConnection: function(outlet, inlet) {
+                gui.eval('patch.disconnect(outletObj.o(outletId), inletObj.i(inletId));', {
+                    inletObj: inlet.obj,
+                    outletObj: outlet.obj,
+                    inletId: inlet.id,
+                    outletId: outlet.id
                 });
-                gui.chart.selectAll('line.connection')
+                gui.canvas.selectAll('line.connection')
                     .data(gui.patch.getAllConnections(), gui.connectionKey)
                     .exit().remove();
             },
 
+            // Creates a new object of type `objType` and with `args`.
+            // New object is added to the patch as well as to the svg canvas.
+            // This also sets-up all the user events, e.g. selecting the object, 
+            // moving it, creating a new connection from an outlet, and so on ...
             newObject: function(objType, args) {
                 // Creating object and adding it to the graph
                 var obj = gui.eval('var ', 'obj = new Pd.objects[objType](patch, args);', {
@@ -191,20 +209,20 @@
                 obj.initGui(args);
 
                 // Object group
-                var gsEnter = gui.chart.selectAll('g')
+                var gsEnter = gui.canvas.selectAll('g')
                     .data(gui.patch.getAllObjects(), gui.f('getKey'))
                     .enter()
                     .append('g')
                     .attr('class', 'objectGroup')
                     .attr('transform', gui.translation(5, 5))
-                    // Object selection
+                    // Selecting object
                     .on('click', function(obj) {
                         gui.setSelection(this);
                         // Stop event propagation so that the canvas
                         // doesn't receive the click.
                         d3.event.stopPropagation();
                     })
-                    // Object dragging
+                    // Moving object
                     .call(d3.behavior.drag()
                         .on('dragstart', function(obj) {})
                         .on('drag', function(obj) {
@@ -258,7 +276,7 @@
                         // Creating new connection
                         .on('dragstart', function(outlet) {
                             d3.select(this).classed('connectPortlet', true);
-                            gui.chart.selectAll('rect.inlet')
+                            gui.canvas.selectAll('rect.inlet')
                                 .on('mouseover', function(inlet) {
                                     d3.select(this)
                                         .classed('connectPortlet', true)
@@ -271,7 +289,7 @@
                                 });
 
                             var x = outlet.getX(), y = outlet.getY();
-                            gui.chart.append('line')
+                            gui.canvas.append('line')
                                 .classed('connection', true)
                                 .classed('newConnection', true)
                                 .attr('x1', x + gui.portletWidth/2)
@@ -281,7 +299,7 @@
                         })
                         .on('drag', function(outlet) {
                             // update new connection
-                            var conn = gui.chart.select('line.newConnection');
+                            var conn = gui.canvas.select('line.newConnection');
                             var x2 = parseInt(conn.attr('x2'), 10) + d3.event.dx;
                             var y2 = parseInt(conn.attr('y2'), 10) + d3.event.dy;
                             conn.attr('x2', x2);
@@ -289,14 +307,13 @@
                         })
                         .on('dragend', function(outlet) {
                             // clean stuff set-up just for the new connection 
-                            gui.chart.selectAll('rect.inlet')
+                            gui.canvas.selectAll('rect.inlet')
                                 .on('mouseover', function(inlet) {})
                                 .on('mouseout', function(inlet) {});
                             d3.select(this).classed('connectPortlet', false);
-                            gui.chart.select('line.newConnection').remove();
-                            gui.chart.selectAll('rect.inlet').classed('connectPortlet', false);
-                            // create the actual connection in the patch,
-                            // and update the display.
+                            gui.canvas.select('line.newConnection').remove();
+                            gui.canvas.selectAll('rect.inlet').classed('connectPortlet', false);
+                            // create the actual connection in the patch
                             d3.selectAll('.hoveredInlet')
                                 .classed('hoveredInlet', false)
                                 .each(function(inlet) { gui.newConnection(outlet, inlet); });
@@ -310,7 +327,7 @@
                         d3.event.stopPropagation();
                     });
 
-                // Click message
+                // Add control for sending message if object is message
                 if (objType == 'message') {
                     gsEnter
                         .append('circle')
@@ -326,12 +343,13 @@
 
             },
 
+            // Removes object from the patch and from the canvas.
             removeObject: function(obj) {
                 gui.eval('patch.removeObject(obj);', {obj: obj});
-                gui.chart.selectAll('g.objectGroup')
+                gui.canvas.selectAll('g.objectGroup')
                     .data(gui.patch.getAllObjects(), gui.f('getKey'))
                     .exit().remove();
-                gui.chart.selectAll('line.connection')
+                gui.canvas.selectAll('line.connection')
                     .data(gui.patch.getAllConnections(), gui.connectionKey)
                     .exit().remove();
             },
@@ -340,7 +358,7 @@
             // for logging
             objCount: 0,
 
-            // This function is used to log and execute a command on the patch
+            // This function is used to execute and log a WebPd API call.
             eval: function(arg1, arg2, arg3) {
 
                 // Handling the arguments
@@ -375,7 +393,7 @@
                         toLog = toLog.replace(name, JSON.stringify(val));
                     }
                 }
-                this.console.log(toLog);
+                this.commandLog.log(toLog);
                 return result;
             },
 
@@ -420,7 +438,7 @@
 
             // Deletes the current selection
             deleteSelection: function() {
-                gui.chart.selectAll('.selected').each(function(thing) {
+                gui.canvas.selectAll('.selected').each(function(thing) {
                     if (thing instanceof Pd.Object) {
                         gui.removeObject(thing);
                     } else {
@@ -430,20 +448,26 @@
             }
         };
 
-        // Dynamic patching API commands log
-        var guiConsole = {
 
+        // Console logging calls to WebPd's dynamic patching API
+        var WebPdCommandLog = {
+
+            // The element to write logs into
             elem: null,
             
-            limit: 3,
+            // The number of commands displayed at the same time
+            limit: 6,
 
+            // Total number of commands issued
             count: 0,
 
+            // The commands currently displayed
             buffer: [],
 
-            log: function(msg) {
+            // Logs a new command
+            log: function(command) {
                 if (this.buffer.length >= this.limit) this.buffer.splice(0, 1);
-                this.buffer.push(msg);
+                this.buffer.push(command);
                 this.count++;
                 var code = $('<code>', {class: 'highlight'}).text(this.buffer.join('\n'));
                 this.elem.empty().append(code);
@@ -454,201 +478,197 @@
                 }
             }
         };
+        $.SyntaxHighlighter.init();
 
+
+        // Starting the whole mess
         $(function() {
-            gui.chart = d3.select('svg.canvas');
-            gui.chart.on('click', function() { gui.setSelection(); });
-
-            // Deletion of objects or connections
+            
+            // Creating canvas and setting-up user events
+            gui.canvas = d3.select('svg.canvas');
+            gui.canvas.on('click', function() { gui.setSelection(); });
             $('body').keyup(function(event) {
                 if (event.keyCode == 46) gui.deleteSelection();
             });
 
-            gui.console = guiConsole;
-            guiConsole.elem = $('#console');
+            // Adding the console for loggin WebPd API calls
+            gui.commandLog = WebPdCommandLog;
+            WebPdCommandLog.elem = $('#commandLog');
 
+            // Creating and starting the WebPd patch
             gui.patch = gui.eval('var ', 'patch = new Pd.Patch();');
             gui.eval('patch.play();');
-        });
 
-        // Controls to create objects
-        var toExpanded = function(li) {
-            $('.newObject').show();
-            $('.hideNewObject').hide();
-            $('.newObject', li).hide();
-            $('.hideNewObject', li).show();
-            $('form').hide();
-            $('form', li).show();
-            $(li).addClass('expanded');
-            $('input[type=text]', 'form').focus();
-        };
+            // Creating the list of objects in the sidebar
+            $.each(Pd.objects, function(objType) {
+                var objLi = Mustache.to_html($('#template-newObject').text(), {objType: objType});
+                objLi = $(objLi);
+                $('#sidebar ul').append(objLi);
 
-        var toCollapsed = function(li) {
-            $('.newObject', li).show();
-            $('.hideNewObject', li).hide();
-            $('form', li).hide();
-            $('input[type=text]', li).val('');
-            $(li).removeClass('expanded');
-        };
-
-        $(function() {
-            for (objType in Pd.objects) {
-                var objLiItem = $(getObjLiElem(objType));
-                $('#objectsAvailable').append(objLiItem);
-                toCollapsed(objLiItem);
-
-                $(objLiItem).click(function(event) {
-                    var objLiElem = $(event.currentTarget);
-                    if (objLiElem.hasClass('expanded')) {
-                        toCollapsed(objLiElem);
+                // Toggle expanded/collapsed when clicking on the object 
+                // in the list
+                objLi.click(function(event) {
+                    var elem = $(this);
+                    if (elem.hasClass('expanded')) {
+                        elem.removeClass('expanded');
+                        elem.find('input[type=text]').val('');
                     } else {
-                        toExpanded(objLiElem);
+                        $('#sidebar li').removeClass('expanded');
+                        elem.addClass('expanded');
+                        elem.find('input[type=text]').focus();
                     }
                     event.preventDefault();
                 });
 
-                // closure to retain `objType`
-                var createObjFunc = (function(objType) {
-                    return function(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        var form = $(event.currentTarget).parent();
-                        var objLiElem = form.parent();
-                        var rawArgs = $('input[type=text]', form).val();
-                        rawArgs = '[' + rawArgs.split(' ').join(', ') + ']';
-                        gui.newObject(objType, JSON.parse(rawArgs));
-                        toCollapsed(objLiElem);
-                    };
-                })(objType);
-
-                $('input', objLiItem).click(function(event) {
+                // Prevent the form from collapsing when clicking on the input 
+                objLi.find('input').click(function(event) {
                     event.preventDefault();
                     event.stopPropagation();
                 });
-                $('input[type=submit]', objLiItem).click(createObjFunc);
-            }
-        });
 
-        function getObjLiElem(objType) {
-            return '<li class="objLiElem">'
-                + '<a class="newObject" href="">+</a>'
-                + '<a class="hideNewObject" href="">-</a>'
-                + '<span class="objType">' + objType + '</span>'
-                + '<form><input type="text" /><input type="submit" value="Create" /></form>'
-                + '</li>';
-        }
+                // Creating the object when submiting the form
+                objLi.find('input[type=submit]').click(function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // Get the creation args and parse them to a javascript array
+                    var rawArgs = objLi.find('input[type=text]').val();
+                    rawArgs = '[' + rawArgs.split(' ').join(', ') + ']';
+                    gui.newObject(objType, JSON.parse(rawArgs));
+                    objLi.click();
+                });
+            });
+        });
 	</script>
-	<style>
+	<style type="text/less">
         body {
             margin: 0;
             padding: 0;
         }
-		.objLiElem .newObject, .objLiElem .hideNewObject {
-            font-size: 150%;
-            color: grey;
-            font-weight: bold;
-            text-decoration: none;
-            margin-right: 0.5em;
-            display: inline-block;
-            width: 0.5em;
-        }
-        .objLiElem .objType {
-            font-size: 125%;
-            display: inline-block;
-        }
-        .objLiElem .newObject:hover, .objLiElem .hideNewObject:hover {
-            color: LightGrey;
-        }
-        ul#objectsAvailable {
-            background-color: white;
-            padding-left: 0;
-            list-style: none;
-            padding-bottom: 0.1em;
-            padding-top: 0.1em;
-        }
+
         #sidebar {
             background-color: #eee;
             height: 100%;
-            width: 15em;
+            width: 20%;
             position: absolute;
             right: 0;
             top: 0;
-        }
-        .objLiElem {
-            background-color: #eee;
-            margin-bottom: 0.1em;
-            padding-left: 0.5em;
-            padding-bottom: 0.3em;
-        }
-        .objLiElem:hover {
-            background-color: #ffe;
-        }
-        .objLiElem form {
-            margin-bottom: 0;
+
+            ul {
+                background-color: white;
+                padding-left: 0;
+                list-style: none;
+                padding-bottom: 0.1em;
+                padding-top: 0.1em;
+
+		        li {
+                    background-color: #eee;
+                    margin-bottom: 0.1em;
+                    padding-left: 0.5em;
+                    padding-bottom: 0.3em;
+                    &:hover {
+                        background-color: #ffe;
+                    }
+
+                    form { margin-bottom: 0; }
+                    .expand, .collapse {
+                        font-size: 150%;
+                        color: grey;
+                        font-weight: bold;
+                        text-decoration: none;
+                        margin-right: 0.5em;
+                        display: inline-block;
+                        width: 0.5em;
+                    }
+                    .expand:hover, .collapse:hover {
+                        color: LightGrey;
+                    }
+                    .objType {
+                        font-size: 125%;
+                        display: inline-block;
+                    }
+                    /* handling states expanded/collapsed */
+                    form, .collapse { display: none; }
+                    &.expanded {
+                        .collapse { display: inline-block; }
+                        form { display: block; }
+                        .expand { display: none; }
+                    }
+                }
+            }
         }
 
-        #console {
+        #commandLog {
             position: absolute;
             bottom: 0;
             left: 0;
-        }
-
-        #console ul {
-            list-style: none;
+            width: 78%;
         }
 
         .canvas {
             width: 100%;
             height: 100%;
-        }
-        .canvas rect.object {
-            stroke: black;
-            fill: white;
-        }
-        .canvas rect.portlet {
-            stroke: #555;
-            fill: #555;
-        }
-        .canvas rect.outlet {
-            cursor: crosshair;
-        }
-        .canvas rect.connectPortlet {
-            fill: blue;
-        }
-        .canvas text {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-        .canvas line.connection {
-            stroke: black;
-            stroke-width: 2px;
-        }
-        .canvas line.newConnection {
-            stroke: blue;
-            stroke-width: 2px;
-        }
-        .canvas line.selected, .canvas g.selected {
-            stroke: blue;
-            stroke-width: 3px;
-        }
-        .canvas circle.sendMessage:hover {
-            cursor: pointer;
-            fill: blue;
+
+            rect.object {
+                stroke: black;
+                fill: white;
+            }
+            rect.portlet {
+                stroke: #555;
+                fill: #555;
+            }
+            rect.outlet {
+                cursor: crosshair;
+            }
+            rect.connectPortlet {
+                fill: blue;
+            }
+            text {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            line.connection {
+                stroke: black;
+                stroke-width: 2px;
+            }
+            line.newConnection {
+                stroke: blue;
+                stroke-width: 2px;
+            }
+            line.selected, g.selected {
+                stroke: blue;
+                stroke-width: 3px;
+            }
+            circle.sendMessage:hover {
+                cursor: pointer;
+                fill: blue;
+            }
         }
 	</style>
+    <script src="http://lesscss.googlecode.com/files/less-1.3.0.min.js"></script>
 </head>
+<script id="template-newObject" type="text/x-mustache-template">
+    <li>
+        <a class="expand" href="">+</a>
+        <a class="collapse" href="">-</a>
+        <span class="objType">{{objType}}</span>
+        <form>
+            <input type="text" />
+            <input type="submit" value="Create" />
+        </form>
+    </li>
+</script>
 <body>
     <svg class="canvas">
     </svg>
     <div id="sidebar">
-        <ul id="objectsAvailable">
+        <ul>
         </ul>
     </div>
-    <div id="console">
+    <div id="commandLog">
     </div>
 </body>
 </html>
