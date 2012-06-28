@@ -11,16 +11,50 @@
             if (proto = Pd.objects[objType].prototype) {
                 Pd.extend(proto, {
 
-                    // Returns the height of `obj` in pixels
-                    getH: function() {
-                        return 40;
+                    initGui: function(args) {
+                        this._guiData = {
+                            x: 0,
+                            y: 0,
+                            text: this.type + ' ' + args.join(' ')
+                        };
                     },
+
+                    getX: function() { return this._guiData.x; },
+
+                    getY: function() { return this._guiData.y; },
+
+                    setPos: function(pos) {
+                        // Update the saved position
+                        var x = this._guiData.x = (pos.x || this._guiData.x);
+                        var y = this._guiData.y = (pos.y || this._guiData.y);
+                        // Update the display of the object and all its connections
+                        this.d3().attr('transform', gui.translation(x, y));
+                        gui.chart.selectAll('line.connection')
+                            .data(gui.patch.getAllConnections(this), gui.connectionKey)
+                            .call(gui.setConnectionXY);
+                    },
+
+                    getText: function() { return this._guiData.text; },
+
+                    getTextY: function() { return this.getH()/2 + gui.portletHeight/2; },
+
+                    // Returns the height of `obj` in pixels
+                    getH: function() { return 40; },
 
                     // Returns the width of `obj` in pixels
                     getW: function() {
                         var maxPortlet = Math.max(this.inlets.length, this.outlets.length);
-                        var textLength = this.__display__.text.length * 9;
+                        var textLength = this.getText().length * 9;
                         return Math.max((maxPortlet-1) * 75, 75, textLength);
+                    },
+
+                    // Helper to build a key for an object for d3
+                    getKey: function() {
+                        return this.id;
+                    },
+
+                    d3: function() {
+                        return d3.selectAll('g.objectGroup').data([this], gui.f('getKey'));
                     }
 
                 });
@@ -31,7 +65,17 @@
 
             // Returns the absolute X of the portlet.
             getX: function() {
-                return this.getRelX() + this.obj.__display__.x;
+                return this.getRelX() + this.obj.getX();
+            },
+
+            // Returns the absolute Y of `outlet`.
+            getY: function() {
+                return this.getRelY() + this.obj.getY();
+            },
+
+            // Helper to build a key for a portlet for d3
+            getKey: function() {
+                return this.obj.getKey() + '-' + this.id;
             },
 
             _getPortletX: function(inOrOutlets) {
@@ -58,9 +102,9 @@
                     return this._getPortletX('outlets');
                 },
 
-                // Returns the absolute Y of `outlet`.
-                getY: function() {
-                    return this.obj.getH() - gui.portletHeight + this.obj.__display__.y;
+                // 
+                getRelY: function() {
+                    return this.obj.getH() - gui.portletHeight;
                 }
 
             });
@@ -75,9 +119,9 @@
                     return this._getPortletX('inlets');
                 },
 
-                // Returns the absolute Y of `inlet`.
-                getY: function() {
-                    return 0 + this.obj.__display__.y;
+                // 
+                getRelY: function() {
+                    return 0;
                 }
 
             });
@@ -104,7 +148,7 @@
                     .attr('class', 'connection')
                     .call(gui.setConnectionXY)
                     .on('click', function(conn) {
-                        gui.updateSelection(this);
+                        gui.setSelection(this);
                         // Stop event propagation so that the canvas
                         // doesn't receive the click.
                         d3.event.stopPropagation();
@@ -131,26 +175,34 @@
                     obj: undefined
                 });
                 
-                // Add `__display__` object to the graph objects
-                obj.__display__ = {
-                    x: 0,
-                    y: 0,
-                    text: obj.type + ' ' + args.join(' ')
-                };
+                // Initialize the GUI infos for the new object. 
+                obj.initGui(args);
 
                 // Object group
                 var gsEnter = gui.chart.selectAll('g')
-                    .data(gui.patch.getAllObjects(), gui.objectKey)
+                    .data(gui.patch.getAllObjects(), gui.f('getKey'))
                     .enter()
                     .append('g')
                     .attr('class', 'objectGroup')
                     .attr('transform', gui.translation(5, 5))
+                    // Object selection
                     .on('click', function(obj) {
-                        gui.updateSelection(this);
+                        gui.setSelection(this);
                         // Stop event propagation so that the canvas
                         // doesn't receive the click.
                         d3.event.stopPropagation();
-                    });
+                    })
+                    // Object dragging
+                    .call(d3.behavior.drag()
+                        .on('dragstart', function(obj) {})
+                        .on('drag', function(obj) {
+                            obj.setPos({
+                                x: obj.getX() + d3.event.dx,
+                                y: obj.getY() + d3.event.dy
+                            });
+                        })
+                        .on('dragend', function(obj) {})
+                    );
 
                 // Object box
                 gsEnter.append('rect')
@@ -161,26 +213,27 @@
                 // Object text
                 gsEnter.append('text')
                     .attr('class', 'objectType')
-                    .text(function(obj) { return obj.__display__.text; })
-                    .attr('dy', function(obj) { return obj.getH()/2 + gui.portletHeight/2; })
+                    .text(gui.f('getText'))
+                    .attr('dy', gui.f('getTextY'))
                     .attr('dx', gui.portletWidth);
 
                 // Inlets
                 gsEnter
-                    .selectAll('rect.objectType') // TODO: why does this selector even work ???
-                    .data(function(obj) {return obj.inlets})
+                    .selectAll('rect.inlet')
+                    .data(function(obj) {return obj.inlets}, gui.f('getKey'))
                     .enter()
                     .append('rect')
                     .classed('inlet', true)
                     .classed('portlet', true)
                     .attr('width', gui.portletWidth)
                     .attr('height', gui.portletHeight)
-                    .attr('x', gui.f('getRelX'));
+                    .attr('x', gui.f('getRelX'))
+                    .attr('y', gui.f('getRelY'));
 
                 // Outlets
                 gsEnter
-                    .selectAll('rect.objectType')
-                    .data(function(obj) {return obj.outlets})
+                    .selectAll('rect.outlet')
+                    .data(function(obj) {return obj.outlets}, gui.f('getKey'))
                     .enter()
                     .append('rect')
                     .classed('outlet', true)
@@ -188,10 +241,10 @@
                     .attr('width', gui.portletWidth)
                     .attr('height', gui.portletHeight)
                     .attr('x', gui.f('getRelX'))
-                    .attr('y', function(outlet) { return outlet.obj.getH() - gui.portletHeight; })
+                    .attr('y', gui.f('getRelY'))
                     .call(d3.behavior.drag()
+                        // Creating new connection
                         .on('dragstart', function(outlet) {
-                            // draw new connection
                             d3.select(this).classed('connectPortlet', true);
                             gui.chart.selectAll('rect.inlet')
                                 .on('mouseover', function(inlet) {
@@ -245,21 +298,6 @@
                         d3.event.stopPropagation();
                     });
 
-                // Dragging objects
-                gsEnter
-                    .call(d3.behavior.drag()
-                        .on('dragstart', function(obj) {})
-                        .on('drag', function(obj) {
-                            var x = obj.__display__.x += d3.event.dx;
-                            var y = obj.__display__.y += d3.event.dy;
-                            d3.select(this).attr('transform', gui.translation(x, y));
-                            gui.chart.selectAll('line.connection')
-                                .data(gui.patch.getAllConnections(obj), gui.connectionKey)
-                                .call(gui.setConnectionXY);
-                        })
-                        .on('dragend', function(obj) {})
-                    );
-
                 // Click message
                 if (objType == 'message') {
                     gsEnter
@@ -279,7 +317,7 @@
             removeObject: function(obj) {
                 gui.eval('patch.removeObject(obj);', {obj: obj});
                 gui.chart.selectAll('g.objectGroup')
-                    .data(gui.patch.getAllObjects(), gui.objectKey)
+                    .data(gui.patch.getAllObjects(), gui.f('getKey'))
                     .exit().remove();
                 gui.chart.selectAll('line.connection')
                     .data(gui.patch.getAllConnections(), gui.connectionKey)
@@ -340,11 +378,6 @@
                         +conn[1].obj.id+':'+conn[1].id;
             },
 
-            // Helper to build a key for an object for d3
-            objectKey: function(obj) {
-                return obj.id;
-            },
-
             // Helper to update XY of a connection
             setConnectionXY: function(line) {
                 line.attr('x1', function(conn) {
@@ -361,18 +394,19 @@
                     });
             },
 
+            // Helper for d3, makes a function that takes an object and calls `methName` on it.
             f: function(methName) {
                 return function(o) { return o[methName](); };
             },
 
-            // variables used for maintaining state, establishing connections,
-            // and deleting objects and connections.
-            updateSelection: function(elem) {
+            // Sets the current selection to `elem`
+            setSelection: function(elem) {
                 d3.selectAll('line.connection').classed('selected', false);
                 d3.selectAll('g.objectGroup').classed('selected', false);
                 if (elem != undefined) d3.select(elem).classed('selected', true);
             },
 
+            // Deletes the current selection
             deleteSelection: function() {
                 gui.chart.selectAll('.selected').each(function(thing) {
                     if (thing instanceof Pd.Object) {
@@ -381,19 +415,15 @@
                         gui.removeConnection(thing[0], thing[1]);
                     }
                 });
-            },
-
-            // Width and height - in pixels - of a portlet
-            portletWidth: 15,
-            portletHeight: 10,
+            }
         };
-
-        gui.patch = gui.eval('var ', 'patch = new Pd.Patch();');
-        gui.eval('patch.play();');
 
         $(function() {
             gui.chart = d3.select('svg.canvas');
-            gui.chart.on('click', function() { gui.updateSelection(); });
+            gui.chart.on('click', function() { gui.setSelection(); });
+
+            gui.patch = gui.eval('var ', 'patch = new Pd.Patch();');
+            gui.eval('patch.play();');
 
         // Deletion of objects or connections
             $('body').keyup(function(event) {
