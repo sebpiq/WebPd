@@ -1,27 +1,6 @@
 $(document).ready(function() {
 
-/******************** some test utilities ************************/
-
-    // turns an array or Float32 into an array
-    var toArray = function(arrayish) {
-        var array = [];
-        for (var i=0; i<arrayish.length; i++) array[i] = arrayish[i];
-        return array;
-    };
-
-    // round a number to a given number of decimal places
-    var round = function(num, dec) {
-        dec = dec || 4;
-        var f = Math.pow(10, dec);
-        return Math.round(num * f) / f;
-    }
-
-    // apply round to all elements of an array
-    var roundArray = function(array, dec) {
-        var roundedArray = [];
-        for (var i=0; i<array.length; i++) roundedArray[i] = round(array[i], dec);
-        return roundedArray;
-    };
+/******************** setting up tests ************************/
 
     // declaring special inlets and outlets for testing
     Pd['testinlet~'] = Pd['inlet~'].extend({

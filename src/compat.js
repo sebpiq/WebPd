@@ -1,60 +1,40 @@
 (function(Pd){
 
+    // Regular expression to split tokens in a message.
+    var tokensRe = new RegExp(' |\r\n?|\n');
+
     Pd.compat = {};
 
-
-    // Converts a Pd message to a float
-    // TODO: scientific notation, e.g. 2.999e-5
-    Pd.compat.toFloat = function(data) {
-	    // first check if we just got an actual float, return it if so
-	    if (!isNaN(data)) return parseFloat(data);
-	    // otherwise parse this thing
-	    var element = data.split(' ')[0];
-	    var foundfloat = parseFloat(element);
-	    if (!isNaN(foundfloat)) {
-		    element = foundfloat;
-	    } else if (element != 'symbol') {
-		    Pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
-		    element = '';
-	    } else {
-		    element = 0;
-	    }
-	    return element;
+    // Parses argument to a string or a number.
+    Pd.compat.parseArg = function(arg) {
+        var parsed = Pd.compat.parseFloat(arg);
+        if (Pd.isNumber(parsed)) return parsed;
+        else if (Pd.isString(arg)) return arg;
+        else throw new Error('couldn\'t parse arg ' + arg);
     };
 
-    // Converts a Pd message to a symbol
-    Pd.compat.toSymbol = function(data) {
-	    var element = data.split(' ')[0];
-	    if (!isNaN(parseFloat(element))) {
-		    element = 'symbol float';
-	    } else if (element != 'symbol') {
-		    Pd.log("error: trigger: can only convert 's' to 'b' or 'a'")
-		    element = '';
-	    } else {
-		    element = 'symbol ' + data.split(' ')[1];
-	    }
-	    return element;
-    };
-
-    // Convert a Pd message to a bang
-    Pd.compat.toBang = function(data) {
-	    return 'bang';
+    // Parses a float from a .pd file. Returns the parsed float or NaN.
+    Pd.compat.parseFloat = function(data) {
+        if (Pd.isNumber(data)) return data;
+	    else if (Pd.isString(data)) return parseFloat(data);
+        else return NaN;
     };
 
     // Convert a Pd message to a javascript array
-    Pd.compat.toArray = function(msg) {
-	    // if it's a string, split the atom
-	    if (typeof msg == 'string') {
-		    var parts = msg.split(' ');
-		    if (parts[0] == 'list') parts.shift();
-		    return parts;
+    Pd.compat.parseArgs = function(args) {
 	    // if it's an int, make a single valued array
-	    } else if (typeof msg == 'number') {
-		    return [msg];
-	    // otherwise it's proably an object/array and should stay that way
-	    } else {
-		    return msg;
-	    }
+	    if (Pd.isNumber(args)) return [args];
+	    // if it's a string, split the atom
+	    else {
+	        var parts = Pd.isString(args) ? args.split(tokensRe) : args,
+                parsed = [], i, length;
+		    if (parts[0] == 'list') parts.shift();
+            for (i = 0, length = parts.length; i < length; i++) {
+                if ((arg = parts[i]) === '') continue;
+                else parsed.push(Pd.compat.parseArg(arg));
+            }
+            return parsed;
+        }
     };
 
     
@@ -62,21 +42,19 @@
 
     // regular expression for finding valid lines of Pd in a file
     var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n', 'gi');
-    var tokensRe = new RegExp(' |\r\n?|\n');
 
     // Parses a Pd file, creates and returns a new `Pd.Patch` object from it
     // ref : http://puredata.info/docs/developer/PdFileFormat 
     Pd.compat.parse = function(txt) {
-	    // last table name to add samples to
-	    var lastTable = null;
-        var counter = 0;
-        var line;
-        var pd = new Pd.Patch();
+	    var lastTable = null,       // last table name to add samples to
+            counter = 0,
+            pd = new Pd.Patch(),
+            line;
 
 	    // use our regular expression to match instances of valid Pd lines
 	    while (line = linesRe.exec(txt)) {
-		    var tokens = line[1].split(tokensRe);
-            var chunkType = tokens[0];
+		    var tokens = line[1].split(tokensRe),
+                chunkType = tokens[0];
 		    Pd.debug(tokens.toString());
 
 		    // if we've found a create token
@@ -85,8 +63,8 @@
 
 			    // is this an obj instantiation
 			    if (elementType == 'obj' || elementType == 'msg' || elementType == 'text') {
-				    var proto;  // the lookup to use in the `Pd.objects` hash
-                    var args;   // the construction args for the object
+				    var proto,  // the lookup to use in the `Pd.objects` hash
+                        args;   // the construction args for the object
 
 				    if (elementType == 'msg') {
                         proto = 'msg';
@@ -103,7 +81,7 @@
 					    }
 				    }
 
-                    var obj = new Pd.objects[proto](pd, args);
+                    var obj = new Pd.objects[proto](pd, Pd.compat.parseArgs(args));
 
 			    } else if (elementType == 'array') {
                     var arrayName = tokens[2];

@@ -32,17 +32,18 @@
     };
     Pd._patches = [];
 
-    // Returns true if an object is an array, false otherwise 
+    // Returns true if an object is an array, false otherwise.
     Pd.isArray = Array.isArray || function(obj) {
         return toString.call(obj) == '[object Array]';
     };
 
-    // Returns true if an object is a number, false otherwise
+    // Returns true if an object is a number, false otherwise.
+    // If `val` is NaN, the function returns false.
     Pd.isNumber = function(val) {
-        return typeof val === 'number';
+        return typeof val === 'number' && !isNaN(val);
     },
 
-    // Returns true if an object is a string, false otherwise
+    // Returns true if an object is a string, false otherwise.
     Pd.isString = function(val) {
         return typeof val === 'string';
     },

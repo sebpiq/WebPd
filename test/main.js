@@ -116,6 +116,7 @@ $(document).ready(function() {
         ok(Pd.isNumber(1.2));
         ok(!Pd.isNumber([]));
         ok(!Pd.isNumber('iop'));
+        ok(!Pd.isNumber(NaN));
     });
 
     test('isString', function() {

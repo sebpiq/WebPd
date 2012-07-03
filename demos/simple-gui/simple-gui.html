@@ -493,7 +493,11 @@
 
             // Adding the console for loggin WebPd API calls
             gui.commandLog = WebPdCommandLog;
-            WebPdCommandLog.elem = $('#commandLog');
+            WebPdCommandLog.elem = $('#commandLog .codeContainer');
+            $('#commandLog .collapse, #commandLog .expand').click(function(event) {
+                event.preventDefault();
+                $('#commandLog').toggleClass('expanded');
+            });
 
             // Creating and starting the WebPd patch
             gui.patch = gui.eval('var ', 'patch = new Pd.Patch();');
@@ -531,9 +535,8 @@
                     event.preventDefault();
                     event.stopPropagation();
                     // Get the creation args and parse them to a javascript array
-                    var rawArgs = objLi.find('input[type=text]').val();
-                    rawArgs = '[' + rawArgs.split(' ').join(', ') + ']';
-                    gui.newObject(objType, JSON.parse(rawArgs));
+                    var args = objLi.find('input[type=text]').val();
+                    gui.newObject(objType, Pd.compat.parseArgs(args));
                     objLi.click();
                 });
             });
@@ -601,7 +604,30 @@
             position: absolute;
             bottom: 0;
             left: 0;
-            width: 78%;
+            width: 80%;
+            code { width: auto; }
+            .controls {
+                a {
+                    text-decoration: none;
+                    background-color: grey;
+                }
+            }
+            &.expanded {
+                .controls { 
+                    text-align: right;
+                    position: absolute;
+                    width: 100%;
+                    top: 0;
+                    right: 0;
+                }
+            }
+            /* handling states expanded/collapsed */
+            code, .collapse { display: none; }
+            &.expanded {
+                .collapse { display: inline-block; }
+                code { display: block; }
+                .expand { display: none; }
+            }
         }
 
         .canvas {
@@ -662,13 +688,16 @@
     </li>
 </script>
 <body>
-    <svg class="canvas">
-    </svg>
+    <svg class="canvas"></svg>
     <div id="sidebar">
-        <ul>
-        </ul>
+        <ul></ul>
     </div>
-    <div id="commandLog">
+    <div id="commandLog" class="expanded">
+        <div class="controls">
+            <a class="collapse" href="">< API calls</a>
+            <a class="expand" href="">> API calls</a>
+        </div>
+        <div class="codeContainer"></div>
     </div>
 </body>
 </html>
