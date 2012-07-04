@@ -3,8 +3,7 @@
 	<title>Simple GUI</title>
 	<script src="../../pd.js"></script>
     <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
-    <!--<script src="https://raw.github.com/mbostock/d3/master/d3.v2.min.js"></script>-->
-    <script src="d3.v2.min.js"></script>
+    <script src="http://funktion.fm/WebPd/cdn/js/d3.v2.min.js"></script>
     <script src="http://balupton.github.com/jquery-syntaxhighlighter/scripts/jquery.syntaxhighlighter.min.js"></script>
     <script src="https://raw.github.com/janl/mustache.js/0.4.x/mustache.min.js"></script>
 
@@ -563,7 +562,9 @@
             // Patch loader
             $('#loadPatch form').submit(function(event) {
                 event.preventDefault();
-                gui.patch = Pd.compat.parse($(this).find('textarea').val());
+                var textarea = $(this).find('textarea');
+                gui.patch = Pd.compat.parse(textarea.val());
+                textarea.val('');
                 gui.refresh();
                 gui.patch.play();
             });
@@ -572,7 +573,6 @@
                 $('#loadPatch').addClass('expanded');
             });
             $('#loadPatch input').click(function(event) {
-                $('#loadPatch textarea').val('');
                 $('#loadPatch').removeClass('expanded');
             });
 
