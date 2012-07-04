@@ -3,7 +3,7 @@
     /******************** Base Object *****************/
 
     Pd.Object = function (pd, args) {
-        args = args || [];
+        this._args = args = args || [];
         // the patch this object belong to
         this.patch = (pd || null);
         // id of the object in this patch

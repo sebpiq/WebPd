@@ -57,7 +57,7 @@ $(document).ready(function() {
         var patchStr = '#N canvas 778 17 450 300 10;\n'
             + '#X obj 14 13 loadbang;\n'
             + '#X obj 14 34 print bla;\n'
-            + '#X connect 0 0 1 0;\n';
+            + '#X connect 0 0 1 0;';
         var patch = Pd.compat.parse(patchStr);
         var loadbang = patch.getObject(0);
         var print = patch.getObject(1);
@@ -68,8 +68,14 @@ $(document).ready(function() {
 
         equal(loadbang.o(0).sinks.length, 1);
         equal(print.i(0).sources.length, 1);
-        equal(loadbang.o(0).sinks[0], print.i(0));
-        equal(print.i(0).sources[0], loadbang.o(0));
+
+        var inlet1 = loadbang.o(0).sinks[0],
+            inlet2 = print.i(0);
+        deepEqual([inlet1.id, inlet1.obj.id], [inlet2.id, inlet2.obj.id]);
+
+        var outlet1 = print.i(0).sources[0],
+            outlet2 = loadbang.o(0);
+        deepEqual([outlet1.id, outlet1.obj.id], [outlet2.id, outlet2.obj.id]);
     });
 
     test('parse : table', function() {
@@ -87,7 +93,7 @@ $(document).ready(function() {
             + '#A 27 2.8 2.9 3.0;\n'
             + '#X coords 0 1 14818 -1 200 140 1;\n'
             + '#X restore 157 26 graph;\n'
-            + '#X obj 19 370 osc~ 440;\n'
+            + '#X obj 19 370 osc~ 440;'
         var patch = Pd.compat.parse(patchStr);
         var table = patch.getObject(0);
         var sameTable = patch.getTableByName('myTable');

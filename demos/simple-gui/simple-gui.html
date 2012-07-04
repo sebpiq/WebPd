@@ -3,7 +3,8 @@
 	<title>Simple GUI</title>
 	<script src="../../pd.js"></script>
     <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
-    <script src="https://raw.github.com/mbostock/d3/master/d3.v2.min.js"></script>
+    <!--<script src="https://raw.github.com/mbostock/d3/master/d3.v2.min.js"></script>-->
+    <script src="d3.v2.min.js"></script>
     <script src="http://balupton.github.com/jquery-syntaxhighlighter/scripts/jquery.syntaxhighlighter.min.js"></script>
     <script src="https://raw.github.com/janl/mustache.js/0.4.x/mustache.min.js"></script>
 
@@ -17,11 +18,11 @@
                 Pd.extend(proto, {
 
                     // Method to call after object creation to initialize gui data
-                    initGui: function(args) {
+                    initGui: function() {
                         this._guiData = {
                             x: 0,
                             y: 0,
-                            text: this.type + ' ' + args.join(' ')
+                            text: this.type + ' ' + this._args.join(' ')
                         };
                     },
 
@@ -166,18 +167,7 @@
                     inletObj: inlet.obj,
                     inletId: inlet.id,
                 });
-                var lines = gui.canvas.selectAll('line.connection')
-                    .data(gui.patch.getAllConnections(), gui.connectionKey)
-                    .enter()
-                    .append('line')
-                    .attr('class', 'connection')
-                    .call(gui.setConnectionXY)
-                    .on('click', function(conn) {
-                        gui.setSelection(this);
-                        // Stop event propagation so that the canvas
-                        // doesn't receive the click.
-                        d3.event.stopPropagation();
-                    });
+                this.refreshConnections();
             },
 
             // Removes a connection between outlet and inlet from the patch and the canvas
@@ -188,15 +178,10 @@
                     inletId: inlet.id,
                     outletId: outlet.id
                 });
-                gui.canvas.selectAll('line.connection')
-                    .data(gui.patch.getAllConnections(), gui.connectionKey)
-                    .exit().remove();
+                this.refreshConnections();
             },
 
             // Creates a new object of type `objType` and with `args`.
-            // New object is added to the patch as well as to the svg canvas.
-            // This also sets-up all the user events, e.g. selecting the object, 
-            // moving it, creating a new connection from an outlet, and so on ...
             newObject: function(objType, args) {
                 // Creating object and adding it to the graph
                 var obj = gui.eval('var ', 'obj = new Pd.objects[objType](patch, args);', {
@@ -204,15 +189,72 @@
                     objType: objType,
                     obj: undefined
                 });
-                
-                // Initialize the GUI infos for the new object. 
-                obj.initGui(args);
+                gui.refreshObjects();
+            },
 
-                // Object group
-                var gsEnter = gui.canvas.selectAll('g')
-                    .data(gui.patch.getAllObjects(), gui.f('getKey'))
-                    .enter()
+            // Removes object from the patch and from the canvas.
+            removeObject: function(obj) {
+                gui.eval('patch.removeObject(obj);', {obj: obj});
+                gui.refresh();
+            },
+
+            // Refresh the whole canvas
+            refresh: function() {
+                gui.refreshObjects();
+                gui.refreshConnections();
+            },
+
+            // Create new connections, setting-up user events on them,
+            // remove those that don't exist anymore.
+            refreshConnections: function() {
+                var connections = gui.canvas.selectAll('line.connection')
+                    .data(gui.patch.getAllConnections(), gui.connectionKey)
+                
+                connections.enter()
+                    .append('line')
+                    .attr('class', 'connection')
+                    .each(function(conn) {
+                        gui.setConnectionXY(d3.select(this));
+                    })
+                    .on('click', function(conn) {
+                        gui.setSelection(this);
+                        // Stop event propagation so that the canvas
+                        // doesn't receive the click.
+                        d3.event.stopPropagation();
+                    });
+
+                connections.exit().remove();
+            },
+
+            // Refresh objects display. 
+            // New objects are added to the svg canvas and user events are set-up : 
+            // e.g. selecting the object, moving it, creating a new connection 
+            // from an outlet, and so on ...
+            // Objects that don't exist anymore are removed from the canvas.
+            refreshObjects: function() {
+                var objects = gui.canvas.selectAll('g.objectGroup')
+                    .data(gui.patch.getAllObjects(), gui.f('getKey'));
+
+                // New objects
+                var gsEnter = objects.enter()
                     .append('g')
+                    .each(function(obj) {
+                        // Initialize the GUI infos for the new object. 
+                        obj.initGui();
+
+                        // Add control for sending message if object is message
+                        if (obj.type == 'message') {
+                            d3.select(this).append('circle')
+                                .attr('class', 'sendMessage')
+                                .attr('cx', function(obj) { return obj.getW() + 20; })
+                                .attr('cy', function(obj) { return obj.getH()/2; })
+                                .attr('r', 20)
+                                .on('click', function(obj) {
+                                    gui.eval("obj.i(0).message('bang');", {obj: obj});
+                                    d3.event.stopPropagation();
+                                });
+                        }
+                    })
                     .attr('class', 'objectGroup')
                     .attr('transform', gui.translation(5, 5))
                     // Selecting object
@@ -327,31 +369,8 @@
                         d3.event.stopPropagation();
                     });
 
-                // Add control for sending message if object is message
-                if (objType == 'message') {
-                    gsEnter
-                        .append('circle')
-                        .attr('class', 'sendMessage')
-                        .attr('cx', function(obj) { return obj.getW() + 20; })
-                        .attr('cy', function(obj) { return obj.getH()/2; })
-                        .attr('r', 20)
-                        .on('click', function(obj) {
-                            gui.eval("obj.i(0).message('bang');", {obj: obj});
-                            d3.event.stopPropagation();
-                        });
-                }
-
-            },
-
-            // Removes object from the patch and from the canvas.
-            removeObject: function(obj) {
-                gui.eval('patch.removeObject(obj);', {obj: obj});
-                gui.canvas.selectAll('g.objectGroup')
-                    .data(gui.patch.getAllObjects(), gui.f('getKey'))
-                    .exit().remove();
-                gui.canvas.selectAll('line.connection')
-                    .data(gui.patch.getAllConnections(), gui.connectionKey)
-                    .exit().remove();
+                // Remove old objects from the canvas
+                objects.exit().remove();
             },
 
             // Object count, used only to give the objects a unique name
@@ -393,7 +412,7 @@
                         toLog = toLog.replace(name, JSON.stringify(val));
                     }
                 }
-                this.commandLog.log(toLog);
+                gui.commandLog.log(toLog);
                 return result;
             },
 
@@ -485,7 +504,7 @@
         $(function() {
             
             // Creating canvas and setting-up user events
-            gui.canvas = d3.select('svg.canvas');
+            gui.canvas = d3.select('svg#canvas');
             gui.canvas.on('click', function() { gui.setSelection(); });
             $('body').keyup(function(event) {
                 if (event.keyCode == 46) gui.deleteSelection();
@@ -540,6 +559,24 @@
                     objLi.click();
                 });
             });
+
+            // Patch loader
+            $('#loadPatch form').submit(function(event) {
+                event.preventDefault();
+                gui.patch = Pd.compat.parse($(this).find('textarea').val());
+                gui.refresh();
+                gui.patch.play();
+            });
+            $('#loadPatch .expand').click(function(event) {
+                event.preventDefault();
+                $('#loadPatch').addClass('expanded');
+            });
+            $('#loadPatch input').click(function(event) {
+                $('#loadPatch textarea').val('');
+                $('#loadPatch').removeClass('expanded');
+            });
+
+
         });
 	</script>
 	<style type="text/less">
@@ -547,14 +584,41 @@
             margin: 0;
             padding: 0;
         }
+        a { 
+            text-decoration: none;
+        }
+
+        @menubarHeight: 5%;
+
+        #menubar {
+            height: @menubarHeight;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            background-color: #eee;
+
+            #loadPatch {
+                display: inline-block;
+                form { margin: 0; }
+                textarea { display: block; }
+                /* handling states expanded/collapsed */
+                form { display: none; }
+                &.expanded {
+                    background-color: grey;
+                    padding: 1em;
+                    form { display: block; }
+                    .expand { display: none; }
+                }
+            }
+        }
 
         #sidebar {
             background-color: #eee;
-            height: 100%;
+            height: 100% - @menubarHeight;
             width: 20%;
             position: absolute;
             right: 0;
-            top: 0;
+            top: @menubarHeight;
 
             ul {
                 background-color: white;
@@ -577,7 +641,6 @@
                         font-size: 150%;
                         color: grey;
                         font-weight: bold;
-                        text-decoration: none;
                         margin-right: 0.5em;
                         display: inline-block;
                         width: 0.5em;
@@ -608,7 +671,6 @@
             code { width: auto; }
             .controls {
                 a {
-                    text-decoration: none;
                     background-color: grey;
                 }
             }
@@ -630,9 +692,11 @@
             }
         }
 
-        .canvas {
+        #canvas {
             width: 100%;
-            height: 100%;
+            height: 100% - @menubarHeight;
+            position: absolute;
+            top: @menubarHeight;
 
             rect.object {
                 stroke: black;
@@ -688,7 +752,17 @@
     </li>
 </script>
 <body>
-    <svg class="canvas"></svg>
+    <svg id="canvas"></svg>
+    <div id="menubar">
+        <div id="loadPatch">
+            <a class="expand" href="">Load patch</a>
+            <form>
+                <textarea></textarea>
+                <input type="submit" value="Load" />
+                <input type="reset" value="Cancel" />
+            </form>
+        </div>
+    </div>
     <div id="sidebar">
         <ul></ul>
     </div>

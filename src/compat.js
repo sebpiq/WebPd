@@ -41,7 +41,7 @@
     /******************** Patch parsing ************************/
 
     // regular expression for finding valid lines of Pd in a file
-    var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}\n', 'gi');
+    var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}(\n|$)', 'gi');
 
     // Parses a Pd file, creates and returns a new `Pd.Patch` object from it
     // ref : http://puredata.info/docs/developer/PdFileFormat 
@@ -64,7 +64,8 @@
 			    // is this an obj instantiation
 			    if (elementType == 'obj' || elementType == 'msg' || elementType == 'text') {
 				    var proto,  // the lookup to use in the `Pd.objects` hash
-                        args;   // the construction args for the object
+                        args,   // the construction args for the object
+                        obj;
 
 				    if (elementType == 'msg') {
                         proto = 'msg';
@@ -80,14 +81,13 @@
 						    proto = 'null';
 					    }
 				    }
-
-                    var obj = new Pd.objects[proto](pd, Pd.compat.parseArgs(args));
+                    obj = new Pd.objects[proto](pd, Pd.compat.parseArgs(args));
 
 			    } else if (elementType == 'array') {
-                    var arrayName = tokens[2];
-                    var arraySize = parseInt(tokens[3]);
+                    var arrayName = tokens[2],
+                        arraySize = parseInt(tokens[3]),
+				        obj = new Pd.objects['table'](pd, [arrayName, arraySize]);
 
-				    var obj = new Pd.objects['table'](pd, [arrayName, arraySize]);
                     // remind the last table for handling correctly 
                     // the table related instructions which might follow.
                     lastTable = obj;
@@ -97,8 +97,8 @@
 				    lastTable = null;
 
 			    } else if (elementType == 'connect') {
-                    var obj1 = pd.getObject(parseInt(tokens[2]));
-                    var obj2 = pd.getObject(parseInt(tokens[4]));
+                    var obj1 = pd.getObject(parseInt(tokens[2])),
+                        obj2 = pd.getObject(parseInt(tokens[4]));
                     pd.connect(obj1.o(parseInt(tokens[3])), obj2.i(parseInt(tokens[5])));
                 }
 
