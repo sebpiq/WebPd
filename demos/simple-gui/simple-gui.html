@@ -103,6 +103,10 @@
             // Patch loader
             $('#loadPatch form').submit(function(event) {
                 event.preventDefault();
+                var i, objects = gui.patch.getAllObjects(), length = objects.length;
+                for (var i = 0; i < length; i++) {
+                    gui.removeObject(objects[i]);
+                }
                 var textarea = $(this).find('textarea');
                 gui.patch = Pd.compat.parse(textarea.val());
                 textarea.val('');
