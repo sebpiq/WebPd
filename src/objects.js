@@ -19,6 +19,14 @@
         'cnv': {}
     };
 
+    Pd.objects['text'] = Pd.Object.extend({
+
+        load: function(text) {
+            this.text = text;
+        }
+
+    });
+
     Pd.objects['loadbang'] = Pd.Object.extend({
 
         outletTypes: ['outlet'],

@@ -6,6 +6,7 @@
     <script src="http://funktion.fm/WebPd/cdn/js/d3.v2.min.js"></script>
     <script src="http://balupton.github.com/jquery-syntaxhighlighter/scripts/jquery.syntaxhighlighter.min.js"></script>
     <script src="https://raw.github.com/janl/mustache.js/0.4.x/mustache.min.js"></script>
+    <link href='http://fonts.googleapis.com/css?family=Didact+Gothic' rel='stylesheet' type='text/css'>
     <script src="simple-gui.js"></script>
 	<script>
         // Console logging calls to WebPd's dynamic patching API
@@ -104,7 +105,9 @@
             $('#loadPatch form').submit(function(event) {
                 event.preventDefault();
                 var textarea = $(this).find('textarea');
-                gui.patch = Pd.compat.parse(textarea.val());
+                gui.patch = gui.eval('var patch = ', 'Pd.compat.parse(patchText);', {
+                    patchText: textarea.val()
+                });
                 textarea.val('');
                 gui.refresh();
                 gui.patch.play();

@@ -65,10 +65,11 @@
     //
     //    });
     Pd.extend = function(obj) {
-        var sources = Array.prototype.slice.call(arguments, 1);
-        for(var i=0; i<sources.length; i++) {
-            var source = sources[i];
-            for (var prop in source) {
+        var sources = Array.prototype.slice.call(arguments, 1),
+            i, length, source, prop;
+        for(i = 0, length = sources.length; i < length; i++) {
+            source = sources[i];
+            for (prop in source) {
                 obj[prop] = source[prop];
             }
         }
@@ -76,12 +77,13 @@
     };
 
     Pd.chainExtend = function() {
-        var sources = Array.prototype.slice.call(arguments, 0);
-        var parent = this;
-        // Calls parent constructor
-        var child = function() {parent.apply(this, arguments);};
+        var sources = Array.prototype.slice.call(arguments, 0),
+            parent = this,
+            child = function() { parent.apply(this, arguments); };
+
         // Fix instanceof
         child.prototype = new parent();
+
         // extend with new properties
         Pd.extend.apply(this, [child.prototype, parent.prototype].concat(sources));
         child.extend = this.extend;
@@ -116,32 +118,31 @@
             if (!callback || !event) return this;
             var eventCbs = cbsArray[event] || (cbsArray[event] = []);
             eventCbs.push({callback: callback, context: context});
-            return this;
+            return;
         },
 
         // Unbinds `callback` from `event`.
         off: function(event, callback) {
-            if (!callback || !event) return this;
-            var cbObj;
-            var removeCbs = function(array) {
-                var i = 0;
-                while (i < array.length) {
-                    cbObj = array[i];
-                    if (cbObj.callback == callback) array.splice(i, 1);
-                    else i++;
-                }
-            };
-            removeCbs(this._cbs[event] || []);
-            removeCbs(this._cbsOne[event] || []);
+            this._genericOff(this._cbs, event, callback);
+            this._genericOff(this._cbsOne, event, callback);
             return this;
+        },
+
+        // Helper function to unbind a callback.
+        _genericOff: function(cbsArray, event, callback) {
+            if (!callback || !event || !cbsArray[event]) return;
+            var cbObj, i = 0, eventCbs = cbsArray[event];
+            while (cbObj = eventCbs[i]) {
+                if (cbObj.callback == callback) eventCbs.splice(i, 1);
+                else i++;
+            }
         },
 
         // Triggers `event` on the calling object, thus calling the bound callbacks.
         trigger: function(event) {
-            var allCbs = (this._cbs[event] || []).concat(this._cbsOne[event] || []);
-            var cbObj;
-            for (var i=0; i<allCbs.length; i++) {
-                cbObj = allCbs[i];
+            var allCbs = (this._cbs[event] || []).concat(this._cbsOne[event] || []),
+                cbObj, i;
+            for (i = 0; cbObj = allCbs[i]; i++) {
                 cbObj.callback.apply(cbObj.context);
             }
             delete this._cbsOne[event];

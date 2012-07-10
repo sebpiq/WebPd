@@ -68,11 +68,11 @@
                         obj;
 
 				    if (elementType == 'msg') {
-                        proto = 'msg';
+                        proto = 'message';
                         args = tokens.slice(4);
                     } else if (elementType == 'text') {
                         proto = 'text';
-                        args = tokens.slice(4);
+                        args = [tokens.slice(4).join(' ')];
                     } else {
 					    proto = tokens[4];
                         args = tokens.slice(5);
@@ -81,7 +81,12 @@
 						    proto = 'null';
 					    }
 				    }
-                    obj = new Pd.objects[proto](pd, Pd.compat.parseArgs(args));
+
+                    if (Pd.objects.hasOwnProperty(proto)) {
+                        obj = new Pd.objects[proto](pd, Pd.compat.parseArgs(args));
+                    } else {
+                        throw new Error('unknown object "' + proto + '"');
+                    }
 
 			    } else if (elementType == 'array') {
                     var arrayName = tokens[2],
