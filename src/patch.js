@@ -73,8 +73,18 @@
 	
 	    // gets the absolute current logical elapsed time in milliseconds
 	    getAbsTime: function() {
-		    return this.frame * Pd.blockSize / (Pd.sampleRate / 1000);
+		    return this.frameToTime(this.frame);
 	    },
+
+        // Returns the time corresponding with `frame` in milliseconds.
+        frameToTime: function(frame) {
+            return frame * this.blockSize / (this.sampleRate / 1000);
+        },
+
+        // Returns the frame corresponding with `time` (given in milliseconds).
+        timeToFrame: function(time) {
+            return time / (this.blockSize / (this.sampleRate / 1000));
+        },
 
     /******************** DSP stuff ************************/
 

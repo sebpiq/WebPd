@@ -37,6 +37,7 @@
 
     });
 
+    // TODO: should this be an endPoint ?
     Pd.objects['print'] = Pd.Object.extend({
 
 		inletTypes: ['inlet'],
@@ -602,6 +603,69 @@
 			    this.outlets[0].message(out);
             }
 		}
+	});
+
+
+    // Metronome, outputs 'bang' every `rate` milliseconds.
+    // TODO: sample-exactitude ? How does it work in pd ?
+	Pd.objects['metro'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+        init: function(rate) {
+            // The next metronome tick in frames
+            this.nextMTick = null;
+            // Last there was a metronome tick
+            this.lastMTickTime = null;
+            this.setRate(rate || 0);
+            this.toDspTickNoOp();
+        },
+
+        dspTickTicking: function() {
+            if (this.frame > this.nextMTick) {
+                this.outlets[0].message('bang');
+                this._computeNext();
+            }
+        },
+
+        // Metronome rate, in ms per tick
+        setRate: function(rate) {
+            this.rate = rate;
+        },
+
+        // Compute the next metronome tick
+        _computeNext: function() {
+            // TODO: this needs to be recalculated on sampleRate change
+            var nextTime = this.lastMTickTime + this.rate;
+            this.nextMTick = this.patch.timeToFrame(nextTime);
+            this.lastMTickTime = nextTime;
+        },
+
+		message: function(inletId, msg) {
+            if (inletId === 0) {
+                if (msg === 'bang') this.toDspTickTicking();
+                else if (msg === 'stop') this.toDspTickNoOp(); 
+                else {
+                    this.assertIsNumber(msg, 'invalid msg ' + msg);
+                    if (msg === 0) this.toDspTickNoOp();
+                    else this.toDspTickTicking();
+                }
+            } else if (inletId === 1) {
+                this.assertIsNumber(msg, 'invalid rate ' + msg);
+                this.setRate(msg);
+                // If ticking, recalculate the next tick.
+                if (this.dspTick == this.dspTickTicking) {
+                    this.toDspTickTicking();
+                }
+            }
+		},
+
+        toDspTickTicking: function() {
+            this.lastMTickTime = this.patch.frameToTime(this.frame);
+            this._computeNext();
+            this.dspTick = this.dspTickTicking;
+        }
 	});
 
 

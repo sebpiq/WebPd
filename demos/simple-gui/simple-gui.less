@@ -1,4 +1,5 @@
 @menubarHeight: 6%;
+@sidebarWidth: 22%;
 @blue1: #008DCF;
 @blue2: #006da0;
 @hoverBg: #ffe;
@@ -93,10 +94,11 @@ a {
 #sidebar {
     background-color: #eee;
     height: 100% - @menubarHeight;
-    width: 20%;
+    width: @sidebarWidth;
     position: absolute;
     right: 0;
     top: @menubarHeight;
+    overflow: auto;
 
     ul {
         background-color: white;
@@ -145,7 +147,7 @@ a {
     position: absolute;
     bottom: 0;
     left: 0;
-    width: 80%;
+    width: 100% - @sidebarWidth;
     code { width: auto; }
     .controls {
         padding-bottom: 0.4em;

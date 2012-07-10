@@ -431,6 +431,51 @@ $(document).ready(function() {
         equal(round(mtof.o(0).receivedMessage), 440);
     });
 
+    test('metro', function() {
+        Pd.sampleRate = 10;
+        var patch = new Pd.Patch();
+        var metro = new Pd.objects['metro'](patch, [1000]);
+
+        // metro stopped
+        for (metro.frame = 0; metro.frame < 10; metro.frame++) {
+            metro.dspTick();
+        }
+        equal(metro.o(0).receivedMessage, undefined);
+
+        // metro started (1000 ms => 10 samples => >= 3 frames (cause blockSize = 4) )
+        metro.i(0).message('bang');
+        for (var start = metro.frame; metro.frame < start + 3; metro.frame++) {
+            metro.dspTick();
+        }
+        equal(metro.o(0).receivedMessage, undefined);
+        metro.frame++;
+        metro.dspTick();
+        deepEqual(metro.o(0).receivedMessage, ['bang']);
+
+        // metro stopped again
+        metro.i(0).message(0);
+        metro.o(0).receivedMessage = undefined;
+        for (metro.frame = 0; metro.frame < 20; metro.frame++) {
+            metro.dspTick();
+        }
+        equal(metro.o(0).receivedMessage, undefined);
+
+        // metro started again
+        metro.i(0).message(123);
+        // a few ticks pass
+        for (metro.frame = 0; metro.frame < 23; metro.frame++) {
+            metro.dspTick();
+        }
+        metro.o(0).receivedMessage = undefined;
+        metro.i(1).message(1600);
+        for (var start = metro.frame; metro.frame < start + 4; metro.frame++) {
+            metro.dspTick();
+        }
+        equal(metro.o(0).receivedMessage, undefined);
+        metro.frame++;
+        metro.dspTick();
+        deepEqual(metro.o(0).receivedMessage, ['bang']);
+    });
 
     test('loadbang', function() {
         expect(0);
