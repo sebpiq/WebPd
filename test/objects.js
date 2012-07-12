@@ -494,4 +494,29 @@ $(document).ready(function() {
         var textBla = new Pd.objects['text'](null, ['Je suis un texte']);
     });
 
+    module('Pd.objects - glue');
+
+    test('float', function() {
+        var float = new Pd.objects['float']();
+        equal(float.o(0).receivedMessage, undefined);
+
+        float.i(0).message('bang');
+        deepEqual(float.o(0).receivedMessage, [0]);
+
+        float.i(0).message(2);
+        deepEqual(float.o(0).receivedMessage, [2]);
+
+        float.i(1).message(3);
+        float.i(0).message('bang');
+        deepEqual(float.o(0).receivedMessage, [3]);
+
+        float.i(1).message(4);
+        float.i(0).message(5);
+        deepEqual(float.o(0).receivedMessage, [5]);
+
+        float = new Pd.objects['float'](null, [6]);
+        float.i(0).message('bang');
+        deepEqual(float.o(0).receivedMessage, [6]);
+    });
+
 });

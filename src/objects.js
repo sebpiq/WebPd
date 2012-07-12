@@ -99,6 +99,32 @@
 
     });
 
+/**************************** Glue *********************************/
+
+	// Stores a float
+	Pd.objects['float'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+		init: function(val) {
+            this.val = val || 0;
+		},
+
+		message: function(inletId, msg) {
+			if (inletId === 0) {
+                if (msg !== 'bang') {
+                    this.assertIsNumber(msg, 'value must be a number');
+                    this.val = msg;
+                }
+                this.o(0).message(this.val);
+            } else if (inletId === 1) {
+                this.assertIsNumber(msg, 'value must be a number');
+                this.val = msg;
+            }
+		}
+    });
+
 /************************** DSP objects ******************************/
 	
 	// basic oscillator
@@ -608,6 +634,7 @@
 
     // Metronome, outputs 'bang' every `rate` milliseconds.
     // TODO: sample-exactitude ? How does it work in pd ?
+    // TODO: see objects.old : schedule helpers in patch
 	Pd.objects['metro'] = Pd.Object.extend({
 
 		inletTypes: ['inlet', 'inlet'],
