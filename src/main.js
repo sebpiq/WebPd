@@ -41,12 +41,12 @@
     // If `val` is NaN, the function returns false.
     Pd.isNumber = function(val) {
         return typeof val === 'number' && !isNaN(val);
-    },
+    };
 
     // Returns true if an object is a string, false otherwise.
     Pd.isString = function(val) {
         return typeof val === 'string';
-    },
+    };
 
     // Simple prototype inheritance. Used like so :
     //    

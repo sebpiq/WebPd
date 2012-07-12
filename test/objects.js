@@ -519,4 +519,25 @@ $(document).ready(function() {
         deepEqual(float.o(0).receivedMessage, [6]);
     });
 
+    test('spigot', function() {
+        var spigot = new Pd.objects['spigot']();
+        equal(spigot.o(0).receivedMessage, undefined);
+
+        spigot.i(0).message(1, 23, 'bla');
+        equal(spigot.o(0).receivedMessage, undefined);
+
+        spigot.i(1).message(1);
+        spigot.i(0).message(1, 23, 'bla');
+        deepEqual(spigot.o(0).receivedMessage, [1, 23, 'bla']);
+
+        spigot.o(0).receivedMessage = undefined;
+        spigot.i(1).message(0);
+        spigot.i(0).message(2266);
+        equal(spigot.o(0).receivedMessage, undefined);
+
+        spigot = new Pd.objects['spigot'](null, [8]);
+        spigot.i(0).message('2266');
+        deepEqual(spigot.o(0).receivedMessage, ['2266']);
+    });
+
 });

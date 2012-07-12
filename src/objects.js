@@ -117,11 +117,37 @@
                     this.assertIsNumber(msg, 'value must be a number');
                     this.val = msg;
                 }
-                this.o(0).message(this.val);
+                this.outlets[0].message(this.val);
             } else if (inletId === 1) {
                 this.assertIsNumber(msg, 'value must be a number');
                 this.val = msg;
             }
+		}
+    });
+
+	// Blocks messages or let them through depending on value on right inlet.
+	Pd.objects['spigot'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+		init: function(val) {
+            this.setPassing(val || 0);
+		},
+
+        setPassing: function(val) {
+            this.assertIsNumber(val, 'value must be a number');
+            this.passing = Boolean(val);
+        },
+
+		message: function(inletId, msg) {
+			if (inletId === 0) {
+                if (this.passing) {
+                    var outlet = this.outlets[0],
+                        args = Array.prototype.slice.call(arguments, 1);
+                    outlet.message.apply(outlet, args);
+                }
+            } else if (inletId === 1) this.setPassing(msg);
 		}
     });
 
