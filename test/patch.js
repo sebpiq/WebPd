@@ -277,4 +277,30 @@ $(document).ready(function() {
         ]);
     });
 
+    test('scheduling : timeout', function() {
+        patch.received = [];
+        patch.sampleRate = 10;
+        patch.timeout(1000, function() { this.received.push('bang'); }, patch);
+        for (patch.frame; patch.frame < 10; patch.frame++) patch.generateFrame();
+        deepEqual(patch.received, []);
+        patch.generateFrame();
+        deepEqual(patch.received, ['bang']);
+        for (patch.frame; patch.frame < 31; patch.frame++) patch.generateFrame();
+        deepEqual(patch.received, ['bang']);        
+    });
+
+    test('scheduling : interval', function() {
+        patch.received = [];
+        patch.sampleRate = 10;
+        patch.interval(1000, function() { this.received.push('bang'); }, patch);
+        for (patch.frame; patch.frame < 10; patch.frame++) patch.generateFrame();
+        deepEqual(patch.received, []);
+        patch.generateFrame();
+        deepEqual(patch.received, ['bang']);
+        for (patch.frame; patch.frame < 20; patch.frame++) patch.generateFrame();
+        deepEqual(patch.received, ['bang']);
+        patch.generateFrame();
+        deepEqual(patch.received, ['bang', 'bang']);
+    });
+
 });

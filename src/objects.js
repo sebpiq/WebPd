@@ -151,6 +151,18 @@
 		}
     });
 
+	// Blocks messages or let them through depending on value on right inlet.
+	Pd.objects['trigger'] = Pd.Object.extend({
+
+        inletTypes: ['inlet'],
+        outletTypes: [],
+
+        init: function() {
+            
+        },
+
+    });
+
 /************************** DSP objects ******************************/
 	
 	// basic oscillator

@@ -19,6 +19,10 @@
 	    // arrays of float data - Pd's tables
 	    // keys are table names
         this._tables = {};
+	    // arrays of callbacks which are scheduled to run at some point in time
+	    // keys are times
+	    this._scheduled = {};
+        this._scheduledTimes = [];
 
 	    // create the audio output driver
 	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
@@ -78,12 +82,63 @@
 
         // Returns the time corresponding with `frame` in milliseconds.
         frameToTime: function(frame) {
-            return frame * this.blockSize / (this.sampleRate / 1000);
+            return frame / (this.sampleRate / 1000);
         },
 
         // Returns the frame corresponding with `time` (given in milliseconds).
         timeToFrame: function(time) {
-            return time / (this.blockSize / (this.sampleRate / 1000));
+            return time / (1000 / this.sampleRate);
+        },
+
+        // TODO: optimize
+        // TODO: if possible factorize with event scheduling
+        runScheduled: function() {
+            if (this._scheduledTimes.length) {
+		        var allTimes = this._scheduledTimes, allScheduled = this._scheduled,
+                    absTime = this.getAbsTime(), i, length, t, cbs, cbObj;
+                
+		        for (i = 0, length = allTimes.length; i < length; i++) {
+                    t = allTimes[i];
+			        if (t > absTime) return;
+                    cbs = allScheduled[t];
+                    for (j = 0, length2 = cbs.length; j < length2; j++) {
+                        cbObj = cbs[j];
+                        cbObj.callback.call(cbObj.context);
+                        if (cbObj.repeat) {
+                            this.interval(cbObj.time, cbObj.callback, cbObj.context);
+                        }
+                    }
+                    delete allScheduled[t];
+		        }
+                allTimes.splice(0, i); 
+            }
+        },
+
+	    timeout: function(time, callback, context) {
+            return this._genericOn(time, callback, context, false);
+	    },
+
+	    interval: function(time, callback, context) {
+            return this._genericOn(time, callback, context, true);
+	    },
+
+        _genericOn: function(time, callback, context, repeat) {
+            if (!Pd.isNumber(time) || !callback) return this;
+            var cbs, absTime = Math.round(time + this.getAbsTime());
+            this._scheduledTimes.push(absTime);
+            this._scheduledTimes.sort();
+            cbs = this._scheduled[absTime] || (this._scheduled[absTime] = []);
+            cbs.push({callback: callback, context: context, time: time, repeat: repeat});
+            return absTime;
+        },
+
+        off: function(absTime, callback) {
+            if (!absTime || !callback) return;
+            var cbObj, i = 0, cbs = this._scheduled[absTime];
+            while (cbObj = cbs[i]) {
+                if (cbObj.callback == callback) cbs.splice(i, 1);
+                else i++;
+            }
         },
 
     /******************** DSP stuff ************************/
@@ -96,8 +151,12 @@
 		    // reset our output buffer (gets written to by dac~ objects)
             Pd.fillWithZeros(output);
 
-		    // run the dsp function on all endpoints to get data
+		    // run the dsp function on all endpoints to pull data
 		    this.mapEndPoints(function(obj) { patch.tick(obj); });
+
+            // run all scheduled callbacks
+            this.runScheduled();
+
 		    this.frame++;
 		    return output;
 	    },

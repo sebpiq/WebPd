@@ -431,7 +431,7 @@ $(document).ready(function() {
         equal(round(mtof.o(0).receivedMessage), 440);
     });
 
-    test('metro', function() {
+    /*test('metro', function() {
         Pd.sampleRate = 10;
         var patch = new Pd.Patch();
         var metro = new Pd.objects['metro'](patch, [1000]);
@@ -475,7 +475,7 @@ $(document).ready(function() {
         metro.frame++;
         metro.dspTick();
         deepEqual(metro.o(0).receivedMessage, ['bang']);
-    });
+    });*/
 
     test('loadbang', function() {
         expect(0);
