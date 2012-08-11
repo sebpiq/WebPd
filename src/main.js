@@ -92,6 +92,7 @@
 
     // Simple mixin to add event management to objects.
     // To initialize the mixin, `initEvents` must be run at object initialization.
+    // TODO: extract code common with scheduling in patch.js
     Pd.EventsBase = {
 
         // Must be run to initialize event management on a new object.
@@ -102,35 +103,55 @@
 
         // Binds a `callback` to an `event`. Callback will be called in `context`.
         on: function(event, callback, context) {
-            this._genericOn(this._cbs, event, callback, context);
+            return this._genericOn(this._cbs, event, {callback: callback, context: context});
         },
 
         // Binds a `callback` to an `event`. Callback will be called in `context`.
         // Once the callback has been run one time, it is removed from the callback list.
         one: function(event, callback, context) {
-            this._genericOn(this._cbsOne, event, callback, context);
+            return this._genericOn(this._cbsOne, event, {callback: callback, context: context});
         },
 
         // Helper function to bind a callback.
-        _genericOn: function(cbsArray, event, callback, context) {
-            if (!callback || !event) return this;
-            var eventCbs = cbsArray[event] || (cbsArray[event] = []);
-            eventCbs.push({callback: callback, context: context});
+        _genericOn: function(cbsRoot, event, cbObj) {
+            if (!cbObj.callback || !event) return;
+            var eventCbs = cbsRoot[event] || (cbsRoot[event] = []);
+            eventCbs.push(cbObj);
+            return cbObj.id = this._generateBindId();
         },
 
-        // Unbinds `callback` from `event`.
-        off: function(event, callback) {
-            this._genericOff(this._cbs, event, callback);
-            this._genericOff(this._cbsOne, event, callback);
+        // Unbinds using the pair (`event`, `callback`), or simply `id`. 
+        off: function(arg1, arg2) {
+            this._genericOff(this._cbs, arg1, arg2);
+            this._genericOff(this._cbsOne, arg1, arg2);
         },
 
         // Helper function to unbind a callback.
-        _genericOff: function(cbsArray, event, callback) {
-            if (!callback || !event || !cbsArray[event]) return;
-            var cbObj, i = 0, eventCbs = cbsArray[event];
-            while (cbObj = eventCbs[i]) {
-                if (cbObj.callback == callback) eventCbs.splice(i, 1);
-                else i++;
+        // If `arg2` is not provided, we assume `arg1` is `id`,
+        // otherwise `arg1` is event, `arg2` callback.
+        // TODO: check args better
+        _genericOff: function(cbsRoot, arg1, arg2) {
+            if (arg2 === undefined) {
+                var id = arg1,
+                    event, eventCbs, cbObj, i;
+                for (event in cbsRoot) {
+                    eventCbs = cbsRoot[event];
+                    i = 0;
+                    while (cbObj = eventCbs[i]) {
+                        if (cbObj.id == id) {
+                            eventCbs.splice(i, 1);
+                            return;
+                        }
+                    }
+                }
+            } else {
+                var event = arg1, callback = arg2;
+                if (!callback || event == undefined || !cbsRoot[event]) return;
+                var cbObj, i = 0, eventCbs = cbsRoot[event];
+                while (cbObj = eventCbs[i]) {
+                    if (cbObj.callback == callback) eventCbs.splice(i, 1);
+                    else i++;
+                }
             }
         },
 
@@ -143,7 +164,15 @@
                 cbObj.callback.apply(cbObj.context);
             }
             delete this._cbsOne[event];
-        }
+        },
+
+        // Every time it is called, this method returns a new unique id
+        // for a bind.
+        _generateBindId: function() {
+            Pd.EventsBase._idCounter++;
+		    return Pd.EventsBase._idCounter;
+        },
+        _idCounter: 0,
 
     };
 

@@ -672,26 +672,15 @@
 
     // Metronome, outputs 'bang' every `rate` milliseconds.
     // TODO: sample-exactitude ? How does it work in pd ?
-    // TODO: see objects.old : schedule helpers in patch
 	Pd.objects['metro'] = Pd.Object.extend({
 
 		inletTypes: ['inlet', 'inlet'],
 		outletTypes: ['outlet'],
 
         init: function(rate) {
-            // The next metronome tick in frames
-            this.nextMTick = null;
-            // Last there was a metronome tick
-            this.lastMTickTime = null;
             this.setRate(rate || 0);
             this.toDspTickNoOp();
-        },
-
-        dspTickTicking: function() {
-            if (this.frame > this.nextMTick) {
-                this.outlets[0].message('bang');
-                this._computeNext();
-            }
+            this._intervalId = null;
         },
 
         // Metronome rate, in ms per tick
@@ -699,38 +688,37 @@
             this.rate = rate;
         },
 
-        // Compute the next metronome tick
-        _computeNext: function() {
-            // TODO: this needs to be recalculated on sampleRate change
-            var nextTime = this.lastMTickTime + this.rate;
-            this.nextMTick = this.patch.timeToFrame(nextTime);
-            this.lastMTickTime = nextTime;
-        },
-
 		message: function(inletId, msg) {
             if (inletId === 0) {
-                if (msg === 'bang') this.toDspTickTicking();
-                else if (msg === 'stop') this.toDspTickNoOp(); 
+                if (msg === 'bang') this._startMetroTick();
+                else if (msg === 'stop') this._stopMetroTick(); 
                 else {
                     this.assertIsNumber(msg, 'invalid msg ' + msg);
-                    if (msg === 0) this.toDspTickNoOp();
-                    else this.toDspTickTicking();
+                    if (msg === 0) this._stopMetroTick();
+                    else this._startMetroTick();
                 }
             } else if (inletId === 1) {
                 this.assertIsNumber(msg, 'invalid rate ' + msg);
                 this.setRate(msg);
-                // If ticking, recalculate the next tick.
-                if (this.dspTick == this.dspTickTicking) {
-                    this.toDspTickTicking();
-                }
+                this._stopMetroTick();
+                this._startMetroTick();
             }
 		},
 
-        toDspTickTicking: function() {
-            this.lastMTickTime = this.patch.frameToTime(this.frame);
-            this._computeNext();
-            this.dspTick = this.dspTickTicking;
-        }
+        _startMetroTick: function() {
+            if (this._intervalId === null) {
+                this._intervalId = this.patch.interval(this.rate, this._metroTick, this);
+            }
+        },
+
+        _stopMetroTick: function() {
+            if (this._intervalId !== null) {
+                this.patch.clear(this._intervalId);
+                this._intervalId = null;
+            }
+        }, 
+
+        _metroTick: function() { this.outlets[0].message('bang'); }
 	});
 
 

@@ -94,9 +94,16 @@ $(document).ready(function() {
         testObject.trigger('bla');
         equal(context.bla, 3);
 
-        // Test removing .one with .off
+        // Test removing .one with .off, passing (event, callback)
         testObject.one('bla', blaCallback, context);
         testObject.off('bla', blaCallback);
+        equal(context.bla, 3);
+        testObject.trigger('bla');
+        equal(context.bla, 3);
+
+        // Test removing .one with .off, passing id
+        var id = testObject.one('bla', blaCallback, context);
+        testObject.off(id);
         equal(context.bla, 3);
         testObject.trigger('bla');
         equal(context.bla, 3);

@@ -278,29 +278,53 @@ $(document).ready(function() {
     });
 
     test('scheduling : timeout', function() {
-        patch.received = [];
         patch.sampleRate = 10;
+        patch.blockSize = 4;
+
+        // simple timeout
+        patch.received = [];
         patch.timeout(1000, function() { this.received.push('bang'); }, patch);
-        for (patch.frame; patch.frame < 10; patch.frame++) patch.generateFrame();
+        // timeout started (1000 ms => 10 samples => >= 3 frames (cause blockSize = 4) )
+        for (1; patch.frame < 3; 1) patch.generateFrame();
         deepEqual(patch.received, []);
         patch.generateFrame();
         deepEqual(patch.received, ['bang']);
-        for (patch.frame; patch.frame < 31; patch.frame++) patch.generateFrame();
-        deepEqual(patch.received, ['bang']);        
+        for (1; patch.frame < 13; 1) patch.generateFrame();
+        deepEqual(patch.received, ['bang']);
+
+        // timeout cleared
+        patch.received = [];
+        var id = patch.timeout(1000, function() { this.received.push('bang'); }, patch);
+        for (1; patch.frame < 2; 1) patch.generateFrame();
+        patch.clear(id);
+        for (1; patch.frame < 10; 1) patch.generateFrame();
+        deepEqual(patch.received, []);
     });
 
     test('scheduling : interval', function() {
-        patch.received = [];
         patch.sampleRate = 10;
-        patch.interval(1000, function() { this.received.push('bang'); }, patch);
-        for (patch.frame; patch.frame < 10; patch.frame++) patch.generateFrame();
+        patch.blockSize = 4;
+
+        // simple interval
+        patch.received = [];
+        var id = patch.interval(1000, function() { this.received.push('bang'); }, patch);
+        // interval started (1000 ms => 10 samples => >= 3 frames (cause blockSize = 4) )
+        for (1; patch.frame < 3; 1) patch.generateFrame();
         deepEqual(patch.received, []);
         patch.generateFrame();
         deepEqual(patch.received, ['bang']);
-        for (patch.frame; patch.frame < 20; patch.frame++) patch.generateFrame();
+        for (1; patch.frame < 5; 1) patch.generateFrame();
         deepEqual(patch.received, ['bang']);
         patch.generateFrame();
         deepEqual(patch.received, ['bang', 'bang']);
+        for (1; patch.frame <= 8; 1) patch.generateFrame();
+        deepEqual(patch.received, ['bang', 'bang', 'bang']);
+
+        // simple interval
+        patch.received = [];
+        patch.clear(id);
+        for (1; patch.frame < 31; 1) patch.generateFrame();
+        deepEqual(patch.received, []);
     });
 
 });

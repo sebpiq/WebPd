@@ -1,7 +1,11 @@
-(function(Pd){
+(function(Pd) {
 
+    // !!! What we call "frame" here is a block of audio frames 
+    // (i.e. : 1 frame = <channelsCount * blockSize> samples).
     Pd.Patch = function () {
         Pd.register(this);
+
+        this.initEvents();
         this.sampleRate = Pd.sampleRate;
         this.blockSize = Pd.blockSize;
 
@@ -20,21 +24,20 @@
 	    // keys are table names
         this._tables = {};
 	    // arrays of callbacks which are scheduled to run at some point in time
-	    // keys are times
+	    // keys are frames
 	    this._scheduled = {};
-        this._scheduledTimes = [];
 
 	    // create the audio output driver
 	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
 	    // output buffer (stereo)
 	    this.output = Pd.newBuffer(2);
-	    // how many frames have we run
+	    // Next frame
 	    this.frame = 0;
 	    // keys are receiver names
 	    this.listeners = {};
     };
 
-    Pd.extend(Pd.Patch.prototype, {
+    Pd.extend(Pd.Patch.prototype, Pd.EventsBase, {
 
 	    // regular expression for finding dollarargs
 	    dollarMatch: /(?:\\{0,1}\$)(\d+)/g, //TODO: probably shouldn't be here
@@ -65,15 +68,14 @@
 		    this.send('test', 'bang');
 	    },
 	
-
-    /******************** Internal methods ************************/
-
 	    // adds a new named listener to our graph
 	    addListener: function(name, who) {
 		    if (!this.listeners[name])
 			    this.listeners[name] = [];
 		    this.listeners[name][this.listeners[name].length] = who;
 	    },
+
+    /******************** Time/scheduling methods ************************/
 	
 	    // gets the absolute current logical elapsed time in milliseconds
 	    getAbsTime: function() {
@@ -82,68 +84,64 @@
 
         // Returns the time corresponding with `frame` in milliseconds.
         frameToTime: function(frame) {
-            return frame / (this.sampleRate / 1000);
+            return frame * this.blockSize / (this.sampleRate / 1000);
         },
 
         // Returns the frame corresponding with `time` (given in milliseconds).
         timeToFrame: function(time) {
-            return time / (1000 / this.sampleRate);
+            return time / (this.blockSize / (this.sampleRate / 1000));
         },
 
-        // TODO: optimize
-        // TODO: if possible factorize with event scheduling
-        runScheduled: function() {
-            if (this._scheduledTimes.length) {
-		        var allTimes = this._scheduledTimes, allScheduled = this._scheduled,
-                    absTime = this.getAbsTime(), i, length, t, cbs, cbObj;
-                
-		        for (i = 0, length = allTimes.length; i < length; i++) {
-                    t = allTimes[i];
-			        if (t > absTime) return;
-                    cbs = allScheduled[t];
-                    for (j = 0, length2 = cbs.length; j < length2; j++) {
-                        cbObj = cbs[j];
-                        cbObj.callback.call(cbObj.context);
-                        if (cbObj.repeat) {
-                            this.interval(cbObj.time, cbObj.callback, cbObj.context);
-                        }
-                    }
-                    delete allScheduled[t];
-		        }
-                allTimes.splice(0, i); 
-            }
-        },
-
+        // Schedules `callback` in `time` milliseconds.
+        // Returns the timeout handle which can be used to unschedule it.
 	    timeout: function(time, callback, context) {
-            return this._genericOn(time, callback, context, false);
-	    },
+            return this._genericSchedule({
+                callback: callback, context: context,   
+                absTime: this.getAbsTime() + time, repeat: false
+            });
+   	    },
 
+        // Schedules `callback` to be run every `time` milliseconds.
+        // Returns the interval handle which can be used to stop it.
+        // TODO: possible optimization : scheduling several cbs at once.  
 	    interval: function(time, callback, context) {
-            return this._genericOn(time, callback, context, true);
+            return this._genericSchedule({
+                callback: callback, context: context,
+                absTime: this.getAbsTime() + time, repeat: true, time: time
+            });
 	    },
 
-        _genericOn: function(time, callback, context, repeat) {
-            if (!Pd.isNumber(time) || !callback) return this;
-            var cbs, absTime = Math.round(time + this.getAbsTime());
-            this._scheduledTimes.push(absTime);
-            this._scheduledTimes.sort();
-            cbs = this._scheduled[absTime] || (this._scheduled[absTime] = []);
-            cbs.push({callback: callback, context: context, time: time, repeat: repeat});
-            return absTime;
+        // Clears the timeout or interval whose handle is `id`.
+        clear: function(id) {
+            this._genericOff(this._scheduled, id);
         },
 
-        off: function(absTime, callback) {
-            if (!absTime || !callback) return;
-            var cbObj, i = 0, cbs = this._scheduled[absTime];
-            while (cbObj = cbs[i]) {
-                if (cbObj.callback == callback) cbs.splice(i, 1);
-                else i++;
+        // Helper for scheduling a callback at an absolute time.
+        _genericSchedule: function(cbObj, repeated) {
+            if (!cbObj.callback || !cbObj.absTime) return;
+            var frame = Math.ceil(this.timeToFrame(cbObj.absTime));
+                cbs = this._scheduled[frame] = this._scheduled[frame] || [];
+            cbs.push(cbObj);
+            if (repeated !== true) return cbObj.id = this._generateBindId();
+	    },
+
+        // Runs all the callbacks scheduled at the current frame
+        // TODO: respect absTime order
+        _runScheduled: function() {
+            var cbs = this._scheduled[this.frame] || [], i, cbObj;
+            for (i = 0; cbObj = cbs[i]; i++) {
+                if (cbObj.repeat) {
+                    cbObj.absTime += cbObj.time;
+                    this._genericSchedule(cbObj, true);
+                }
+                cbObj.callback.call(cbObj.context);
             }
+            delete this._scheduled[this.frame];
         },
 
     /******************** DSP stuff ************************/
 
-	    // Get a single frame of audio data from Pd
+	    // Get a single frame of audio data from Pd.
 	    generateFrame: function() {
             var patch = this;
             var output = this.output;
@@ -155,7 +153,7 @@
 		    this.mapEndPoints(function(obj) { patch.tick(obj); });
 
             // run all scheduled callbacks
-            this.runScheduled();
+            this._runScheduled();
 
 		    this.frame++;
 		    return output;
