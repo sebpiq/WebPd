@@ -722,6 +722,59 @@
 	});
 
 
+    // Delay, outputs 'bang' after a given time in milliseconds.
+    // TODO: sample-exactitude ? How does it work in pd ?
+	Pd.objects['delay'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+        init: function(delay) {
+            this.setDelay(delay || 0);
+            this.toDspTickNoOp();
+            this._timeoutId = null;
+        },
+
+        // Delay time, in ms
+        setDelay: function(delay) {
+            this.delay = delay;
+        },
+
+		message: function(inletId, msg) {
+            if (inletId === 0) {
+                if (msg === 'bang') {
+                    this._stopDelay();
+                    this._startDelay();
+                } else if (msg === 'stop') this._stopDelay(); 
+                else {
+                    this.assertIsNumber(msg, 'invalid msg ' + msg);
+                    this._stopDelay();
+                    this.setDelay(msg);
+                    this._startDelay();
+                }
+            } else if (inletId === 1) {
+                this.assertIsNumber(msg, 'invalid rate ' + msg);
+                this.setDelay(msg);
+            }
+		},
+
+        _startDelay: function() {
+            if (this._timeoutId === null) {
+                this._timeoutId = this.patch.timeout(this.delay, this._delayReached, this);
+            }
+        },
+
+        _stopDelay: function() {
+            if (this._timeoutId !== null) {
+                this.patch.clear(this._timeoutId);
+                this._timeoutId = null;
+            }
+        }, 
+
+        _delayReached: function() { this.outlets[0].message('bang'); }
+	});
+
+
     // Let each object know of what type it is
     var proto;
     for (type in Pd.objects) {

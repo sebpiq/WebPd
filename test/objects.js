@@ -448,16 +448,16 @@ $(document).ready(function() {
         deepEqual(metro.o(0).receivedMessage, ['bang']);
 
         // metro stopped again
-        metro.i(0).message(0);
         metro.o(0).receivedMessage = undefined;
+        metro.i(0).message(0);
         for (var i = 0; i < 13; i++) patch.generateFrame();
         equal(metro.o(0).receivedMessage, undefined);
 
         // metro started again
+        metro.o(0).receivedMessage = undefined;
         metro.i(0).message(123);
         // a few ticks pass
         for (var i = 0; i < 2; i++) patch.generateFrame();
-        metro.o(0).receivedMessage = undefined;
         metro.i(1).message(1600);
         // timeout started (1600 ms => 16 samples => 4 frames)
         for (var start = patch.frame; patch.frame < start + 4; 1) {
@@ -466,6 +466,53 @@ $(document).ready(function() {
         equal(metro.o(0).receivedMessage, undefined);
         patch.generateFrame();
         deepEqual(metro.o(0).receivedMessage, ['bang']);
+    });
+
+    test('delay', function() {
+        Pd.sampleRate = 10;
+        var patch = new Pd.Patch();
+        var delay = new Pd.objects['delay'](patch, [1100]);
+
+        // no delay started
+        for (var i = 0; i < 13; i++) patch.generateFrame();
+        equal(delay.o(0).receivedMessage, undefined);
+
+        // delay started (1100 ms => 11 samples => 2,75 frames (cause blockSize = 4) )
+        delay.i(0).message('bang');
+        for (var i = 0; i < 3; i++) patch.generateFrame();
+        equal(delay.o(0).receivedMessage, undefined);
+        patch.generateFrame();
+        deepEqual(delay.o(0).receivedMessage, ['bang']);
+
+        // delay instant bang
+        delay.o(0).receivedMessage = undefined;
+        delay.i(0).message(0);
+        equal(delay.o(0).receivedMessage, undefined);
+        patch.generateFrame();
+        deepEqual(delay.o(0).receivedMessage, ['bang']);
+
+        // delay started again (1200 ms => 3 frames)
+        delay.o(0).receivedMessage = undefined;
+        delay.i(0).message(1200);
+        // a few ticks pass, changing the delay doesn't affect the delay already started
+        for (var i = 0; i < 3; i++) patch.generateFrame();
+        equal(delay.o(0).receivedMessage, undefined);
+        delay.i(1).message(1600);
+        patch.generateFrame();
+        deepEqual(delay.o(0).receivedMessage, ['bang']);
+
+        // delay should now be (1600 ms => 4 frames)
+        delay.o(0).receivedMessage = undefined;
+        delay.i(0).message('bang');
+        // a few ticks pass, sending a new message on 0 restart the delay
+        for (var i = 0; i < 4; i++) patch.generateFrame();
+        equal(delay.o(0).receivedMessage, undefined);
+        delay.i(0).message(800);
+        for (var i = 0; i < 2; i++) patch.generateFrame();
+        equal(delay.o(0).receivedMessage, undefined);
+        patch.generateFrame();
+        deepEqual(delay.o(0).receivedMessage, ['bang']);
+
     });
 
     test('loadbang', function() {
