@@ -621,4 +621,32 @@ $(document).ready(function() {
         notEqual(numbers[3], 0);
     });
 
+    test('list split', function() {
+        var listSplit = new Pd.objects['list split'](null);
+        listSplit.i(0).message('lolo', 12, 34);
+        deepEqual(listSplit.o(0).receivedMessage, ['bang']);
+        deepEqual(listSplit.o(1).receivedMessage, ['lolo', 12, 34]);
+        equal(listSplit.o(2).receivedMessage, undefined);
+
+        listSplit.i(1).message(3);
+        listSplit.i(0).message(12, 34, 'popo');
+        deepEqual(listSplit.o(0).receivedMessage, [12, 34, 'popo']);
+        deepEqual(listSplit.o(1).receivedMessage, ['bang']);
+        equal(listSplit.o(2).receivedMessage, undefined);
+
+        listSplit.i(1).message(1);
+        listSplit.i(0).message(45, 67, 78);
+        deepEqual(listSplit.o(0).receivedMessage, [45]);
+        deepEqual(listSplit.o(1).receivedMessage, [67, 78]);
+        equal(listSplit.o(2).receivedMessage, undefined);
+
+        listSplit.o(0).receivedMessage = undefined;
+        listSplit.o(1).receivedMessage = undefined;
+        listSplit.i(1).message(8);
+        listSplit.i(0).message(45, 67, 78);
+        equal(listSplit.o(0).receivedMessage, undefined);
+        equal(listSplit.o(1).receivedMessage, undefined);
+        deepEqual(listSplit.o(2).receivedMessage, ['bang']);
+    });
+
 });

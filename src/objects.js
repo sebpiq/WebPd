@@ -171,9 +171,49 @@
 
     });
 
+/**************************** Lists *********************************/
+
+	// Basic oscillator
+	Pd.objects['list split'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet', 'outlet', 'outlet'],
+
+        init: function(splitInd) {
+            this.setSplitInd(splitInd || 0);
+        },
+
+        setSplitInd: function(ind) {
+            this.assertIsNumber(ind, 'split point must be a number');
+            this.splitInd = ind;
+        },
+
+		message: function(inletId, msg) {
+			if (inletId === 0) {
+                var list = Array.prototype.slice.call(arguments, 1);
+                if (this.splitInd > list.length) this.outlets[2].message('bang');
+                else {
+                    var outlet;
+                    if (this.splitInd === list.length) this.outlets[1].message('bang');
+                    else {
+                        outlet = this.outlets[1];
+                        outlet.message.apply(outlet, list.slice(this.splitInd, list.length));
+                    }
+                    if (this.splitInd === 0) this.outlets[0].message('bang');
+                    else {
+                        outlet = this.outlets[0];
+                        outlet.message.apply(outlet, list.slice(0, this.splitInd));
+                    }
+                }
+            } else if (inletId === 1) this.setSplitInd(msg);
+		}
+
+    });
+
+
 /************************** DSP objects ******************************/
 	
-	// basic oscillator
+	// Basic oscillator
 	Pd.objects['osc~'] = Pd.Object.extend({
 
 		inletTypes: ['inlet~', 'inlet'],
