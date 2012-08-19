@@ -108,20 +108,19 @@
 		outletTypes: ['outlet'],
 
 		init: function(val) {
-            this.val = val || 0;
+            this.setVal(val || 0);
 		},
+
+        setVal: function(val) {
+            this.assertIsNumber(val, 'value must be a number');
+            this.val = val;
+        },
 
 		message: function(inletId, msg) {
 			if (inletId === 0) {
-                if (msg !== 'bang') {
-                    this.assertIsNumber(msg, 'value must be a number');
-                    this.val = msg;
-                }
+                if (msg !== 'bang') this.setVal(msg);
                 this.outlets[0].message(this.val);
-            } else if (inletId === 1) {
-                this.assertIsNumber(msg, 'value must be a number');
-                this.val = msg;
-            }
+            } else if (inletId === 1) this.setVal(msg);
 		}
     });
 
@@ -187,6 +186,7 @@
 
         // Sets the frequency for the constant frequency dspTick method.
         setFreq: function(freq) {
+            this.assertIsNumber(freq, 'frequency must be a number');
             this.freq = freq;
             // TODO: this needs to be recalculated on sampleRate change
             if (this.patch) this.K = 2 * Math.PI * this.freq / this.patch.sampleRate;
@@ -217,10 +217,8 @@
 
         // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
-			if (inletId === 0) {
-                this.assertIsNumber(msg, 'frequency must be a number');
-                this.setFreq(msg);
-            } else if (inletId === 1 && msg === 'bang') this.phase = 0;
+			if (inletId === 0) this.setFreq(msg);
+            else if (inletId === 1 && msg === 'bang') this.phase = 0;
 		},
 
         // On inlet connection, we change dspTick method if appropriate
@@ -340,17 +338,19 @@
 		outletTypes: ['outlet~'],
 
 		init: function(val) {
-			this.val = (val || 0);
+			this.setVal(val || 0);
             this.dspTick = this.dspTickConstant;
             this.on('inletConnect', this._onInletConnect, this);
             this.on('inletDisconnect', this._onInletDisconnect, this);
 		},
 
+        setVal: function(val) {
+            this.assertIsNumber(val, 'invalid constant value ' + val);
+            this.val = val;
+        }, 
+
         message: function(inletId, val) {
-            if (inletId === 1) {
-                this.assertIsNumber(val, 'invalid constant value ' + val);
-                this.val = val;
-            } 
+            if (inletId === 1) this.setVal(val);
         },
 
         // This is the dspTick method used when there is a dsp connection in inlet 1
@@ -649,7 +649,7 @@
 
 /************************** Misc non-DSP ******************************/
 
-	//convert midi notes to frequency
+	// Convert midi notes to frequency
 	Pd.objects['mtof'] = Pd.Object.extend({
 
 		inletTypes: ['inlet'],
@@ -670,6 +670,35 @@
 	});
 
 
+    // Random number generator
+	Pd.objects['random'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+        init: function(maxInt) {
+            this.setMax(maxInt || 1);
+        },
+
+        setMax: function(maxInt) {
+            this.assertIsNumber(maxInt, 'invalid maximum ' + maxInt);
+            this.max = maxInt;
+        },
+
+		message: function(inletId, arg1, arg2) {
+            if (inletId === 0) {
+                if (arg1 === 'bang') this.outputRandomInt();
+                else if (arg1 === 'seed') 1; // TODO: seeding, not available with `Math.rand`
+            } else if (inletId === 1) this.setMax(arg1);
+		},
+
+        outputRandomInt: function() {
+            this.outlets[0].message(Math.floor(Math.random() * this.max));
+        }
+
+    });
+
+
     // Metronome, outputs 'bang' every `rate` milliseconds.
     // TODO: sample-exactitude ? How does it work in pd ?
 	Pd.objects['metro'] = Pd.Object.extend({
@@ -685,6 +714,7 @@
 
         // Metronome rate, in ms per tick
         setRate: function(rate) {
+            this.assertIsNumber(rate, 'invalid rate ' + rate);
             this.rate = rate;
         },
 
@@ -698,7 +728,6 @@
                     else this._startMetroTick();
                 }
             } else if (inletId === 1) {
-                this.assertIsNumber(msg, 'invalid rate ' + msg);
                 this.setRate(msg);
                 this._stopMetroTick();
                 this._startMetroTick();
@@ -737,6 +766,7 @@
 
         // Delay time, in ms
         setDelay: function(delay) {
+            this.assertIsNumber(delay, 'invalid delay ' + delay);
             this.delay = delay;
         },
 
@@ -747,15 +777,11 @@
                     this._startDelay();
                 } else if (msg === 'stop') this._stopDelay(); 
                 else {
-                    this.assertIsNumber(msg, 'invalid msg ' + msg);
-                    this._stopDelay();
                     this.setDelay(msg);
+                    this._stopDelay();
                     this._startDelay();
                 }
-            } else if (inletId === 1) {
-                this.assertIsNumber(msg, 'invalid rate ' + msg);
-                this.setDelay(msg);
-            }
+            } else if (inletId === 1) this.setDelay(msg);
 		},
 
         _startDelay: function() {

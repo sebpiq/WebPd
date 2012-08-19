@@ -512,7 +512,6 @@ $(document).ready(function() {
         equal(delay.o(0).receivedMessage, undefined);
         patch.generateFrame();
         deepEqual(delay.o(0).receivedMessage, ['bang']);
-
     });
 
     test('loadbang', function() {
@@ -576,6 +575,32 @@ $(document).ready(function() {
         spigot = new Pd.objects['spigot'](null, [8]);
         spigot.i(0).message('2266');
         deepEqual(spigot.o(0).receivedMessage, ['2266']);
+    });
+
+    test('random', function() {
+        var randObj = new Pd.objects['random'](null, [3]),
+            numbers = [0, 0, 0];
+
+        for (var i = 0; i < 20; i++) {
+            randObj.i(0).message('bang');
+            numbers[randObj.o(0).receivedMessage]++;
+        }
+        equal(numbers.length, 3);
+        notEqual(numbers[0], 0);
+        notEqual(numbers[1], 0);
+        notEqual(numbers[2], 0);
+
+        randObj.i(1).message(4);
+        numbers = [0, 0, 0, 0];
+        for (var i = 0; i < 20; i++) {
+            randObj.i(0).message('bang');
+            numbers[randObj.o(0).receivedMessage]++;
+        }
+        equal(numbers.length, 4);
+        notEqual(numbers[0], 0);
+        notEqual(numbers[1], 0);
+        notEqual(numbers[2], 0);
+        notEqual(numbers[3], 0);
     });
 
 });
