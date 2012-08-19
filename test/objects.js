@@ -537,23 +537,41 @@ $(document).ready(function() {
         var float = new Pd.objects['float']();
         equal(float.o(0).receivedMessage, undefined);
 
+        // Default value 
         float.i(0).message('bang');
         deepEqual(float.o(0).receivedMessage, [0]);
 
+        // Float in input
         float.i(0).message(2);
         deepEqual(float.o(0).receivedMessage, [2]);
 
+        // Test set value
         float.i(1).message(3);
         float.i(0).message('bang');
         deepEqual(float.o(0).receivedMessage, [3]);
 
+        // Test inlet 0 overwrites inlet 1
         float.i(1).message(4);
         float.i(0).message(5);
         deepEqual(float.o(0).receivedMessage, [5]);
 
+        // Test creation argument
         float = new Pd.objects['float'](null, [6]);
         float.i(0).message('bang');
         deepEqual(float.o(0).receivedMessage, [6]);
+
+        // Test dollar var
+        float = new Pd.objects['float'](null, ['$1']);
+        float.i(0).message(123, 89);
+        deepEqual(float.o(0).receivedMessage, [123]);
+        float.i(0).message('bang');
+        deepEqual(float.o(0).receivedMessage, [123]);
+
+        float = new Pd.objects['float'](null, ['$2']);
+        float.i(0).message(123, 89);
+        deepEqual(float.o(0).receivedMessage, [89]);
+        float.i(0).message('bang');
+        deepEqual(float.o(0).receivedMessage, [89]);
     });
 
     test('spigot', function() {

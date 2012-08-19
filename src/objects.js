@@ -19,6 +19,19 @@
         'cnv': {}
     };
 
+    // A mixin providing helpers for objects supporting
+    var DollarVarsMixin = {
+
+        // Sets the message template, with constant values or $-vars that
+        // will be replaced when a message is received.
+        setFilterMsg: function(filterMsg) {
+            if (!Pd.isArray(filterMsg)) filterMsg = [filterMsg];
+            this.filterMsg = filterMsg;
+            this.filter = Pd.makeMsgFilter(filterMsg);
+        }
+
+    };    
+
     Pd.objects['text'] = Pd.Object.extend({
 
         load: function(text) {
@@ -63,7 +76,7 @@
 
     });
 
-    Pd.objects['message'] = Pd.Object.extend({
+    Pd.objects['message'] = Pd.Object.extend(DollarVarsMixin, {
 
         inletTypes: ['inlet'],
         outletTypes: ['outlet'],
@@ -72,28 +85,14 @@
             this.setFilterMsg(Array.prototype.slice.call(arguments));
         },
 
-        // Sets the message template, with constant values or $-vars that
-        // will be replaced when a message is received.
-        setFilterMsg: function(filterMsg) {
-            if (!Pd.isArray(filterMsg)) filterMsg = [filterMsg];
-            this.filterMsg = filterMsg;
-            this.filter = Pd.makeMsgFilter(filterMsg);
-        },
-
 		message: function(inletId) {
 			if (inletId === 0) {
-                var msg = Array.prototype.slice.call(arguments, 1);
-                var filtered;
-                if (!Pd.isArray(msg)) msg = [msg];
-
-                // Do the filtering of input message :
-                // if a 'bang' is received $-vars don't work
-                if (msg.length == 1 && msg[0] == 'bang') filtered = this.filter([]);
-                else filtered = this.filter(msg);
+                var msg = Array.prototype.slice.call(arguments, 1),
+                    filtered, outlet;
 
                 // outputs the filtered message
-                var outlet = this.outlets[0]; 
-                outlet.message.apply(outlet, filtered);
+                outlet = this.outlets[0]; 
+                outlet.message.apply(outlet, this.filter(msg));
             }
 		}
 
@@ -102,7 +101,7 @@
 /**************************** Glue *********************************/
 
 	// Stores a float
-	Pd.objects['float'] = Pd.Object.extend({
+	Pd.objects['float'] = Pd.Object.extend(DollarVarsMixin, {
 
 		inletTypes: ['inlet', 'inlet'],
 		outletTypes: ['outlet'],
@@ -112,12 +111,22 @@
 		},
 
         setVal: function(val) {
-            this.assertIsNumber(val, 'value must be a number');
-            this.val = val;
+            if (Pd.isDollarVar(val)) {
+                this._dollarVal = true;
+                this.setFilterMsg([val]);
+            } else {
+                this.assertIsNumber(val, 'value must be a number');
+                this._dollarVal = false;
+                this.val = val;
+            }
         },
 
 		message: function(inletId, msg) {
 			if (inletId === 0) {
+                if (this._dollarVal) {
+                    msg = Array.prototype.slice.call(arguments, 1);
+                    msg = this.filter(msg)[0];
+                }
                 if (msg !== 'bang') this.setVal(msg);
                 this.outlets[0].message(this.val);
             } else if (inletId === 1) this.setVal(msg);

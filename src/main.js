@@ -209,15 +209,15 @@
     //     filter([89, 'bli']); // [56, 89, 'bla', 'bli']
     // TODO: $0
     Pd.makeMsgFilter = function(filterMsg) {
-        var dollarVars = [];
-        for (var i=0; i<filterMsg.length; i++) {
-            var matched = dollarVarRegExp.exec(filterMsg[i]);
+        var dollarVars = [], i, length, matched;
+        for (i = 0, length = filterMsg.length;  i < length; i++) {
+            matched = dollarVarRegExp.exec(filterMsg[i]);
             if (matched) dollarVars.push([i, parseInt(matched[1], 10)]);
         }
         return function(msg) {
             filtered = filterMsg.slice(0);
             var inInd, outInd;
-            for (var i=0; i<dollarVars.length; i++) {
+            for (i = 0, length = dollarVars.length;  i < length; i++) {
                 outInd = dollarVars[i][0];
                 inInd = dollarVars[i][1] - 1;
                 if (inInd >= msg.length) throw new Error('$' + inInd + ': argument number out of range');
@@ -225,6 +225,10 @@
             }
             return filtered;
         }; 
+    };
+
+    var isDollarVar = Pd.isDollarVar = function(val) {
+        return Boolean(dollarVarRegExp.exec(val));
     };
 
     // Fills array with zeros
