@@ -17,12 +17,13 @@
 	    // array holds 2-tuple entries of [dest-object, dest-inlet-number]
 	    this.outlets = [];
 	    // create inlets and outlets specified in the object's proto
-        var outletTypes = this.outletTypes;
-        var inletTypes = this.inletTypes;
-	    for (var i=0; i<outletTypes.length; i++) {
+        var outletTypes = this.outletTypes,
+            inletTypes = this.inletTypes,
+            i, length;
+	    for (i = 0, length = outletTypes.length; i < length; i++) {
 		    this.outlets[i] = new Pd[outletTypes[i]](this, i);
 	    }
-	    for (var i=0; i<inletTypes.length; i++) {
+	    for (i = 0, length = inletTypes.length; i < length; i++) {
 		    this.inlets[i] = new Pd[inletTypes[i]](this, i);
 	    }
 

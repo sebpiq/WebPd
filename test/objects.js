@@ -2,38 +2,30 @@ $(document).ready(function() {
 
 /******************** setting up tests ************************/
 
-    // declaring special inlets and outlets for testing
-    Pd['testinlet~'] = Pd['inlet~'].extend({
-        getBuffer: function() {
-            return this.testBuffer;
-        },
-        hasDspSources: function() {
-            return this.testBuffer != undefined;
-        }
-    });
-    Pd['testinlet'] = Pd['inlet'];
-    Pd['testoutlet~'] = Pd['outlet~'];
-    Pd['testoutlet'] = Pd['outlet'].extend({
-        message: function() {this.receivedMessage = Array.prototype.slice.call(arguments);}
-    });
+    // Override inlets and outlets methods for easier testing
+    function portletsTesting() {
+        Pd.extend(Pd['inlet~'].prototype, {
+            getBuffer: function() { return this.testBuffer; },
+            hasDspSources: function() { return this.testBuffer != undefined; },
+            __testing__getBuffer: Pd['inlet~'].prototype.getBuffer,
+            __testing__hasDspSources: Pd['inlet~'].prototype.hasDspSources
+        });
 
-    // replacing in all object prototypes, with our test inlets/outlets
-    for (type in Pd.objects) {
-        if ('prototype' in Pd.objects[type]) {
-            var proto = Pd.objects[type].prototype;
-            var outletTypes = proto.outletTypes;
-            var inletTypes = proto.inletTypes;
-            for (var i=0; i<outletTypes.length; i++) {
-                if (outletTypes[i].indexOf('test') == -1) {
-                    outletTypes[i] = 'test' + outletTypes[i];
-                }
-            }
-            for (var i=0; i<inletTypes.length; i++) {
-                if (inletTypes[i].indexOf('test') == -1) {
-                    inletTypes[i] = 'test' + inletTypes[i];
-                }
-            }
-        }
+        Pd.extend(Pd['outlet'].prototype, {
+            message: function() { this.receivedMessage = Array.prototype.slice.call(arguments); },
+            __testing__message: Pd['outlet'].prototype.message,
+        });
+    }
+
+    function restorePortlets() {
+        Pd.extend(Pd['inlet~'].prototype, {
+            getBuffer: Pd['inlet~'].prototype.__testing__getBuffer,
+            hasDspSources: Pd['inlet~'].prototype.__testing__hasDspSources
+        });
+
+        Pd.extend(Pd['outlet'].prototype, {
+            message: Pd['outlet'].prototype.__testing__message
+        });
     }
 
 /******************** tests dsp objects ************************/
@@ -42,6 +34,7 @@ $(document).ready(function() {
         setup: function() {
             Pd.blockSize = 4;
             this.sampleRate = Pd.sampleRate;
+            portletsTesting();
         },
         teardown: function() {
             Pd.sampleRate = this.sampleRate;
@@ -593,6 +586,40 @@ $(document).ready(function() {
         spigot = new Pd.objects['spigot'](null, [8]);
         spigot.i(0).message('2266');
         deepEqual(spigot.o(0).receivedMessage, ['2266']);
+    });
+
+    test('trigger', function() {
+        var trigger = new Pd.objects['trigger'](null);
+        equal(trigger.o(0).receivedMessage, undefined);
+        equal(trigger.o(1).receivedMessage, undefined);
+        equal(trigger.outlets.length, 2);
+        trigger.i(0).message(1, 2, 3);
+        deepEqual(trigger.o(0).receivedMessage, ['bang']);
+        deepEqual(trigger.o(1).receivedMessage, ['bang']);
+
+        var trigger = new Pd.objects['trigger'](null, ['float', 'bang', 'symbol', 'list', 'anything']);
+        equal(trigger.outlets.length, 5);
+
+        trigger.i(0).message(1);
+        deepEqual(trigger.o(4).receivedMessage, [1]);
+        deepEqual(trigger.o(3).receivedMessage, [1]);
+        deepEqual(trigger.o(2).receivedMessage, ['float']);
+        deepEqual(trigger.o(1).receivedMessage, ['bang']);
+        deepEqual(trigger.o(0).receivedMessage, [1]);
+
+        trigger.i(0).message(1, 'pol', 3);
+        deepEqual(trigger.o(4).receivedMessage, [1, 'pol', 3]);
+        deepEqual(trigger.o(3).receivedMessage, [1, 'pol', 3]);
+        deepEqual(trigger.o(2).receivedMessage, ['float']);
+        deepEqual(trigger.o(1).receivedMessage, ['bang']);
+        deepEqual(trigger.o(0).receivedMessage, [1]);
+
+        trigger.i(0).message('bang');
+        deepEqual(trigger.o(4).receivedMessage, ['bang']);
+        deepEqual(trigger.o(3).receivedMessage, ['bang']);
+        deepEqual(trigger.o(2).receivedMessage, ['symbol']);
+        deepEqual(trigger.o(1).receivedMessage, ['bang']);
+        deepEqual(trigger.o(0).receivedMessage, [0]);
     });
 
     test('random', function() {

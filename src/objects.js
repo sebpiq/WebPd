@@ -160,14 +160,46 @@
     });
 
 	// Blocks messages or let them through depending on value on right inlet.
+    // TODO: validate filters
 	Pd.objects['trigger'] = Pd.Object.extend({
 
         inletTypes: ['inlet'],
         outletTypes: [],
 
         init: function() {
-            
+            var array = Array.prototype.slice.call(arguments, 0), 
+                i, length;
+            if (array.length == 0) array = ['bang', 'bang'];
+            for (i = 0, length = array.length; i < length; i++) {
+                this.outlets[i] = new Pd['outlet'](this, i);
+            }
+            this.filters = array;
         },
+
+        message: function(inletId, msg) {
+            if (inletId === 0) {
+                var list = Array.prototype.slice.call(arguments, 1), 
+                    i, length, msg, filter, outlet;
+                for (i = this.filters.length - 1; i >= 0; i--) {
+                    filter = this.filters[i];
+                    outlet = this.outlets[i];
+                    if (filter === 'bang') outlet.message('bang');
+                    else if (filter === 'list' || filter === 'anything')
+                        outlet.message.apply(outlet, list);
+                    else if (filter === 'float') {
+                        msg = list[0];
+                        if (Pd.isNumber(msg)) outlet.message(msg);
+                        else outlet.message(0);
+                    } else if (filter === 'symbol') {
+                        msg = list[0];
+                        if (msg === 'bang') outlet.message('symbol');
+                        else if (Pd.isNumber(msg)) outlet.message('float');
+                        else if (Pd.isString(msg)) outlet.message(msg);
+                        else throw new Error('Got unexpected input ' + msg)
+                    }
+                }
+            }
+        }
 
     });
 
