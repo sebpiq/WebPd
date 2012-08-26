@@ -577,6 +577,30 @@ $(document).ready(function() {
         deepEqual(float.o(0).receivedMessage, [89]);
     });
 
+    test('+, -, *, /', function() {
+        var add = new Pd.objects['+']();
+        equal(add.o(0).receivedMessage, undefined);
+
+        // Default value 
+        add.i(0).message('bang');
+        deepEqual(add.o(0).receivedMessage, [0]);
+        add.i(0).message(12);
+        deepEqual(add.o(0).receivedMessage, [12]);
+
+        // Constructor value 
+        var add = new Pd.objects['+'](null, [9]);
+        add.i(0).message(11.5);
+        deepEqual(add.o(0).receivedMessage, [20.5]);
+        add.o(0).receivedMessage = undefined;
+        add.i(0).message('bang');
+        deepEqual(add.o(0).receivedMessage, [20.5]);
+
+        // Change value 
+        add.i(1).message(118.78);
+        add.i(0).message(23.5);
+        deepEqual(add.o(0).receivedMessage, [142.28]);
+    });
+
     test('spigot', function() {
         var spigot = new Pd.objects['spigot']();
         equal(spigot.o(0).receivedMessage, undefined);

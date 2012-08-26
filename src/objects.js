@@ -100,6 +100,69 @@
 
 /**************************** Glue *********************************/
 
+    var ArithmBase = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+		init: function(val) {
+			this.setVal(val || 0);
+            this.lastResult = 0;
+		},
+
+        setVal: function(val) {
+            this.assertIsNumber(val, 'invalid constant value ' + val);
+            this.val = val;
+        }, 
+
+        message: function(inletId, val) {
+            if (inletId === 0) {
+                if (val !== 'bang') { 
+                    this.assertIsNumber(val, 'value must be a number');
+                    this.lastResult = this.compute(val);
+                }
+                this.outlets[0].message(this.lastResult);
+            } else if (inletId === 1) this.setVal(val);
+        },
+
+        // Must be overriden
+        compute: function(val) {
+            return;
+        }
+    });
+
+	Pd.objects['+'] = ArithmBase.extend({
+
+        compute: function(val) {
+            return val + this.val;
+        }
+
+    });
+
+	Pd.objects['-'] = ArithmBase.extend({
+
+        compute: function(val) {
+            return val - this.val;
+        }
+
+    });
+
+	Pd.objects['*'] = ArithmBase.extend({
+
+        compute: function(val) {
+            return val * this.val;
+        }
+
+    });
+
+	Pd.objects['/'] = ArithmBase.extend({
+
+        compute: function(val) {
+            return val / this.val;
+        }
+
+    });
+
 	// Stores a float
 	Pd.objects['float'] = Pd.Object.extend(DollarVarsMixin, {
 
@@ -205,7 +268,6 @@
 
 /**************************** Lists *********************************/
 
-	// Basic oscillator
 	Pd.objects['list split'] = Pd.Object.extend({
 
 		inletTypes: ['inlet', 'inlet'],
