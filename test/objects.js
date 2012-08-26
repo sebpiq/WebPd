@@ -435,6 +435,8 @@ $(document).ready(function() {
 
         // timeout started (1000 ms => 10 samples => 2,5 frames (cause blockSize = 4) )
         metro.i(0).message('bang');
+        deepEqual(metro.o(0).receivedMessage, ['bang']);
+        metro.o(0).receivedMessage = undefined;
         for (var i = 0; i < 3; i++) patch.generateFrame();
         equal(metro.o(0).receivedMessage, undefined);
         patch.generateFrame();
@@ -448,14 +450,22 @@ $(document).ready(function() {
 
         // metro started again
         metro.o(0).receivedMessage = undefined;
+        // TICK 1
         metro.i(0).message(123);
-        // a few ticks pass
-        for (var i = 0; i < 2; i++) patch.generateFrame();
+        deepEqual(metro.o(0).receivedMessage, ['bang']);
+        metro.o(0).receivedMessage = undefined;
+        // TICK 2
+        // a few frames pass (rate still 1000)
+        for (var i = 0; i < 3; i++) patch.generateFrame();
         metro.i(1).message(1600);
+        equal(metro.o(0).receivedMessage, undefined);
+        // Changing the rate works only for next tick
+        patch.generateFrame();
+        deepEqual(metro.o(0).receivedMessage, ['bang']);
+        metro.o(0).receivedMessage = undefined;
+        // TICK 3
         // timeout started (1600 ms => 16 samples => 4 frames)
-        for (var start = patch.frame; patch.frame < start + 4; 1) {
-            patch.generateFrame();
-        }
+        for (var i = 0; i < 4; i++) patch.generateFrame();
         equal(metro.o(0).receivedMessage, undefined);
         patch.generateFrame();
         deepEqual(metro.o(0).receivedMessage, ['bang']);

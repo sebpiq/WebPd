@@ -791,6 +791,7 @@
             this.setRate(rate || 0);
             this.toDspTickNoOp();
             this._intervalId = null;
+            this._metroTick = this._metroTickNormal;
         },
 
         // Metronome rate, in ms per tick
@@ -801,23 +802,23 @@
 
 		message: function(inletId, msg) {
             if (inletId === 0) {
-                if (msg === 'bang') this._startMetroTick();
+                if (msg === 'bang') this._restartMetroTick();
                 else if (msg === 'stop') this._stopMetroTick(); 
                 else {
                     this.assertIsNumber(msg, 'invalid msg ' + msg);
                     if (msg === 0) this._stopMetroTick();
-                    else this._startMetroTick();
+                    else this._restartMetroTick();
                 }
             } else if (inletId === 1) {
                 this.setRate(msg);
-                this._stopMetroTick();
-                this._startMetroTick();
+                this._metroTick = this._metroTickRateChange;
             }
 		},
 
         _startMetroTick: function() {
+            this._metroTick();
             if (this._intervalId === null) {
-                this._intervalId = this.patch.interval(this.rate, this._metroTick, this);
+                this._intervalId = this.patch.interval(this.rate, function() { this._metroTick(); }, this);
             }
         },
 
@@ -826,9 +827,21 @@
                 this.patch.clear(this._intervalId);
                 this._intervalId = null;
             }
-        }, 
+        },
 
-        _metroTick: function() { this.outlets[0].message('bang'); }
+        _restartMetroTick: function() {
+            this._stopMetroTick();
+            this._startMetroTick();
+        },
+
+        _metroTickNormal: function() { this.outlets[0].message('bang'); },
+
+        // Ticks, restarts the interval and switches to normal ticking.
+        // This is useful when the rate was changed.
+        _metroTickRateChange: function() {
+            this._metroTick = this._metroTickNormal;
+            this._restartMetroTick();
+        }
 	});
 
 

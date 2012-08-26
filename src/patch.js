@@ -125,10 +125,25 @@
             if (repeated !== true) return cbObj.id = this._generateBindId();
 	    },
 
-        // Runs all the callbacks scheduled at the current frame
-        // TODO: respect absTime order
-        _runScheduled: function() {
-            var cbs = this._scheduled[this.frame] || [], i, cbObj;
+    /******************** DSP stuff ************************/
+
+	    // Get a single frame of audio data from Pd.
+	    generateFrame: function() {
+            var patch = this, output = this.output,
+                cbs = this._scheduled[this.frame] || [], i, cbObj;
+            delete this._scheduled[this.frame];
+
+		    // reset our output buffer (gets written to by dac~ objects)
+            Pd.fillWithZeros(output);
+
+		    // run the dsp function on all endpoints to pull data
+		    this.mapEndPoints(function(obj) { patch.tick(obj); });
+		    this.frame++;
+
+            // Runs all the callbacks scheduled at the current frame
+            // !!! We have to execute this after the frame has been incremented, 
+            // otherwise rescheduling an interval will take wrong frame as reference.
+            // TODO: respect absTime order
             for (i = 0; cbObj = cbs[i]; i++) {
                 if (cbObj.repeat) {
                     cbObj.absTime += cbObj.time;
@@ -136,26 +151,7 @@
                 }
                 cbObj.callback.call(cbObj.context);
             }
-            delete this._scheduled[this.frame];
-        },
 
-    /******************** DSP stuff ************************/
-
-	    // Get a single frame of audio data from Pd.
-	    generateFrame: function() {
-            var patch = this;
-            var output = this.output;
-
-		    // reset our output buffer (gets written to by dac~ objects)
-            Pd.fillWithZeros(output);
-
-		    // run the dsp function on all endpoints to pull data
-		    this.mapEndPoints(function(obj) { patch.tick(obj); });
-
-            // run all scheduled callbacks
-            this._runScheduled();
-
-		    this.frame++;
 		    return output;
 	    },
 	

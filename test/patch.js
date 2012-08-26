@@ -285,11 +285,11 @@ $(document).ready(function() {
         patch.received = [];
         patch.timeout(1000, function() { this.received.push('bang'); }, patch);
         // timeout started (1000 ms => 10 samples => >= 3 frames (cause blockSize = 4) )
-        for (1; patch.frame < 3; 1) patch.generateFrame();
+        for (var i = 0; i < 3; i++) patch.generateFrame();
         deepEqual(patch.received, []);
         patch.generateFrame();
         deepEqual(patch.received, ['bang']);
-        for (1; patch.frame < 13; 1) patch.generateFrame();
+        for (var i = 0; i < 13; i++) patch.generateFrame();
         deepEqual(patch.received, ['bang']);
 
         // timeout cleared
