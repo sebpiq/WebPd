@@ -142,6 +142,7 @@
                             eventCbs.splice(i, 1);
                             return;
                         }
+                        i++;
                     }
                 }
             } else {

@@ -294,6 +294,7 @@ $(document).ready(function() {
 
         // timeout cleared
         patch.received = [];
+        var dummy = patch.timeout(500, function() { }, patch); // Just to test with several timeouts scheduled
         var id = patch.timeout(1000, function() { this.received.push('bang'); }, patch);
         for (1; patch.frame < 2; 1) patch.generateFrame();
         patch.clear(id);
