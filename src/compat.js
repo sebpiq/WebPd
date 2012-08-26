@@ -65,7 +65,8 @@
 			    if (elementType == 'obj' || elementType == 'msg' || elementType == 'text') {
 				    var proto,  // the lookup to use in the `Pd.objects` hash
                         args,   // the construction args for the object
-                        obj;
+                        obj,
+                        guiX = parseInt(tokens[2], 10), guiY = parseInt(tokens[3], 10);
 
 				    if (elementType == 'msg') {
                         proto = 'message';
@@ -84,6 +85,8 @@
 
                     if (Pd.objects.hasOwnProperty(proto)) {
                         obj = new Pd.objects[proto](pd, Pd.compat.parseArgs(args));
+                        obj._guiData.x = guiX;
+                        obj._guiData.y = guiY;
                     } else {
                         throw new Error('unknown object "' + proto + '"');
                     }

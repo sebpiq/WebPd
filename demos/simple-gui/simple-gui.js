@@ -10,11 +10,9 @@
 
                 // Method to call after object creation to initialize gui data
                 initGui: function() {
-                    this._guiData = {
-                        x: 0,
-                        y: 0,
-                        text: this.type + ' ' + this._args.join(' ')
-                    };
+                    this._guiData.text = this.type + ' ' + this._args.join(' ');
+                    this._guiData.x = this._guiData.x * 2 || 5;
+                    this._guiData.y = this._guiData.y * 2 || 5;
                 },
 
                 // Returns object's X in the canvas
@@ -247,7 +245,6 @@
                     }
                 })
                 .attr('class', 'objectGroup')
-                .attr('transform', gui.translation(5, 5))
                 // Selecting object
                 .on('click', function(obj) {
                     gui.setSelection(this);
@@ -311,11 +308,13 @@
                         d3.select(this).classed('connectPortlet', true);
                         gui.canvas.selectAll('rect.inlet')
                             .on('mouseover', function(inlet) {
+                                console.log('OVER', this);
                                 d3.select(this)
                                     .classed('connectPortlet', true)
                                     .classed('hoveredInlet', true);
                             })
                             .on('mouseout', function(inlet) {
+                                console.log('OUT', this);
                                 d3.select(this)
                                     .classed('connectPortlet', false)
                                     .classed('hoveredInlet', false);
@@ -358,6 +357,9 @@
                     // a connection
                     d3.event.stopPropagation();
                 });
+
+            // Refresh the new object's position.
+            gsEnter.each(function(obj) { obj.setPos({}); });
 
             // Remove old objects from the canvas
             objects.exit().remove();

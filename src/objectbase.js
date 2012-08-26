@@ -3,7 +3,10 @@
     /******************** Base Object *****************/
 
     Pd.Object = function (pd, args) {
+        // Attributes mostly used for compatibility and GUIs.
         this._args = args = args || [];
+        this._guiData = {};
+
         // the patch this object belong to
         this.patch = (pd || null);
         // id of the object in this patch
