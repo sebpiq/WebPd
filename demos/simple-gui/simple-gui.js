@@ -308,13 +308,11 @@
                         d3.select(this).classed('connectPortlet', true);
                         gui.canvas.selectAll('rect.inlet')
                             .on('mouseover', function(inlet) {
-                                console.log('OVER', this);
                                 d3.select(this)
                                     .classed('connectPortlet', true)
                                     .classed('hoveredInlet', true);
                             })
                             .on('mouseout', function(inlet) {
-                                console.log('OUT', this);
                                 d3.select(this)
                                     .classed('connectPortlet', false)
                                     .classed('hoveredInlet', false);

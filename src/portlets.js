@@ -112,24 +112,23 @@
 
         init: function() {
             BaseInlet.prototype.init.apply(this, arguments);
-            this._dspSources = [];
+            this.dspSources = [];
             this._buffer = Pd.newBuffer();
             this._zerosBuffer = Pd.newBuffer();
             Pd.fillWithZeros(this._zerosBuffer);
         },
 
         getBuffer: function() {
-            var dspSources = this._dspSources;
+            var dspSources = this.dspSources;
 
             // if more than one dsp source, we have to sum the signals.
             if (dspSources.length > 1) {
-                var buffer = this._buffer;
+                var buffer = this._buffer, sourceBuff, i, j, len1, len2;
                 Pd.fillWithZeros(buffer);
-                var sourceBuff;
 
-                for (var i=0; i<dspSources.length; i++) {
+                for (i = 0, len1 = dspSources.length; i < len1; i++) {
                     sourceBuff = dspSources[i].getBuffer();
-                    for (var j=0; j<buffer.length; j++) {
+                    for (j = 0, len2 = buffer.length; j < len2; j++) {
                         buffer[j] += sourceBuff[j];
                     }
                 }
@@ -146,18 +145,18 @@
         },
 
         connect: function(source) {
-            if (source instanceof Pd['outlet~']) this._dspSources.push(source);
+            if (source instanceof Pd['outlet~']) this.dspSources.push(source);
             BaseInlet.prototype.connect.apply(this, arguments);
         },
 
         disconnect: function(source) {
-            var ind = this._dspSources.indexOf(source);
-            if (ind != -1) this._dspSources.splice(ind, 1);
+            var ind = this.dspSources.indexOf(source);
+            if (ind != -1) this.dspSources.splice(ind, 1);
             BaseInlet.prototype.disconnect.apply(this, arguments);
         },
 
         hasDspSources: function() {
-            return this._dspSources.length > 0;
+            return this.dspSources.length > 0;
         }
 
     });

@@ -156,18 +156,20 @@
 	    },
 	
 	    // Dsp tick function. Pulls dsp data from `obj` and all its parents.
+        // TODO: infinite loop for DSP objects ? Circular reference ?
         // TODO: maybe objects shouldn't know about the frame count, it should
         // be passed to the dspTick function --- yes, but the frame count allows the graph to know
         // that dspTick has already been called for a given frame (see osc~)
 	    tick: function(obj) {
             if (obj.frame < this.frame) {
-                var inlets = obj.inlets;
-                var sources;
+                var inlets = obj.inlets, sources, i, j, len1, len2;
 
-		        // recursively triggers tick on all parent objects
-		        for (var i=0; i<inlets.length; i++) {
-			        sources = inlets[i].sources;
-                    for (var j=0; j<sources.length; j++) this.tick(sources[j].obj);
+		        // Recursively triggers tick on all DSP objects.
+		        for (i = 0, len1 = inlets.length; i < len1; i++) {
+			        if (inlets[i] instanceof Pd['inlet~']) {
+                        sources = inlets[i].sources;
+                        for (j = 0, len2 = sources.length; j < len2; j++) this.tick(sources[j].obj);
+                    }
 		        }
 
 		        // once all parents have run their dsp process,

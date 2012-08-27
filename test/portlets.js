@@ -32,4 +32,13 @@ $(document).ready(function() {
         sink.disconnect(source);
     });
 
+    test('subclassing', function() {
+        var inlet = new Pd['inlet']();
+        ok(inlet instanceof Pd['inlet']);
+        ok(!(inlet instanceof Pd['inlet~']));
+        var inlett = new Pd['inlet~']();
+        ok(inlet instanceof Pd['inlet~']);
+        ok(!(inlet instanceof Pd['inlet']));
+    });
+
 });
