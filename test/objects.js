@@ -656,6 +656,39 @@ $(document).ready(function() {
         deepEqual(trigger.o(0).receivedMessage, [0]);
     });
 
+    test('select', function() {
+        var select = new Pd.objects['select'](null, [3]);
+        equal(select.o(0).receivedMessage, undefined);
+        equal(select.o(1).receivedMessage, undefined);
+        equal(select.outlets.length, 2);
+        select.i(0).message(1);
+        equal(select.o(0).receivedMessage, undefined);
+        deepEqual(select.o(1).receivedMessage, [1]);
+
+        var select = new Pd.objects['select'](null, [1, 2, 'bla']);
+        equal(select.outlets.length, 4);
+        select.i(0).message(1);
+        deepEqual(select.o(0).receivedMessage, ['bang']);
+        equal(select.o(1).receivedMessage, undefined);
+        equal(select.o(2).receivedMessage, undefined);
+        equal(select.o(3).receivedMessage, undefined);
+        select.o(0).receivedMessage = undefined;
+
+        select.i(0).message('bla');
+        equal(select.o(0).receivedMessage, undefined);
+        equal(select.o(1).receivedMessage, undefined);
+        deepEqual(select.o(2).receivedMessage, ['bang']);
+        equal(select.o(3).receivedMessage, undefined);
+        select.o(2).receivedMessage = undefined;
+
+        select.i(0).message('blablabla');
+        equal(select.o(0).receivedMessage, undefined);
+        equal(select.o(1).receivedMessage, undefined);
+        equal(select.o(2).receivedMessage, undefined);
+        deepEqual(select.o(3).receivedMessage, ['blablabla']);
+        select.o(3).receivedMessage = undefined;
+    });
+
     test('random', function() {
         var randObj = new Pd.objects['random'](null, [3]),
             numbers = [0, 0, 0];

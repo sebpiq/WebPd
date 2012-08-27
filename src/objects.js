@@ -266,6 +266,40 @@
 
     });
 
+	// Checks the input message and routes it to the right inlet if it doesn't
+    // correspond to any of the filters.
+    // TODO : right inlet
+	Pd.objects['select'] = Pd.Object.extend({
+
+        inletTypes: ['inlet'],
+        outletTypes: [],
+
+        init: function() {
+            var array = Array.prototype.slice.call(arguments, 0), 
+                i, length;
+            for (i = 0, length = array.length; i < length; i++) {
+                this.outlets[i] = new Pd['outlet'](this, i);
+            }
+            this.outlets[i] = new Pd['outlet'](this, i);
+            this.filters = array;
+        },
+
+        message: function(inletId, msg) {
+            if (inletId === 0) {
+                var filters = this.filters, 
+                    i, length;
+                for (i = 0, length = filters.length; i < length; i++) {
+                    if (msg == filters[i]) {
+                        this.outlets[i].message('bang');
+                        return;
+                    }
+                }
+                this.outlets.slice(-1)[0].message(msg);
+            }
+        }
+
+    });
+
 /**************************** Lists *********************************/
 
 	Pd.objects['list split'] = Pd.Object.extend({
