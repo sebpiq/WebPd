@@ -534,7 +534,16 @@ $(document).ready(function() {
         var textBla = new Pd.objects['text'](null, ['Je suis un texte']);
     });
 
-    module('Pd.objects - glue');
+    module('Pd.objects - glue', {
+        setup: function() {
+            Pd.blockSize = 4;
+            this.sampleRate = Pd.sampleRate;
+            portletsTesting();
+        },
+        teardown: function() {
+            Pd.sampleRate = this.sampleRate;
+        }
+    });
 
     test('float', function() {
         var float = new Pd.objects['float']();
@@ -713,6 +722,25 @@ $(document).ready(function() {
         notEqual(numbers[1], 0);
         notEqual(numbers[2], 0);
         notEqual(numbers[3], 0);
+    });
+
+    test('send/receive', function() {
+        var patch = new Pd.Patch();
+            send1 = new Pd.objects['send'](patch, ['no1']),
+            receive1 = new Pd.objects['receive'](patch, ['no1']),
+            send2 = new Pd.objects['send'](patch, ['no2']),
+            receive2 = new Pd.objects['receive'](patch, ['no2']);
+
+        equal(receive1.o(0).receivedMessage, undefined);
+        equal(receive2.o(0).receivedMessage, undefined);
+        send1.i(0).message('bla', 'bli', 'blu');
+        deepEqual(receive1.o(0).receivedMessage, ['bla', 'bli', 'blu']);
+        equal(receive2.o(0).receivedMessage, undefined);
+
+        receive1.o(0).receivedMessage = undefined;
+        patch.send('no2', 'bla', 888);
+        equal(receive1.o(0).receivedMessage, undefined);
+        deepEqual(receive2.o(0).receivedMessage, ['bla', 888]);
     });
 
     test('list split', function() {

@@ -36,7 +36,7 @@ $(document).ready(function() {
         var inlet = new Pd['inlet']();
         ok(inlet instanceof Pd['inlet']);
         ok(!(inlet instanceof Pd['inlet~']));
-        var inlett = new Pd['inlet~']();
+        var inlet = new Pd['inlet~']();
         ok(inlet instanceof Pd['inlet~']);
         ok(!(inlet instanceof Pd['inlet']));
     });

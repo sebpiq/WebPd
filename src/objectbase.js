@@ -92,6 +92,10 @@
             if (!Pd.isArray(val)) throw (new Error(errorMsg));
         },
 
+        assertIsString: function(val, errorMsg) {
+            if (!Pd.isString(val)) throw (new Error(errorMsg));
+        },
+
     /******************** Basic dspTicks ************************/
         dspTickNoOp: function() {},
         toDspTickNoOp: function() { this.dspTick = this.dspTickNoOp; },

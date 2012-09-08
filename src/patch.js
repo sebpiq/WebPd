@@ -20,9 +20,12 @@
         // counter used internally to assign a unique id to objects
         // this counter should never be decremented to ensure the id unicity
         this._idCounter = -1;
+        // TODO: find a clean way to handle named stuff.
 	    // arrays of float data - Pd's tables
 	    // keys are table names
         this._tables = {};
+	    // Map of receivers, keys are receiver names
+        this._receivers = {};
 	    // arrays of callbacks which are scheduled to run at some point in time
 	    // keys are frames
 	    this._scheduled = {};
@@ -38,41 +41,13 @@
     };
 
     Pd.extend(Pd.Patch.prototype, Pd.EventsBase, {
-
-	    // regular expression for finding dollarargs
-	    dollarMatch: /(?:\\{0,1}\$)(\d+)/g, //TODO: probably shouldn't be here
 	
-	    // send a message from outside the graph to a named receiver inside the graph
-	    send: function(name, val) {
-		    Pd.debug('graph received: ' + name + ' ' + val);
-		    var listeners = this.listeners[name];
-		    if (listeners) {
-			    for (var l=0; l<listeners.length; l++) {
-				    if (listeners[l].message) {
-					    // inletnum of -1 signifies it came from somewhere other than an inlet
-					    listeners[l].message(-1, val);
-				    }
-			    }
-		    } else {
-			    Pd.log('error: ' + name + ': no such object');
-		    }
-	    },
-	
-	    // send a message from inside the graph to a named receiver outside the graph
-	    receive: function(name,callback){
-		    pd.addlistener(name,{'message':function(d,val){callback(val);}});	
-	    },
-	
-	    // send a bang to all receive objects named 'test'
-	    testBang: function(){
-		    this.send('test', 'bang');
-	    },
-	
-	    // adds a new named listener to our graph
-	    addListener: function(name, who) {
-		    if (!this.listeners[name])
-			    this.listeners[name] = [];
-		    this.listeners[name][this.listeners[name].length] = who;
+	    // Send a message to a named receiver inside the graph
+	    send: function(name) {
+            if (this._receivers.hasOwnProperty(name)) {
+                var receiver = this._receivers[name];
+                receiver.send.apply(receiver, Array.prototype.slice.call(arguments, 1));
+            }
 	    },
 
     /******************** Time/scheduling methods ************************/

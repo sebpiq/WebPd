@@ -30,7 +30,19 @@
             this.filter = Pd.makeMsgFilter(filterMsg);
         }
 
-    };    
+    };
+
+    // A mixin for named objects
+    var NamedMixin = {
+
+        setName: function(name) {
+            var errorMsg = 'unvalid name ' + name;
+            this.assertIsString(name, errorMsg);
+            if (!name) throw new Error(errorMsg);
+            this.name = name;
+        }
+
+    }
 
     Pd.objects['text'] = Pd.Object.extend({
 
@@ -300,6 +312,210 @@
 
     });
 
+	// Convert midi notes to frequency
+	Pd.objects['mtof'] = Pd.Object.extend({
+
+		inletTypes: ['inlet'],
+		outletTypes: ['outlet'],
+        maxMidiNote: 8.17579891564 * Math.exp(.0577622650 * 1499),
+
+        // TODO: round output ?
+		message: function(inletId, note) {
+            if (inletId === 0) {
+                this.assertIsNumber(note, 'invalid midi note ' + note);
+			    var out = 0;
+			    if (note <= -1500) out = 0;
+                else if (note > 1499) out = this.maxMidiNote;
+			    else out = 8.17579891564 * Math.exp(.0577622650 * note);
+			    this.outlets[0].message(out);
+            }
+		}
+	});
+
+    // Random number generator
+	Pd.objects['random'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+        init: function(maxInt) {
+            this.setMax(maxInt || 1);
+        },
+
+        setMax: function(maxInt) {
+            this.assertIsNumber(maxInt, 'invalid maximum ' + maxInt);
+            this.max = maxInt;
+        },
+
+		message: function(inletId, arg1, arg2) {
+            if (inletId === 0) {
+                if (arg1 === 'bang') this.outputRandomInt();
+                else if (arg1 === 'seed') 1; // TODO: seeding, not available with `Math.rand`
+            } else if (inletId === 1) this.setMax(arg1);
+		},
+
+        outputRandomInt: function() {
+            this.outlets[0].message(Math.floor(Math.random() * this.max));
+        }
+
+    });
+
+    // Metronome, outputs 'bang' every `rate` milliseconds.
+    // TODO: sample-exactitude ? How does it work in pd ?
+	Pd.objects['metro'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+        init: function(rate) {
+            this.setRate(rate || 0);
+            this.toDspTickNoOp();
+            this._intervalId = null;
+            this._metroTick = this._metroTickNormal;
+        },
+
+        // Metronome rate, in ms per tick
+        setRate: function(rate) {
+            this.assertIsNumber(rate, 'invalid rate ' + rate);
+            this.rate = rate;
+        },
+
+		message: function(inletId, msg) {
+            if (inletId === 0) {
+                if (msg === 'bang') this._restartMetroTick();
+                else if (msg === 'stop') this._stopMetroTick(); 
+                else {
+                    this.assertIsNumber(msg, 'invalid msg ' + msg);
+                    if (msg === 0) this._stopMetroTick();
+                    else this._restartMetroTick();
+                }
+            } else if (inletId === 1) {
+                this.setRate(msg);
+                this._metroTick = this._metroTickRateChange;
+            }
+		},
+
+        _startMetroTick: function() {
+            this._metroTick();
+            if (this._intervalId === null) {
+                this._intervalId = this.patch.interval(this.rate, function() { this._metroTick(); }, this);
+            }
+        },
+
+        _stopMetroTick: function() {
+            if (this._intervalId !== null) {
+                this.patch.clear(this._intervalId);
+                this._intervalId = null;
+            }
+        },
+
+        _restartMetroTick: function() {
+            this._stopMetroTick();
+            this._startMetroTick();
+        },
+
+        _metroTickNormal: function() { this.outlets[0].message('bang'); },
+
+        // Ticks, restarts the interval and switches to normal ticking.
+        // This is useful when the rate was changed.
+        _metroTickRateChange: function() {
+            this._metroTick = this._metroTickNormal;
+            this._restartMetroTick();
+        }
+	});
+
+    // Delay, outputs 'bang' after a given time in milliseconds.
+    // TODO: sample-exactitude ? How does it work in pd ?
+	Pd.objects['delay'] = Pd.Object.extend({
+
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
+
+        init: function(delay) {
+            this.setDelay(delay || 0);
+            this.toDspTickNoOp();
+            this._timeoutId = null;
+        },
+
+        // Delay time, in ms
+        setDelay: function(delay) {
+            this.assertIsNumber(delay, 'invalid delay ' + delay);
+            this.delay = delay;
+        },
+
+		message: function(inletId, msg) {
+            if (inletId === 0) {
+                if (msg === 'bang') {
+                    this._stopDelay();
+                    this._startDelay();
+                } else if (msg === 'stop') this._stopDelay(); 
+                else {
+                    this.setDelay(msg);
+                    this._stopDelay();
+                    this._startDelay();
+                }
+            } else if (inletId === 1) this.setDelay(msg);
+		},
+
+        _startDelay: function() {
+            if (this._timeoutId === null) {
+                this._timeoutId = this.patch.timeout(this.delay, this._delayReached, this);
+            }
+        },
+
+        _stopDelay: function() {
+            if (this._timeoutId !== null) {
+                this.patch.clear(this._timeoutId);
+                this._timeoutId = null;
+            }
+        }, 
+
+        _delayReached: function() { this.outlets[0].message('bang'); }
+	});
+
+    var ReceiveSendBase = Pd.Object.extend(NamedMixin);
+
+    // TODO: Registering the receiver to the graph in a proper way...
+    // TODO: find a good way to handle named objects in patch.js
+    Pd.objects['receive'] = ReceiveSendBase.extend({
+
+		inletTypes: [],
+		outletTypes: ['outlet'],
+
+        init: function(name) {
+            this.setName(name);
+        },
+
+        setName: function() {
+            ReceiveSendBase.prototype.setName.apply(this, arguments);
+            this.patch._receivers[this.name] = this;
+        },
+
+        send: function() {
+            var outlet = this.outlets[0];
+            outlet.message.apply(outlet, arguments);
+        }
+
+    });
+
+    Pd.objects['send'] = ReceiveSendBase.extend({
+
+		inletTypes: ['inlet'],
+		outletTypes: [],
+
+        init: function(name) {
+            this.setName(name)
+        },
+
+        message: function(inletId) {
+			if (inletId === 0) {
+                this.patch.send.apply(this.patch,
+                    [this.name].concat(Array.prototype.slice.call(arguments, 1)));
+            }
+        }
+
+    });
+
 /**************************** Lists *********************************/
 
 	Pd.objects['list split'] = Pd.Object.extend({
@@ -414,7 +630,6 @@
 
 	});
 
-
 	// digital to analogue converter (sound output)
 	Pd.objects['dac~'] = Pd.Object.extend({
 
@@ -432,7 +647,6 @@
 			}
 		}
 	});
-
 
 	// creates simple dsp lines
 	Pd.objects['line~'] = Pd.Object.extend({
@@ -551,7 +765,6 @@
         }
     });
 
-
 	// dsp multiply object
 	Pd.objects['*~'] = DSPArithmBase.extend({
 
@@ -574,7 +787,6 @@
         }
 
 	});
-
 
 	// dsp divide object (d_arithmetic.c line 454 - over_perform() )
 	Pd.objects['/~'] = DSPArithmBase.extend({
@@ -600,7 +812,6 @@
         }
 
 	});
-	
 
 	// dsp addition object
 	Pd.objects['+~'] = DSPArithmBase.extend({
@@ -624,7 +835,6 @@
         }
 
 	});
-
 
 	// dsp substraction object
 	Pd.objects['-~'] = DSPArithmBase.extend({
@@ -677,7 +887,6 @@
         tableChanged: function() {}
     });
 
-
     // read data from a table with no interpolation
     Pd.objects['tabread~'] = DSPTabBase.extend({
 
@@ -713,7 +922,6 @@
             }
         }
     });
-
 
     // play data from a table with no interpolation
     Pd.objects['tabplay~'] = DSPTabBase.extend({
@@ -771,7 +979,6 @@
 
     });
 
-
     // read data from a table with no interpolation
     Pd.objects['tabwrite~'] = DSPTabBase.extend({
 
@@ -822,174 +1029,6 @@
             this.pos = start;
         }
     });
-
-
-/************************** Misc non-DSP ******************************/
-
-	// Convert midi notes to frequency
-	Pd.objects['mtof'] = Pd.Object.extend({
-
-		inletTypes: ['inlet'],
-		outletTypes: ['outlet'],
-        maxMidiNote: 8.17579891564 * Math.exp(.0577622650 * 1499),
-
-        // TODO: round output ?
-		message: function(inletId, note) {
-            if (inletId === 0) {
-                this.assertIsNumber(note, 'invalid midi note ' + note);
-			    var out = 0;
-			    if (note <= -1500) out = 0;
-                else if (note > 1499) out = this.maxMidiNote;
-			    else out = 8.17579891564 * Math.exp(.0577622650 * note);
-			    this.outlets[0].message(out);
-            }
-		}
-	});
-
-
-    // Random number generator
-	Pd.objects['random'] = Pd.Object.extend({
-
-		inletTypes: ['inlet', 'inlet'],
-		outletTypes: ['outlet'],
-
-        init: function(maxInt) {
-            this.setMax(maxInt || 1);
-        },
-
-        setMax: function(maxInt) {
-            this.assertIsNumber(maxInt, 'invalid maximum ' + maxInt);
-            this.max = maxInt;
-        },
-
-		message: function(inletId, arg1, arg2) {
-            if (inletId === 0) {
-                if (arg1 === 'bang') this.outputRandomInt();
-                else if (arg1 === 'seed') 1; // TODO: seeding, not available with `Math.rand`
-            } else if (inletId === 1) this.setMax(arg1);
-		},
-
-        outputRandomInt: function() {
-            this.outlets[0].message(Math.floor(Math.random() * this.max));
-        }
-
-    });
-
-
-    // Metronome, outputs 'bang' every `rate` milliseconds.
-    // TODO: sample-exactitude ? How does it work in pd ?
-	Pd.objects['metro'] = Pd.Object.extend({
-
-		inletTypes: ['inlet', 'inlet'],
-		outletTypes: ['outlet'],
-
-        init: function(rate) {
-            this.setRate(rate || 0);
-            this.toDspTickNoOp();
-            this._intervalId = null;
-            this._metroTick = this._metroTickNormal;
-        },
-
-        // Metronome rate, in ms per tick
-        setRate: function(rate) {
-            this.assertIsNumber(rate, 'invalid rate ' + rate);
-            this.rate = rate;
-        },
-
-		message: function(inletId, msg) {
-            if (inletId === 0) {
-                if (msg === 'bang') this._restartMetroTick();
-                else if (msg === 'stop') this._stopMetroTick(); 
-                else {
-                    this.assertIsNumber(msg, 'invalid msg ' + msg);
-                    if (msg === 0) this._stopMetroTick();
-                    else this._restartMetroTick();
-                }
-            } else if (inletId === 1) {
-                this.setRate(msg);
-                this._metroTick = this._metroTickRateChange;
-            }
-		},
-
-        _startMetroTick: function() {
-            this._metroTick();
-            if (this._intervalId === null) {
-                this._intervalId = this.patch.interval(this.rate, function() { this._metroTick(); }, this);
-            }
-        },
-
-        _stopMetroTick: function() {
-            if (this._intervalId !== null) {
-                this.patch.clear(this._intervalId);
-                this._intervalId = null;
-            }
-        },
-
-        _restartMetroTick: function() {
-            this._stopMetroTick();
-            this._startMetroTick();
-        },
-
-        _metroTickNormal: function() { this.outlets[0].message('bang'); },
-
-        // Ticks, restarts the interval and switches to normal ticking.
-        // This is useful when the rate was changed.
-        _metroTickRateChange: function() {
-            this._metroTick = this._metroTickNormal;
-            this._restartMetroTick();
-        }
-	});
-
-
-    // Delay, outputs 'bang' after a given time in milliseconds.
-    // TODO: sample-exactitude ? How does it work in pd ?
-	Pd.objects['delay'] = Pd.Object.extend({
-
-		inletTypes: ['inlet', 'inlet'],
-		outletTypes: ['outlet'],
-
-        init: function(delay) {
-            this.setDelay(delay || 0);
-            this.toDspTickNoOp();
-            this._timeoutId = null;
-        },
-
-        // Delay time, in ms
-        setDelay: function(delay) {
-            this.assertIsNumber(delay, 'invalid delay ' + delay);
-            this.delay = delay;
-        },
-
-		message: function(inletId, msg) {
-            if (inletId === 0) {
-                if (msg === 'bang') {
-                    this._stopDelay();
-                    this._startDelay();
-                } else if (msg === 'stop') this._stopDelay(); 
-                else {
-                    this.setDelay(msg);
-                    this._stopDelay();
-                    this._startDelay();
-                }
-            } else if (inletId === 1) this.setDelay(msg);
-		},
-
-        _startDelay: function() {
-            if (this._timeoutId === null) {
-                this._timeoutId = this.patch.timeout(this.delay, this._delayReached, this);
-            }
-        },
-
-        _stopDelay: function() {
-            if (this._timeoutId !== null) {
-                this.patch.clear(this._timeoutId);
-                this._timeoutId = null;
-            }
-        }, 
-
-        _delayReached: function() { this.outlets[0].message('bang'); }
-	});
-
 
     // Let each object know of what type it is
     var proto;
