@@ -1,7 +1,0 @@
-
-print: 31.6228
-print: 10
-print: 3.16228
-print: 1
-print: 0
-print: 0

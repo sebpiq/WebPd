@@ -1,6 +1,0 @@
-#N canvas 90 62 450 300 10;
-#X obj 21 19 loadbang;
-#X msg 21 40 hello foo bar sheep goat;
-#X obj 21 61 print;
-#X connect 0 0 1 0;
-#X connect 1 0 2 0;

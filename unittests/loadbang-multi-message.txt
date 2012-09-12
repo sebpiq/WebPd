@@ -1,4 +1,0 @@
-print: hello foo
-print: 234 2
-print: a
-error: ping: no such object

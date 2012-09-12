@@ -1,8 +1,0 @@
-#N canvas 379 341 450 300 12;
-#X obj 7 31 snapshot~;
-#X obj 7 56 print;
-#X obj 63 7 r test;
-#X obj 7 7 osc~ 5;
-#X connect 0 0 1 0;
-#X connect 2 0 0 0;
-#X connect 3 0 0 0;

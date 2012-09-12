@@ -1,7 +1,0 @@
-
-print: 8.5067e+037
-print: 8.5067e+037
-print: 22026.5
-print: 2.71828
-print: 1
-print: 0.367879
