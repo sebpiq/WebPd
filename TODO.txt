@@ -1,8 +1,0 @@
-* pd.receive() - 'callback' receivers which send data outside Pd, like in pd-for-android
-* connection fanning - make inlet/outlet holders be arrays
-* make [timer] to get the internal Pd timer right
-
-* fix [sel]
-* fix [random] and [noise~] (use Pd's algorithm)
-* fromString method for constructing patches programmatically
-* sample accurate messages - give some messages a timestamp if they are to be executed at a certain time. in objects like [vline~] only execute them at that time

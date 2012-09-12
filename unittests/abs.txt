@@ -1,7 +1,0 @@
-
-print: 1000
-print: 100
-print: 10
-print: 1.45
-print: 0
-print: 1

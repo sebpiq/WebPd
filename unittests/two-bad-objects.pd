@@ -1,4 +1,0 @@
-#N canvas 0 0 450 300 10;
-#X obj 10 11 boing;
-#X obj 10 32 bloop;
-#X connect 0 0 1 0;

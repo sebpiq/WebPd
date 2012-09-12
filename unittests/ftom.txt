@@ -1,7 +1,0 @@
-
-print: 83.2131
-print: 43.35
-print: 3.48682
-print: -36.3763
-print: -1500
-print: -1500

@@ -1,4 +1,0 @@
-print: this is a very very long message hopefully with internal semicolons! yes it is. it's like this: yo. test
-error: test: no such object
-error: test: no such object
-error: ping: no such object
