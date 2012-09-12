@@ -75,12 +75,14 @@
                         proto = 'text';
                         args = [tokens.slice(4).join(' ')];
                     } else {
-					    proto = tokens[4];
-                        args = tokens.slice(5);
-					    if (!Pd.objects.hasOwnProperty(proto)) {
-						    Pd.log(' ' + proto + '\n... couldn\'t create');
-						    proto = 'null';
-					    }
+                        // TODO: quick fix for list split
+                        if (tokens[4] == 'list') {
+                            proto = tokens[4] + ' ' + tokens[5];
+                            args = tokens.slice(6);
+                        } else {
+					        proto = tokens[4];
+                            args = tokens.slice(5);
+                        }
 				    }
 
                     if (Pd.objects.hasOwnProperty(proto)) {
