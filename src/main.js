@@ -159,10 +159,12 @@
         // Triggers `event` on the calling object, thus calling the bound callbacks.
         trigger: function(event) {
             var allCbs = (this._cbs[event] || []).concat(this._cbsOne[event] || []),
+                args = Array.prototype.slice.call(arguments, 1),
                 cbObj, i;
+
             if (allCbs.length == 0) return;
             for (i = 0; cbObj = allCbs[i]; i++) {
-                cbObj.callback.apply(cbObj.context);
+                cbObj.callback.apply(cbObj.context, args);
             }
             delete this._cbsOne[event];
         },

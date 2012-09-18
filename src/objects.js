@@ -509,8 +509,10 @@
 
         message: function(inletId) {
 			if (inletId === 0) {
-                this.patch.send.apply(this.patch,
-                    [this.name].concat(Array.prototype.slice.call(arguments, 1)));
+                var patch = this.patch,
+                    args = Array.prototype.slice.call(arguments, 1);
+
+                patch.send.apply(patch, [this.name].concat(args));
             }
         }
 

@@ -42,13 +42,31 @@
 
     Pd.extend(Pd.Patch.prototype, Pd.EventsBase, {
 	
+    /************************* Send/receive ******************************/
+
 	    // Send a message to a named receiver inside the graph
 	    send: function(name) {
+            var args = Array.prototype.slice.call(arguments, 1),
+                msgEvent = this._buildMsgEvent(name);
+
             if (this._receivers.hasOwnProperty(name)) {
                 var receiver = this._receivers[name];
-                receiver.send.apply(receiver, Array.prototype.slice.call(arguments, 1));
+                receiver.send.apply(receiver, args);
+            }
+            if (this._cbs.hasOwnProperty(msgEvent)) {
+                this.trigger.apply(this, [msgEvent].concat(args));
             }
 	    },
+
+	    // Receive a message from a named sender inside the graph
+	    receive: function(name, callback) {
+            this.on(this._buildMsgEvent(name), callback);
+	    },
+
+        // Event triggered when a message is sent by `senderName`.
+        _buildMsgEvent: function(senderName) {
+            return 'msg:' + senderName;
+        },
 
     /******************** Time/scheduling methods ************************/
 	

@@ -753,9 +753,18 @@ $(document).ready(function() {
         equal(receive2.o(0).receivedMessage, undefined);
 
         receive1.o(0).receivedMessage = undefined;
+        var receivedOutside = [];
+        patch.receive('no2', function() {
+            var args = Array.prototype.slice.call(arguments, 0);
+            console.log(args);
+            for (var i = 0; i < args.length; i++) {
+                receivedOutside.push(args[i]);
+            }
+        });
         patch.send('no2', 'bla', 888);
         equal(receive1.o(0).receivedMessage, undefined);
         deepEqual(receive2.o(0).receivedMessage, ['bla', 888]);
+        deepEqual(receivedOutside, ['bla', 888]);
     });
 
     test('list split', function() {
