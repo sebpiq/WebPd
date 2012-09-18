@@ -105,6 +105,21 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*1), cos(k*2), cos(k*3), cos(k*4)], 4));
     });
 
+    test('noise~', function() {
+        var noise = new Pd.objects['noise~']();
+        var outBuff = noise.o(0).getBuffer();
+
+        noise.dspTick();
+        var mt0p5 = false;
+        var ltm0p5 = false;
+        for (var i = 0; i < outBuff.length; i++) {
+            if (mt0p5 && ltm0p5) break;
+            if (outBuff[i] < -0.5) ltm0p5 = true;
+            if (outBuff[i] > 0.5) mt0p5 = true;
+        }
+        ok(mt0p5 && ltm0p5);
+    });
+
     test('*~', function() {
         var mult = new Pd.objects['*~'](null, [2]);
         var outBuff = mult.o(0).getBuffer();

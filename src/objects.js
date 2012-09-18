@@ -559,6 +559,8 @@
 	
 	// Basic oscillator
 	Pd.objects['osc~'] = Pd.Object.extend({
+        // TODO : reset phase takes float and no bang
+        // TODO : recalculate stuff on sample rate change. (Useless ?)
 
 		inletTypes: ['inlet~', 'inlet'],
 		outletTypes: ['outlet~'],
@@ -587,28 +589,29 @@
 
         // Calculates the cos taking the frequency from dsp inlet
 		dspTickVariableFreq: function() {
-            var inBuff = this.inlets[0].getBuffer();
-            var outBuff = this.outlets[0].getBuffer();
-            var J = this.J;
+            var inBuff = this.inlets[0].getBuffer(),
+                outBuff = this.outlets[0].getBuffer(),
+                J = this.J, phase = this.phase, i, length;
 
-		    for (var i=0; i<outBuff.length; i++) {
-                this.phase += J * inBuff[i];
-			    outBuff[i] = Math.cos(this.phase);
+		    for (i = 0, length = outBuff.length; i < length; i++) {
+                phase += J * inBuff[i];
+			    outBuff[i] = Math.cos(phase);
 		    }
+            this.phase = phase;
 		},
 
         // Calculates the cos with a constant frequency from first inlet
         dspTickConstFreq: function() {
-            var outBuff = this.outlets[0].getBuffer();
-            var K = this.K;
+            var outBuff = this.outlets[0].getBuffer(),
+                K = this.K, phase = this.phase, i, length;
 
-		    for (var i=0; i<outBuff.length; i++) {
-                this.phase += K;
-			    outBuff[i] = Math.cos(this.phase);
+		    for (i = 0, length = outBuff.length; i < length; i++) {
+                phase += K;
+			    outBuff[i] = Math.cos(phase);
 		    }
+            this.phase = phase;
         },
 
-        // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
 			if (inletId === 0) this.setFreq(msg);
             else if (inletId === 1 && msg === 'bang') this.phase = 0;
@@ -629,6 +632,21 @@
         }
 
 	});
+
+    // White noise generator 
+    Pd.objects['noise~'] = Pd.Object.extend({
+
+		outletTypes: ['outlet~'],
+
+		dspTick: function() {
+            var outBuff = this.outlets[0].getBuffer(),
+                J = this.J, i, length;
+
+		    for (i = 0, length = outBuff.length; i < length; i++) {
+			    outBuff[i] = 2 * Math.random() - 1;
+		    }
+		}
+    });
 
 	// digital to analogue converter (sound output)
 	Pd.objects['dac~'] = Pd.Object.extend({
