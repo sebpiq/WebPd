@@ -201,7 +201,7 @@
 	    }
     };
 
-    var dollarVarRegExp = /^\$(\d+)$/;
+    var dollarVarRe = /^\$(\d+)$/;
 
     // Returns a function `filter(msg)`, that takes a message array as input, and returns 
     // the filtered message. For example :
@@ -212,7 +212,7 @@
     Pd.makeMsgFilter = function(filterMsg) {
         var dollarVars = [], i, length, matched;
         for (i = 0, length = filterMsg.length;  i < length; i++) {
-            matched = dollarVarRegExp.exec(filterMsg[i]);
+            matched = dollarVarRe.exec(filterMsg[i]);
             if (matched) dollarVars.push([i, parseInt(matched[1], 10)]);
         }
         return function(msg) {
@@ -229,7 +229,7 @@
     };
 
     var isDollarVar = Pd.isDollarVar = function(val) {
-        return Boolean(dollarVarRegExp.exec(val));
+        return Boolean(dollarVarRe.exec(val));
     };
 
     // Fills array with zeros

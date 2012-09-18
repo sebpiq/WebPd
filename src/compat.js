@@ -1,7 +1,10 @@
 (function(Pd){
 
     // Regular expression to split tokens in a message.
-    var tokensRe = new RegExp(' |\r\n?|\n');
+    var tokensRe = / |\r\n?|\n/;
+
+    // Regular expression to detect escaped dollar vars.
+    var escapedDollarVarRe = /^\\(\$\d+)$/;
 
     Pd.compat = {};
 
@@ -9,8 +12,11 @@
     Pd.compat.parseArg = function(arg) {
         var parsed = Pd.compat.parseFloat(arg);
         if (Pd.isNumber(parsed)) return parsed;
-        else if (Pd.isString(arg)) return arg;
-        else throw new Error('couldn\'t parse arg ' + arg);
+        else if (Pd.isString(arg)) {
+            var matched;
+            if (matched = escapedDollarVarRe.exec(arg)) return matched[1];
+            else return arg;
+        } else throw new Error('couldn\'t parse arg ' + arg);
     };
 
     // Parses a float from a .pd file. Returns the parsed float or NaN.
@@ -28,7 +34,6 @@
 	    else {
 	        var parts = Pd.isString(args) ? args.split(tokensRe) : args,
                 parsed = [], i, length;
-		    if (parts[0] == 'list') parts.shift();
             for (i = 0, length = parts.length; i < length; i++) {
                 if ((arg = parts[i]) === '') continue;
                 else parsed.push(Pd.compat.parseArg(arg));
@@ -41,7 +46,7 @@
     /******************** Patch parsing ************************/
 
     // regular expression for finding valid lines of Pd in a file
-    var linesRe = new RegExp('(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}(\n|$)', 'gi');
+    var linesRe = /(#((.|\r|\n)*?)[^\\\\])\r{0,1}\n{0,1};\r{0,1}(\n|$)/gi;
 
     // Parses a Pd file, creates and returns a new `Pd.Patch` object from it
     // ref : http://puredata.info/docs/developer/PdFileFormat 
