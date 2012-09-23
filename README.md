@@ -31,7 +31,7 @@ Getting started
 </html>
 ```
 
-Then, get a PD patch file, load it to a WebPd patch and start it. The way you get the PD patch file in JavaScript is up to you, ... but the prefered way is by using an Ajax request. For this I suggest to use JQuery :
+Then, get a PD file, load it to a WebPd patch and start it. The way you get the PD file in JavaScript is up to you, ... but the prefered way is by using an Ajax request. For this I suggest to use JQuery :
 
 ```html
 <!DOCTYPE html>
@@ -51,7 +51,7 @@ Then, get a PD patch file, load it to a WebPd patch and start it. The way you ge
 </html>
 ```
 
-**Note** : _sometimes chrome forbids JavaScript to access your file system, so getting the patch file might fail. In this case you can start chrome with the `--allow-file-access-from-files` option._
+**Note** : _sometimes chrome forbids JavaScript to access your file system, so getting the patch file might fail. To fix this, start chrome with the `--allow-file-access-from-files` option._
 
 
 If the patch file is not too big, you can also include it directly in your page, and read it with JavaScript :
