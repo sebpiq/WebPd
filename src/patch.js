@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ * BSD Simplified License.
+ * For information on usage and redistribution, and for a DISCLAIMER OF ALL
+ * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+ *
+ * See https://github.com/sebpiq/WebPd for documentation
+ *
+ */
+
 (function(Pd) {
 
     // !!! What we call "frame" here is a block of audio frames 
@@ -42,13 +53,34 @@
 
     Pd.extend(Pd.Patch.prototype, Pd.EventsBase, {
 	
+    /************************* Send/receive ******************************/
+
 	    // Send a message to a named receiver inside the graph
 	    send: function(name) {
+            var args = Array.prototype.slice.call(arguments, 1),
+                msgEvent = this._buildMsgEvent(name);
+
             if (this._receivers.hasOwnProperty(name)) {
-                var receiver = this._receivers[name];
-                receiver.send.apply(receiver, Array.prototype.slice.call(arguments, 1));
+                var receivers = this._receivers[name],
+                    receiver, i;
+                for (i = 0; receiver = receivers[i]; i++) {
+                    receiver.send.apply(receiver, args);
+                }
+            }
+            if (this._cbs.hasOwnProperty(msgEvent)) {
+                this.trigger.apply(this, [msgEvent].concat(args));
             }
 	    },
+
+	    // Receive a message from a named sender inside the graph
+	    receive: function(name, callback) {
+            this.on(this._buildMsgEvent(name), callback);
+	    },
+
+        // Event triggered when a message is sent by `senderName`.
+        _buildMsgEvent: function(senderName) {
+            return 'msg:' + senderName;
+        },
 
     /******************** Time/scheduling methods ************************/
 	

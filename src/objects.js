@@ -1,12 +1,13 @@
-/***
-	A very basic implementation of Pd's dsp engine for the web.
-	
-	Copyright Chris McCormick, 2010.
-	Licensed under the terms of the AGPLv3, or a later version of that license.
-	See the file COPYING for details.
-	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
-***/
-
+/*
+ * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ * BSD Simplified License.
+ * For information on usage and redistribution, and for a DISCLAIMER OF ALL
+ * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+ *
+ * See https://github.com/sebpiq/WebPd for documentation
+ *
+ */
 
 (function(Pd){
 
@@ -171,6 +172,14 @@
 
         compute: function(val) {
             return val / this.val;
+        }
+
+    });
+
+	Pd.objects['mod'] = ArithmBase.extend({
+
+        compute: function(val) {
+            return val % this.val;
         }
 
     });
@@ -488,7 +497,10 @@
 
         setName: function() {
             ReceiveSendBase.prototype.setName.apply(this, arguments);
-            this.patch._receivers[this.name] = this;
+            if (!this.patch._receivers.hasOwnProperty(this.name)) {
+                this.patch._receivers[this.name] = [];
+            }
+            this.patch._receivers[this.name].push(this);
         },
 
         send: function() {
@@ -509,8 +521,10 @@
 
         message: function(inletId) {
 			if (inletId === 0) {
-                this.patch.send.apply(this.patch,
-                    [this.name].concat(Array.prototype.slice.call(arguments, 1)));
+                var patch = this.patch,
+                    args = Array.prototype.slice.call(arguments, 1);
+
+                patch.send.apply(patch, [this.name].concat(args));
             }
         }
 
@@ -559,6 +573,8 @@
 	
 	// Basic oscillator
 	Pd.objects['osc~'] = Pd.Object.extend({
+        // TODO : reset phase takes float and no bang
+        // TODO : recalculate stuff on sample rate change. (Useless ?)
 
 		inletTypes: ['inlet~', 'inlet'],
 		outletTypes: ['outlet~'],
@@ -587,28 +603,29 @@
 
         // Calculates the cos taking the frequency from dsp inlet
 		dspTickVariableFreq: function() {
-            var inBuff = this.inlets[0].getBuffer();
-            var outBuff = this.outlets[0].getBuffer();
-            var J = this.J;
+            var inBuff = this.inlets[0].getBuffer(),
+                outBuff = this.outlets[0].getBuffer(),
+                J = this.J, phase = this.phase, i, length;
 
-		    for (var i=0; i<outBuff.length; i++) {
-                this.phase += J * inBuff[i];
-			    outBuff[i] = Math.cos(this.phase);
+		    for (i = 0, length = outBuff.length; i < length; i++) {
+                phase += J * inBuff[i];
+			    outBuff[i] = Math.cos(phase);
 		    }
+            this.phase = phase;
 		},
 
         // Calculates the cos with a constant frequency from first inlet
         dspTickConstFreq: function() {
-            var outBuff = this.outlets[0].getBuffer();
-            var K = this.K;
+            var outBuff = this.outlets[0].getBuffer(),
+                K = this.K, phase = this.phase, i, length;
 
-		    for (var i=0; i<outBuff.length; i++) {
-                this.phase += K;
-			    outBuff[i] = Math.cos(this.phase);
+		    for (i = 0, length = outBuff.length; i < length; i++) {
+                phase += K;
+			    outBuff[i] = Math.cos(phase);
 		    }
+            this.phase = phase;
         },
 
-        // TODO : reset phase takes float and no bang
 		message: function(inletId, msg) {
 			if (inletId === 0) this.setFreq(msg);
             else if (inletId === 1 && msg === 'bang') this.phase = 0;
@@ -629,6 +646,21 @@
         }
 
 	});
+
+    // White noise generator 
+    Pd.objects['noise~'] = Pd.Object.extend({
+
+		outletTypes: ['outlet~'],
+
+		dspTick: function() {
+            var outBuff = this.outlets[0].getBuffer(),
+                J = this.J, i, length;
+
+		    for (i = 0, length = outBuff.length; i < length; i++) {
+			    outBuff[i] = 2 * Math.random() - 1;
+		    }
+		}
+    });
 
 	// digital to analogue converter (sound output)
 	Pd.objects['dac~'] = Pd.Object.extend({

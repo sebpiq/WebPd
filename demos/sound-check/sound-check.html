@@ -21,43 +21,20 @@
         </div>
         <img src="patch.png" />
         <script>
-            var patch
-            $(function() {
-                var patchFile = $('#patchFile').text();
+            // We Get the patch file with an Ajax request, then load this into a WebPd patch,
+            // which we then start.
+            var patch;
+            $.get('sound-check.pd', function(patchFile) {
                 patch = Pd.compat.parse(patchFile);
                 patch.play();
-
-                $('#noteButton').click(function() {
-                    patch.send('freq', parseFloat($('#freqInput').val()));
-                    patch.send('note', 'bang');
-                });
             });
-        </script>
-        <script id="patchFile" type="text/pd">
-            #N canvas 320 231 450 300 10;
-            #X obj -153 140 osc~ 440;
-            #X obj -82 37 receive note;
-            #X obj -164 37 receive freq;
-            #X obj -84 57 trigger bang bang;
-            #X obj -82 77 delay 10;
-            #X msg -82 111 0 500;
-            #X obj -82 139 line~;
-            #X obj -152 167 *~;
-            #X obj -151 199 dac~;
-            #X msg -41 111 0.5 10;
-            #X msg 59 36 bang;
-            #X connect 0 0 7 0;
-            #X connect 1 0 3 0;
-            #X connect 2 0 0 0;
-            #X connect 3 0 4 0;
-            #X connect 3 1 9 0;
-            #X connect 4 0 5 0;
-            #X connect 5 0 6 0;
-            #X connect 6 0 7 1;
-            #X connect 7 0 8 0;
-            #X connect 7 0 8 1;
-            #X connect 9 0 6 0;
-            #X connect 10 0 3 0;
+
+            // When clicking on the button, we get the frequency set by the user
+            // and send a message to the patch
+            $('#noteButton').click(function() {
+                patch.send('freq', parseFloat($('#freqInput').val()));
+                patch.send('note', 'bang');
+            });
         </script>
     </body>
 </html>

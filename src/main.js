@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ * BSD Simplified License.
+ * For information on usage and redistribution, and for a DISCLAIMER OF ALL
+ * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+ *
+ * See https://github.com/sebpiq/WebPd for documentation
+ *
+ */
+
 (function(){
 
     var Pd = this.Pd = {
@@ -159,10 +170,12 @@
         // Triggers `event` on the calling object, thus calling the bound callbacks.
         trigger: function(event) {
             var allCbs = (this._cbs[event] || []).concat(this._cbsOne[event] || []),
+                args = Array.prototype.slice.call(arguments, 1),
                 cbObj, i;
+
             if (allCbs.length == 0) return;
             for (i = 0; cbObj = allCbs[i]; i++) {
-                cbObj.callback.apply(cbObj.context);
+                cbObj.callback.apply(cbObj.context, args);
             }
             delete this._cbsOne[event];
         },
@@ -201,7 +214,7 @@
 	    }
     };
 
-    var dollarVarRegExp = /^\$(\d+)$/;
+    var dollarVarRe = /^\$(\d+)$/;
 
     // Returns a function `filter(msg)`, that takes a message array as input, and returns 
     // the filtered message. For example :
@@ -212,7 +225,7 @@
     Pd.makeMsgFilter = function(filterMsg) {
         var dollarVars = [], i, length, matched;
         for (i = 0, length = filterMsg.length;  i < length; i++) {
-            matched = dollarVarRegExp.exec(filterMsg[i]);
+            matched = dollarVarRe.exec(filterMsg[i]);
             if (matched) dollarVars.push([i, parseInt(matched[1], 10)]);
         }
         return function(msg) {
@@ -229,7 +242,7 @@
     };
 
     var isDollarVar = Pd.isDollarVar = function(val) {
-        return Boolean(dollarVarRegExp.exec(val));
+        return Boolean(dollarVarRe.exec(val));
     };
 
     // Fills array with zeros

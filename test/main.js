@@ -69,15 +69,17 @@ $(document).ready(function() {
         var context = {};        
 
         var counter = 1;
-        var blaCallback = function() {
+        var blaCallback = function(arg1, arg2) {
+            this.args = [arg1, arg2];
             this.bla = counter;
             counter ++;
         };
 
         // Test .on
         testObject.on('bla', blaCallback, context);
-        testObject.trigger('bla');
+        testObject.trigger('bla', 12, 34);
         equal(context.bla, 1);
+        deepEqual(context.args, [12, 34]);
         testObject.trigger('bla');
         equal(context.bla, 2);
 

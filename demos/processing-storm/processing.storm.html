@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	    <title>Storm - processing example</title>
+	    <script src="../../pd.js"></script>
+        <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+        <script src="http://cloud.github.com/downloads/processing-js/processing-js/processing-1.4.1.min.js"></script>
+        <style>
+            body, html {padding: 0; margin: 0;}
+            canvas {position: absolute; top: 0; left 0;}
+        </style>
+    </head>
+    <body>
+        <script>
+            var patch, sketch;
+                docH = $(window).height(), docW = $(window).width();
+
+            $.get('storm.pd', function(patchFile) {
+                patch = Pd.compat.parse(patchFile);
+            
+            // WebPd patch -> Processing.js sketch
+            // -------------------------------------
+            // This is how you receive a message from a patch, and send it to processing
+            //
+                patch.receive('thunder', function() {
+                    sketch.startLightning();
+                });
+
+                sketch = Processing.getInstanceById('sketch');
+                patch.play();
+            });
+        </script>
+        <script type="text/processing" data-processing-target="sketch">
+            // Processing.js sketch -> WebPd patch 
+            // -------------------------------------
+            // This is how, from Processing, you send a message to a patch
+            //
+            void sendDrop() {
+                patch.send("drop", "bang");
+            }
+
+            // The rest is just general Processing knowledge :)
+            // --------------------------------------------------
+            // credits: http://www.openprocessing.org/sketch/9299
+            // 
+
+            // `draw` and `setup` methods
+            void setup() {
+                size(docW,docH);
+                colorMode(HSB,100);
+                background(0);
+
+                rain.add(new Rain());
+            }
+ 
+            void draw() {
+                blur(50);
+                lightning();
+               
+                if (random(0, 10) > 9.9 && rain.size()<4) {
+                    rain.add(new Rain());
+                }
+               
+                for (int i=0 ; i<rain.size() ; i++) {
+                    Rain rainT = (Rain) rain.get(i);
+                    rainT.calculate();
+                    rainT.draw();
+                    if (rainT.position.y>height) {
+                        sendDrop();
+                        for (int k = 0 ; k<random(5,10) ; k++) {
+                            splash.add(new Splash(rainT.position.x,height));
+                        }
+
+                        rain.remove(i);
+                        float rand = random(0,100);
+                        if (rand>10&&rain.size()<150) rain.add(new Rain());
+                    }
+                }
+               
+                for (int i=0 ; i<splash.size() ; i++) {
+                    Splash spl = (Splash) splash.get(i);
+                    spl.calculate();
+                    spl.draw();
+                    if (spl.position.y>height)
+                    splash.remove(i);
+                }
+             
+            }
+
+            // Rain drops, splashes and other functions
+            void blur(float trans) {
+                noStroke();
+                fill(0,trans);
+                rect(0,0,width,height);
+            }
+
+            int lightningFrame = 5;
+            void startLightning() {
+                lightningFrame = 1;
+            }
+            void lightning() {
+                if (lightningFrame < 5) {
+                    fill(255,255);
+                    rect(0,0,width,height);
+                    lightningFrame++;
+                }
+            }
+
+            public class Rain {
+                PVector position,pposition,speed;
+                float col;
+
+                public Rain() {
+                    position = new PVector(random(0,width),0);
+                    pposition = position;
+                    speed = new PVector(0,0);
+                    col = random(30,100);
+                }
+
+                void draw() {
+                    stroke(100,col);
+                    strokeWeight(2);
+                    line(position.x,position.y,pposition.x,pposition.y);
+                }
+
+                void calculate() {
+                    pposition = new PVector(position.x,position.y);
+                    gravity();
+                }
+
+                void gravity() {
+                    speed.y += .5;
+                    speed.x += .01;
+                    position.add(speed);
+                }
+            }
+ 
+            public class Splash {
+                PVector position,speed;
+
+                public Splash(float x,float y) {
+                    float angle = random(PI,TWO_PI);
+                    float distance = random(1,5);
+                    float xx = cos(angle)*distance;
+                    float yy = sin(angle)*distance;
+                    position = new PVector(x,y);
+                    speed = new PVector(xx,yy);
+                }
+
+                public void draw() {
+                    strokeWeight(1);
+                    stroke(100,50);
+                    fill(100,100);
+                    ellipse(position.x,position.y,2,2);
+                }
+
+                void calculate() {
+                    gravity();
+                      
+                    speed.x*=0.98;
+                    speed.y*=0.98;
+                            
+                    position.add(speed);
+                }
+
+                void gravity() {
+                    speed.y+=.2;
+                }
+
+            }
+
+            int rainNum = 100;
+            ArrayList rain = new ArrayList();
+            ArrayList splash = new ArrayList();
+        </script>
+        <canvas id="sketch"> </canvas>
+    </body>
+</html>

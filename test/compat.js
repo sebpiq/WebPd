@@ -4,6 +4,7 @@ $(document).ready(function() {
 
     test('parseArg', function() {
         equal(Pd.compat.parseArg('bla'), 'bla');
+        equal(Pd.compat.parseArg('\\$15'), '$15');
         equal(Pd.compat.parseArg(1), 1);
         equal(Pd.compat.parseArg(0.7e-2), 0.007);
         equal(Pd.compat.parseArg('1'), 1);
