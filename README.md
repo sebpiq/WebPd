@@ -5,6 +5,7 @@ WebPd
 
 - **WebPd** is also a **standalone DSP library**. Every object as you know it in Pure Data provides a complete API, allowing developers to control **everything** with JavaScript.
 
+
 Documentation
 -------------
 
@@ -16,18 +17,66 @@ To check-out which objects are implemented, you can use the [webpd gui](http://b
 Getting started
 ----------------
 
-- [Download pd.js](http://beraebeo.futupeeps.com/webpd/pd.js), and include it in your webpage.
+**Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html)._
 
-- Load a patch and start it :
+[Download pd.js](http://beraebeo.futupeeps.com/webpd/pd.js), and include it in your webpage.
 
-```javascript
-    var patch = Pd.compat.parse(patchFile);
-    patch.play();
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="pd.js"></script>
+    </head>
+    <body></body>
+</html>
 ```
 
-- That's it ? Wooow !
+Then, get a PD patch file, load it to a WebPd patch and start it. The way you get the PD patch file in JavaScript is up to you, ... but the prefered way is by using an Ajax request. For this I suggest to use JQuery :
 
-There is a complete (but simple) example in `demos/sound-check`. Also online [here](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html).
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="pd.js"></script>
+        <script src="jquery.js"></script>
+    </head>
+    <body>
+        <script>
+            $.get('myPatch.pd', function(patchFile) {       // Getting the PD patch file
+                var patch = Pd.compat.parse(patchFile);     // Loading the WebPd patch
+                patch.play();                               // Starting it
+            });
+        </script>
+    </body>
+</html>
+```
+
+**Note** : _sometimes chrome forbids JavaScript to access your file system, so getting the patch file might fail. In this case you can start chrome with the `--allow-file-access-from-files` option._
+
+
+If the patch file is not too big, you can also include it directly in your page, and read it with JavaScript :
+
+```html
+<html>
+    <head>
+        <script src="pd.js"></script>
+    </head>
+    <body>
+        <script id="patchFile" type="text/pd">
+            #N canvas 199 234 519 300 10;
+            #X obj -114 170 osc~ 440;
+            #X obj -108 246 dac~;
+            #X connect 0 0 1 0;
+        </script>
+        <script>
+            var patchFile = document.getElementById('patchFile').text;      // Getting the PD patch file
+            var patch = Pd.compat.parse(patchFile);                         // Loading the WebPd patch
+            patch.play();                                                   // Starting it
+        </script>
+    </body>
+</html>
+```
+
 
 Instructions for building pd.js
 --------------------------------
@@ -36,6 +85,7 @@ To build `pd.js` and `pd-min.js` you will need *node.js*, [Jake](https://github.
 Follow the instructions to install those, then in WebPd's root folder run :
 
     jake
+
 
 Contributing
 ------------
