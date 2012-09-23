@@ -6,6 +6,12 @@ WebPd
 - **WebPd** is also a **standalone DSP library**. Every object as you know it in Pure Data provides a complete API, allowing developers to control **everything** with JavaScript.
 
 
+Browser support
+---------------
+
+**Firefox 4.0+** | **Chrome 10.0+** | **Safari : 6.0+**
+
+
 Documentation
 -------------
 
@@ -51,7 +57,7 @@ Then, get a PD file, load it to a WebPd patch and start it. The way you get the 
 </html>
 ```
 
-**Note** : _sometimes chrome forbids JavaScript to access your file system, so getting the patch file might fail. To fix this, start chrome with the `--allow-file-access-from-files` option._
+**Note** : _when developing on your computer, web browsers block this kind of requests for security reasons. A workaround for Chrome is to launch it from a terminal with the option `--allow-file-access-from-files`._
 
 
 If the patch file is not too big, you can also include it directly in your page, and read it with JavaScript :
