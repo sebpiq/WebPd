@@ -601,7 +601,7 @@ $(document).ready(function() {
         deepEqual(float.o(0).receivedMessage, [89]);
     });
 
-    test('+, -, *, /', function() {
+    test('+, -, *, /, mod', function() {
         var add = new Pd.objects['+']();
         equal(add.o(0).receivedMessage, undefined);
 
@@ -743,6 +743,7 @@ $(document).ready(function() {
         var patch = new Pd.Patch();
             send1 = new Pd.objects['send'](patch, ['no1']),
             receive1 = new Pd.objects['receive'](patch, ['no1']),
+            receive1bis = new Pd.objects['receive'](patch, ['no1']),
             send2 = new Pd.objects['send'](patch, ['no2']),
             receive2 = new Pd.objects['receive'](patch, ['no2']);
 
@@ -750,6 +751,7 @@ $(document).ready(function() {
         equal(receive2.o(0).receivedMessage, undefined);
         send1.i(0).message('bla', 'bli', 'blu');
         deepEqual(receive1.o(0).receivedMessage, ['bla', 'bli', 'blu']);
+        deepEqual(receive1bis.o(0).receivedMessage, ['bla', 'bli', 'blu']);
         equal(receive2.o(0).receivedMessage, undefined);
 
         receive1.o(0).receivedMessage = undefined;

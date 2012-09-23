@@ -175,6 +175,14 @@
 
     });
 
+	Pd.objects['mod'] = ArithmBase.extend({
+
+        compute: function(val) {
+            return val % this.val;
+        }
+
+    });
+
 	// Stores a float
 	Pd.objects['float'] = Pd.Object.extend(DollarVarsMixin, {
 
@@ -488,7 +496,10 @@
 
         setName: function() {
             ReceiveSendBase.prototype.setName.apply(this, arguments);
-            this.patch._receivers[this.name] = this;
+            if (!this.patch._receivers.hasOwnProperty(this.name)) {
+                this.patch._receivers[this.name] = [];
+            }
+            this.patch._receivers[this.name].push(this);
         },
 
         send: function() {

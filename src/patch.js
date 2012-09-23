@@ -50,8 +50,11 @@
                 msgEvent = this._buildMsgEvent(name);
 
             if (this._receivers.hasOwnProperty(name)) {
-                var receiver = this._receivers[name];
-                receiver.send.apply(receiver, args);
+                var receivers = this._receivers[name],
+                    receiver, i;
+                for (i = 0; receiver = receivers[i]; i++) {
+                    receiver.send.apply(receiver, args);
+                }
             }
             if (this._cbs.hasOwnProperty(msgEvent)) {
                 this.trigger.apply(this, [msgEvent].concat(args));
