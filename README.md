@@ -83,6 +83,15 @@ If the patch file is not too big, you can also include it directly in your page,
 </html>
 ```
 
+Demos
+----------
+
+There's a bunch of demos in `demos` (surprisingly :) :
+
+- [sound-check](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html) : a complete example to help you getting started
+- [processing-storm](http://beraebeo.futupeeps.com/webpd/demos/processing-storm/processing-storm.html) : a example of using WebPd with processing
+- [simple-gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html) : a very simple GUI for WebPd. Also documents the dynamic patching API
+
 
 Instructions for building pd.js
 --------------------------------
