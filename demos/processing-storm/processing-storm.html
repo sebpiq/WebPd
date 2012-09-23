@@ -28,6 +28,7 @@
 
                 sketch = Processing.getInstanceById('sketch');
                 patch.play();
+                sketch.loop();
             });
         </script>
         <script type="text/processing" data-processing-target="sketch">
@@ -46,6 +47,7 @@
 
             // `draw` and `setup` methods
             void setup() {
+                noLoop();
                 size(docW,docH);
                 colorMode(HSB,100);
                 background(0);
