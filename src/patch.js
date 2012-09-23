@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ * BSD Simplified License.
+ * For information on usage and redistribution, and for a DISCLAIMER OF ALL
+ * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+ *
+ * See https://github.com/sebpiq/WebPd for documentation
+ *
+ */
+
 (function(Pd) {
 
     // !!! What we call "frame" here is a block of audio frames 

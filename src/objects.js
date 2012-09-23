@@ -1,12 +1,13 @@
-/***
-	A very basic implementation of Pd's dsp engine for the web.
-	
-	Copyright Chris McCormick, 2010.
-	Licensed under the terms of the AGPLv3, or a later version of that license.
-	See the file COPYING for details.
-	(Basically if you provide this software via the network you need to make the source code available, but read the license for details).
-***/
-
+/*
+ * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ * BSD Simplified License.
+ * For information on usage and redistribution, and for a DISCLAIMER OF ALL
+ * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+ *
+ * See https://github.com/sebpiq/WebPd for documentation
+ *
+ */
 
 (function(Pd){
 
