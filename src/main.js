@@ -35,6 +35,20 @@
 	    Pd.arraySlice = function (array, start) { return array.subarray(start) };
     }
 
+    // Returns true if the current browser supports WebPd, false otherwise.
+    Pd.isSupported = function() {
+        // Web audio API - Chrome, Safari
+        var test = typeof window === 'undefined' ? null : window.webkitAudioContext || window.AudioContext;
+        if (test) return true;
+
+        // Audio data API - Firefox
+        var audioDevice = new Audio();
+        if (audioDevice.mozSetup) return true;
+
+        // All the rest
+        return false;
+    }
+
     // every new patch registers itself using this function
     Pd.register = function(patch) {
         if (this._patches.indexOf(patch) == -1) {
