@@ -25,7 +25,7 @@ Getting started
 
 **Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html)._
 
-[Go to](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` and include it in your webpage.
+[Go to "dist/"](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` and include it in your webpage.
 
 ```html
 <!DOCTYPE html>
