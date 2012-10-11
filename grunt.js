@@ -58,6 +58,8 @@ module.exports = function(grunt) {
 
     grunt.registerTask('default', 'lint test concat min copy-latest');
 
+    grunt.registerTask('build', 'concat min');
+
     grunt.registerTask('test', 'qunit');
 
     grunt.registerTask('copy-latest', 'Copy the latest builds to "webpd-latest.js" and "webpd-latest.min.js".', function() {

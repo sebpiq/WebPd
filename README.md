@@ -25,30 +25,30 @@ Getting started
 
 **Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html)._
 
-[Download pd.js](http://beraebeo.futupeeps.com/webpd/pd.js), and include it in your webpage.
+[Go to](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` and include it in your webpage.
 
 ```html
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="pd.js"></script>
+        <script src="webpd-min.js"></script>
     </head>
     <body></body>
 </html>
 ```
 
-Then, get a PD file, load it to a WebPd patch and start it. The way you get the PD file in JavaScript is up to you, ... but the prefered way is by using an Ajax request. For this I suggest to use JQuery :
+Then, get a Pd file, load it to a WebPd patch and start it. The way you get the Pd file in JavaScript is up to you, ... but the prefered way is by using an Ajax request. For this I suggest to use JQuery :
 
 ```html
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="pd.js"></script>
+        <script src="webpd-min.js"></script>
         <script src="jquery.js"></script>
     </head>
     <body>
         <script>
-            $.get('myPatch.pd', function(patchFile) {       // Getting the PD patch file
+            $.get('myPatch.pd', function(patchFile) {       // Getting the Pd patch file
                 var patch = Pd.compat.parse(patchFile);     // Loading the WebPd patch
                 patch.play();                               // Starting it
             });
@@ -65,7 +65,7 @@ If the patch file is not too big, you can also include it directly in your page,
 ```html
 <html>
     <head>
-        <script src="pd.js"></script>
+        <script src="webpd-min.js"></script>
     </head>
     <body>
         <script id="patchFile" type="text/pd">
@@ -75,7 +75,7 @@ If the patch file is not too big, you can also include it directly in your page,
             #X connect 0 0 1 0;
         </script>
         <script>
-            var patchFile = document.getElementById('patchFile').text;      // Getting the PD patch file
+            var patchFile = document.getElementById('patchFile').text;      // Getting the Pd patch file
             var patch = Pd.compat.parse(patchFile);                         // Loading the WebPd patch
             patch.play();                                                   // Starting it
         </script>
@@ -93,16 +93,28 @@ There's a bunch of demos in `demos` (surprisingly :) :
 - [simple-gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html) : a very simple GUI for WebPd. Also documents the dynamic patching API
 
 
-Instructions for building pd.js
---------------------------------
+Instructions for building webpd.js
+------------------------------------
 
-To build `pd.js` and `pd-min.js` you will need *node.js*, [Jake](https://github.com/mde/jake), and [UglifyJS](https://github.com/mishoo/UglifyJS/).
+To build `webpd.js` and `webpd-min.js` yourself, you will need [node.js](http://nodejs.org/) and [Grunt](https://github.com/gruntjs/grunt).
 Follow the instructions to install those, then in WebPd's root folder run :
 
-    jake
+    grunt build
+
+**note**: _the build with grunt is not fully working yet, so you'll have to run grunt with the `--force` option_
+
+
+Instructions for running the tests
+------------------------------------
+
+You can run the tests either with grunt, by running the command :
+
+    grunt test
+
+Or by opening `test/index.html` in your browser.
 
 
 Contributing
 ------------
 
-Any kind of contribution would be very very welcome. Right now the roadmap is a bit blurry, but I am working on it, and there'll soon be many issues open in the tracker. If you want to help anyways, don't hesitate to contact me directly, and we'll figure out something.
+Any kind of contribution would be very very welcome. Check out the issue tracker or contact me directly.
