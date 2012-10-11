@@ -1,16 +1,3 @@
-/*
- * WebPd - v0.2.0
- * Copyright (c) 2012 Sébastien Piquemal <sebpiq@gmail.com>
- *
- * BSD Simplified License.
- * For information on usage and redistribution, and for a DISCLAIMER OF ALL
- * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
- *
- * See https://github.com/sebpiq/WebPd for documentation
- *
- */
-
-
 var Sink = this.Sink = function (global) {
 
 /**
@@ -1655,7 +1642,6 @@ proto.getSyncWriteOffset = function () {
 };
 
 } (this.Sink);
-
 /*
  * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1684,13 +1670,13 @@ proto.getSyncWriteOffset = function () {
         arrayType: Array,
 
         // Array slice function, to unify slicing float arrays and normal arrays.
-        arraySlice: function (array, start) { return array.slice(start); }
+	    arraySlice: function (array, start) { return array.slice(start) }
     };
 
     // use a Float32Array if we have it
-    if (typeof Float32Array !== "undefined") {
+    if (typeof Float32Array != "undefined") {
         Pd.arrayType = Float32Array;
-        Pd.arraySlice = function (array, start) { return array.subarray(start); };
+	    Pd.arraySlice = function (array, start) { return array.subarray(start) };
     }
 
     // Returns true if the current browser supports WebPd, false otherwise.
@@ -1705,11 +1691,11 @@ proto.getSyncWriteOffset = function () {
 
         // All the rest
         return false;
-    };
+    }
 
     // every new patch registers itself using this function
     Pd.register = function(patch) {
-        if (this._patches.indexOf(patch) === -1) {
+        if (this._patches.indexOf(patch) == -1) {
             this._patches.push(patch);
         }
     };
@@ -1717,7 +1703,7 @@ proto.getSyncWriteOffset = function () {
 
     // Returns true if an object is an array, false otherwise.
     Pd.isArray = Array.isArray || function(obj) {
-        return toString.call(obj) === '[object Array]';
+        return toString.call(obj) == '[object Array]';
     };
 
     // Returns true if an object is a number, false otherwise.
@@ -1750,8 +1736,7 @@ proto.getSyncWriteOffset = function () {
     Pd.extend = function(obj) {
         var sources = Array.prototype.slice.call(arguments, 1),
             i, length, source, prop;
-
-        for (i = 0, length = sources.length; i < length; i++) {
+        for(i = 0, length = sources.length; i < length; i++) {
             source = sources[i];
             for (prop in source) {
                 obj[prop] = source[prop];
@@ -1818,12 +1803,11 @@ proto.getSyncWriteOffset = function () {
             if (arg2 === undefined) {
                 var id = arg1,
                     event, eventCbs, cbObj, i;
-
                 for (event in cbsRoot) {
                     eventCbs = cbsRoot[event];
                     i = 0;
                     while (cbObj = eventCbs[i]) {
-                        if (cbObj.id === id) {
+                        if (cbObj.id == id) {
                             eventCbs.splice(i, 1);
                             return;
                         }
@@ -1832,10 +1816,10 @@ proto.getSyncWriteOffset = function () {
                 }
             } else {
                 var event = arg1, callback = arg2;
-                if (!callback || event === undefined || !cbsRoot[event]) return;
+                if (!callback || event == undefined || !cbsRoot[event]) return;
                 var cbObj, i = 0, eventCbs = cbsRoot[event];
                 while (cbObj = eventCbs[i]) {
-                    if (cbObj.callback === callback) eventCbs.splice(i, 1);
+                    if (cbObj.callback == callback) eventCbs.splice(i, 1);
                     else i++;
                 }
             }
@@ -1847,7 +1831,7 @@ proto.getSyncWriteOffset = function () {
                 args = Array.prototype.slice.call(arguments, 1),
                 cbObj, i;
 
-            if (allCbs.length === 0) return;
+            if (allCbs.length == 0) return;
             for (i = 0; cbObj = allCbs[i]; i++) {
                 cbObj.callback.apply(cbObj.context, args);
             }
@@ -1858,15 +1842,35 @@ proto.getSyncWriteOffset = function () {
         // for a bind.
         _generateBindId: function() {
             Pd.EventsBase._idCounter++;
-            return Pd.EventsBase._idCounter;
+		    return Pd.EventsBase._idCounter;
         },
-        _idCounter: 0
+        _idCounter: 0,
 
     };
 
 
     Pd.notImplemented = function() { throw new Error('Not implemented !'); };
 
+    // log a message to console
+	Pd.log = function(msg, debugconsole) {
+	    if (typeof window.console != 'undefined' && typeof console.log != 'undefined') {
+		    console.log(msg);
+	    } else {
+		    // log manually in HTML
+		    var fakeconsole = document.getElementById(arguments.length == 2 ? 'debug' : 'console');
+		    if (fakeconsole) fakeconsole.innerHTML += msg + '<br/>\n';
+	    }
+    };
+
+    // logs only when debug mode is set.
+    Pd.debug = function(msg) {
+	    if (Pd.debugMode) {
+		    if (typeof(msg) == 'string')
+			    this.log('debug: ' + msg, 'debug');
+		    else
+			    this.log(msg, 'debug');
+	    }
+    };
 
     var dollarVarRe = /^\$(\d+)$/;
 
@@ -1878,7 +1882,6 @@ proto.getSyncWriteOffset = function () {
     // TODO: $0
     Pd.makeMsgFilter = function(filterMsg) {
         var dollarVars = [], i, length, matched;
-
         for (i = 0, length = filterMsg.length;  i < length; i++) {
             matched = dollarVarRe.exec(filterMsg[i]);
             if (matched) dollarVars.push([i, parseInt(matched[1], 10)]);
@@ -1901,21 +1904,19 @@ proto.getSyncWriteOffset = function () {
     };
 
     // Fills array with zeros
-    Pd.fillWithZeros = function(array, start) {
-        var i, length, start = start !== undefined ? start : 0;
-        for (i = start, length = array.length; i < length; i++) {
+    Pd.fillWithZeros = function(array) {
+        for (var i=0; i<array.length; i++) {
             array[i] = 0;
         }
-    };
+    }
 
     // Returns a brand, new, clean, buffer
     Pd.newBuffer = function(channels) {
-        if (channels === undefined) channels = 1;
+        if (channels == undefined) var channels = 1
         return new Pd.arrayType(Pd.blockSize * channels);
-    };
+    }
 
 }).call(this);
-
 /*
  * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1977,48 +1978,47 @@ proto.getSyncWriteOffset = function () {
 
         // Start the audio playing with the supplied function as the audio-block generator
         play: function(generator) {
-            var me = this,
-                // We set the buffer size to an exact number of blocks,
-                // that way we don't have to think about overflows
-                bufferSize = this._blockSize * this._batchSize * this._channelCount,
-                blockBufferSize = this._channelCount * me._blockSize,
-                // Sink(callback, channelCount, preBufferSize, sampleRate)
-                sink = Sink(null, this._channelCount, null, this._sampleRate),
-                proxy = sink.createProxy(bufferSize);
-            this._sink = sink;
+            var me = this;
+
+            // We set the buffer size to an exact number of blocks,
+            // that way we don't have to think about overflows
+            var bufferSize = this._blockSize * this._batchSize * this._channelCount;
+            var blockBufferSize = this._channelCount * me._blockSize;
+            // Sink(callback, channelCount, preBufferSize, sampleRate)
+            this._sink = Sink(null, this._channelCount, null, this._sampleRate);
+            var proxy = this._sink.createProxy(bufferSize);
 
             // this callback takes generated blocks, and copy them directly
             // to the buffer supplied by sink.js.
             proxy.on('audioprocess', function(buffer){
-                var pos = 0, i, length, bPos, block;
+                var pos = 0;
 
-                // how many blocks we should generate and add to the buffer
-                for (i = 0, length = me._batchSize; i < length; i++) {
-                    bPos = 0;
-                    block = generator();
-                    for (pos, bPos; bPos < blockBufferSize; pos++, bPos++) {
+		        // how many blocks we should generate and add to the buffer
+		        for (var i=0; i<me._batchSize; i++) {
+                    var bPos = 0;
+			        var block = generator();
+                    for (pos, bPos; bPos<blockBufferSize; pos++, bPos++) {
                         buffer[pos] = block[bPos];
                     }
-                }
+		        }
             });
 
             // activating sink.js debugging 
-            sink.on('error', function(e){
-                console.error(e);
+            this._sink.on('error', function(e){
+	            console.error(e);
             });
         },
 
         // test whether this driver is currently playing audio
         isPlaying: function() {
             return this._sink !== null;
-        }
+        },
 
     });
 
     Pd.AudioDriver = SinkAdapter;
 
 })(this.Pd);
-
 
 /*
  * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
@@ -2049,7 +2049,7 @@ proto.getSyncWriteOffset = function () {
         // Generic function for connecting the calling portlet 
         // with `otherPortlet`.
         _genericConnect: function(allConn, otherPortlet) {
-            if (allConn.indexOf(otherPortlet) !== -1) return;
+            if (allConn.indexOf(otherPortlet) != -1) return;
             allConn.push(otherPortlet);
             otherPortlet.connect(this);
         },
@@ -2058,7 +2058,7 @@ proto.getSyncWriteOffset = function () {
         // from  `otherPortlet`.
         _genericDisconnect: function(allConn, otherPortlet) {
             var connInd = allConn.indexOf(otherPortlet);
-            if (connInd === -1) return;
+            if (connInd == -1) return;
             allConn.splice(connInd, 1);
             otherPortlet.disconnect(this);
         }
@@ -2088,7 +2088,7 @@ proto.getSyncWriteOffset = function () {
 
         // message received callback
         message: function() {
-          this.obj.message.apply(this.obj, [this.id].concat(Array.prototype.slice.call(arguments)));
+	        this.obj.message.apply(this.obj, [this.id].concat(Array.prototype.slice.call(arguments)));
         },
 
         // Returns a buffer to read dsp data from.
@@ -2168,7 +2168,7 @@ proto.getSyncWriteOffset = function () {
                 return buffer;
 
             // if only one dsp source, we can pass the signal as is.
-            } else if (dspSources.length === 1) {
+            } else if (dspSources.length == 1) {
                 return dspSources[0].getBuffer();
 
             // if no dsp source, just pass some zeros
@@ -2184,7 +2184,7 @@ proto.getSyncWriteOffset = function () {
 
         disconnect: function(source) {
             var ind = this.dspSources.indexOf(source);
-            if (ind !== -1) this.dspSources.splice(ind, 1);
+            if (ind != -1) this.dspSources.splice(ind, 1);
             BaseInlet.prototype.disconnect.apply(this, arguments);
         },
 
@@ -2202,11 +2202,9 @@ proto.getSyncWriteOffset = function () {
         },
 
         message: function() {
-            var sinks = this.sinks,
-                sink, i, length;
-
-            for (i = 0, length = sinks.length; i < length; i++) {
-                sink = sinks[i];
+            var sink;
+            for (var i=0; i<this.sinks.length; i++) {
+                sink = this.sinks[i];
                 sink.message.apply(sink, arguments);
             }
         }
@@ -2232,7 +2230,6 @@ proto.getSyncWriteOffset = function () {
     });
 
 })(this.Pd);
-
 /*
  * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2257,50 +2254,49 @@ proto.getSyncWriteOffset = function () {
         this.patch = (pd || null);
         // id of the object in this patch
         this.id = null;
-        // frame counter - how many frames have we run for
-        this.frame = 0;
-  
-        // create the inlets and outlets array for this object
-        // array holds 2-tuple entries of [src-object, src-outlet-number]
-        this.inlets = [];
-        // array holds 2-tuple entries of [dest-object, dest-inlet-number]
-        this.outlets = [];
-        // create inlets and outlets specified in the object's proto
+	    // frame counter - how many frames have we run for
+	    this.frame = 0;
+	
+	    // create the inlets and outlets array for this object
+	    // array holds 2-tuple entries of [src-object, src-outlet-number]
+	    this.inlets = [];
+	    // array holds 2-tuple entries of [dest-object, dest-inlet-number]
+	    this.outlets = [];
+	    // create inlets and outlets specified in the object's proto
         var outletTypes = this.outletTypes,
             inletTypes = this.inletTypes,
             i, length;
-
-        for (i = 0, length = outletTypes.length; i < length; i++) {
-            this.outlets[i] = new Pd[outletTypes[i]](this, i);
-        }
-        for (i = 0, length = inletTypes.length; i < length; i++) {
-            this.inlets[i] = new Pd[inletTypes[i]](this, i);
-        }
+	    for (i = 0, length = outletTypes.length; i < length; i++) {
+		    this.outlets[i] = new Pd[outletTypes[i]](this, i);
+	    }
+	    for (i = 0, length = inletTypes.length; i < length; i++) {
+		    this.inlets[i] = new Pd[inletTypes[i]](this, i);
+	    }
 
         // initializes event management system
         this.initEvents();
 
         // pre-initializes the object, handling the creation arguments
-        this.init.apply(this, args);
+	    this.init.apply(this, args);
         // if object was created in a patch, we add it to the graph
-        if (pd) {
+	    if (pd) {
             // TODO: ugly check shouldn't be there ... most likely in the table subclass
             if (this instanceof Pd.objects['table']) pd.addTable(this);
             else pd.addObject(this);
         }
     };
-  
+	
     Pd.extend(Pd.Object.prototype, Pd.EventsBase, {
 
-        // set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
-        endPoint: false,
+		// set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
+		endPoint: false,
 
         // 'dsp'/'message'
-        outletTypes: [],
+		outletTypes: [],
 
         // Beware, inlet type doesn't have the exact same meaning as
         // outlet type, cause dsp capable inlets also take messages.  
-        inletTypes: [],
+		inletTypes: [],
 
         // Returns inlet `id` if it exists.
         i: function(id) {
@@ -2324,10 +2320,10 @@ proto.getSyncWriteOffset = function () {
         load: function() {},
 
         // method run every frame for this object
-        dspTick: function() {},
+		dspTick: function() {},
 
         // method run when this object receives a message at any inlet
-        message: function(inletnumber, message) {},
+		message: function(inletnumber, message) {},
 
     /********************** Helper methods *********************/
 
@@ -2355,7 +2351,6 @@ proto.getSyncWriteOffset = function () {
     Pd.Object.extend = Pd.chainExtend;
 
 })(this.Pd);
-
 /*
  * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2379,42 +2374,42 @@ proto.getSyncWriteOffset = function () {
         this.blockSize = Pd.blockSize;
 
         // setting up the graph
-        this._graph = {
-            // an array of every object we know about
-            objects: [],
-            // an array of all of the end-points of the dsp graph
-            // (like dac~ or print~ or send~ or outlet~)
-            endPoints: []
-        };
+	    this._graph = {
+		    // an array of every object we know about
+		    objects: [],
+		    // an array of all of the end-points of the dsp graph
+		    // (like dac~ or print~ or send~ or outlet~)
+		    endPoints: [],
+	    };
         // counter used internally to assign a unique id to objects
         // this counter should never be decremented to ensure the id unicity
         this._idCounter = -1;
         // TODO: find a clean way to handle named stuff.
-        // arrays of float data - Pd's tables
-        // keys are table names
+	    // arrays of float data - Pd's tables
+	    // keys are table names
         this._tables = {};
-        // Map of receivers, keys are receiver names
+	    // Map of receivers, keys are receiver names
         this._receivers = {};
-        // arrays of callbacks which are scheduled to run at some point in time
-        // keys are frames
-        this._scheduled = {};
+	    // arrays of callbacks which are scheduled to run at some point in time
+	    // keys are frames
+	    this._scheduled = {};
 
-        // create the audio output driver
-        this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
-        // output buffer (stereo)
-        this.output = Pd.newBuffer(2);
-        // Next frame
-        this.frame = 0;
-        // keys are receiver names
-        this.listeners = {};
+	    // create the audio output driver
+	    this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
+	    // output buffer (stereo)
+	    this.output = Pd.newBuffer(2);
+	    // Next frame
+	    this.frame = 0;
+	    // keys are receiver names
+	    this.listeners = {};
     };
 
     Pd.extend(Pd.Patch.prototype, Pd.EventsBase, {
-  
+	
     /************************* Send/receive ******************************/
 
-        // Send a message to a named receiver inside the graph
-        send: function(name) {
+	    // Send a message to a named receiver inside the graph
+	    send: function(name) {
             var args = Array.prototype.slice.call(arguments, 1),
                 msgEvent = this._buildMsgEvent(name);
 
@@ -2428,12 +2423,12 @@ proto.getSyncWriteOffset = function () {
             if (this._cbs.hasOwnProperty(msgEvent)) {
                 this.trigger.apply(this, [msgEvent].concat(args));
             }
-        },
+	    },
 
-        // Receive a message from a named sender inside the graph
-        receive: function(name, callback) {
+	    // Receive a message from a named sender inside the graph
+	    receive: function(name, callback) {
             this.on(this._buildMsgEvent(name), callback);
-        },
+	    },
 
         // Event triggered when a message is sent by `senderName`.
         _buildMsgEvent: function(senderName) {
@@ -2441,11 +2436,11 @@ proto.getSyncWriteOffset = function () {
         },
 
     /******************** Time/scheduling methods ************************/
-  
-        // gets the absolute current logical elapsed time in milliseconds
-        getAbsTime: function() {
-            return this.frameToTime(this.frame);
-        },
+	
+	    // gets the absolute current logical elapsed time in milliseconds
+	    getAbsTime: function() {
+		    return this.frameToTime(this.frame);
+	    },
 
         // Returns the time corresponding with `frame` in milliseconds.
         frameToTime: function(frame) {
@@ -2459,22 +2454,22 @@ proto.getSyncWriteOffset = function () {
 
         // Schedules `callback` in `time` milliseconds.
         // Returns the timeout handle which can be used to unschedule it.
-        timeout: function(time, callback, context) {
+	    timeout: function(time, callback, context) {
             return this._genericSchedule({
                 callback: callback, context: context,   
                 absTime: this.getAbsTime() + time, repeat: false
             });
-        },
+   	    },
 
         // Schedules `callback` to be run every `time` milliseconds.
         // Returns the interval handle which can be used to stop it.
         // TODO: possible optimization : scheduling several cbs at once.  
-        interval: function(time, callback, context) {
+	    interval: function(time, callback, context) {
             return this._genericSchedule({
                 callback: callback, context: context,
                 absTime: this.getAbsTime() + time, repeat: true, time: time
             });
-        },
+	    },
 
         // Clears the timeout or interval whose handle is `id`.
         clear: function(id) {
@@ -2486,25 +2481,24 @@ proto.getSyncWriteOffset = function () {
             if (!cbObj.callback || !cbObj.absTime) return;
             var frame = Math.ceil(this.timeToFrame(cbObj.absTime));
                 cbs = this._scheduled[frame] = this._scheduled[frame] || [];
-
             cbs.push(cbObj);
             if (repeated !== true) return cbObj.id = this._generateBindId();
-        },
+	    },
 
     /******************** DSP stuff ************************/
 
-        // Get a single frame of audio data from Pd.
-        generateFrame: function() {
+	    // Get a single frame of audio data from Pd.
+	    generateFrame: function() {
             var patch = this, output = this.output,
                 cbs = this._scheduled[this.frame] || [], i, cbObj;
             delete this._scheduled[this.frame];
 
-            // reset our output buffer (gets written to by dac~ objects)
+		    // reset our output buffer (gets written to by dac~ objects)
             Pd.fillWithZeros(output);
 
-            // run the dsp function on all endpoints to pull data
-            this.mapEndPoints(function(obj) { patch.tick(obj); });
-            this.frame++;
+		    // run the dsp function on all endpoints to pull data
+		    this.mapEndPoints(function(obj) { patch.tick(obj); });
+		    this.frame++;
 
             // Runs all the callbacks scheduled at the current frame
             // !!! We have to execute this after the frame has been incremented, 
@@ -2518,62 +2512,62 @@ proto.getSyncWriteOffset = function () {
                 cbObj.callback.call(cbObj.context);
             }
 
-            return output;
-        },
-  
-        // Dsp tick function. Pulls dsp data from `obj` and all its parents.
+		    return output;
+	    },
+	
+	    // Dsp tick function. Pulls dsp data from `obj` and all its parents.
         // TODO: infinite loop for DSP objects ? Circular reference ?
         // TODO: maybe objects shouldn't know about the frame count, it should
         // be passed to the dspTick function --- yes, but the frame count allows the graph to know
         // that dspTick has already been called for a given frame (see osc~)
-        tick: function(obj) {
+	    tick: function(obj) {
             if (obj.frame < this.frame) {
                 var inlets = obj.inlets, sources, i, j, len1, len2;
 
-                // Recursively triggers tick on all DSP objects.
-                for (i = 0, len1 = inlets.length; i < len1; i++) {
-                    if (inlets[i] instanceof Pd['inlet~']) {
+		        // Recursively triggers tick on all DSP objects.
+		        for (i = 0, len1 = inlets.length; i < len1; i++) {
+			        if (inlets[i] instanceof Pd['inlet~']) {
                         sources = inlets[i].sources;
                         for (j = 0, len2 = sources.length; j < len2; j++) this.tick(sources[j].obj);
                     }
-                }
+		        }
 
-                // once all parents have run their dsp process,
+		        // once all parents have run their dsp process,
                 // we can proceed with the current object.
-                if (obj.dspTick) obj.dspTick();
-                obj.frame = this.frame;
+		        if (obj.dspTick) obj.dspTick();
+		        obj.frame = this.frame;
             }
-        },
-  
-        // Starts this graph running
-        play: function() {
-            var patch = this;
+	    },
+	
+	    // Starts this graph running
+	    play: function() {
+		    var patch = this;
 
-            if (!this.isPlaying()) {
-                console.debug('Starting audio.');
-                // fetch the actual samplerate from the audio driver
-                this.sampleRate = this.audio.getSampleRate();
+		    if (!this.isPlaying()) {
+			    Pd.debug('Starting audio.');
+            	// fetch the actual samplerate from the audio driver
+	            this.sampleRate = this.audio.getSampleRate();
                 // TODO: should load called with post-order traversal,
                 //        to ensure all children gets loaded before their parents ? 
                 this.mapObjects(function(obj) { obj.load(); });
-                this.audio.play(function() { return patch.generateFrame(); });
+			    this.audio.play(function() { return patch.generateFrame(); });
                 // reset frame counts
-                this.frame = 0;
-                this.mapObjects(function(obj) { obj.frame = 0; });
-            } else {
-                console.debug('Already started.');
-            }
-        },
-  
-        // Stops this graph from running
-        stop: function() {
-            if (this.isPlaying()) {
-                console.debug('Stopping audio.');
-                this.audio.stop();
-            } else {
-                console.debug('Already stopped.');
-            }
-        },
+			    this.frame = 0;
+			    this.mapObjects(function(obj) { obj.frame = 0; });
+		    } else {
+			    Pd.debug('Already started.');
+		    }
+	    },
+	
+	    // Stops this graph from running
+	    stop: function() {
+		    if (this.isPlaying()) {
+			    Pd.debug('Stopping audio.');
+			    this.audio.stop();
+      		} else {
+			    Pd.debug('Already stopped.');
+		    }
+	    },
 
         // Returns true if the patch is playing, false otherwise.
         isPlaying: function() {
@@ -2587,29 +2581,27 @@ proto.getSyncWriteOffset = function () {
         // This id can be used to uniquely identify the object in the patch.
         // Also, if the patch is playing, the `load` method of the object will be called.
         addObject: function(obj) {
-            if (this._graph.objects.indexOf(obj) === -1) {
+            if (this._graph.objects.indexOf(obj) == -1) {
                 var id = this._generateId();
                 obj.id = id;
                 obj.patch = this;
                 this._graph.objects[id] = obj;
-                if (obj.endPoint) this._graph.endPoints.push(obj);
+		        if (obj.endPoint) this._graph.endPoints.push(obj);
                 if (this.isPlaying()) obj.load();
-                console.debug('Added ' + obj.type + ' to the graph at position ' + id);
+		        Pd.debug('Added ' + obj.type + ' to the graph at position ' + id);
             }
         },
 
         // Remove the object from the patch.
         // If the object is not in the patch, nothing happens.
         removeObject: function(obj) {
-            var conns = this.getAllConnections(obj),
-                ind = this._graph.endPoints.indexOf(obj), 
-                i, length;
-
-            for (i = 0, length = conns.length; i < length; i++) {
+            var conns = this.getAllConnections(obj);
+            for (var i=0; i<conns.length; i++) {
                 this.disconnect(conns[i][0], conns[i][1]);
             }
             delete this._graph.objects[obj.id];
-            if (ind !== -1) this._graph.endPoints.splice(ind, 1);
+            var ind = this._graph.endPoints.indexOf(obj);
+            if (ind != -1) this._graph.endPoints.splice(ind, 1);
         },
 
         // Returns an object given its id in the patch, or `null` if an object
@@ -2622,7 +2614,7 @@ proto.getSyncWriteOffset = function () {
         addTable: function(table) {
             this._tables[table.name] = table;
             this.addObject(table);
-            console.debug("Added " + table.type + " to the graph at position " + table.id);
+            Pd.debug("Added " + table.type + " to the graph at position " + table.id);
         },
 
         // Returns a table given its name, or `null` if such a table doesn't exist.
@@ -2656,10 +2648,10 @@ proto.getSyncWriteOffset = function () {
 
         // Returns an array of all objects in the patch
         getAllObjects: function() {
-            var objects = this._graph.objects,
-                filtered = [], obj, i, length;
-
-            for (i = 0, length = objects.length; i < length; i++) {
+            var objects = this._graph.objects;
+            var filtered = [];
+            var obj;
+            for (var i=0; i<objects.length; i++) {
                 if (objects[i]) filtered.push(objects[i]);
             }
             return filtered;
@@ -2669,30 +2661,28 @@ proto.getSyncWriteOffset = function () {
         // of pairs `(outlet, inlet)`. If `obj` is provided, 
         // this returns only the connections from/to `obj`.
         getAllConnections: function(obj) {
-            var connections = [], source, i, j, k;
-
-            if (obj === undefined) {
+            var connections = [];
+            if (obj == undefined) {
                 var allObjs = this.getAllObjects();
-                for (i = 0; i < allObjs.length; i++) {
-                    obj = allObjs[i];
-                    for (j = 0; j < obj.outlets.length; j++) {
-                        source = obj.o(j);
-                        for (k = 0; k < source.sinks.length; k++) {
+                for (var i=0; i<allObjs.length; i++) {
+                    var obj = allObjs[i];
+                    for (var j=0; j<obj.outlets.length; j++) {
+                        var source = obj.o(j);
+                        for (var k=0; k<source.sinks.length; k++) {
                             connections.push([source, source.sinks[k]]);
                         }
                     }
                 }
             } else {
-                var sink;
-                for (j = 0; j < obj.outlets.length; j++) {
-                    source = obj.o(j);
-                    for (k = 0; k < source.sinks.length; k++) {
+                for (var j=0; j<obj.outlets.length; j++) {
+                    var source = obj.o(j);
+                    for (var k=0; k<source.sinks.length; k++) {
                         connections.push([source, source.sinks[k]]);
                     }
                 }
-                for (j = 0; j < obj.inlets.length; j++) {
-                    sink = obj.i(j);
-                    for (k = 0; k < sink.sources.length; k++) {
+                for (var j=0; j<obj.inlets.length; j++) {
+                    var sink = obj.i(j);
+                    for (var k=0; k<sink.sources.length; k++) {
                         connections.push([sink.sources[k], sink]);
                     }
                 }
@@ -2702,7 +2692,7 @@ proto.getSyncWriteOffset = function () {
 
         // Throws an error if `obj` is not in the patch.
         _checkContainsObj: function(obj) {
-            if (this._graph.objects.indexOf(obj) === -1) {
+            if (this._graph.objects.indexOf(obj) == -1) {
                 throw (new Error('this object is not in the patch'));
             }
         },
@@ -2716,12 +2706,11 @@ proto.getSyncWriteOffset = function () {
         // for a graph object.
         _generateId: function() {
             this._idCounter++;
-            return this._idCounter;
+		    return this._idCounter;
         }
     });
 
 })(this.Pd);
-
 /*
  * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2739,7 +2728,7 @@ proto.getSyncWriteOffset = function () {
 /************************** Basic objects ******************************/
 
     Pd.objects = {
-    // null placeholder object for objects which don't exist
+	// null placeholder object for objects which don't exist
         'null': {},
         'cnv': {}
     };
@@ -2767,7 +2756,7 @@ proto.getSyncWriteOffset = function () {
             this.name = name;
         }
 
-    };
+    }
 
     Pd.objects['text'] = Pd.Object.extend({
 
@@ -2790,7 +2779,7 @@ proto.getSyncWriteOffset = function () {
     // TODO: should this be an endPoint ?
     Pd.objects['print'] = Pd.Object.extend({
 
-        inletTypes: ['inlet'],
+		inletTypes: ['inlet'],
 
         init: function(printName) {
             this.printName = (printName || 'print');
@@ -2822,16 +2811,16 @@ proto.getSyncWriteOffset = function () {
             this.setFilterMsg(Array.prototype.slice.call(arguments));
         },
 
-    message: function(inletId) {
-        if (inletId === 0) {
-            var msg = Array.prototype.slice.call(arguments, 1),
-                filtered, outlet;
+		message: function(inletId) {
+			if (inletId === 0) {
+                var msg = Array.prototype.slice.call(arguments, 1),
+                    filtered, outlet;
 
-            // outputs the filtered message
-            outlet = this.outlets[0]; 
-            outlet.message.apply(outlet, this.filter(msg));
-        }
-    }
+                // outputs the filtered message
+                outlet = this.outlets[0]; 
+                outlet.message.apply(outlet, this.filter(msg));
+            }
+		}
 
     });
 
@@ -2839,13 +2828,13 @@ proto.getSyncWriteOffset = function () {
 
     var ArithmBase = Pd.Object.extend({
 
-        inletTypes: ['inlet', 'inlet'],
-        outletTypes: ['outlet'],
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
 
-        init: function(val) {
-            this.setVal(val || 0);
+		init: function(val) {
+			this.setVal(val || 0);
             this.lastResult = 0;
-        },
+		},
 
         setVal: function(val) {
             this.assertIsNumber(val, 'invalid constant value ' + val);
@@ -2868,7 +2857,7 @@ proto.getSyncWriteOffset = function () {
         }
     });
 
-    Pd.objects['+'] = ArithmBase.extend({
+	Pd.objects['+'] = ArithmBase.extend({
 
         compute: function(val) {
             return val + this.val;
@@ -2876,7 +2865,7 @@ proto.getSyncWriteOffset = function () {
 
     });
 
-    Pd.objects['-'] = ArithmBase.extend({
+	Pd.objects['-'] = ArithmBase.extend({
 
         compute: function(val) {
             return val - this.val;
@@ -2884,7 +2873,7 @@ proto.getSyncWriteOffset = function () {
 
     });
 
-    Pd.objects['*'] = ArithmBase.extend({
+	Pd.objects['*'] = ArithmBase.extend({
 
         compute: function(val) {
             return val * this.val;
@@ -2892,7 +2881,7 @@ proto.getSyncWriteOffset = function () {
 
     });
 
-    Pd.objects['/'] = ArithmBase.extend({
+	Pd.objects['/'] = ArithmBase.extend({
 
         compute: function(val) {
             return val / this.val;
@@ -2900,7 +2889,7 @@ proto.getSyncWriteOffset = function () {
 
     });
 
-    Pd.objects['mod'] = ArithmBase.extend({
+	Pd.objects['mod'] = ArithmBase.extend({
 
         compute: function(val) {
             return val % this.val;
@@ -2908,15 +2897,15 @@ proto.getSyncWriteOffset = function () {
 
     });
 
-    // Stores a float
-    Pd.objects['float'] = Pd.Object.extend(DollarVarsMixin, {
+	// Stores a float
+	Pd.objects['float'] = Pd.Object.extend(DollarVarsMixin, {
 
-        inletTypes: ['inlet', 'inlet'],
-        outletTypes: ['outlet'],
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
 
-        init: function(val) {
+		init: function(val) {
             this.setVal(val || 0);
-        },
+		},
 
         setVal: function(val) {
             if (Pd.isDollarVar(val)) {
@@ -2929,8 +2918,8 @@ proto.getSyncWriteOffset = function () {
             }
         },
 
-        message: function(inletId, msg) {
-            if (inletId === 0) {
+		message: function(inletId, msg) {
+			if (inletId === 0) {
                 if (this._dollarVal) {
                     msg = Array.prototype.slice.call(arguments, 1);
                     msg = this.filter(msg)[0];
@@ -2938,38 +2927,38 @@ proto.getSyncWriteOffset = function () {
                 if (msg !== 'bang') this.setVal(msg);
                 this.outlets[0].message(this.val);
             } else if (inletId === 1) this.setVal(msg);
-        }
+		}
     });
 
-    // Blocks messages or let them through depending on value on right inlet.
-    Pd.objects['spigot'] = Pd.Object.extend({
+	// Blocks messages or let them through depending on value on right inlet.
+	Pd.objects['spigot'] = Pd.Object.extend({
 
-        inletTypes: ['inlet', 'inlet'],
-        outletTypes: ['outlet'],
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
 
-        init: function(val) {
+		init: function(val) {
             this.setPassing(val || 0);
-        },
+		},
 
         setPassing: function(val) {
             this.assertIsNumber(val, 'value must be a number');
             this.passing = Boolean(val);
         },
 
-        message: function(inletId, msg) {
-            if (inletId === 0) {
+		message: function(inletId, msg) {
+			if (inletId === 0) {
                 if (this.passing) {
                     var outlet = this.outlets[0],
                         args = Array.prototype.slice.call(arguments, 1);
                     outlet.message.apply(outlet, args);
                 }
             } else if (inletId === 1) this.setPassing(msg);
-        }
+		}
     });
 
-    // Blocks messages or let them through depending on value on right inlet.
+	// Blocks messages or let them through depending on value on right inlet.
     // TODO: validate filters
-    Pd.objects['trigger'] = Pd.Object.extend({
+	Pd.objects['trigger'] = Pd.Object.extend({
 
         inletTypes: ['inlet'],
         outletTypes: [],
@@ -2977,7 +2966,7 @@ proto.getSyncWriteOffset = function () {
         init: function() {
             var array = Array.prototype.slice.call(arguments, 0), 
                 i, length;
-            if (array.length === 0) array = ['bang', 'bang'];
+            if (array.length == 0) array = ['bang', 'bang'];
             for (i = 0, length = array.length; i < length; i++) {
                 this.outlets[i] = new Pd['outlet'](this, i);
             }
@@ -2987,8 +2976,7 @@ proto.getSyncWriteOffset = function () {
         message: function(inletId, msg) {
             if (inletId === 0) {
                 var list = Array.prototype.slice.call(arguments, 1), 
-                    i, length, filter, outlet;
-
+                    i, length, msg, filter, outlet;
                 for (i = this.filters.length - 1; i >= 0; i--) {
                     filter = this.filters[i];
                     outlet = this.outlets[i];
@@ -3004,7 +2992,7 @@ proto.getSyncWriteOffset = function () {
                         if (msg === 'bang') outlet.message('symbol');
                         else if (Pd.isNumber(msg)) outlet.message('float');
                         else if (Pd.isString(msg)) outlet.message(msg);
-                        else throw new Error('Got unexpected input ' + msg);
+                        else throw new Error('Got unexpected input ' + msg)
                     }
                 }
             }
@@ -3012,10 +3000,10 @@ proto.getSyncWriteOffset = function () {
 
     });
 
-    // Checks the input message and routes it to the right inlet if it doesn't
+	// Checks the input message and routes it to the right inlet if it doesn't
     // correspond to any of the filters.
     // TODO : right inlet
-    Pd.objects['select'] = Pd.Object.extend({
+	Pd.objects['select'] = Pd.Object.extend({
 
         inletTypes: ['inlet'],
         outletTypes: [],
@@ -3023,7 +3011,6 @@ proto.getSyncWriteOffset = function () {
         init: function() {
             var array = Array.prototype.slice.call(arguments, 0), 
                 i, length;
-
             for (i = 0, length = array.length; i < length; i++) {
                 this.outlets[i] = new Pd['outlet'](this, i);
             }
@@ -3036,7 +3023,7 @@ proto.getSyncWriteOffset = function () {
                 var filters = this.filters, 
                     i, length;
                 for (i = 0, length = filters.length; i < length; i++) {
-                    if (msg === filters[i]) {
+                    if (msg == filters[i]) {
                         this.outlets[i].message('bang');
                         return;
                     }
@@ -3047,31 +3034,31 @@ proto.getSyncWriteOffset = function () {
 
     });
 
-    // Convert midi notes to frequency
-    Pd.objects['mtof'] = Pd.Object.extend({
+	// Convert midi notes to frequency
+	Pd.objects['mtof'] = Pd.Object.extend({
 
-        inletTypes: ['inlet'],
-        outletTypes: ['outlet'],
-        maxMidiNote: 8.17579891564 * Math.exp((0.0577622650 * 1499)),
+		inletTypes: ['inlet'],
+		outletTypes: ['outlet'],
+        maxMidiNote: 8.17579891564 * Math.exp(.0577622650 * 1499),
 
         // TODO: round output ?
-        message: function(inletId, note) {
+		message: function(inletId, note) {
             if (inletId === 0) {
                 this.assertIsNumber(note, 'invalid midi note ' + note);
-                var out = 0;
-                if (note <= -1500) out = 0;
+			    var out = 0;
+			    if (note <= -1500) out = 0;
                 else if (note > 1499) out = this.maxMidiNote;
-                else out = 8.17579891564 * Math.exp((0.0577622650 * note));
-                this.outlets[0].message(out);
+			    else out = 8.17579891564 * Math.exp(.0577622650 * note);
+			    this.outlets[0].message(out);
             }
-        }
-    });
+		}
+	});
 
     // Random number generator
-    Pd.objects['random'] = Pd.Object.extend({
+	Pd.objects['random'] = Pd.Object.extend({
 
-        inletTypes: ['inlet', 'inlet'],
-        outletTypes: ['outlet'],
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
 
         init: function(maxInt) {
             this.setMax(maxInt || 1);
@@ -3082,12 +3069,12 @@ proto.getSyncWriteOffset = function () {
             this.max = maxInt;
         },
 
-        message: function(inletId, arg1, arg2) {
+		message: function(inletId, arg1, arg2) {
             if (inletId === 0) {
                 if (arg1 === 'bang') this.outputRandomInt();
-                else if (arg1 === 'seed'); // TODO: seeding, not available with `Math.rand`
+                else if (arg1 === 'seed') 1; // TODO: seeding, not available with `Math.rand`
             } else if (inletId === 1) this.setMax(arg1);
-        },
+		},
 
         outputRandomInt: function() {
             this.outlets[0].message(Math.floor(Math.random() * this.max));
@@ -3097,10 +3084,10 @@ proto.getSyncWriteOffset = function () {
 
     // Metronome, outputs 'bang' every `rate` milliseconds.
     // TODO: sample-exactitude ? How does it work in pd ?
-    Pd.objects['metro'] = Pd.Object.extend({
+	Pd.objects['metro'] = Pd.Object.extend({
 
-        inletTypes: ['inlet', 'inlet'],
-        outletTypes: ['outlet'],
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
 
         init: function(rate) {
             this.setRate(rate || 0);
@@ -3115,7 +3102,7 @@ proto.getSyncWriteOffset = function () {
             this.rate = rate;
         },
 
-        message: function(inletId, msg) {
+		message: function(inletId, msg) {
             if (inletId === 0) {
                 if (msg === 'bang') this._restartMetroTick();
                 else if (msg === 'stop') this._stopMetroTick(); 
@@ -3128,7 +3115,7 @@ proto.getSyncWriteOffset = function () {
                 this.setRate(msg);
                 this._metroTick = this._metroTickRateChange;
             }
-        },
+		},
 
         _startMetroTick: function() {
             this._metroTick();
@@ -3157,14 +3144,14 @@ proto.getSyncWriteOffset = function () {
             this._metroTick = this._metroTickNormal;
             this._restartMetroTick();
         }
-    });
+	});
 
     // Delay, outputs 'bang' after a given time in milliseconds.
     // TODO: sample-exactitude ? How does it work in pd ?
-    Pd.objects['delay'] = Pd.Object.extend({
+	Pd.objects['delay'] = Pd.Object.extend({
 
-        inletTypes: ['inlet', 'inlet'],
-        outletTypes: ['outlet'],
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet'],
 
         init: function(delay) {
             this.setDelay(delay || 0);
@@ -3178,7 +3165,7 @@ proto.getSyncWriteOffset = function () {
             this.delay = delay;
         },
 
-        message: function(inletId, msg) {
+		message: function(inletId, msg) {
             if (inletId === 0) {
                 if (msg === 'bang') {
                     this._stopDelay();
@@ -3190,7 +3177,7 @@ proto.getSyncWriteOffset = function () {
                     this._startDelay();
                 }
             } else if (inletId === 1) this.setDelay(msg);
-        },
+		},
 
         _startDelay: function() {
             if (this._timeoutId === null) {
@@ -3206,7 +3193,7 @@ proto.getSyncWriteOffset = function () {
         }, 
 
         _delayReached: function() { this.outlets[0].message('bang'); }
-    });
+	});
 
     var ReceiveSendBase = Pd.Object.extend(NamedMixin);
 
@@ -3214,8 +3201,8 @@ proto.getSyncWriteOffset = function () {
     // TODO: find a good way to handle named objects in patch.js
     Pd.objects['receive'] = ReceiveSendBase.extend({
 
-        inletTypes: [],
-        outletTypes: ['outlet'],
+		inletTypes: [],
+		outletTypes: ['outlet'],
 
         init: function(name) {
             this.setName(name);
@@ -3238,15 +3225,15 @@ proto.getSyncWriteOffset = function () {
 
     Pd.objects['send'] = ReceiveSendBase.extend({
 
-        inletTypes: ['inlet'],
-        outletTypes: [],
+		inletTypes: ['inlet'],
+		outletTypes: [],
 
         init: function(name) {
-            this.setName(name);
+            this.setName(name)
         },
 
         message: function(inletId) {
-            if (inletId === 0) {
+			if (inletId === 0) {
                 var patch = this.patch,
                     args = Array.prototype.slice.call(arguments, 1);
 
@@ -3258,10 +3245,10 @@ proto.getSyncWriteOffset = function () {
 
 /**************************** Lists *********************************/
 
-    Pd.objects['list split'] = Pd.Object.extend({
+	Pd.objects['list split'] = Pd.Object.extend({
 
-        inletTypes: ['inlet', 'inlet'],
-        outletTypes: ['outlet', 'outlet', 'outlet'],
+		inletTypes: ['inlet', 'inlet'],
+		outletTypes: ['outlet', 'outlet', 'outlet'],
 
         init: function(splitInd) {
             this.setSplitInd(splitInd || 0);
@@ -3272,8 +3259,8 @@ proto.getSyncWriteOffset = function () {
             this.splitInd = ind;
         },
 
-        message: function(inletId, msg) {
-            if (inletId === 0) {
+		message: function(inletId, msg) {
+			if (inletId === 0) {
                 var list = Array.prototype.slice.call(arguments, 1);
                 if (this.splitInd > list.length) this.outlets[2].message('bang');
                 else {
@@ -3290,31 +3277,31 @@ proto.getSyncWriteOffset = function () {
                     }
                 }
             } else if (inletId === 1) this.setSplitInd(msg);
-        }
+		}
 
     });
 
 
 /************************** DSP objects ******************************/
-  
-    // Basic oscillator
-    Pd.objects['osc~'] = Pd.Object.extend({
+	
+	// Basic oscillator
+	Pd.objects['osc~'] = Pd.Object.extend({
         // TODO : reset phase takes float and no bang
         // TODO : recalculate stuff on sample rate change. (Useless ?)
 
-        inletTypes: ['inlet~', 'inlet'],
-        outletTypes: ['outlet~'],
+		inletTypes: ['inlet~', 'inlet'],
+		outletTypes: ['outlet~'],
 
-        init: function(freq) {
+		init: function(freq) {
             this.setFreq(freq || 0);
-            this.phase = 0;
+			this.phase = 0;
             this.dspTick = this.dspTickConstFreq;
             this.on('inletConnect', this._onInletConnect, this);
             this.on('inletDisconnect', this._onInletDisconnect, this);
-        },
+		},
 
         load: function() {
-            this.setFreq(this.freq);
+			this.setFreq(this.freq);
             // TODO: this needs to be recalculated on sampleRate change
             this.J = 2 * Math.PI / this.patch.sampleRate;
         },
@@ -3328,34 +3315,34 @@ proto.getSyncWriteOffset = function () {
         },
 
         // Calculates the cos taking the frequency from dsp inlet
-        dspTickVariableFreq: function() {
+		dspTickVariableFreq: function() {
             var inBuff = this.inlets[0].getBuffer(),
                 outBuff = this.outlets[0].getBuffer(),
                 J = this.J, phase = this.phase, i, length;
 
-            for (i = 0, length = outBuff.length; i < length; i++) {
+		    for (i = 0, length = outBuff.length; i < length; i++) {
                 phase += J * inBuff[i];
-                outBuff[i] = Math.cos(phase);
-            }
+			    outBuff[i] = Math.cos(phase);
+		    }
             this.phase = phase;
-        },
+		},
 
         // Calculates the cos with a constant frequency from first inlet
         dspTickConstFreq: function() {
             var outBuff = this.outlets[0].getBuffer(),
                 K = this.K, phase = this.phase, i, length;
 
-            for (i = 0, length = outBuff.length; i < length; i++) {
+		    for (i = 0, length = outBuff.length; i < length; i++) {
                 phase += K;
-                outBuff[i] = Math.cos(phase);
-            }
+			    outBuff[i] = Math.cos(phase);
+		    }
             this.phase = phase;
         },
 
-        message: function(inletId, msg) {
-            if (inletId === 0) this.setFreq(msg);
+		message: function(inletId, msg) {
+			if (inletId === 0) this.setFreq(msg);
             else if (inletId === 1 && msg === 'bang') this.phase = 0;
-        },
+		},
 
         // On inlet connection, we change dspTick method if appropriate
         _onInletConnect: function() {
@@ -3371,133 +3358,127 @@ proto.getSyncWriteOffset = function () {
             }
         }
 
-    });
+	});
 
     // White noise generator 
     Pd.objects['noise~'] = Pd.Object.extend({
 
-        outletTypes: ['outlet~'],
+		outletTypes: ['outlet~'],
 
-        dspTick: function() {
+		dspTick: function() {
             var outBuff = this.outlets[0].getBuffer(),
                 J = this.J, i, length;
 
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = 2 * Math.random() - 1;
-            }
-        }
+		    for (i = 0, length = outBuff.length; i < length; i++) {
+			    outBuff[i] = 2 * Math.random() - 1;
+		    }
+		}
     });
 
-    // digital to analogue converter (sound output)
-    Pd.objects['dac~'] = Pd.Object.extend({
+	// digital to analogue converter (sound output)
+	Pd.objects['dac~'] = Pd.Object.extend({
 
-      endPoint: true,
-      inletTypes: ['inlet~', 'inlet~'],
+		endPoint: true,
+		inletTypes: ['inlet~', 'inlet~'],
 
-      dspTick: function() {
-          var inBuff1 = this.inlets[0].getBuffer(),
-              inBuff2 = this.inlets[1].getBuffer(),
-              output = this.patch.output,
-              i, length;
+		dspTick: function() {
+			var inBuff1 = this.inlets[0].getBuffer();
+			var inBuff2 = this.inlets[1].getBuffer();
+            var output = this.patch.output;
+			// copy interleaved data from inlets to the graph's output buffer
+			for (var i=0; i<output.length; i++) {
+				output[i * 2] += inBuff1[i];
+				output[i * 2 + 1] += inBuff2[i];
+			}
+		}
+	});
 
-          // copy interleaved data from inlets to the graph's output buffer
-          for (i = 0, length = output.length; i < length; i++) {
-              output[i * 2] += inBuff1[i];
-              output[i * 2 + 1] += inBuff2[i];
-          }
-      }
-    });
+	// creates simple dsp lines
+	Pd.objects['line~'] = Pd.Object.extend({
 
-    // creates simple dsp lines
-    Pd.objects['line~'] = Pd.Object.extend({
+		inletTypes: ['inlet'],
+		outletTypes: ['outlet~'],
 
-        inletTypes: ['inlet'],
-        outletTypes: ['outlet~'],
+		init: function() {
+			// what the value was at the start of the line
+			this.y0 = 0;
+			// the destination value we are aiming for
+			this.y1 = 0;
+            // this stores the current index 
+            this.n = 0;
+			// this stores the index max the line must reach
+			this.nMax = 0;
+			// we want to use the dsptick method that returns a constant value for now
+			this.toDspConst(this.y0);
+		},
 
-        init: function() {
-            // what the value was at the start of the line
-            this.y0 = 0;
-            // the destination value we are aiming for
-            this.y1 = 0;
-                  // this stores the current index 
-                  this.n = 0;
-            // this stores the index max the line must reach
-            this.nMax = 0;
-            // we want to use the dsptick method that returns a constant value for now
-            this.toDspConst(this.y0);
-        },
+		// write a constant value to our output buffer for every sample
+		dspTickConst: function() {
+            var outBuff = this.outlets[0].getBuffer();
+			for (var i=0; i<outBuff.length; i++) outBuff[i] = this.y0;
+		},
 
-        // write a constant value to our output buffer for every sample
-        dspTickConst: function() {
-            var outBuff = this.outlets[0].getBuffer(),
-                i, length, y0 = this.y0;
-
-            for (i = 0, length = outBuff.length; i < length; i++) outBuff[i] = y0;
-        },
-
-        // write this correct value of the line at each sample
-        dspTickLine: function() {
-            var outBuff = this.outlets[0].getBuffer(),
-                outBuffLength = outBuff.length,
-                slope = this.slope,
-                i, j;
-
-            for (i = 0; i < outBuffLength; i++, this.n++) {
-                // if we've reached the end of our line, we fill-in the rest of the buffer,
+		// write this correct value of the line at each sample
+		dspTickLine: function() {
+            var outBuff = this.outlets[0].getBuffer();
+            var outBuffLength = outBuff.length;
+            var slope = this.slope;
+			for (var i=0; i<outBuffLength; i++, this.n++) {
+				// if we've reached the end of our line, we fill-in the rest of the buffer,
                 // break, and switch back to the constant method.
-                if (this.n >= this.nMax) {
-                    for (j = i; j < outBuffLength; j++) outBuff[j] = this.y1;
+				if (this.n >= this.nMax) {
+                    for (var j=i; j<outBuffLength; j++) outBuff[j] = this.y1;
                     this.toDspConst(this.y1);
                     this.trigger('end');
                     break;
-                } else {
-                    outBuff[i] = this.n * slope + this.y0;
-                }
-            }
-        },
+				} else {
+					outBuff[i] = this.n * slope + this.y0;
+				}
+			}
+		},
 
-        message: function(inletId, y1, duration) {
-            if (inletId === 0) {
-                // if this is a single valued message we want line~ to output a constant value,
+		message: function(inletId, y1, duration) {
+			if (inletId === 0) {
+				// if this is a single valued message we want line~ to output a constant value,
                 // otherwise the message is taken as [targetY duration(
                 this.assertIsNumber(y1, 'invalid value ' + y1);
-                if (duration !== undefined) {
+				if (duration != undefined) {
                     this.assertIsNumber(duration, 'invalid duration ' + duration);
-                    this.toDspLine(y1, duration);
-                } else {
-                    this.toDspConst(y1);
-                }
-            }
-        },
+					this.toDspLine(y1, duration)
+				} else {
+					this.toDspConst(y1);
+				}
+			}
+		},
 
         toDspConst: function(val) {
             this.y0 = val;
-            this.dspTick = this.dspTickConst;
+			this.dspTick = this.dspTickConst;
         },
 
         toDspLine: function(val, duration) {
-            this.y1 = val;
+			this.y1 = val;
             this.n = 0;
-            this.nMax = duration * this.patch.sampleRate / 1000;
+			this.nMax = duration * this.patch.sampleRate / 1000;
             this.slope = (this.y1 - this.y0) / this.nMax;
-            this.dspTick = this.dspTickLine;
+			this.dspTick = this.dspTickLine;
         }
-    });  
+	});	
 
 
 /************************** DSP arithmetics ******************************/
 
     var DSPArithmBase = Pd.Object.extend({
 
-        inletTypes: ['inlet~', 'inlet~'],
-        outletTypes: ['outlet~'],
+		inletTypes: ['inlet~', 'inlet~'],
+		outletTypes: ['outlet~'],
 
-        init: function(val) {
-            this.setVal(val || 0);
+		init: function(val) {
+			this.setVal(val || 0);
             this.dspTick = this.dspTickConstant;
             this.on('inletConnect', this._onInletConnect, this);
             this.on('inletDisconnect', this._onInletDisconnect, this);
-        },
+		},
 
         setVal: function(val) {
             this.assertIsNumber(val, 'invalid constant value ' + val);
@@ -3529,110 +3510,99 @@ proto.getSyncWriteOffset = function () {
         }
     });
 
-    // dsp multiply object
-    Pd.objects['*~'] = DSPArithmBase.extend({
+	// dsp multiply object
+	Pd.objects['*~'] = DSPArithmBase.extend({
 
         dspTickVariable: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                inBuff2 = this.inlets[1].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = inBuff1[i] * inBuff2[i];
-            }
+            var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] * inBuff2[i];
+		    }
         },
 
         dspTickConstant: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                val = this.val, i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = inBuff1[i] * val;
-            }
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] * val;
+		    }
         }
 
-    });
+	});
 
-    // dsp divide object (d_arithmetic.c line 454 - over_perform() )
-    Pd.objects['/~'] = DSPArithmBase.extend({
+	// dsp divide object (d_arithmetic.c line 454 - over_perform() )
+	Pd.objects['/~'] = DSPArithmBase.extend({
 
         dspTickVariable: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                inBuff2 = this.inlets[1].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                val2, i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
+            var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            var val2;
+		    for (var i=0; i < outBuff.length; i++) {
                 val2 = inBuff2[i];
-                outBuff[i] = (val2 ? inBuff1[i] / val2 : 0);
-            }
+			    outBuff[i] = (val2 ? inBuff1[i] / val2 : 0);
+		    }
         },
 
         dspTickConstant: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                val = this.val, i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = (val ? inBuff1[i] / val : 0);
-            }
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = (val ? inBuff1[i] / val : 0);
+		    }
         }
 
-    });
+	});
 
-    // dsp addition object
-    Pd.objects['+~'] = DSPArithmBase.extend({
+	// dsp addition object
+	Pd.objects['+~'] = DSPArithmBase.extend({
 
         dspTickVariable: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                inBuff2 = this.inlets[1].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = inBuff1[i] + inBuff2[i];
-            }
+            var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] + inBuff2[i];
+		    }
         },
 
         dspTickConstant: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                val = this.val, i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = inBuff1[i] + val;
-            }
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] + val;
+		    }
         }
 
-    });
+	});
 
-    // dsp substraction object
-    Pd.objects['-~'] = DSPArithmBase.extend({
+	// dsp substraction object
+	Pd.objects['-~'] = DSPArithmBase.extend({
 
         dspTickVariable: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                inBuff2 = this.inlets[1].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = inBuff1[i] - inBuff2[i];
-            }
+            var inBuff1 = this.inlets[0].getBuffer();
+            var inBuff2 = this.inlets[1].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] - inBuff2[i];
+		    }
         },
 
         dspTickConstant: function() {
-            var inBuff1 = this.inlets[0].getBuffer(),
-                outBuff = this.outlets[0].getBuffer(),
-                val = this.val, i, length;
-
-            for (i = 0, length = outBuff.length; i < length; i++) {
-                outBuff[i] = inBuff1[i] - val;
-            }
+            var inBuff1 = this.inlets[0].getBuffer();
+            var outBuff = this.outlets[0].getBuffer();
+            var val = this.val;
+		    for (var i=0; i < outBuff.length; i++) {
+			    outBuff[i] = inBuff1[i] - val;
+		    }
         }
 
-    });
+	});
 
 /************************** DSP tables ******************************/
 
@@ -3674,15 +3644,14 @@ proto.getSyncWriteOffset = function () {
         },
 
         dspTickReading: function() {
-            var outBuff = this.outlets[0].getBuffer(),
-                inBuff = this.inlets[0].getBuffer(),
-                tableMax = this.table.size - 1,
-                tableData = this.table.data,
-                s, i, length;
-
+            var outBuff = this.outlets[0].getBuffer();
+            var inBuff = this.inlets[0].getBuffer();
+            var tableMax = this.table.size - 1;
+            var tableData = this.table.data;
+            var s;
             // cf. pd : Incoming values are truncated to the next lower integer,
             // and values out of bounds get the nearest (first or last) point.
-            for (i = 0, length = outBuff.length; i < length; i++) {
+            for (var i=0; i<outBuff.length; i++) {
                 s = Math.floor(inBuff[i]);
                 outBuff[i] = tableData[(s >= 0 ? (s > tableMax ? tableMax : s) : 0)];
             }
@@ -3693,8 +3662,8 @@ proto.getSyncWriteOffset = function () {
         },
 
         message: function(inletId, method, arg) {
-            if (inletId === 0) {
-                if (method === 'set') this.setTableName(arg);
+			if (inletId === 0) {
+                if (method == 'set') this.setTableName(arg);
             }
         }
     });
@@ -3713,31 +3682,29 @@ proto.getSyncWriteOffset = function () {
         },
 
         dspTickReading: function() {
-            var outBuff = this.outlets[0].getBuffer(),
-                iMax = Math.min(outBuff.length, this.posMax - this.pos),
-                i, j, length;
-
-            for (i = 0; i < iMax; i++, this.pos++) {
+            var outBuff = this.outlets[0].getBuffer();
+            var iMax = Math.min(outBuff.length, this.posMax - this.pos); // +1 cause comparing length to position
+            for (var i=0; i<iMax; i++, this.pos++) {
                 outBuff[i] = this.table.data[this.pos];
             }
             // If we've reached the last position, that's it
-            if (this.pos === this.posMax) {
-                Pd.fillWithZeros(outBuff, i);
+            if (this.pos == this.posMax) {
+                for (var j=i; j<outBuff.length; j++) outBuff[j] = 0;
                 this.toDspTickZeros();
                 this.trigger('end');
             }
         },
 
         message: function(inletId, arg1, arg2) {
-            if (inletId === 0) {
-                if (arg1 === 'set') {
+			if (inletId === 0) {
+                if (arg1 == 'set') {
                     this.setTableName(arg2);
                     this.toDspTickZeros();
-                } else if (arg1 === 'bang') {
+                } else if (arg1 == 'bang') {
                     this.toDspTickReading(0);
-                } else if (arg1 !== undefined) {
+                } else if (arg1 != undefined) {
                     this.assertIsNumber(arg1, 'not a valid start position ' + arg1);
-                    if (arg2 !== undefined) {
+                    if (arg2 != undefined) {
                         this.assertIsNumber(arg2, 'not a valid sample number ' + arg2);
                         this.toDspTickReading(arg1, arg2);
                     } else {
@@ -3776,24 +3743,24 @@ proto.getSyncWriteOffset = function () {
                 this.table.data[this.pos] = inBuff[i];
             }
             // If we reached table size, that's it
-            if (this.pos === this.table.size) {
+            if (this.pos == this.table.size) {
                 this.toDspTickNoOp();
                 this.trigger('end');
             }
         },
 
         message: function(inletId, command, arg) {
-            if (inletId === 0) {
-                if (command === 'bang') {
+			if (inletId === 0) {
+                if (command == 'bang') {
                     this.toDspTickWriting(0);
-                } else if (command === 'stop') {
+                } else if (command == 'stop') {
                     this.toDspTickNoOp();
-                } else if (command === 'set') {
+                } else if (command == 'set') {
                     this.setTableName(arg);
                     this.toDspTickNoOp();
-                } else if (command === 'start') {
+                } else if (command == 'start') {
                     var pos = 0;
-                    if (arg !== undefined) {
+                    if (arg != undefined) {
                         this.assertIsNumber(arg, 'invalid start position ' + arg);
                         pos = Math.floor(arg);
                     }
@@ -3809,13 +3776,12 @@ proto.getSyncWriteOffset = function () {
     });
 
     // Let each object know of what type it is
-    var proto, type;
+    var proto;
     for (type in Pd.objects) {
         if (proto = Pd.objects[type].prototype) proto.type = type;
     }
 
 })(this.Pd);
-
 /*
  * Copyright (c) 2012 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3851,19 +3817,18 @@ proto.getSyncWriteOffset = function () {
     // Parses a float from a .pd file. Returns the parsed float or NaN.
     Pd.compat.parseFloat = function(data) {
         if (Pd.isNumber(data)) return data;
-        else if (Pd.isString(data)) return parseFloat(data);
+	    else if (Pd.isString(data)) return parseFloat(data);
         else return NaN;
     };
 
     // Convert a Pd message to a javascript array
     Pd.compat.parseArgs = function(args) {
-        // if it's an int, make a single valued array
-        if (Pd.isNumber(args)) return [args];
-        // if it's a string, split the atom
-        else {
-            var parts = Pd.isString(args) ? args.split(tokensRe) : args,
+	    // if it's an int, make a single valued array
+	    if (Pd.isNumber(args)) return [args];
+	    // if it's a string, split the atom
+	    else {
+	        var parts = Pd.isString(args) ? args.split(tokensRe) : args,
                 parsed = [], i, length;
-
             for (i = 0, length = parts.length; i < length; i++) {
                 if ((arg = parts[i]) === '') continue;
                 else parsed.push(Pd.compat.parseArg(arg));
@@ -3881,43 +3846,44 @@ proto.getSyncWriteOffset = function () {
     // Parses a Pd file, creates and returns a new `Pd.Patch` object from it
     // ref : http://puredata.info/docs/developer/PdFileFormat 
     Pd.compat.parse = function(txt) {
-        var lastTable = null,       // last table name to add samples to
+	    var lastTable = null,       // last table name to add samples to
             counter = 0,
             pd = new Pd.Patch(),
             line;
 
-        // use our regular expression to match instances of valid Pd lines
-        while (line = linesRe.exec(txt)) {
-            var tokens = line[1].split(tokensRe),
+	    // use our regular expression to match instances of valid Pd lines
+	    while (line = linesRe.exec(txt)) {
+		    var tokens = line[1].split(tokensRe),
                 chunkType = tokens[0];
+		    Pd.debug(tokens.toString());
 
-            // if we've found a create token
-            if (chunkType === '#X') {
+		    // if we've found a create token
+		    if (chunkType == '#X') {
                 var elementType = tokens[1];
 
-                // is this an obj instantiation
-                if (elementType === 'obj' || elementType === 'msg' || elementType === 'text') {
-                    var proto,  // the lookup to use in the `Pd.objects` hash
+			    // is this an obj instantiation
+			    if (elementType == 'obj' || elementType == 'msg' || elementType == 'text') {
+				    var proto,  // the lookup to use in the `Pd.objects` hash
                         args,   // the construction args for the object
                         obj,
                         guiX = parseInt(tokens[2], 10), guiY = parseInt(tokens[3], 10);
 
-                    if (elementType === 'msg') {
+				    if (elementType == 'msg') {
                         proto = 'message';
                         args = tokens.slice(4);
-                    } else if (elementType === 'text') {
+                    } else if (elementType == 'text') {
                         proto = 'text';
                         args = [tokens.slice(4).join(' ')];
                     } else {
                         // TODO: quick fix for list split
-                        if (tokens[4] === 'list') {
+                        if (tokens[4] == 'list') {
                             proto = tokens[4] + ' ' + tokens[5];
                             args = tokens.slice(6);
                         } else {
-                            proto = tokens[4];
+					        proto = tokens[4];
                             args = tokens.slice(5);
                         }
-                    }
+				    }
 
                     if (Pd.objects.hasOwnProperty(proto)) {
                         obj = new Pd.objects[proto](pd, Pd.compat.parseArgs(args));
@@ -3927,44 +3893,44 @@ proto.getSyncWriteOffset = function () {
                         throw new Error('unknown object "' + proto + '"');
                     }
 
-                } else if (elementType === 'array') {
+			    } else if (elementType == 'array') {
                     var arrayName = tokens[2],
-                        arraySize = parseInt(tokens[3], 10),
-                        obj = new Pd.objects['table'](pd, [arrayName, arraySize]);
+                        arraySize = parseInt(tokens[3]),
+				        obj = new Pd.objects['table'](pd, [arrayName, arraySize]);
 
                     // remind the last table for handling correctly 
                     // the table related instructions which might follow.
                     lastTable = obj;
 
-                } else if (elementType === 'restore') {
-                  // end the current table
-                  lastTable = null;
+			    } else if (elementType == 'restore') {
+				    // end the current table
+				    lastTable = null;
 
-                } else if (elementType === 'connect') {
-                    var obj1 = pd.getObject(parseInt(tokens[2], 10)),
-                        obj2 = pd.getObject(parseInt(tokens[4], 10));
-                    pd.connect(obj1.o(parseInt(tokens[3], 10)), obj2.i(parseInt(tokens[5], 10)));
+			    } else if (elementType == 'connect') {
+                    var obj1 = pd.getObject(parseInt(tokens[2])),
+                        obj2 = pd.getObject(parseInt(tokens[4]));
+                    pd.connect(obj1.o(parseInt(tokens[3])), obj2.i(parseInt(tokens[5])));
                 }
 
-            } else if (chunkType === '#A') {
-                // reads in part of an array/table of data, starting at the index specified in this line
-                // name of the array/table comes from the the '#X array' and '#X restore' matches above
-                var idx = parseInt(tokens[1], 10), t, length;
-                if (lastTable) {
-                    for (t = 2, length = tokens.length; t < length; t++, idx++) {
-                        lastTable.data[idx] = parseFloat(tokens[t]);
-                    }
-                    console.debug('read ' + (tokens.length - 1) +
-                                ' floats into table "' + lastTable.name + '"');
-                } else {
-                    console.error('got table data outside of a table.');
-                }
-            }
-        }
+		    } else if (chunkType == '#A') {
+			    // reads in part of an array/table of data, starting at the index specified in this line
+			    // name of the array/table comes from the the '#X array' and '#X restore' matches above
+			    var idx = parseInt(tokens[1]);
+			    if (lastTable) {
+				    for (var t=2; t<tokens.length; t++, idx++) {
+					    lastTable.data[idx] = parseFloat(tokens[t]);
+				    }
+				    Pd.debug('read ' + (tokens.length - 1) +
+                        ' floats into table "' + lastTable.name + '"');
+			    } else {
+				    Pd.log('Error: got table data outside of a table.');
+			    }
+		    }
+	    }
 
-        // output a message with our graph
-        console.debug('Graph:');
-        console.debug(pd);
+	    // output a message with our graph
+	    Pd.debug('Graph:');
+	    Pd.debug(pd);
 
         return pd;
     };

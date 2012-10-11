@@ -1,5 +1,5 @@
 /*
- * WebPd - v0.2.0
+ * WebPd - v0.2.1
  * Copyright (c) 2012 Sébastien Piquemal <sebpiq@gmail.com>
  *
  * BSD Simplified License.

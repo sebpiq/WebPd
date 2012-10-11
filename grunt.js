@@ -42,13 +42,13 @@ module.exports = function(grunt) {
                     'lib/WebPd/patch.js',
                     'lib/WebPd/objects.js',
                     'lib/WebPd/compat.js'],
-                dest: 'dist/webpd-<%= pkg.version %>.js'
+                dest: 'dist/webpd-latest.js'
             }
         },
         min: {
             dist: {
-                src: ['dist/webpd-<%= pkg.version %>.js'],
-                dest: 'dist/webpd-<%= pkg.version %>.min.js'
+                src: ['dist/webpd-latest.js'],
+                dest: 'dist/webpd-latest.min.js'
             }
         },
         qunit: {
@@ -56,32 +56,45 @@ module.exports = function(grunt) {
         }
     });
 
-    grunt.registerTask('default', 'lint test concat min copy-latest');
+    grunt.registerTask('default', 'lint test concat min');
 
     grunt.registerTask('build', 'concat min');
 
     grunt.registerTask('test', 'qunit');
 
-    grunt.registerTask('copy-latest', 'Copy the latest builds to "webpd-latest.js" and "webpd-latest.min.js".', function() {
+    grunt.registerTask('release', 'concat min release-task');
+    grunt.registerTask('release-task', 'Make a new release, creates a git tag and a release file in "dist/"', function() {
         grunt.task.requires('concat');
         grunt.task.requires('min');
 
-        var version = grunt.config('pkg.version'),
+        var sys = require('sys'),
+            exec = require('child_process').exec,
+            done = this.async(),
+            version = grunt.config('pkg.version'),
             fileMap = {
                 'dist/webpd-latest.js': 'dist/webpd-' + version + '.js',
                 'dist/webpd-latest.min.js': 'dist/webpd-' + version + '.min.js'
             },
             filename, data;
 
+        // Copy files in dist
         for (filename in fileMap) {
             try {
-                data = fs.readFileSync(fileMap[filename]);
+                data = fs.readFileSync(filename);
             } catch (err) {
                 grunt.fatal(err);
             }
-            fs.writeFileSync(filename, data);
-            grunt.log.writeln('"' + filename + '" written');
+            fs.writeFileSync(fileMap[filename], data);
+            grunt.log.writeln('"' + fileMap[filename] + '" written');
         }
+
+        // Make git tag
+        exec('git tag -a v' + version + ' -m "' + version + ' release"', function (error, stdout, stderr) {
+            if (error !== null) grunt.fatal(error);
+            grunt.log.writeln('Git tag release version ' + version);
+            grunt.log.writeln('Don\'t forget incrementing version number in "package.json"');
+            done();
+        });
     });
 
 };
