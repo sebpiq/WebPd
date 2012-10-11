@@ -9,7 +9,7 @@ WebPd
 Browser support
 ---------------
 
-**Firefox 4.0+** | **Chrome 10.0+** | **Safari : 6.0+**
+**Firefox 4.0+** | **Chrome 10.0+** | **Safari 6.0+**
 
 
 Documentation

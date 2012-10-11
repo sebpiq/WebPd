@@ -55,10 +55,10 @@ $(document).ready(function() {
     });
 
     test('parse : objects + connections', function() {
-        var patchStr = '#N canvas 778 17 450 300 10;\n'
-            + '#X obj 14 13 loadbang;\n'
-            + '#X obj 14 34 print bla;\n'
-            + '#X connect 0 0 1 0;';
+        var patchStr = '#N canvas 778 17 450 300 10;\n' +
+            '#X obj 14 13 loadbang;\n' +
+            '#X obj 14 34 print bla;\n' +
+            '#X connect 0 0 1 0;';
         var patch = Pd.compat.parse(patchStr);
         var loadbang = patch.getObject(0);
         var print = patch.getObject(1);
@@ -80,21 +80,21 @@ $(document).ready(function() {
     });
 
     test('parse : table', function() {
-        var patchStr = '#N canvas 667 72 551 408 10;\n'
-            + '#N canvas 0 0 450 300 (subpatch) 0;\n'
-            + '#X array myTable 35 float 3;\n'
-            + '#A 0 0.1 0.2 0.3 0.4 0.5\n'
-            + '0.6 0.7 0.8 0.9 1\n'
-            + ';\n'
-            + '#A 10 1.1 1.2 1.3 1.4 1.5\n'
-            + '1.6 1.7\n'
-            + '1.8 1.9 2.0;\n'
-            + '#A 20 2.1 2.2 2.3 2.4 2.5\n'
-            + '2.6 2.7;\n'
-            + '#A 27 2.8 2.9 3.0;\n'
-            + '#X coords 0 1 14818 -1 200 140 1;\n'
-            + '#X restore 157 26 graph;\n'
-            + '#X obj 19 370 osc~ 440;'
+        var patchStr = '#N canvas 667 72 551 408 10;\n' +
+            '#N canvas 0 0 450 300 (subpatch) 0;\n' +
+            '#X array myTable 35 float 3;\n' +
+            '#A 0 0.1 0.2 0.3 0.4 0.5\n' +
+            '0.6 0.7 0.8 0.9 1\n' +
+            ';\n' +
+            '#A 10 1.1 1.2 1.3 1.4 1.5\n' +
+            '1.6 1.7\n' +
+            '1.8 1.9 2.0;\n' +
+            '#A 20 2.1 2.2 2.3 2.4 2.5\n' +
+            '2.6 2.7;\n' +
+            '#A 27 2.8 2.9 3.0;\n' +
+            '#X coords 0 1 14818 -1 200 140 1;\n' +
+            '#X restore 157 26 graph;\n' +
+            '#X obj 19 370 osc~ 440;';
         var patch = Pd.compat.parse(patchStr);
         var table = patch.getObject(0);
         var sameTable = patch.getTableByName('myTable');

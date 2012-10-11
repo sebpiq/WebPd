@@ -5,7 +5,7 @@ $(document).ready(function() {
     test('makeMsgFilter', function() {
         var filter = Pd.makeMsgFilter([1]);
         deepEqual(filter([2, 'bla', 4]), [1]);
-        var filter = Pd.makeMsgFilter([1, '$1', 'bla', '$3']);
+        filter = Pd.makeMsgFilter([1, '$1', 'bla', '$3']);
         deepEqual(filter(['bli', 'bla', 4, 5]), [1, 'bli', 'bla', 4]);
     });
 
@@ -19,6 +19,9 @@ $(document).ready(function() {
         Pd.fillWithZeros(array);
         deepEqual(array, [0, 0, 0, 0]);
 
+        array = [1, 2, 3, 4];
+        Pd.fillWithZeros(array, 2);
+        deepEqual(array, [1, 2, 0, 0]);
     });
 
     test('newBuffer', function() {
@@ -38,7 +41,7 @@ $(document).ready(function() {
         A.extend = Pd.chainExtend;
         A.prototype.blo = 456;
         A.prototype.bli = 987;
-        A.prototype.func = function() {return 'blabla'};
+        A.prototype.func = function() { return 'blabla'; };
 
         var B = A.extend({'bla': 113, 'bli': 654});
         var b = new B();

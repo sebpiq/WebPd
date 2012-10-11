@@ -36,7 +36,7 @@ $(document).ready(function() {
         // Add an object
         patch.addObject(obj1);
         var ind1 = obj1.id;
-        ok(ind1 != undefined);
+        ok(ind1 !== undefined);
         deepEqual(patch.getObject(ind1), obj1);
 
         // Add same object
@@ -46,8 +46,8 @@ $(document).ready(function() {
         // Add second object
         patch.addObject(obj2);
         var ind2 = obj2.id;
-        ok(ind2 != undefined);
-        ok(ind2 != ind1);
+        ok(ind2 !== undefined);
+        ok(ind2 !== ind1);
         equal(patch.getObject(ind1), obj1);
         equal(patch.getObject(ind2), obj2);
 
@@ -90,13 +90,13 @@ $(document).ready(function() {
 
         patch.addTable(table1);
         var ind1 = table1.id;
-        ok(ind1 != undefined);
+        ok(ind1 !== undefined);
         deepEqual(patch.getObject(ind1), table1);
 
         patch.addTable(table2);
         var ind2 = table2.id;
-        ok(ind2 != undefined);
-        ok(ind2 != ind1);
+        ok(ind2 !== undefined);
+        ok(ind2 !== ind1);
         equal(patch.getObject(ind1), table1);
         equal(patch.getObject(ind2), table2);
     });
@@ -105,7 +105,7 @@ $(document).ready(function() {
 
         patch.addTable(table1);
         var ind = table1.id;
-        ok(ind != undefined);
+        ok(ind !== undefined);
         equal(patch.getTableByName('table1'), table1);
         equal(patch.getTableByName('unknown name'), null);
     });
@@ -280,16 +280,17 @@ $(document).ready(function() {
     test('scheduling : timeout', function() {
         patch.sampleRate = 10;
         patch.blockSize = 4;
+        var i;
 
         // simple timeout
         patch.received = [];
         patch.timeout(1000, function() { this.received.push('bang'); }, patch);
         // timeout started (1000 ms => 10 samples => >= 3 frames (cause blockSize = 4) )
-        for (var i = 0; i < 3; i++) patch.generateFrame();
+        for (i = 0; i < 3; i++) patch.generateFrame();
         deepEqual(patch.received, []);
         patch.generateFrame();
         deepEqual(patch.received, ['bang']);
-        for (var i = 0; i < 13; i++) patch.generateFrame();
+        for (i = 0; i < 13; i++) patch.generateFrame();
         deepEqual(patch.received, ['bang']);
 
         // timeout cleared
