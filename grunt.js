@@ -50,10 +50,15 @@ module.exports = function(grunt) {
                 src: ['dist/webpd-<%= pkg.version %>.js'],
                 dest: 'dist/webpd-<%= pkg.version %>.min.js'
             }
+        },
+        qunit: {
+            all: ['test/*.html']
         }
     });
 
-    grunt.registerTask('default', 'lint concat min copy-latest');
+    grunt.registerTask('default', 'lint test concat min copy-latest');
+
+    grunt.registerTask('test', 'qunit');
 
     grunt.registerTask('copy-latest', 'Copy the latest builds to "webpd-latest.js" and "webpd-latest.min.js".', function() {
         grunt.task.requires('concat');
@@ -63,11 +68,12 @@ module.exports = function(grunt) {
             fileMap = {
                 'dist/webpd-latest.js': 'dist/webpd-' + version + '.js',
                 'dist/webpd-latest.min.js': 'dist/webpd-' + version + '.min.js'
-            };
+            },
+            filename, data;
 
         for (filename in fileMap) {
             try {
-                var data = fs.readFileSync(fileMap[filename]);
+                data = fs.readFileSync(fileMap[filename]);
             } catch (err) {
                 grunt.fatal(err);
             }
