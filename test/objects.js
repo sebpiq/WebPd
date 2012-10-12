@@ -114,25 +114,32 @@ $(document).ready(function() {
     });
 
     test('noise~', function() {
-        var noise = new Pd.objects['noise~']();
-        var outBuff = noise.o(0).getBuffer();
+        Pd.blockSize = 1024;
+        var noise = new Pd.objects['noise~'](),
+            outBuff = noise.o(0).getBuffer(),
+            avg = 0, dev = 0, i;
 
         noise.dspTick();
-        var mt0p5 = false;
-        var ltm0p5 = false;
-        for (var i = 0; i < outBuff.length; i++) {
-            if (mt0p5 && ltm0p5) break;
-            if (outBuff[i] < -0.5) ltm0p5 = true;
-            if (outBuff[i] > 0.5) mt0p5 = true;
+        for (i = 0; i < outBuff.length; i++) {
+            avg += outBuff[i];
         }
-        ok(mt0p5 && ltm0p5);
+        avg /= outBuff.length;
+        for (i = 0; i < outBuff.length; i++) {
+            dev += Math.pow(outBuff[i] - avg, 2);
+        }
+        dev /= outBuff.length;
+        dev = Math.pow(dev, 0.5);
+        // Avg should be around 0
+        ok(Math.abs(avg) < 0.1);
+        // Values are not concentrated around 0
+        ok(dev > 0.5);
     });
 
     test('*~', function() {
-        var mult = new Pd.objects['*~'](null, [2]);
-        var outBuff = mult.o(0).getBuffer();
-        var inlet0 = mult.i(0);
-        var inlet1 = mult.i(1);
+        var mult = new Pd.objects['*~'](null, [2]),
+            outBuff = mult.o(0).getBuffer(),
+            inlet0 = mult.i(0),
+            inlet1 = mult.i(1);
 
         inlet0.setBuffer([0, 0, 0, 0]);
         mult.dspTick();
