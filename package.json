@@ -14,6 +14,10 @@
         "dsp"
     ],
     "dependencies" : {},
+    "devDependencies": {
+        "grunt": "~0.3.16",
+        "jQuery": "~1.7.3"
+    },
     "license": "Standard Improved BSD License",
     "scripts": {
         "test": "grunt travis --verbose"
