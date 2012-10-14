@@ -2,13 +2,6 @@ $(document).ready(function() {
 
     module('Pd\'s global functionalities');
 
-    test('makeMsgFilter', function() {
-        var filter = Pd.makeMsgFilter([1]);
-        deepEqual(filter([2, 'bla', 4]), [1]);
-        filter = Pd.makeMsgFilter([1, '$1', 'bla', '$3']);
-        deepEqual(filter(['bli', 'bla', 4, 5]), [1, 'bli', 'bla', 4]);
-    });
-
     test('fillWithZeros', function() {
         var array = [];
 
@@ -127,6 +120,13 @@ $(document).ready(function() {
         equal(context.bla, 3);
         testObject.trigger('bla');
         equal(context.bla, 3);
+    });
+
+    test('makeMsgFilter', function() {
+        var filter = Pd.makeMsgFilter([1]);
+        deepEqual(filter([2, 'bla', 4]), [1]);
+        filter = Pd.makeMsgFilter([1, '$1', 'bla', '$3']);
+        deepEqual(filter(['bli', 'bla', 4, 5]), [1, 'bli', 'bla', 4]);
     });
 
     test('isArray', function() {

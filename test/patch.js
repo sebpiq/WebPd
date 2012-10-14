@@ -3,7 +3,8 @@ $(document).ready(function() {
     var MyObject = Pd.Object.extend({
         init: function(objName) {
             this.objName = objName;
-        }
+        },
+        type: 'myobject'
     });
     var MyEndPointObject = MyObject.extend({
         endPoint: true
@@ -28,6 +29,9 @@ $(document).ready(function() {
             table2 = new Pd.objects['table'](null, ['table2', 100]);
             ep1 = new MyEndPointObject(null, ['ep1']);
             ep2 = new MyEndPointObject(null, ['ep2']);
+        },
+        teardown: function() {
+            Pd._uniquelyNamedObjects = {};
         }
     });
 
@@ -86,30 +90,6 @@ $(document).ready(function() {
         deepEqual(patch.getAllConnections(), []);
     });
 
-    test('graphiness : addTable / getObject', function() {
-
-        patch.addTable(table1);
-        var ind1 = table1.id;
-        ok(ind1 !== undefined);
-        deepEqual(patch.getObject(ind1), table1);
-
-        patch.addTable(table2);
-        var ind2 = table2.id;
-        ok(ind2 !== undefined);
-        ok(ind2 !== ind1);
-        equal(patch.getObject(ind1), table1);
-        equal(patch.getObject(ind2), table2);
-    });
-
-    test('graphiness : addTable / getTableByName', function() {
-
-        patch.addTable(table1);
-        var ind = table1.id;
-        ok(ind !== undefined);
-        equal(patch.getTableByName('table1'), table1);
-        equal(patch.getTableByName('unknown name'), null);
-    });
-
     test('graphiness : mapObjects', function() {
         patch.addObject(obj1);
         patch.addObject(obj2);
@@ -141,7 +121,7 @@ $(document).ready(function() {
         patch.addObject(obj1);
         patch.addObject(obj2);
         deepEqual(patch.getAllObjects(), [obj1, obj2]);
-        patch.addTable(table1);
+        patch.addObject(table1);
         deepEqual(patch.getAllObjects(), [obj1, obj2, table1]);
     });
 

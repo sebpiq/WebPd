@@ -46,6 +46,7 @@ $(document).ready(function() {
         },
         teardown: function() {
             Pd.sampleRate = this.sampleRate;
+            Pd._uniquelyNamedObjects = {};
         }
     });
 
@@ -603,19 +604,6 @@ $(document).ready(function() {
         float = new Pd.objects['float'](null, [6]);
         float.i(0).message('bang');
         deepEqual(float.o(0).receivedMessage, [6]);
-
-        // Test dollar var
-        float = new Pd.objects['float'](null, ['$1']);
-        float.i(0).message(123, 89);
-        deepEqual(float.o(0).receivedMessage, [123]);
-        float.i(0).message('bang');
-        deepEqual(float.o(0).receivedMessage, [123]);
-
-        float = new Pd.objects['float'](null, ['$2']);
-        float.i(0).message(123, 89);
-        deepEqual(float.o(0).receivedMessage, [89]);
-        float.i(0).message('bang');
-        deepEqual(float.o(0).receivedMessage, [89]);
     });
 
     test('+, -, *, /, mod', function() {

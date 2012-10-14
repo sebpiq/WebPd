@@ -101,7 +101,7 @@ There's a bunch of demos in `demos` (surprisingly :) :
 - [processing-storm](http://beraebeo.futupeeps.com/webpd/demos/processing-storm/processing-storm.html) _a example of using WebPd with processing._
 - [simple-gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
 
-**note**: _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
+**Note** : _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
 
     cp dist/webpd-0.2.0.js dist/webpd-latest.js
 
