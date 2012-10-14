@@ -63,11 +63,26 @@ $(document).ready(function() {
         equal(c.blo, 456);
     });
 
+    test('UniqueIdsBase', function() {
+        var TestUniqueIds1 = function() {};
+        Pd.extend(TestUniqueIds1.prototype, Pd.EventsBase, Pd.UniqueIdsBase);
+        var testObject1 = new TestUniqueIds1();
+
+        var TestUniqueIds2 = function() {};
+        Pd.extend(TestUniqueIds2.prototype, Pd.EventsBase, Pd.UniqueIdsBase);
+        var testObject2 = new TestUniqueIds2();
+
+        // 2 different prototypes have distinct id spaces.
+        var id1 = testObject1._generateId(),
+            id2 = testObject2._generateId();
+        equal(id1, id2);
+    });
+
     test('EventsBase', function() {
         var TestEvent = function() {
             this.initEvents();
         };
-        Pd.extend(TestEvent.prototype, Pd.EventsBase);
+        Pd.extend(TestEvent.prototype, Pd.EventsBase, Pd.UniqueIdsBase);
         var testObject = new TestEvent();
         var context = {};        
 

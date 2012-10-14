@@ -1711,9 +1711,11 @@ proto.getSyncWriteOffset = function () {
     Pd.register = function(patch) {
         if (this._patches.indexOf(patch) === -1) {
             this._patches.push(patch);
+            patch.id = this._generateId();
         }
     };
     Pd._patches = [];
+    Pd._idCounter = 0;
 
     // Returns true if an object is an array, false otherwise.
     Pd.isArray = Array.isArray || function(obj) {
@@ -1774,6 +1776,26 @@ proto.getSyncWriteOffset = function () {
         return child;
     };
 
+
+    // Simple mixin to add functionalities for generating unique ids.
+    // Each prototype inheriting from this mixin has a separate id counter.
+    // Therefore ids are not unique globally but unique for each prototype.
+    Pd.UniqueIdsBase = {
+
+        // Every time it is called, this method returns a new unique id.
+        _generateId: function() {
+            this._idCounter++;
+            console.log(this, this._idCounter);
+            return this._idCounter;
+        },
+
+        // Counter used internally to assign a unique id to objects
+        // this counter should never be decremented to ensure the id unicity
+        _idCounter: -1
+    };
+    Pd.extend(Pd, Pd.UniqueIdsBase);
+
+
     // Simple mixin to add event management to objects.
     // To initialize the mixin, `initEvents` must be run at object initialization.
     // TODO: extract code common with scheduling in patch.js
@@ -1801,7 +1823,7 @@ proto.getSyncWriteOffset = function () {
             if (!cbObj.callback || !event) return;
             var eventCbs = cbsRoot[event] || (cbsRoot[event] = []);
             eventCbs.push(cbObj);
-            return cbObj.id = this._generateBindId();
+            return cbObj.id = this._generateId();
         },
 
         // Unbinds using the pair (`event`, `callback`), or simply `id`. 
@@ -1852,15 +1874,7 @@ proto.getSyncWriteOffset = function () {
                 cbObj.callback.apply(cbObj.context, args);
             }
             delete this._cbsOne[event];
-        },
-
-        // Every time it is called, this method returns a new unique id
-        // for a bind.
-        _generateBindId: function() {
-            Pd.EventsBase._idCounter++;
-            return Pd.EventsBase._idCounter;
-        },
-        _idCounter: 0
+        }
 
     };
 
@@ -2290,7 +2304,7 @@ proto.getSyncWriteOffset = function () {
         }
     };
   
-    Pd.extend(Pd.Object.prototype, Pd.EventsBase, {
+    Pd.extend(Pd.Object.prototype, Pd.EventsBase, Pd.UniqueIdsBase, {
 
         // set to true if this object is a dsp sink (e.g. [dac~], [outlet~], [print~]
         endPoint: false,
@@ -2386,9 +2400,6 @@ proto.getSyncWriteOffset = function () {
             // (like dac~ or print~ or send~ or outlet~)
             endPoints: []
         };
-        // counter used internally to assign a unique id to objects
-        // this counter should never be decremented to ensure the id unicity
-        this._idCounter = -1;
         // TODO: find a clean way to handle named stuff.
         // arrays of float data - Pd's tables
         // keys are table names
@@ -2409,7 +2420,7 @@ proto.getSyncWriteOffset = function () {
         this.listeners = {};
     };
 
-    Pd.extend(Pd.Patch.prototype, Pd.EventsBase, {
+    Pd.extend(Pd.Patch.prototype, Pd.EventsBase, Pd.UniqueIdsBase, {
   
     /************************* Send/receive ******************************/
 
@@ -2488,7 +2499,7 @@ proto.getSyncWriteOffset = function () {
                 cbs = this._scheduled[frame] = this._scheduled[frame] || [];
 
             cbs.push(cbObj);
-            if (repeated !== true) return cbObj.id = this._generateBindId();
+            if (repeated !== true) return cbObj.id = this._generateId();
         },
 
     /******************** DSP stuff ************************/
@@ -2508,7 +2519,7 @@ proto.getSyncWriteOffset = function () {
 
             // Runs all the callbacks scheduled at the current frame
             // !!! We have to execute this after the frame has been incremented, 
-            // otherwise rescheduling an interval will take wrong frame as reference.
+            // otherwise rescheduling will take wrong frame as reference.
             // TODO: respect absTime order
             for (i = 0; cbObj = cbs[i]; i++) {
                 if (cbObj.repeat) {
@@ -2710,14 +2721,8 @@ proto.getSyncWriteOffset = function () {
         // this method calls the function `iterator` on every element of `array`
         _map: function(array, iterator) {
             for (var i=0; i<array.length; i++) iterator(array[i]);
-        },
-
-        // every time it is called, this method returns a new unique id
-        // for a graph object.
-        _generateId: function() {
-            this._idCounter++;
-            return this._idCounter;
         }
+
     });
 
 })(this.Pd);
