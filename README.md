@@ -97,9 +97,13 @@ Demos
 
 There's a bunch of demos in `demos` (surprisingly :) :
 
-- [sound-check](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html) : a complete example to help you getting started
-- [processing-storm](http://beraebeo.futupeeps.com/webpd/demos/processing-storm/processing-storm.html) : a example of using WebPd with processing
-- [simple-gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html) : a very simple GUI for WebPd. Also documents the dynamic patching API
+- [sound-check](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html) _a complete example to help you getting started._
+- [processing-storm](http://beraebeo.futupeeps.com/webpd/demos/processing-storm/processing-storm.html) _a example of using WebPd with processing._
+- [simple-gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
+
+**note**: _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
+
+    cp dist/webpd-0.2.0.js dist/webpd-latest.js
 
 
 Instructions for building webpd.js
@@ -109,8 +113,6 @@ To build `webpd.js` and `webpd-min.js` yourself, you will need [node.js](http://
 Follow the instructions to install those, then in WebPd's root folder run :
 
     grunt build
-
-**note**: _the build with grunt is not fully working yet, so you'll have to run grunt with the `--force` option_
 
 
 Instructions for running the tests

@@ -1,3 +1,4 @@
 *~
 node_modules
-
+dist/webpd-latest.js
+dist/webpd-latest.min.js
