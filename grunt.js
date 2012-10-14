@@ -64,7 +64,7 @@ module.exports = function(grunt) {
 
     // Task the CI server will execute
     // TODO: lint
-    grunt.registerTask('travis', 'qunit');
+    grunt.registerTask('travis', 'build qunit');
 
     grunt.registerTask('release', 'concat min release-task');
     grunt.registerTask('release-task', 'Make a new release, creates a git tag and a release file in "dist/"', function() {
