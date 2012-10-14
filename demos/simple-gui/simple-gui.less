@@ -186,15 +186,15 @@ a {
         stroke: black;
         fill: white;
     }
+    rect.overlay {
+        fill-opacity: 0;
+    }
     rect.portlet {
         stroke: #555;
         fill: #555;
     }
     rect.outlet {
         cursor: crosshair;
-    }
-    rect.connectPortlet {
-        fill: @blue2;
     }
     text {
         -webkit-touch-callout: none;
@@ -203,6 +203,12 @@ a {
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
+    }
+    rect.connectPortlet {
+        fill: @blue2;
+        &.inlet {
+            cursor: crosshair;
+        }
     }
     line.connection {
         stroke: black;

@@ -277,6 +277,12 @@
                 .attr('dy', gui.f('getTextY'))
                 .attr('dx', gui.portletWidth);
 
+            // Overlay, blocking text selection
+            gsEnter.append('rect')
+                .attr('class', 'overlay')
+                .attr('width', gui.f('getW'))
+                .attr('height', gui.f('getH'));
+
             // Inlets
             gsEnter
                 .selectAll('rect.inlet')
@@ -302,54 +308,54 @@
                 .attr('height', gui.portletHeight)
                 .attr('x', gui.f('getRelX'))
                 .attr('y', gui.f('getRelY'))
-                .call(d3.behavior.drag()
-                    // Creating new connection
-                    .on('dragstart', function(outlet) {
-                        d3.select(this).classed('connectPortlet', true);
-                        gui.canvas.selectAll('rect.inlet')
-                            .on('mouseover', function(inlet) {
-                                d3.select(this)
-                                    .classed('connectPortlet', true)
-                                    .classed('hoveredInlet', true);
-                            })
-                            .on('mouseout', function(inlet) {
-                                d3.select(this)
-                                    .classed('connectPortlet', false)
-                                    .classed('hoveredInlet', false);
-                            });
+                .on('mousedown', function(outlet) {
+                    d3.select(this).classed('connectPortlet', true);
 
-                        var x = outlet.getX(), y = outlet.getY();
-                        gui.canvas.append('line')
-                            .classed('connection', true)
-                            .classed('newConnection', true)
-                            .attr('x1', x + gui.portletWidth/2)
-                            .attr('y1', y + gui.portletHeight)
-                            .attr('x2', x + gui.portletWidth/2)
-                            .attr('y2', y);
-                    })
-                    .on('drag', function(outlet) {
-                        // update new connection
-                        var conn = gui.canvas.select('line.newConnection'),
-                            pos = d3.mouse(gui.canvas[0][0]);
-                        conn.attr('x2', pos[0]);
-                        conn.attr('y2', pos[1]);
-                    })
-                    .on('dragend', function(outlet) {
-                        // clean stuff set-up just for the new connection 
-                        gui.canvas.selectAll('rect.inlet')
-                            .on('mouseover', function(inlet) {})
-                            .on('mouseout', function(inlet) {});
-                        d3.select(this).classed('connectPortlet', false);
-                        gui.canvas.select('line.newConnection').remove();
-                        gui.canvas.selectAll('rect.inlet').classed('connectPortlet', false);
-                        // create the actual connection in the patch
-                        d3.selectAll('.hoveredInlet')
-                            .classed('hoveredInlet', false)
-                            .each(function(inlet) { gui.newConnection(outlet, inlet); });
-                    })
+                    // Set the handlers for the connecting phase
+                    gui.canvas.selectAll('rect.inlet')
+                        .on('mousemove', function(inlet) {
+                            d3.select(this).classed('connectPortlet', true);
+                            d3.event.stopPropagation();
+                        });
 
-                )
-                .on('mousedown', function() {
+                    gui.canvas
+                        .on('mousemove', function() {
+                            // update new connection
+                            var conn = gui.canvas.select('line.newConnection'),
+                                pos = d3.mouse(gui.canvas[0][0]);
+                            conn.attr('x2', pos[0]);
+                            conn.attr('y2', pos[1]);
+                            gui.canvas.selectAll('rect.inlet').classed('connectPortlet', false);
+                        })
+                        .on('mouseup', function() {
+                            // Clean-up stuff set-up for the connecting phase
+                            gui.canvas.selectAll('rect.inlet')
+                                .on('mousemove', function() {});
+                            gui.canvas
+                                .on('mousemove', function() {})
+                                .on('mouseup', function() {});
+                            gui.canvas.select('line.newConnection').remove();
+                            document.onselectstart = function(){}
+
+                            // Actually create the new connection
+                            gui.canvas.selectAll('rect.inlet.connectPortlet')
+                                .each(function(inlet) { gui.newConnection(outlet, inlet); });
+                            gui.canvas.selectAll('rect.portlet').classed('connectPortlet', false);
+                        });
+
+                    // Draw the line used for connecting
+                    var x = outlet.getX(), y = outlet.getY();
+                    gui.canvas.append('line')
+                        .classed('connection', true)
+                        .classed('newConnection', true)
+                        .attr('x1', x + gui.portletWidth/2)
+                        .attr('y1', y + gui.portletHeight)
+                        .attr('x2', x + gui.portletWidth/2)
+                        .attr('y2', y);
+
+                    // This turns off text selection
+                    document.onselectstart = function(){ return false; };
+
                     // Prevent bubbling so that drag and drop
                     // of whole object doesn't occur when creating
                     // a connection

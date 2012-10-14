@@ -2798,7 +2798,7 @@ proto.getSyncWriteOffset = function () {
 
         message: function(inletId) {
             var msg = Array.prototype.slice.call(arguments, 1);
-            Pd.log(this.printName + ': ' + msg.join(' '));
+            console.log(this.printName + ': ' + msg.join(' '));
         }
 
     });
