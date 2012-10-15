@@ -258,9 +258,9 @@ $(document).ready(function() {
     });
 
     test('tabread~', function() {
-        var patch = new Pd.Patch();
-        var tabread = new Pd.objects['tabread~'](patch, ['table1']);
-        var table = new Pd.objects['table'](patch, ['table1', 10]);
+        var patch = new Pd.Patch(),
+            tabread = new Pd.objects['tabread~'](patch, ['table1']),
+            table = new Pd.objects['table'](patch, ['table1', 10]);
         tabread.load();
 
         table.data = [11, 22, 33, 44, 55, 66, 77, 88, 99, 100];
@@ -274,6 +274,25 @@ $(document).ready(function() {
         inlet0.setBuffer([-10, 9, 10, 1]);
         tabread.dspTick();
         deepEqual(toArray(outBuff), [11, 100, 100, 22]);
+    });
+
+    test('tabread4~', function() {
+        var patch = new Pd.Patch(),
+            tabread = new Pd.objects['tabread4~'](patch, ['table1']),
+            table = new Pd.objects['table'](patch, ['table1', 10]);
+        tabread.load();
+
+        table.data = [10, 20, 33, 44, 55, 66, 77, 88, 99, 100];
+        var inlet0 = tabread.i(0);
+        var outBuff = tabread.o(0).getBuffer();
+        // normal read
+        inlet0.setBuffer([0.5, 1.5, 2.6, 2.8]);
+        tabread.dspTick();
+        deepEqual(roundArray(outBuff, 4), [15, 26.5, 39.6, 41.8]);
+        // read above and below table bounds
+        inlet0.setBuffer([-10, 9, 10, 1]);
+        tabread.dspTick();
+        deepEqual(toArray(outBuff), [10, 100, 100, 20]);
     });
 
     test('tabplay~', function() {
