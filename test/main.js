@@ -58,68 +58,17 @@ $(document).ready(function() {
 
     test('UniqueIdsBase', function() {
         var TestUniqueIds1 = function() {};
-        Pd.extend(TestUniqueIds1.prototype, Pd.EventsBase, Pd.UniqueIdsBase);
+        Pd.extend(TestUniqueIds1.prototype, EventEmitter.prototype, Pd.UniqueIdsBase);
         var testObject1 = new TestUniqueIds1();
 
         var TestUniqueIds2 = function() {};
-        Pd.extend(TestUniqueIds2.prototype, Pd.EventsBase, Pd.UniqueIdsBase);
+        Pd.extend(TestUniqueIds2.prototype, EventEmitter.prototype, Pd.UniqueIdsBase);
         var testObject2 = new TestUniqueIds2();
 
         // 2 different prototypes have distinct id spaces.
         var id1 = testObject1._generateId(),
             id2 = testObject2._generateId();
         equal(id1, id2);
-    });
-
-    test('EventsBase', function() {
-        var TestEvent = function() {
-            this.initEvents();
-        };
-        Pd.extend(TestEvent.prototype, Pd.EventsBase, Pd.UniqueIdsBase);
-        var testObject = new TestEvent();
-        var context = {};        
-
-        var counter = 1;
-        var blaCallback = function(arg1, arg2) {
-            this.args = [arg1, arg2];
-            this.bla = counter;
-            counter ++;
-        };
-
-        // Test .on
-        testObject.on('bla', blaCallback, context);
-        testObject.trigger('bla', 12, 34);
-        equal(context.bla, 1);
-        deepEqual(context.args, [12, 34]);
-        testObject.trigger('bla');
-        equal(context.bla, 2);
-
-        // Test .off
-        testObject.off('bla', blaCallback);
-        testObject.trigger('bla');
-        equal(context.bla, 2);
-
-        // Test .one
-        testObject.one('bla', blaCallback, context);
-        equal(context.bla, 2);
-        testObject.trigger('bla');
-        equal(context.bla, 3);
-        testObject.trigger('bla');
-        equal(context.bla, 3);
-
-        // Test removing .one with .off, passing (event, callback)
-        testObject.one('bla', blaCallback, context);
-        testObject.off('bla', blaCallback);
-        equal(context.bla, 3);
-        testObject.trigger('bla');
-        equal(context.bla, 3);
-
-        // Test removing .one with .off, passing id
-        var id = testObject.one('bla', blaCallback, context);
-        testObject.off(id);
-        equal(context.bla, 3);
-        testObject.trigger('bla');
-        equal(context.bla, 3);
     });
 
     test('makeMsgFilter', function() {

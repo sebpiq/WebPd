@@ -34,7 +34,9 @@ module.exports = function(grunt) {
         },
         concat: {
             dist: {
-                src: ['<banner>', 'lib/sink/sink.js',
+                src: ['<banner>',
+                    'lib/eventemitter2/eventemitter2.js',
+                    'lib/sink/sink.js',
                     'lib/WebPd/main.js',
                     'lib/WebPd/audiodriver.js',
                     'lib/WebPd/portlets.js',

@@ -26,8 +26,8 @@ $(document).ready(function() {
         var sink = dspObject.i(0);
         var source = dspObject.o(0);
         var hasDspSource;
-        dspObject.on('inletConnect', function() { equal(this.i(0).hasDspSources(), true); }, dspObject);
-        dspObject.on('inletDisconnect', function() { equal(this.i(0).hasDspSources(), false); }, dspObject);
+        dspObject.on('inletConnect', function() { equal(this.i(0).hasDspSources(), true); });
+        dspObject.on('inletDisconnect', function() { equal(this.i(0).hasDspSources(), false); });
         sink.connect(source);
         sink.disconnect(source);
     });

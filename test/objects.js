@@ -7,11 +7,11 @@ $(document).ready(function() {
         Pd.extend(Pd['inlet~'].prototype, {
             setBuffer: function(buff) { 
                 this.testBuffer = buff;
-                this.obj.trigger('inletConnect');
+                this.obj.emit('inletConnect');
             },
             delBuffer: function() { 
                 this.testBuffer = undefined;
-                this.obj.trigger('inletDisconnect');
+                this.obj.emit('inletDisconnect');
             },
             getBuffer: function() { return this.testBuffer; },
             hasDspSources: function() { return this.testBuffer !== undefined; },
@@ -93,7 +93,7 @@ $(document).ready(function() {
         var inlet0 = osc.i(0);
 
         inlet0.setBuffer([770, 550, 330, 110]);
-        osc.trigger('inletConnect');
+        osc.emit('inletConnect');
 
         expected = [cos(osc.phase+m*770), cos(osc.phase+m*770+m*550), cos(osc.phase+m*770+m*550+m*330), cos(osc.phase+m*770+m*550+m*330+m*110)];
         osc.dspTick();
@@ -106,7 +106,7 @@ $(document).ready(function() {
         /*// reset phase
         k2 = 2*Math.PI*440/Pd.sampleRate;
         inlet0.delBuffer();
-        osc.trigger('inletDisconnect');
+        osc.emit('inletDisconnect');
 
         osc.i(0).message(440);
         osc.i(1).message('bang');
@@ -151,12 +151,12 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [2, 4, 6, 8]);
         // dsp right inlet
         inlet1.setBuffer([4, 3, 2, 1]);
-        mult.trigger('inletConnect');
+        mult.emit('inletConnect');
         mult.dspTick();
         deepEqual(toArray(outBuff), [4, 6, 6, 4]);
         // send message right inlet
         inlet1.delBuffer();
-        mult.trigger('inletDisconnect');
+        mult.emit('inletDisconnect');
         inlet1.message(3);
         mult.dspTick();
         deepEqual(toArray(outBuff), [3, 6, 9, 12]);
@@ -177,12 +177,12 @@ $(document).ready(function() {
         deepEqual(toArray(outBuff), [12, 13, 14, 15]);
         // dsp right inlet
         inlet1.setBuffer([4.5, 3.5, 2.5, 1.5]);
-        add.trigger('inletConnect');
+        add.emit('inletConnect');
         add.dspTick();
         deepEqual(toArray(outBuff), [5.5, 5.5, 5.5, 5.5]);
         // send message right inlet
         inlet1.delBuffer();
-        add.trigger('inletDisconnect');
+        add.emit('inletDisconnect');
         inlet1.message(21);
         add.dspTick();
         deepEqual(toArray(outBuff), [22, 23, 24, 25]);
@@ -203,12 +203,12 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), [1.4, 0.4, -0.55, -4]);
         // dsp right inlet
         inlet1.setBuffer([2.5, 1, 0.45, -4]);
-        subs.trigger('inletConnect');
+        subs.emit('inletConnect');
         subs.dspTick();
         deepEqual(roundArray(outBuff, 4), [-0.1, 0.4, 0, 1]);
         // send message right inlet
         inlet1.delBuffer();
-        subs.trigger('inletDisconnect');
+        subs.emit('inletDisconnect');
         inlet1.message(-1.5);
         subs.dspTick();
         deepEqual(roundArray(outBuff, 4), [3.9, 2.9, 1.95, -1.5]);
@@ -229,12 +229,12 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), [1, 11, -3.3, 4]);
         // dsp right inlet
         inlet1.setBuffer([1, 33, 0, 10]);
-        divid.trigger('inletConnect');
+        divid.emit('inletConnect');
         divid.dspTick();
         deepEqual(roundArray(outBuff, 4), [3, 1, 0, 1.2]);
         // send message right inlet
         inlet1.delBuffer();
-        divid.trigger('inletDisconnect');
+        divid.emit('inletDisconnect');
         inlet1.message(0.1);
         divid.dspTick();
         deepEqual(roundArray(outBuff, 4), [30, 330, -99, 120]);
@@ -764,7 +764,6 @@ $(document).ready(function() {
         var receivedOutside = [];
         patch.receive('no2', function() {
             var args = Array.prototype.slice.call(arguments, 0);
-            console.log(args);
             for (var i = 0; i < args.length; i++) {
                 receivedOutside.push(args[i]);
             }
@@ -773,6 +772,15 @@ $(document).ready(function() {
         equal(receive1.o(0).receivedMessage, undefined);
         deepEqual(receive2.o(0).receivedMessage, ['bla', 888]);
         deepEqual(receivedOutside, ['bla', 888]);
+
+        // Test changing name
+        receive1.o(0).receivedMessage = undefined;
+        receive1.setName('num1');
+        send1.i(0).message('blop', 'blep', 'blup');
+        equal(receive1.o(0).receivedMessage, undefined);
+        send1.setName('num1');
+        send1.i(0).message(1, 11, 111);
+        deepEqual(receive1.o(0).receivedMessage, [1, 11, 111]);
     });
 
     test('list split', function() {
