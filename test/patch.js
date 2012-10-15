@@ -9,6 +9,19 @@ $(document).ready(function() {
     var MyEndPointObject = MyObject.extend({
         endPoint: true
     });
+    var DspObject = Pd.Object.extend({
+        inletTypes: ['inlet~'],
+        outletTypes: ['outlet~'],
+        dspTick: Pd.Object.prototype.dspTickId,
+        type: 'myObject2'
+    });
+    var DspEndPointObject = Pd.Object.extend({
+        inletTypes: ['inlet~'],
+        outletTypes: ['outlet~'],
+        endPoint: true,
+        dspTick: Pd.Object.prototype.dspTickId,
+        type: 'myObject3'
+    });
 
     var patch;
     var obj1;
@@ -33,6 +46,23 @@ $(document).ready(function() {
         teardown: function() {
             Pd._uniquelyNamedObjects = {};
         }
+    });
+
+    test('generateFrame, circular ref', function() {
+        var patch = new Pd.Patch(),
+            obj1 = new DspObject(patch, []),
+            obj2 = new DspEndPointObject(patch, []);
+
+        equal(obj1.frame, -1);
+        equal(obj2.frame, -1);
+        patch.connect(obj1.o(0), obj2.i(0));
+        patch.generateFrame();
+        equal(obj1.frame, 0);
+        equal(obj2.frame, 0);
+        patch.connect(obj2.o(0), obj1.i(0));
+        patch.generateFrame();
+        equal(obj1.frame, 1);
+        equal(obj2.frame, 1);
     });
 
     test('graphiness : addObject / getObject', function() {

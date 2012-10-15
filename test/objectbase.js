@@ -1,5 +1,11 @@
 $(document).ready(function() {
 
+    module('Pd.NamedObject', {
+        teardown: function() {
+            Pd._namedObjects = {};
+        }
+    });
+
     var MyNamedObject = Pd.NamedObject.extend({
         init: function(name) { this.setName(name); },
         type: 'namedObj'
@@ -10,16 +16,9 @@ $(document).ready(function() {
         type: 'uniqNamedObj'
     });
 
-
-    module('Pd.NamedObject', {
-        teardown: function() {
-            Pd._namedObjects = {};
-        }
-    });
-
     test('Pd.getNamedObject', function() {
         var obj1A = new MyNamedObject(null, ['obj1']),
-            obj1B = new MyNamedObject(null, ['obj1'])
+            obj1B = new MyNamedObject(null, ['obj1']),
             obj2 = new MyNamedObject(null, ['obj2']),
             query1 = Pd.getNamedObject('namedObj', 'obj1'),
             query2 = Pd.getNamedObject('namedObj', 'obj2'),

@@ -94,10 +94,10 @@ $(document).ready(function() {
             '#A 27 2.8 2.9 3.0;\n' +
             '#X coords 0 1 14818 -1 200 140 1;\n' +
             '#X restore 157 26 graph;\n' +
-            '#X obj 19 370 osc~ 440;';
+            '#X obj 19 370 osc~ 440;',
             patch = Pd.compat.parse(patchStr),
             table = patch.getObject(0),
-            sameTable = Pd.getUniquelyNamedObject('table', 'myTable');
+            sameTable = Pd.getUniquelyNamedObject('table', 'myTable'),
             osc = patch.getObject(1);
 
         ok(table instanceof Pd.objects['table']);
