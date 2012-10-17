@@ -565,10 +565,10 @@ $(document).ready(function() {
     });
 
     test('delay', function() {
-        Pd.sampleRate = 10;
-        var patch = new Pd.Patch(),
-            delay = new Pd.objects['delay'](patch, [1100]),
-            i; 
+        var patch = new Pd.Patch();
+        patch.sampleRate = 10;
+        var delay = new Pd.objects['delay'](patch, [1100]),
+            i;
 
         // no delay started
         for (i = 0; i < 13; i++) patch.generateFrame();
@@ -609,6 +609,28 @@ $(document).ready(function() {
         equal(delay.o(0).receivedMessage, undefined);
         patch.generateFrame();
         deepEqual(delay.o(0).receivedMessage, ['bang']);
+    });
+
+    test('timer', function() {
+        var patch = new Pd.Patch();
+        patch.sampleRate = 10;
+        patch.blockSize = 2;
+        var timer = new Pd.objects['timer'](patch),
+            i, round = Math.round;
+
+        // timer is started when created
+        for (i = 0; i < 5; i++) patch.generateFrame();
+        equal(timer.o(0).receivedMessage, undefined);
+        timer.i(1).message('bang');
+        deepEqual(timer.o(0).receivedMessage, [5 * 2 * 0.1]); // 5 frames of 2 blocks have run at sample rate 10.
+        timer.o(0).receivedMessage = undefined;
+
+        // timer reset
+        timer.i(0).message('bang');
+        for (i = 0; i < 3; i++) patch.generateFrame();
+        equal(timer.o(0).receivedMessage, undefined);
+        timer.i(1).message('bang');
+        deepEqual(round(timer.o(0).receivedMessage, 4), round([3 * 2 * 0.1], 4));
     });
 
     test('loadbang', function() {
