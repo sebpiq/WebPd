@@ -622,7 +622,7 @@ $(document).ready(function() {
         for (i = 0; i < 5; i++) patch.generateFrame();
         equal(timer.o(0).receivedMessage, undefined);
         timer.i(1).message('bang');
-        deepEqual(timer.o(0).receivedMessage, [5 * 2 * 0.1]); // 5 frames of 2 blocks have run at sample rate 10.
+        deepEqual(timer.o(0).receivedMessage, [5 * 2 * 0.1 * 1000]); // 5 frames of 2 blocks have run at sample rate 10.
         timer.o(0).receivedMessage = undefined;
 
         // timer reset
@@ -630,7 +630,7 @@ $(document).ready(function() {
         for (i = 0; i < 3; i++) patch.generateFrame();
         equal(timer.o(0).receivedMessage, undefined);
         timer.i(1).message('bang');
-        deepEqual(round(timer.o(0).receivedMessage, 4), round([3 * 2 * 0.1], 4));
+        deepEqual(round(timer.o(0).receivedMessage, 4), round([3 * 2 * 0.1 * 1000], 4));
     });
 
     test('loadbang', function() {
