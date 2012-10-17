@@ -114,6 +114,48 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), roundArray([cos(k*1), cos(k*2), cos(k*3), cos(k*4)], 4));*/
     });
 
+    test('phasor~', function() {
+        // no frequency (=0)
+        var patch = new Pd.Patch();
+            phasor = new Pd.objects['phasor~'](patch);
+        phasor.load();
+        var outBuff = phasor.o(0).getBuffer();
+        var expected = [];
+
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
+        phasor.dspTick();
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);        
+
+        // frequency argument 
+        phasor = new Pd.objects['phasor~'](patch, [1]);
+        patch.sampleRate = 5;
+        phasor.load();
+        outBuff = phasor.o(0).getBuffer();
+
+        deepEqual(toArray(outBuff), [0, 0, 0, 0]);
+        phasor.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0.2, 0.4, 0.6, 0.8]);
+        phasor.dspTick();
+        deepEqual(roundArray(outBuff, 4), [1, 0.2, 0.4, 0.6]);
+
+        // receive frequency message
+        phasor.i(0).message(0.5);
+        phasor.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0.7, 0.8, 0.9, 0]);
+        phasor.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0.1, 0.2, 0.3, 0.4]);
+
+        // receive frequency signal
+        var inlet0 = phasor.i(0);
+        inlet0.setBuffer([1, 0.5, 0.2, 0.1]);
+        phasor.emit('inletConnect');
+
+        phasor.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0.6, 0.7, 0.74, 0.76]);
+        phasor.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0.96, 0.06, 0.1, 0.12]);
+    });
+
     test('noise~', function() {
         Pd.blockSize = 1024;
         var noise = new Pd.objects['noise~'](),
