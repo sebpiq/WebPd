@@ -47,6 +47,15 @@
             
             // Creating canvas and setting-up user events
             gui.canvas = d3.select('svg#canvas');
+            // set canvas moving
+            var offset = {x: 0, y: 0};
+            gui.canvas.call(d3.behavior.drag()
+                .on("drag", function(d) {
+                    offset.x += d3.event.dx;
+                    offset.y += d3.event.dy;
+                    gui.canvas.style({top: offset.y, left: offset.x});
+                })
+            );
             gui.canvas.on('click', function() { gui.setSelection(); });
             $('body').keyup(function(event) {
                 if (event.keyCode == 46) gui.deleteSelection();
@@ -113,6 +122,24 @@
                 gui.patch = gui.eval('var patch = ', 'Pd.compat.parse(patchText);', {
                     patchText: textarea.val()
                 });
+                // Offset the objects to place them at positive coordinates on the canvas. 
+                var xList = [], yList = [], xMin, xMax, yMin, yMax;
+                gui.patch.mapObjects(function(obj) {
+                    obj._guiData.x *= 2;
+                    obj._guiData.y *= 2;
+                    xList.push(obj._guiData.x);
+                    yList.push(obj._guiData.y);
+                });
+                xMin = Math.min.apply(Math, xList);
+                yMin = Math.min.apply(Math, yList);
+                xMax = Math.max.apply(Math, xList);
+                yMax = Math.max.apply(Math, yList);
+                gui.patch.mapObjects(function(obj) {
+                    obj._guiData.x -= xMin;
+                    obj._guiData.y -= yMin;
+                });
+                gui.canvas.style({'width': xMax - xMin + 500, 'height': yMax - yMin + 500}); 
+
                 textarea.val('');
                 gui.refresh();
                 gui.patch.play();
@@ -143,7 +170,9 @@
     </li>
 </script>
 <body>
-    <svg id="canvas"></svg>
+    <div id="canvasContainer">
+        <svg id="canvas"></svg>
+    </div>
     <div id="menubar">
         <h1>WebPd GUI</h1>
         <ul class="menu">

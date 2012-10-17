@@ -11,8 +11,8 @@
                 // Method to call after object creation to initialize gui data
                 initGui: function() {
                     this._guiData.text = this.type + ' ' + this._args.join(' ');
-                    this._guiData.x = this._guiData.x * 2 || 5;
-                    this._guiData.y = this._guiData.y * 2 || 5;
+                    this._guiData.x = this._guiData.x || 5;
+                    this._guiData.y = this._guiData.y || 5;
                 },
 
                 // Returns object's X in the canvas
