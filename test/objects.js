@@ -801,6 +801,42 @@ $(document).ready(function() {
         select.o(3).receivedMessage = undefined;
     });
 
+    test('moses', function() {
+        var moses = new Pd.objects['moses'](null, [3.55]);
+
+        equal(moses.o(0).receivedMessage, undefined);
+        equal(moses.o(1).receivedMessage, undefined);
+
+        moses.i(0).message(1);
+        deepEqual(moses.o(0).receivedMessage, [1]);
+        equal(moses.o(1).receivedMessage, undefined);
+        moses.o(0).receivedMessage = undefined;
+
+        moses.i(0).message(3.55);
+        equal(moses.o(0).receivedMessage, undefined);
+        deepEqual(moses.o(1).receivedMessage, [3.55]);
+        moses.o(1).receivedMessage = undefined;
+
+        moses.i(0).message(90);
+        equal(moses.o(0).receivedMessage, undefined);
+        deepEqual(moses.o(1).receivedMessage, [90]);
+        moses.o(1).receivedMessage = undefined;
+
+        // Change split
+        moses.i(1).message(9.65);
+
+        moses.i(0).message(9);
+        deepEqual(moses.o(0).receivedMessage, [9]);
+        equal(moses.o(1).receivedMessage, undefined);
+        moses.o(0).receivedMessage = undefined;
+
+        moses.i(0).message(9.7);
+        equal(moses.o(0).receivedMessage, undefined);
+        deepEqual(moses.o(1).receivedMessage, [9.7]);
+        moses.o(1).receivedMessage = undefined;
+        
+    });
+
     test('random', function() {
         var randObj = new Pd.objects['random'](null, [3]),
             numbers = [0, 0, 0],
