@@ -36,6 +36,16 @@ $(document).ready(function() {
         });
     }
 
+    function average(array) {
+        var i, length, avg;
+
+        for (i = 0, length = array.length; i < length; i++) {
+            avg += array[i];
+        }
+        avg /= array.length;
+        return avg
+    }
+
 /******************** tests dsp objects ************************/
 
     module('Pd.objects - dsp', {
@@ -117,10 +127,10 @@ $(document).ready(function() {
     test('phasor~', function() {
         // no frequency (=0)
         var patch = new Pd.Patch();
-            phasor = new Pd.objects['phasor~'](patch);
+            phasor = new Pd.objects['phasor~'](patch),
+            outBuff = phasor.o(0).getBuffer(),
+            expected = [];
         phasor.load();
-        var outBuff = phasor.o(0).getBuffer();
-        var expected = [];
 
         deepEqual(toArray(outBuff), [0, 0, 0, 0]);
         phasor.dspTick();
@@ -163,10 +173,7 @@ $(document).ready(function() {
             avg = 0, dev = 0, i;
 
         noise.dspTick();
-        for (i = 0; i < outBuff.length; i++) {
-            avg += outBuff[i];
-        }
-        avg /= outBuff.length;
+        average(outBuff);
         for (i = 0; i < outBuff.length; i++) {
             dev += Math.pow(outBuff[i] - avg, 2);
         }
@@ -205,10 +212,10 @@ $(document).ready(function() {
     });
 
     test('+~', function() {
-        var add = new Pd.objects['+~'](null, [11]);
-        var outBuff = add.o(0).getBuffer();
-        var inlet0 = add.i(0);
-        var inlet1 = add.i(1);
+        var add = new Pd.objects['+~'](null, [11]),
+            outBuff = add.o(0).getBuffer(),
+            inlet0 = add.i(0),
+            inlet1 = add.i(1);
 
         inlet0.setBuffer([0, 0, 0, 0]);
         add.dspTick();
@@ -231,10 +238,10 @@ $(document).ready(function() {
     });
 
     test('-~', function() {
-        var subs = new Pd.objects['-~'](null, [1]);
-        var outBuff = subs.o(0).getBuffer();
-        var inlet0 = subs.i(0);
-        var inlet1 = subs.i(1);
+        var subs = new Pd.objects['-~'](null, [1]),
+            outBuff = subs.o(0).getBuffer(),
+            inlet0 = subs.i(0),
+            inlet1 = subs.i(1);
 
         inlet0.setBuffer([0, 0, 0, 0]);
         subs.dspTick();
@@ -257,10 +264,10 @@ $(document).ready(function() {
     });
 
     test('/~', function() {
-        var divid = new Pd.objects['/~'](null, [3]);
-        var outBuff = divid.o(0).getBuffer();
-        var inlet0 = divid.i(0);
-        var inlet1 = divid.i(1);
+        var divid = new Pd.objects['/~'](null, [3]),
+            outBuff = divid.o(0).getBuffer(),
+            inlet0 = divid.i(0),
+            inlet1 = divid.i(1);
 
         inlet0.setBuffer([0, 0, 0, 0]);
         divid.dspTick();
@@ -282,11 +289,50 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), [30, 330, -99, 120]);
     });
 
+    test('lop~', function() {
+        Pd.blockSize = 1024;
+        var patch = new Pd.Patch(),
+            lop = new Pd.objects['lop~'](patch),
+            osc = new Pd.objects['osc~'](patch, [440]),
+            oscBuff = osc.o(0).getBuffer(),
+            outBuff = lop.o(0).getBuffer();
+        osc.load();
+        lop.load();
+        osc.dspTick();
+        lop.i(0).setBuffer(oscBuff);
+
+        // cut-off = 0
+        lop.dspTick();
+        var outMin = Math.min.apply(Math, toArray(outBuff)), outMax = Math.max.apply(Math, toArray(outBuff));
+        equal(Math.round(outMin, 4), 0);
+        equal(Math.round(outMax, 4), 0);
+        console.log(outMax, outMin, outBuff)
+
+        // set cut-off
+        lop.i(1).message(100);
+        lop.dspTick();
+        outMin = Math.min.apply(Math, toArray(outBuff)), outMax = Math.max.apply(Math, toArray(outBuff));
+        ok(outMin < 0 && outMin > -0.5);
+        ok(outMax > 0 && outMax < 0.5);
+
+        // set cut-off
+        var lop = new Pd.objects['lop~'](patch, [5000]),
+            outBuff = lop.o(0).getBuffer();
+        lop.load();
+        lop.i(0).setBuffer(oscBuff);
+
+        lop.dspTick();
+        outMin = Math.min.apply(Math, toArray(outBuff)), outMax = Math.max.apply(Math, toArray(outBuff));
+        ok(outMin < -0.5);
+        ok(outMax > 0.5);
+        console.log(outMax, outMin, outBuff);
+    });
+
     test('common : tabread~, tabwrite~, tabplay~', function() {
-        var patch = new Pd.Patch();
-        var tabread = new Pd.objects['tabread~'](patch, ['table1']);
-        var table1 = new Pd.objects['table'](patch, ['table1', 10]);
-        var table2 = new Pd.objects['table'](patch, ['table2', 10]);
+        var patch = new Pd.Patch(),
+            tabread = new Pd.objects['tabread~'](patch, ['table1']),
+            table1 = new Pd.objects['table'](patch, ['table1', 10]),
+            table2 = new Pd.objects['table'](patch, ['table2', 10]);
         tabread.load();
         
         // setting tabread's table
@@ -338,13 +384,13 @@ $(document).ready(function() {
     });
 
     test('tabplay~', function() {
-        var patch = new Pd.Patch();
-        var tabplay = new Pd.objects['tabplay~'](patch, ['table1']);
-        var table = new Pd.objects['table'](patch, ['table1', 6]);
+        var patch = new Pd.Patch(),
+            tabplay = new Pd.objects['tabplay~'](patch, ['table1']),
+            outBuff = tabplay.o(0).getBuffer(),
+            table = new Pd.objects['table'](patch, ['table1', 6]);
         tabplay.load();
 
         table.data = [11, 22, 33, 44, 55, 66];
-        var outBuff = tabplay.o(0).getBuffer();
         // play all
         tabplay.i(0).message('bang');
         tabplay.dspTick();
@@ -366,12 +412,12 @@ $(document).ready(function() {
     });
 
     test('tabwrite~', function() {
-        var patch = new Pd.Patch();
-        var tabwrite = new Pd.objects['tabwrite~'](patch, ['table1']);
-        var table = new Pd.objects['table'](patch, ['table1', 5]);
+        var patch = new Pd.Patch(),
+            tabwrite = new Pd.objects['tabwrite~'](patch, ['table1']),
+            inlet0 = tabwrite.i(0),
+            table = new Pd.objects['table'](patch, ['table1', 5]);
         tabwrite.load();
 
-        var inlet0 = tabwrite.i(0);
         // idle
         deepEqual(toArray(table.data), [0, 0, 0, 0, 0]);
         inlet0.setBuffer([0, 1, 2, 3]);
