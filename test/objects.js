@@ -43,7 +43,7 @@ $(document).ready(function() {
             avg += array[i];
         }
         avg /= array.length;
-        return avg
+        return avg;
     }
 
 /******************** tests dsp objects ************************/
@@ -126,7 +126,7 @@ $(document).ready(function() {
 
     test('phasor~', function() {
         // no frequency (=0)
-        var patch = new Pd.Patch();
+        var patch = new Pd.Patch(),
             phasor = new Pd.objects['phasor~'](patch),
             outBuff = phasor.o(0).getBuffer(),
             expected = [];
@@ -306,26 +306,65 @@ $(document).ready(function() {
         var outMin = Math.min.apply(Math, toArray(outBuff)), outMax = Math.max.apply(Math, toArray(outBuff));
         equal(Math.round(outMin, 4), 0);
         equal(Math.round(outMax, 4), 0);
-        console.log(outMax, outMin, outBuff)
 
         // set cut-off
         lop.i(1).message(100);
         lop.dspTick();
-        outMin = Math.min.apply(Math, toArray(outBuff)), outMax = Math.max.apply(Math, toArray(outBuff));
+        outMin = Math.min.apply(Math, toArray(outBuff));
+        outMax = Math.max.apply(Math, toArray(outBuff));
         ok(outMin < 0 && outMin > -0.5);
         ok(outMax > 0 && outMax < 0.5);
 
         // set cut-off
-        var lop = new Pd.objects['lop~'](patch, [5000]),
-            outBuff = lop.o(0).getBuffer();
+        lop = new Pd.objects['lop~'](patch, [5000]);
+        outBuff = lop.o(0).getBuffer();
         lop.load();
         lop.i(0).setBuffer(oscBuff);
 
         lop.dspTick();
-        outMin = Math.min.apply(Math, toArray(outBuff)), outMax = Math.max.apply(Math, toArray(outBuff));
+        outMin = Math.min.apply(Math, toArray(outBuff));
+        outMax = Math.max.apply(Math, toArray(outBuff));
         ok(outMin < -0.5);
         ok(outMax > 0.5);
-        console.log(outMax, outMin, outBuff);
+    });
+
+    test('hip~', function() {
+        Pd.blockSize = 1024;
+        var patch = new Pd.Patch(),
+            hip = new Pd.objects['hip~'](patch),
+            osc = new Pd.objects['osc~'](patch, [4400]),
+            oscBuff = osc.o(0).getBuffer(),
+            outBuff = hip.o(0).getBuffer();
+        osc.load();
+        hip.load();
+        osc.dspTick();
+
+        // cut-off = 0
+        hip.i(0).setBuffer(oscBuff);
+        hip.dspTick();
+        var outMin = Math.min.apply(Math, toArray(outBuff)), outMax = Math.max.apply(Math, toArray(outBuff));
+        ok(outMin < -0.5);
+        ok(outMax > 0.5);
+
+        // set cut-off
+        hip.i(1).message(4000);
+        hip.dspTick();
+        outMin = Math.min.apply(Math, toArray(outBuff));
+        outMax = Math.max.apply(Math, toArray(outBuff));
+        ok(outMin < 0 && outMin > -0.5);
+        ok(outMax > 0 && outMax < 0.5);
+
+        // set cut-off
+        hip = new Pd.objects['hip~'](patch, [10000]);
+        outBuff = hip.o(0).getBuffer();
+        hip.load();
+        hip.i(0).setBuffer(oscBuff);
+
+        hip.dspTick();
+        outMin = Math.min.apply(Math, toArray(outBuff));
+        outMax = Math.max.apply(Math, toArray(outBuff));
+        equal(Math.round(outMin, 4), 0);
+        equal(Math.round(outMax, 4), 0);
     });
 
     test('common : tabread~, tabwrite~, tabplay~', function() {
