@@ -17,7 +17,7 @@ Browser support
 Documentation
 -------------
 
-Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm) by Miller Puckette, the creator of Pure Data. 
+Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm) by Miller Puckette, the creator of Pure Data.
 
 
 What doesn't work yet
@@ -26,7 +26,7 @@ What doesn't work yet
 Very little of the full Pure Data functionality has been implemented yet. To check-out which objects are implemented, you can use the [WebPd gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html). 
 Abbreviations, internal messages, abstractions and subpatches haven't been implemented yet. Forget externals.
 
-**But everything is not lost !!!** There is enough objects to have fun with. Just keep it simple, and always test your patches with the [WebPd gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon.
+**But everything is not lost !!!** There is way enough objects to have fun. Always test your patches with the [WebPd gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon. Also, check-out [the roadmap](https://github.com/sebpiq/WebPd/wiki/Roadmap).
 
 
 Getting started
