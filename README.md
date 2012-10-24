@@ -66,7 +66,7 @@ Then, get a Pd file, load it to a WebPd patch and start it. The way you get the 
 </html>
 ```
 
-**Note** : _when developing on your computer Ajax requests might fail. See [troubleshooting section](#Troubleshooting)._
+**Note** : _when developing on your computer Ajax requests might fail. See [troubleshooting section](#troubleshooting)._
 
 
 If the patch file is not too big, you can also include it directly in your page, and read it with JavaScript :
