@@ -66,7 +66,7 @@ Then, get a Pd file, load it to a WebPd patch and start it. The way you get the 
 </html>
 ```
 
-**Note** : _when developing on your computer, web browsers block this kind of requests for security reasons. A workaround for Chrome is to launch it from a terminal with the option `--allow-file-access-from-files`._
+**Note** : _when developing on your computer Ajax requests might fail. See [troubleshooting section](#troubleshooting)._
 
 
 If the patch file is not too big, you can also include it directly in your page, and read it with JavaScript :
@@ -92,6 +92,7 @@ If the patch file is not too big, you can also include it directly in your page,
 </html>
 ```
 
+
 Demos
 ----------
 
@@ -104,6 +105,25 @@ There's a bunch of demos in `demos` (surprisingly :) :
 **Note** : _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
 
     cp dist/webpd-0.2.0.js dist/webpd-latest.js
+
+
+Troubleshooting
+------------------
+
+_> I can't run the demos on my computer / PD files won't load_
+
+For security reasons, browsers control access to your file system from web pages. Because of this, getting Pd files with Ajax might fail on your local machine.
+
+A workaround for Chrome is to launch it from a terminal with the option `--allow-file-access-from-files`.
+
+For any browser, you can also start a local HTTP server. For example, if you have [Python](http://www.python.org/) installed, go to the root directory of your project, run : 
+
+    python -m SimpleHTTPServer`
+
+then point your browser to [localhost:8000/my_page.html](localhost:8000/your_page.html).
+
+For example, to run the `processing-storm.html` demo, open a terminal, go to `WebPd/`, start the python server, 
+and point your browser to [localhost:8000/demos/processing-storm/processing-storm.html](http://localhost:8000/demos/processing-storm/processing-storm.html).
 
 
 Instructions for building webpd.js
