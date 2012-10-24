@@ -120,10 +120,10 @@ For any browser, you can also start a local HTTP server. For example, if you hav
 
     python -m SimpleHTTPServer`
 
-then point your browser to `localhost:8000/my_page.html`.
+then point your browser to [localhost:8000/my_page.html](localhost:8000/your_page.html).
 
 For example, to run the `processing-storm.html` demo, open a terminal, go to `WebPd/`, start the python server, 
-and point your browser to `localhost:8000/demos/processing-storm/processing-storm.html`.
+and point your browser to [localhost:8000/demos/processing-storm/processing-storm.html](http://localhost:8000/demos/processing-storm/processing-storm.html).
 
 
 Instructions for building webpd.js
