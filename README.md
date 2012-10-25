@@ -5,19 +5,13 @@ WebPd
 
 - **WebPd** is a **100% JavaScript Pure Data runtime**. It aims at allowing a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) audio patches to run in the browser without plugins.
 
-- **WebPd** is also a **standalone DSP library**. Every object as you know it in Pure Data provides a complete API, allowing developers to control **everything** with JavaScript.
+- **WebPd** is also a **standalone DSP library**. Every object as you know it in Pure Data exposes a complete API, allowing developers to control **everything** with JavaScript.
 
 
 Browser support
 ---------------
 
 **Firefox 4.0+** | **Chrome 10.0+** | **Safari 6.0+**
-
-
-Documentation
--------------
-
-Here is the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm) by Miller Puckette, the creator of Pure Data. 
 
 
 What doesn't work yet
@@ -32,9 +26,11 @@ Abbreviations, internal messages, abstractions and subpatches haven't been imple
 Getting started
 ----------------
 
+**Note** : _for documentation about Pd objects or tutorials about how to make Pd patches, please refer to the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm)._
+
 **Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html)._
 
-[Go to "dist/"](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` and include it in your webpage.
+[Go to "dist/"](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` (click on the file, click on "raw", save the file) and include it in your webpage.
 
 ```html
 <!DOCTYPE html>
