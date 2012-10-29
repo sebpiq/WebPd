@@ -152,7 +152,14 @@
                 $('#loadPatch').removeClass('expanded');
             });
 
-
+            $('#stopPatch a').click(function(event) {
+                event.preventDefault();
+                gui.patch.stop();
+            });
+            $('#playPatch a').click(function(event) {
+                event.preventDefault();
+                gui.patch.play();
+            });
         });
 	</script>
     <link rel="stylesheet/less" type="text/css" href="simple-gui.less">
@@ -170,12 +177,15 @@
     </li>
 </script>
 <body>
+    <button id="stopPatch">Stop</button>
     <div id="canvasContainer">
         <svg id="canvas"></svg>
     </div>
     <div id="menubar">
         <h1>WebPd GUI</h1>
         <ul class="menu">
+            <li class="menuItem" id="stopPatch"><a href="">Stop</a></li>
+            <li class="menuItem" id="playPatch"><a href="">Play</a></li>
             <li class="menuItem" id="loadPatch">
                 <a class="expand" href="">Load patch</a>
                 <form>

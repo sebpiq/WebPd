@@ -133,18 +133,16 @@ $(document).ready(function() {
         deepEqual([obj3.objName, obj3.checked], ['obj3', undefined]);
     });
 
-    test('graphiness : mapEndPoints', function() {
+    test('graphiness : getEndPoints', function() {
         patch.addObject(obj1);
         patch.addObject(ep1);
         patch.addObject(ep2);
 
-        patch.mapEndPoints(function(obj) {
-            obj.checked = true;
-        });
+        ep1.endPointPriority = 10;
+        deepEqual(patch.getEndPoints(), [ep1, ep2]);
 
-        deepEqual([obj1.objName, obj1.checked], ['obj1', undefined]);
-        deepEqual([ep1.objName, ep1.checked], ['ep1', true]);
-        deepEqual([ep2.objName, ep2.checked], ['ep2', true]);
+        ep2.endPointPriority = 100;
+        deepEqual(patch.getEndPoints(), [ep2, ep1]);
     });
 
     test('graphiness : getAllObjects', function() {
@@ -337,6 +335,14 @@ $(document).ready(function() {
         patch.clear(id);
         for (1; patch.frame < 31; 1) patch.generateFrame();
         deepEqual(patch.received, []);
+    });
+
+    test('millisToSamp / sampToMillis', function() {
+        patch.sampleRate = 44100;
+        equal(patch.millisToSamp(1000), 44100);
+        equal(patch.millisToSamp(1500), 66150);
+        equal(patch.sampToMillis(66150), 1500);
+        equal(patch.sampToMillis(22050), 500);
     });
 
 });

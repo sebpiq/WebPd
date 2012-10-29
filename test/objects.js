@@ -544,6 +544,39 @@ $(document).ready(function() {
         equal(bla, 999);
     });
 
+    test('delwrite~ / delread~', function() {
+        Pd.sampleRate = 10;
+        Pd.blockSize = 5;
+        var patch = new Pd.Patch(),
+            delwrite = new Pd.objects['delwrite~'](patch, ['del1', 1000]),
+            delread = new Pd.objects['delread~'](patch, ['del1', 400]),
+            outBuff = delread.o(0).getBuffer();
+        delwrite.load();
+        delread.load();
+        equal(delread.delline.size, 10);
+        equal(delread.delline.name, 'del1');
+
+        delwrite.dspTick();
+        delread.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0, 0, 0, 0, 0]);
+
+        delwrite.i(0).setBuffer([0.1, 0.2, 0.3, 0.4, 0.5]);
+        delwrite.dspTick();
+        delread.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0, 0, 0, 0, 0.1]);
+
+        delwrite.i(0).setBuffer([0.6, 0.7, 0.8, 0.9, 1]);
+        delwrite.dspTick();
+        delread.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0.2, 0.3, 0.4, 0.5, 0.6]);
+
+        delread.i(0).message(500);
+        delwrite.i(0).setBuffer([1.1, 1.2, 1.3, 1.4, 1.5]);
+        delwrite.dspTick();
+        delread.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0.6, 0.7, 0.8, 0.9, 1]);
+    });
+
 /******************** tests dsp objects ************************/
 
     module('Pd.objects - misc', {
@@ -581,6 +614,25 @@ $(document).ready(function() {
         raises(function() { msg.i(0).message('ouch', 'ich'); });
         raises(function() { msg.i(0).message(11); });
         raises(function() { msg.i(0).message('bang'); });
+    });
+
+    test('delline', function() {
+        var delline = new Pd.objects['delline'](null, ['del1', 10]);
+        delline.write([11, 22, 33, 44, 55]);
+        deepEqual(toArray(delline.data), [11, 22, 33, 44, 55, 0, 0, 0, 0, 0]);
+        delline.write([11, 22, 33, 44, 55, 66, 77]);
+        deepEqual(toArray(delline.data), [66, 77, 33, 44, 55, 11, 22, 33, 44, 55]);
+
+        var array = [0, 0, 0, 0, 0];
+        delline.read(array, delline.pos - 5);
+        deepEqual(array, [33, 44, 55, 66, 77]);
+        // position 0 has been overwritten already : 
+        raises(function() { delline.read(array, 0); });
+
+        var delline = new Pd.objects['delline'](null, ['del2', 10]);
+        delline.write([11, 22, 33, 44, 55]);
+        delline.read(array, -2);
+        deepEqual(array, [0, 0, 11, 22, 33]);
     });
 
     test('mtof', function() {

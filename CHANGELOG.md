@@ -4,7 +4,7 @@
 0.2.2
 ------
 
-- objects `[hip~]`, `[lop~]`
+- objects `[hip~]`, `[lop~]`, `[delread~]`, `[delwrite~]`
 
 0.2.1
 ------
