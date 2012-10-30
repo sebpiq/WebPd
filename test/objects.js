@@ -799,6 +799,9 @@ $(document).ready(function() {
     });
 
     test('float', function() {
+        // abbreviation
+        equal(Pd.objects['float'], Pd.objects['f']);
+
         var float = new Pd.objects['float']();
         equal(float.o(0).receivedMessage, undefined);
 
@@ -872,6 +875,9 @@ $(document).ready(function() {
     });
 
     test('trigger', function() {
+        // abbreviation
+        equal(Pd.objects['trigger'], Pd.objects['t']);
+
         var trigger = new Pd.objects['trigger'](null);
         equal(trigger.o(0).receivedMessage, undefined);
         equal(trigger.o(1).receivedMessage, undefined);
@@ -906,6 +912,9 @@ $(document).ready(function() {
     });
 
     test('select', function() {
+        // abbreviation
+        equal(Pd.objects['select'], Pd.objects['sel']);
+
         var select = new Pd.objects['select'](null, [3]);
         equal(select.o(0).receivedMessage, undefined);
         equal(select.o(1).receivedMessage, undefined);
@@ -936,6 +945,25 @@ $(document).ready(function() {
         equal(select.o(2).receivedMessage, undefined);
         deepEqual(select.o(3).receivedMessage, ['blablabla']);
         select.o(3).receivedMessage = undefined;
+
+        // Testing inlet 1 
+        select = new Pd.objects['select']();
+        select.i(0).message(0);
+        deepEqual(select.o(0).receivedMessage, ['bang']);
+        equal(select.o(1).receivedMessage, undefined);
+        select.o(0).receivedMessage = undefined;
+
+        select.i(1).message(2);
+        select.i(0).message(0);
+        equal(select.o(0).receivedMessage, undefined);
+        deepEqual(select.o(1).receivedMessage, [0]);
+        select.o(1).receivedMessage = undefined;
+
+        select.i(0).message(2);
+        deepEqual(select.o(0).receivedMessage, ['bang']);
+        equal(select.o(1).receivedMessage, undefined);
+        select.o(0).receivedMessage = undefined;
+        
     });
 
     test('moses', function() {
