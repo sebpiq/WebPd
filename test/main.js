@@ -71,12 +71,17 @@ $(document).ready(function() {
         equal(id1, id2);
     });
 
-    test('makeMsgFilter', function() {
-        var filter = Pd.makeMsgFilter([1]);
+    test('makeMsgTransfer', function() {
+        var filter = Pd.makeMsgTransfer([1]);
         deepEqual(filter([2, 'bla', 4]), [1]);
-        filter = Pd.makeMsgFilter([1, '$1', 'bla', '$3']);
-        deepEqual(filter(['bli', 'bla', 4, 5]), [1, 'bli', 'bla', 4]);
+        filter = Pd.makeMsgTransfer([1, '$1-bla-$3', 'bla', '$3']);
+        deepEqual(filter(['bli', 'bla', 4, 5]), [1, 'bli-bla-4', 'bla', 4]);
+        deepEqual(filter([7, 'bloop', 'ploo', 5]), [1, '7-bla-ploo', 'bla', 'ploo']);
     });
+
+    /*test('resolveAbbreviations', function() {
+        var dummyPatch
+    });*/
 
     test('isArray', function() {
         ok(Pd.isArray([]));

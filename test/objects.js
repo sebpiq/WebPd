@@ -583,6 +583,7 @@ $(document).ready(function() {
         setup: function() {
             Pd.blockSize = 4;
             this.sampleRate = Pd.sampleRate;
+            portletsTesting();
         },
         teardown: function() {
             Pd.sampleRate = this.sampleRate;
@@ -598,7 +599,7 @@ $(document).ready(function() {
         msg.i(0).message('bla', 123);
         deepEqual(msg.o(0).receivedMessage, [11]);
 
-        msg.setFilterMsg([11, '22']);
+        msg.setTransfer([11, '22']);
         msg.i(0).message('blibli');
         deepEqual(msg.o(0).receivedMessage, [11, '22']);
         msg.i(0).message('bang');
@@ -606,7 +607,7 @@ $(document).ready(function() {
         msg.i(0).message('b', 56, 78);
         deepEqual(msg.o(0).receivedMessage, [11, '22']);
 
-        msg.setFilterMsg(['$1', 33, '$3']);
+        msg.setTransfer(['$1', 33, '$3']);
         msg.i(0).message(22, 'bloblo', 44, 'blibli', 66);
         deepEqual(msg.o(0).receivedMessage, [22, 33, 44]);
         msg.i(0).message('bloblo', 'bleble', 'blybly');
