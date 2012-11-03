@@ -828,6 +828,11 @@ $(document).ready(function() {
         float = new Pd.objects['float'](null, [6]);
         float.i(0).message('bang');
         deepEqual(float.o(0).receivedMessage, [6]);
+
+        // Test $0 arg
+        var patch = new Pd.Patch();
+        float = new Pd.objects['float'](patch, ['$0']);
+        equal(float.val, patch.id);
     });
 
     test('+, -, *, /, mod', function() {

@@ -32,8 +32,8 @@
             // When clicking on the button, we get the frequency set by the user
             // and send a message to the patch
             $('#noteButton').click(function() {
-                patch.send('freq', parseFloat($('#freqInput').val()));
-                patch.send('note', 'bang');
+                patch.send(patch.id.toString() + '-freq', parseFloat($('#freqInput').val()));
+                patch.send(patch.id.toString() + '-note', 'bang');
             });
         </script>
     </body>

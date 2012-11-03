@@ -18,7 +18,7 @@ What doesn't work yet
 ----------------------
 
 Very little of the full Pure Data functionality has been implemented yet. To check-out which objects are implemented, you can use the [WebPd gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html). 
-Abbreviations, internal messages, abstractions and subpatches haven't been implemented yet. Forget externals.
+Internal messages, abstractions, subpatches and externals haven't been implemented yet.
 
 **But everything is not lost !!!** There is way enough objects to have fun. Always test your patches with the [WebPd gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon. Also, check-out [the roadmap](https://github.com/sebpiq/WebPd/wiki/Roadmap).
 

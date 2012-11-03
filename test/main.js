@@ -79,9 +79,16 @@ $(document).ready(function() {
         deepEqual(filter([7, 'bloop', 'ploo', 5]), [1, '7-bla-ploo', 'bla', 'ploo']);
     });
 
-    /*test('resolveAbbreviations', function() {
-        var dummyPatch
-    });*/
+    test('resolveArgs', function() {
+        var dummyPatch = {id: 9888}, resolved;
+        resolved = Pd.resolveArgs(['bla', 'bang', 'b', 'f', 'l', 'a', 's'], null);
+        deepEqual(resolved, ['bla', 'bang', 'bang', 'float', 'list', 'anything', 'symbol']);
+        resolved = Pd.resolveArgs([123, 'b', '$0-BLA', 'list'], dummyPatch);
+        deepEqual(resolved, [123, 'bang', '9888-BLA', 'list']);
+        raises(function() {
+            Pd.resolveArgs(['$0'], null);
+        });
+    });
 
     test('isArray', function() {
         ok(Pd.isArray([]));
