@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	    <title>No input</title>
+	    <script src="../../dist/webpd-latest.js"></script>
+        <script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+        <script src="jquery.kontrol.js"></script>
+        <style>
+            body {
+                background-color: #333;
+            }
+            .excite {
+                width: 50px;
+                height: 50px;
+                border-radius: 25px;
+                background-color: #fafafa;
+            }
+            .line {
+                display: inline-block;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="line1" class="line">
+            <input type="button" class="excite" name="EXCITE1"/>
+            <div><input type="text" value="10" class="delay" name="DEL1" /></div>
+            <div><input type="text" value="0" class="volume" name="VOL1" /></div>
+        </div>
+        <div id="line2" class="line">
+            <input type="button" class="excite" name="EXCITE2"/>
+            <div><input type="text" value="20" class="delay" name="DEL2" /></div>
+            <div><input type="text" value="0" class="volume" name="VOL2" /></div>
+        </div>
+        <div id="line3" class="line">
+            <input type="button" class="excite" name="EXCITE3"/>
+            <div><input type="text" value="40" class="delay" name="DEL3" /></div>
+            <div><input type="text" value="0" class="volume" name="VOL3" /></div>
+        </div>
+        <div id="line4" class="line">
+            <input type="button" class="excite" name="EXCITE4"/>
+            <div><input type="text" value="60" class="delay" name="DEL4" /></div>
+            <div><input type="text" value="0" class="volume" name="VOL4" /></div>
+        </div>
+
+        <script>
+            var patch;
+
+            var delayChange = function(val, input) {
+                if (!input) input = this.i;
+                val = parseInt(val, 10) * 0.1;
+                patch.send(patch.id + '-' + $(input).attr('name'), val);
+            };
+
+            var volumeChange = function(val, input) {
+                if (!input) input = this.i;
+                val = 1 + parseInt(val, 10) / 10000;
+                patch.send(patch.id + '-' + $(input).attr('name'), val);
+            };
+
+            var dialStyle = {
+                'angleOffset': -120,
+                'angleArc': 240,
+                'fgColor': '#fff',
+                'bgColor': '#444'
+            };
+
+            $('.delay').dial(
+                $.extend({
+                    'min': 0,
+                    'max': 100,
+                    'change': delayChange
+                }, dialStyle)
+            );
+
+            $('.volume').dial(
+                $.extend({
+                    'min': -100,
+                    'max': 100,
+                    'change': volumeChange
+                }, dialStyle)
+            );
+
+            $('.excite').click(function() {
+                patch.send(patch.id + '-' + $(this).attr('name'), 'bang');
+            });
+
+            // We Get the patch file with an Ajax request, then load this into a WebPd patch,
+            // which we then start.
+            $.get('no-input.pd', function(patchFile) {
+                patch = Pd.compat.parse(patchFile);
+                patch.play();
+                // Initialize values in pd patch
+                $('.volume').each(function(i, input) {
+                    volumeChange($(input).val(), input);
+                });
+                $('.delay').each(function(i, input) {
+                    delayChange($(input).val(), input);
+                });
+            });
+        </script>
+    </body>
+</html>
