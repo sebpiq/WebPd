@@ -1,5 +1,5 @@
 /*
- * WebPd - v0.2.2
+ * WebPd - v0.2.3
  * Copyright (c) 2012 Sébastien Piquemal <sebpiq@gmail.com>
  *
  * BSD Simplified License.
@@ -5010,6 +5010,7 @@ proto.getSyncWriteOffset = function () {
             line;
 
         // use our regular expression to match instances of valid Pd lines
+        linesRe.lastIndex = 0;
         while (line = linesRe.exec(txt)) {
             var tokens = line[1].split(tokensRe),
                 chunkType = tokens[0];
@@ -5067,6 +5068,9 @@ proto.getSyncWriteOffset = function () {
                     var obj1 = pd.getObject(parseInt(tokens[2], 10)),
                         obj2 = pd.getObject(parseInt(tokens[4], 10));
                     pd.connect(obj1.o(parseInt(tokens[3], 10)), obj2.i(parseInt(tokens[5], 10)));
+                } else if (elementType === 'coords') {
+                } else {
+                    throw new Error('unknown element "' + elementType + '"');
                 }
 
             } else if (chunkType === '#A') {
@@ -5078,17 +5082,19 @@ proto.getSyncWriteOffset = function () {
                         val = parseFloat(tokens[t]);
                         if (Pd.isNumber(val)) lastTable.data[idx] = val;
                     }
-                    
                 } else {
                     console.error('got table data outside of a table.');
                 }
+            } else if (chunkType === '#N') {
+            } else {
+                throw new Error('unknown chunk "' + chunkType + '"');
             }
         }
 
         // output a message with our graph
         console.debug('Graph:');
         console.debug(pd);
-
+        
         return pd;
     };
 
