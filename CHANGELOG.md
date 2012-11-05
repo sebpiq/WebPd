@@ -4,7 +4,7 @@
 0.2.2
 ------
 
-- objects `[hip~]`, `[lop~]`, `[delread~]`, `[delwrite~]`
+- objects `[hip~]`, `[lop~]`, `[delread~]`, `[delwrite~]`, `[clip~]`
 - abbreviations for object names and object arguments
 
 0.2.1

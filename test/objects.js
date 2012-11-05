@@ -577,6 +577,28 @@ $(document).ready(function() {
         deepEqual(roundArray(outBuff, 4), [0.6, 0.7, 0.8, 0.9, 1]);
     });
 
+    test('clip~', function() {
+        var clip = new Pd.objects['clip~'](),
+            outBuff = clip.o(0).getBuffer();
+
+        clip.i(0).setBuffer([-0.1, 0.2, 0.3, 1]);
+        clip.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0, 0, 0, 0]);
+
+        clip.i(1).message(-0.2);
+        clip.dspTick();
+        deepEqual(roundArray(outBuff, 4), [-0.1, 0, 0, 0]);
+
+        clip.i(2).message(2);
+        clip.dspTick();
+        deepEqual(roundArray(outBuff, 4), [-0.1, 0.2, 0.3, 1]);
+
+        clip.i(2).message(0.2);
+        clip.dspTick();
+        deepEqual(roundArray(outBuff, 4), [-0.1, 0.2, 0.2, 0.2]);
+        
+    });
+
 /******************** tests dsp objects ************************/
 
     module('Pd.objects - misc', {
