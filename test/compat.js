@@ -112,4 +112,34 @@ $(document).ready(function() {
         equal(osc.freq, 440);
     });
 
+    test('parse : unknown object', function() {
+        var patchStr = '#N canvas 778 17 450 300 10;\n' +
+            '#X obj 14 13 loadbang;\n' +
+            '#X obj 14 34 weirdObject;\n' +
+            '#X connect 0 0 1 0;';
+        raises(function() {
+            var patch = Pd.compat.parse(patchStr);
+        });
+    });
+
+    test('parse : unknown element', function() {
+        var patchStr = '#N canvas 778 17 450 300 10;\n' +
+            '#X obj 14 13 loadbang;\n' +
+            '#X weirdElement 14 34 dac~;\n' +
+            '#X connect 0 0 1 0;';
+        raises(function() {
+            var patch = Pd.compat.parse(patchStr);
+        });
+    });
+
+    test('parse : unknown chunk', function() {
+        var patchStr = '#N canvas 778 17 450 300 10;\n' +
+            '#X obj 14 13 loadbang;\n' +
+            '#WEIRD dac~ 14 34 dac~;\n' +
+            '#X connect 0 0 1 0;';
+        raises(function() {
+            var patch = Pd.compat.parse(patchStr);
+        });
+    });
+
 });
