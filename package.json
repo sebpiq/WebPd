@@ -1,7 +1,7 @@
 {
     "name": "WebPd",
     "preferGlobal": "false",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "author": "Sébastien Piquemal <sebpiq@gmail.com>",
     "description": "Pure Data in JavaScript",
     "repository": {
