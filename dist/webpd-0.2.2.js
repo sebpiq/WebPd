@@ -2510,7 +2510,7 @@ proto.getSyncWriteOffset = function () {
                     while (matchDollar = dollarVarReGlob.exec(arg)) {
                         patchInd = parseInt(matchDollar[1], 10);
                         if (patchInd >= patchArgs.length || patchInd < 0 ) 
-                            throw new Error('$' + (patchInd + 1) + ': argument number out of range');
+                            throw new Error('$' + patchInd + ': argument number out of range');
                         arg = arg.replace(matchDollar[0], patchArgs[patchInd]);
                     }
                     cleaned[i] = arg;
@@ -2901,7 +2901,8 @@ proto.getSyncWriteOffset = function () {
         }
 
         // initializes the object, handling the creation arguments
-        this.init.apply(this, Pd.resolveArgs(args, patch));
+        if (this.resolveArgs) args = Pd.resolveArgs(args, patch);
+        this.init.apply(this, args);
         if (this.type !== 'abstract') {
             Pd.register(this);
             if (patch) patch.addObject(this);
@@ -2928,6 +2929,9 @@ proto.getSyncWriteOffset = function () {
 
         // List of available abbreviations for that object.
         abbreviations: undefined,
+
+        // If this is true, `Pd.resolveArgs` is applied to the object's arguments.
+        resolveArgs: true,
 
         // Returns inlet `id` if it exists.
         i: function(id) {
@@ -3480,6 +3484,7 @@ proto.getSyncWriteOffset = function () {
 
         inletTypes: ['inlet'],
         outletTypes: ['outlet'],
+        resolveArgs: false,
 
         init: function() {
             this.setTransfer(Array.prototype.slice.call(arguments, 0));
@@ -5010,7 +5015,7 @@ proto.getSyncWriteOffset = function () {
             line;
 
         // use our regular expression to match instances of valid Pd lines
-        linesRe.lastIndex = 0;
+        linesRe.lastIndex = 0; // reset lastIndex, in case the previous call threw an error
         while (line = linesRe.exec(txt)) {
             var tokens = line[1].split(tokensRe),
                 chunkType = tokens[0];

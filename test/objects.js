@@ -637,6 +637,10 @@ $(document).ready(function() {
         raises(function() { msg.i(0).message('ouch', 'ich'); });
         raises(function() { msg.i(0).message(11); });
         raises(function() { msg.i(0).message('bang'); });
+
+        msg = new Pd.objects['message'](null, ['$4-blo', 12]);
+        msg.i(0).message(22, 'bloblo', 44, 'blibli', 66);
+        deepEqual(msg.o(0).receivedMessage, ['blibli-blo', 12]);
     });
 
     test('delline', function() {
