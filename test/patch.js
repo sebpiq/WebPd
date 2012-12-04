@@ -120,19 +120,6 @@ $(document).ready(function() {
         deepEqual(patch.getAllConnections(), []);
     });
 
-    test('graphiness : mapObjects', function() {
-        patch.addObject(obj1);
-        patch.addObject(obj2);
-
-        patch.mapObjects(function(obj) {
-            obj.checked = true;
-        });
-
-        deepEqual([obj1.objName, obj1.checked], ['obj1', true]);
-        deepEqual([obj2.objName, obj2.checked], ['obj2', true]);
-        deepEqual([obj3.objName, obj3.checked], ['obj3', undefined]);
-    });
-
     test('graphiness : getEndPoints', function() {
         patch.addObject(obj1);
         patch.addObject(ep1);
