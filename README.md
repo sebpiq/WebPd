@@ -17,10 +17,10 @@ Browser support
 What doesn't work yet
 ----------------------
 
-Very little of the full Pure Data functionality has been implemented yet. To check-out which objects are implemented, you can use the [WebPd gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html). 
+Very little of the full Pure Data functionality has been implemented yet. To check-out which objects are implemented, you can use the [WebPd gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html). 
 Internal messages, abstractions, subpatches and externals haven't been implemented yet.
 
-**But everything is not lost !!!** There is way enough objects to have fun. Always test your patches with the [WebPd gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon. Also, check-out [the roadmap](https://github.com/sebpiq/WebPd/wiki/Roadmap).
+**But everything is not lost !!!** There is way enough objects to have fun. Always test your patches with the [WebPd gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon. Also, check-out [the roadmap](https://github.com/sebpiq/WebPd/wiki/Roadmap).
 
 
 Getting started
@@ -28,7 +28,7 @@ Getting started
 
 **Note** : _for documentation about Pd objects or tutorials about how to make Pd patches, please refer to the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm)._
 
-**Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html)._
+**Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://funktion.fm/webpd/demos/sound-check/sound-check.html)._
 
 [Go to "dist/"](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` (click on the file, click on "raw", save the file) and include it in your webpage.
 
@@ -94,9 +94,9 @@ Demos
 
 There's a bunch of demos in `demos` (surprisingly :) :
 
-- [sound-check](http://beraebeo.futupeeps.com/webpd/demos/sound-check/sound-check.html) _a complete example to help you getting started._
-- [processing-storm](http://beraebeo.futupeeps.com/webpd/demos/processing-storm/processing-storm.html) _a example of using WebPd with processing._
-- [simple-gui](http://beraebeo.futupeeps.com/webpd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
+- [sound-check](http://funktion.fm/webpd/demos/sound-check/sound-check.html) _a complete example to help you getting started._
+- [processing-storm](http://funktion.fm/webpd/demos/processing-storm/processing-storm.html) _a example of using WebPd with processing._
+- [simple-gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
 
 **Note** : _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
 
