@@ -114,7 +114,7 @@ A workaround for Chrome is to launch it from a terminal with the option `--allow
 
 For any browser, you can also start a local HTTP server. For example, if you have [Python](http://www.python.org/) installed, go to the root directory of your project, run : 
 
-    python -m SimpleHTTPServer`
+    python -m SimpleHTTPServer
 
 then point your browser to [localhost:8000/my_page.html](localhost:8000/your_page.html).
 
