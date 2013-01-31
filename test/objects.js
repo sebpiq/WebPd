@@ -943,6 +943,41 @@ $(document).ready(function() {
         deepEqual(trigger.o(0).receivedMessage, [0]);
     });
 
+    test('pack', function() {
+        var patch = new Pd.Patch(),
+            pack = new Pd.objects['pack'](null, ['symbol', 's', 'f', 'float', 100, 'bla']);
+        equal(pack.inlets.length, 6);
+        pack.i(0).message('prout');
+        deepEqual(pack.o(0).receivedMessage, ['prout', 'symbol', 0, 0, 100, 'bla']);
+        pack.o(0).receivedMessage = undefined;
+        pack.i(1).message('blo');
+        pack.i(2).message(999);
+        pack.i(3).message(3);
+        pack.i(4).message(101);
+        pack.i(5).message('blu');
+        equal(pack.o(0).receivedMessage, undefined);
+        pack.i(0).message('bang');
+        deepEqual(pack.o(0).receivedMessage, ['prout', 'blo', 999, 3, 101, 'blu']);
+
+        pack = new Pd.objects['pack']();
+        equal(pack.inlets.length, 2);
+        pack.i(0).message('bang');
+        deepEqual(pack.o(0).receivedMessage, [0, 0]);
+        pack.o(0).receivedMessage = undefined;
+        pack.i(1).message(1);
+        equal(pack.o(0).receivedMessage, undefined);
+        pack.i(0).message('bang');
+        deepEqual(pack.o(0).receivedMessage, [0, 1]);
+        pack.o(0).receivedMessage = undefined;
+        pack.i(0).message(2);
+        deepEqual(pack.o(0).receivedMessage, [2, 1]);
+
+        pack = new Pd.objects['pack'](patch, ['$0']);
+        equal(pack.inlets.length, 1);
+        pack.i(0).message('bang');
+        pack.o(0).receivedMessage = [patch.id];
+    });
+
     test('select', function() {
         // abbreviation
         equal(Pd.objects['select'], Pd.objects['sel']);
