@@ -88,6 +88,25 @@ If the patch file is not too big, you can also include it directly in your page,
 </html>
 ```
 
+Sending / receiving messages
+------------------------------
+
+To receive messages from named senders within the patch (aka. send boxes : `[send someName]`), call the `receive` method of the patch object :
+
+```javascript
+patch.receive('someName', function(msg) {
+    console.log('received a message from "someName" : ', msg);
+    // your code ...
+});
+```
+
+In return, you can send messages from JavaScript to a named sender within the patch (aka. receive boxes : `[receive someName]`) by calling the `send` method of the patch object :
+
+```javascript
+patch.send('someName', 'hello!');
+```
+
+**Note** : _there is a an example of this in `demos/send-and-receive`. Also online [here](http://funktion.fm/webpd/demos/sound-check/send-and-receive.html)._
 
 Demos
 ----------
