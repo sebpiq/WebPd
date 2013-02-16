@@ -114,7 +114,7 @@ Demos
 There's a bunch of demos in `demos` (surprisingly :) :
 
 - [sound-check](http://funktion.fm/webpd/demos/sound-check/sound-check.html) _a complete example to help you getting started._
-- [sending-and-receive](http://funktion.fm/webpd/demos/send-and-receive/send-and-receive.html) _a complete example for sending/receiving messages_
+- [send-and-receive](http://funktion.fm/webpd/demos/send-and-receive/send-and-receive.html) _a complete example for sending/receiving messages_
 - [processing-storm](http://funktion.fm/webpd/demos/processing-storm/processing-storm.html) _a example of using WebPd with processing._
 - [simple-gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
 
