@@ -106,7 +106,7 @@ In return, you can send messages from JavaScript to a named sender within the pa
 patch.send('someName', 'hello!');
 ```
 
-**Note** : _there is a an example of this in `demos/send-and-receive`. Also online [here](http://funktion.fm/webpd/demos/sound-check/send-and-receive.html)._
+**Note** : _there is a an example of this in `demos/send-and-receive`. Also online [here](http://funktion.fm/webpd/demos/send-and-receive/send-and-receive.html)._
 
 Demos
 ----------
@@ -114,6 +114,7 @@ Demos
 There's a bunch of demos in `demos` (surprisingly :) :
 
 - [sound-check](http://funktion.fm/webpd/demos/sound-check/sound-check.html) _a complete example to help you getting started._
+- [sending-and-receive](http://funktion.fm/webpd/demos/send-and-receive/send-and-receive.html) _a complete example for sending/receiving messages_
 - [processing-storm](http://funktion.fm/webpd/demos/processing-storm/processing-storm.html) _a example of using WebPd with processing._
 - [simple-gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
 
