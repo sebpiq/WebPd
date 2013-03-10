@@ -185,6 +185,23 @@ $(document).ready(function() {
         ok(dev > 0.5);
     });
 
+    test('sig~', function() {
+        var sig = new Pd.objects['sig~'](),
+            outBuff = sig.o(0).getBuffer();
+        sig.dspTick();
+        deepEqual(roundArray(outBuff, 4), [0, 0, 0, 0]);
+        sig.i(0).message(124.8);
+        sig.dspTick();
+        deepEqual(roundArray(outBuff, 4), [124.8, 124.8, 124.8, 124.8]);
+
+        var sig = new Pd.objects['sig~'](null, [45]),
+            outBuff = sig.o(0).getBuffer();
+        sig.dspTick();
+        deepEqual(roundArray(outBuff, 4), [45, 45, 45, 45]);
+        sig.dspTick();
+        deepEqual(roundArray(outBuff, 4), [45, 45, 45, 45]);
+    });
+
     test('*~', function() {
         var mult = new Pd.objects['*~'](null, [2]),
             outBuff = mult.o(0).getBuffer(),

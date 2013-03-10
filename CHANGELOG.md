@@ -4,7 +4,7 @@
 0.2.3
 ------
 
-- objects `[pack]`
+- objects `[pack]`, `[sig~]`
 
 0.2.2
 ------
