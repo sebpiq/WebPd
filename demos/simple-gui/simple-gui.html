@@ -124,7 +124,7 @@
                 });
                 // Offset the objects to place them at positive coordinates on the canvas. 
                 var xList = [], yList = [], xMin, xMax, yMin, yMax;
-                gui.patch.mapObjects(function(obj) {
+                gui.patch.getAllObjects().map(function(obj) {
                     obj._guiData.x *= 2;
                     obj._guiData.y *= 2;
                     xList.push(obj._guiData.x);
@@ -134,7 +134,7 @@
                 yMin = Math.min.apply(Math, yList);
                 xMax = Math.max.apply(Math, xList);
                 yMax = Math.max.apply(Math, yList);
-                gui.patch.mapObjects(function(obj) {
+                gui.patch.getAllObjects().map(function(obj) {
                     obj._guiData.x -= xMin;
                     obj._guiData.y -= yMin;
                 });
