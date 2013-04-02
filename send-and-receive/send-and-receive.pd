@@ -1,0 +1,14 @@
+#N canvas 570 193 450 300 10;
+#X obj 104 42 receive hello_from_js;
+#X obj 104 166 send hello_from_pd;
+#X obj 149 107 f;
+#X obj 184 107 + 1;
+#X obj 104 131 pack s f;
+#X obj 104 70 t s b;
+#X connect 0 0 5 0;
+#X connect 2 0 3 0;
+#X connect 2 0 4 1;
+#X connect 3 0 2 1;
+#X connect 4 0 1 0;
+#X connect 5 0 4 0;
+#X connect 5 1 2 0;
