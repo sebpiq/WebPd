@@ -113,10 +113,10 @@ Demos
 
 There's a bunch of demos in `demos` (surprisingly :) :
 
-- [sound-check](http://funktion.fm/webpd/demos/sound-check/sound-check.html) _a complete example to help you getting started._
-- [send-and-receive](http://funktion.fm/webpd/demos/send-and-receive/send-and-receive.html) _a complete example for sending/receiving messages_
-- [processing-storm](http://funktion.fm/webpd/demos/processing-storm/processing-storm.html) _a example of using WebPd with processing._
-- [simple-gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
+- [sound-check](http://sebpiq.github.com/WebPd/sound-check/sound-check.html) _a complete example to help you getting started._
+- [send-and-receive](http://sebpiq.github.com/WebPd/send-and-receive/send-and-receive.html) _a complete example for sending/receiving messages._
+- [processing-storm](http://sebpiq.github.com/WebPd/processing-storm/processing-storm.html) _a example of using WebPd with processing._
+- [simple-gui](http://sebpiq.github.com/WebPd/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
 
 **Note** : _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
 
