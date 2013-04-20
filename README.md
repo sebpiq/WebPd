@@ -17,10 +17,10 @@ Browser support
 What doesn't work yet
 ----------------------
 
-Very little of the full Pure Data functionality has been implemented yet. To check-out which objects are implemented, you can use the [WebPd gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html). 
+Very little of the full Pure Data functionality has been implemented yet. To check-out which objects are implemented, you can use the [WebPd gui](http://sebpiq.github.com/WebPd/simple-gui/simple-gui.html). 
 Internal messages, abstractions, subpatches and externals haven't been implemented yet.
 
-**But everything is not lost !!!** There is way enough objects to have fun. Always test your patches with the [WebPd gui](http://funktion.fm/webpd/demos/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon. Also, check-out [the roadmap](https://github.com/sebpiq/WebPd/wiki/Roadmap).
+**But everything is not lost !!!** There is way enough objects to have fun. Always test your patches with the [WebPd gui](http://sebpiq.github.com/WebPd/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon. Also, check-out [the roadmap](https://github.com/sebpiq/WebPd/wiki/Roadmap).
 
 
 Getting started
@@ -28,7 +28,7 @@ Getting started
 
 **Note** : _for documentation about Pd objects or tutorials about how to make Pd patches, please refer to the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm)._
 
-**Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://funktion.fm/webpd/demos/sound-check/sound-check.html)._
+**Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://sebpiq.github.com/WebPd/sound-check/sound-check.html)._
 
 [Go to "dist/"](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` (click on the file, click on "raw", save the file) and include it in your webpage.
 
@@ -106,7 +106,7 @@ In return, you can send messages from JavaScript to a named sender within the pa
 patch.send('someName', 'hello!');
 ```
 
-**Note** : _there is a an example of this in `demos/send-and-receive`. Also online [here](http://funktion.fm/webpd/demos/send-and-receive/send-and-receive.html)._
+**Note** : _there is a an example of this in `demos/send-and-receive`. Also online [here](http://sebpiq.github.com/WebPd/send-and-receive/send-and-receive.html)._
 
 Demos
 ----------
@@ -115,7 +115,8 @@ There's a bunch of demos in `demos` (surprisingly :) :
 
 - [sound-check](http://sebpiq.github.com/WebPd/sound-check/sound-check.html) _a complete example to help you getting started._
 - [send-and-receive](http://sebpiq.github.com/WebPd/send-and-receive/send-and-receive.html) _a complete example for sending/receiving messages._
-- [processing-storm](http://sebpiq.github.com/WebPd/processing-storm/processing-storm.html) _a example of using WebPd with processing._
+- [processing-storm](http://sebpiq.github.com/WebPd/processing-storm/processing-storm.html) _an example of using WebPd with processing._
+- [random-drones](http://sebpiq.github.io/pd-fileutils/randomDrone.html) _a simple experiment, generating very simple random drone patches._
 - [simple-gui](http://sebpiq.github.com/WebPd/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
 
 **Note** : _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
