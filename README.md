@@ -7,6 +7,8 @@ WebPd
 
 - **WebPd** is also a **standalone DSP library**. Every object as you know it in Pure Data exposes a complete API, allowing developers to control **everything** with JavaScript.
 
+- checkout the [gallery](https://github.com/sebpiq/WebPd/wiki/Gallery).
+
 
 Browser support
 ---------------
