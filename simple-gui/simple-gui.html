@@ -119,9 +119,13 @@
                     gui.removeObject(objects[i]);
                 }
                 var textarea = $(this).find('textarea');
-                gui.patch = gui.eval('var patch = ', 'Pd.compat.parse(patchText);', {
-                    patchText: textarea.val()
-                });
+                try {
+                    gui.patch = gui.eval('var patch = ', 'Pd.compat.parse(patchText);', {
+                        patchText: textarea.val()
+                    });
+                catch (err) {
+                    alert('Error loading patch : ' + err)
+                }
                 // Offset the objects to place them at positive coordinates on the canvas. 
                 var xList = [], yList = [], xMin, xMax, yMin, yMax;
                 gui.patch.getAllObjects().map(function(obj) {
