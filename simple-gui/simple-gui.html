@@ -123,7 +123,7 @@
                     gui.patch = gui.eval('var patch = ', 'Pd.compat.parse(patchText);', {
                         patchText: textarea.val()
                     });
-                catch (err) {
+                } catch (err) {
                     alert('Error loading patch : ' + err)
                 }
                 // Offset the objects to place them at positive coordinates on the canvas. 
