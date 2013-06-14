@@ -1,25 +1,23 @@
 {
-    "name": "WebPd",
-    "preferGlobal": "false",
-    "version": "0.2.3",
-    "author": "Sébastien Piquemal <sebpiq@gmail.com>",
-    "description": "Pure Data in JavaScript",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/sebpiq/WebPd"
-    },
-    "keywords": [
-        "sound",
-        "pure data",
-        "dsp"
-    ],
-    "dependencies" : {},
-    "devDependencies": {
-        "grunt": "~0.3.16",
-        "jQuery": "~1.7.3"
-    },
-    "license": "Standard Improved BSD License",
-    "scripts": {
-        "test": "grunt travis --verbose"
-    }
+  "name": "WebPd",
+  "preferGlobal": "false",
+  "version": "0.3.0",
+  "author": "Sébastien Piquemal <sebpiq@gmail.com>",
+  "description": "Pure Data in JavaScript",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sebpiq/WebPd"
+  },
+  "keywords": ["sound", "pure data", "dsp"],
+  "dependencies" : {
+    "underscore": "1.4.x",
+    "chai": "1.6.x"
+  },
+  "devDependencies": {
+    "mocha": "1.11.x",
+    "grunt": "0.4.x",
+    "grunt-cli": "0.1.x",
+    "grunt-simple-mocha": "0.4.x"
+  },
+  "license": "Standard Improved BSD License"
 }
