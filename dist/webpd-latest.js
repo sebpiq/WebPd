@@ -5470,6 +5470,28 @@ function _getPathValue (parsed, obj) {
   return res;
 };
 
+},{}],31:[function(require,module,exports){
+/*!
+ * Chai - getName utility
+ * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+/**
+ * # getName(func)
+ *
+ * Gets the name of a function, in a cross-browser way.
+ *
+ * @param {Function} a function (usually a constructor)
+ */
+
+module.exports = function (func) {
+  if (func.name) return func.name;
+
+  var match = /^\s?function ([^(]*)\(/.exec(func);
+  return match && match[1] ? match[1] : "";
+};
+
 },{}],32:[function(require,module,exports){
 /*!
  * Chai - addProperty utility
@@ -5510,28 +5532,6 @@ module.exports = function (ctx, name, getter) {
       }
     , configurable: true
   });
-};
-
-},{}],31:[function(require,module,exports){
-/*!
- * Chai - getName utility
- * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
- * MIT Licensed
- */
-
-/**
- * # getName(func)
- *
- * Gets the name of a function, in a cross-browser way.
- *
- * @param {Function} a function (usually a constructor)
- */
-
-module.exports = function (func) {
-  if (func.name) return func.name;
-
-  var match = /^\s?function ([^(]*)\(/.exec(func);
-  return match && match[1] ? match[1] : "";
 };
 
 },{}],33:[function(require,module,exports){
@@ -6078,7 +6078,7 @@ module.exports = function (obj, args) {
   return flagMsg ? flagMsg + ': ' + msg : msg;
 };
 
-},{"./getActual":24,"./flag":27,"./inspect":25,"./objDisplay":26}],25:[function(require,module,exports){
+},{"./flag":27,"./getActual":24,"./inspect":25,"./objDisplay":26}],25:[function(require,module,exports){
 // This is (almost) directly from Node.js utils
 // https://github.com/joyent/node/blob/f8c335d0caf47f16d31413f89aa28eda3878e3aa/lib/util.js
 
@@ -6396,7 +6396,7 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-},{"./getProperties":39,"./getName":31,"./getEnumerableProperties":40}],26:[function(require,module,exports){
+},{"./getName":31,"./getProperties":39,"./getEnumerableProperties":40}],26:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>

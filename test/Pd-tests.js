@@ -63,7 +63,7 @@ describe('Pd', function() {
     it('should register the patch and give it an id', function() {
       var patch = new Patch()
       assert.ok(_.contains(Pd.patches, patch))
-      assert.ok(_.isNumber(patch.id))
+      assert.ok(_.isNumber(patch.patchId))
     })
 
   })
