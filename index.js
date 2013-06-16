@@ -22,6 +22,7 @@ var _ = require('underscore')
   , objects = require('./lib/objects')
   , Patch = require('./lib/Patch')
   , utils = require('./lib/utils')
+  , EventEmitter = require('events').EventEmitter
 
 var Pd = module.exports = {
 
@@ -43,6 +44,16 @@ var Pd = module.exports = {
       this.patches.forEach(function(patch) { patch.stop() })
       this._isStarted = false
     }
+  },
+
+  // Send a message to a named receiver inside the graph
+  send: function(name) {
+    this.emit.apply(this, ['msg:' + name].concat(_.toArray(arguments).slice(1)))
+  },
+
+  // Receive a message from a named sender inside the graph
+  receive: function(name, callback) {
+    this.on('msg:' + name, callback)
   },
 
   isStarted: function() {
@@ -95,6 +106,7 @@ var Pd = module.exports = {
 
 }
 
+_.extend(Pd, new EventEmitter())
 _.extend(Pd, utils.UniqueIdsMixin)
 if (typeof window !== 'undefined') window.Pd = Pd
 if (typeof webkitAudioContext !== 'undefined') Pd.WAAContext = new webkitAudioContext()
