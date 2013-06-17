@@ -1,781 +1,4 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , objects = require('./lib/objects')
-  , Patch = require('./lib/Patch')
-  , utils = require('./lib/utils')
-
-var Pd = module.exports = {
-
-  WAAContext: null,
-
-  patches: [],  
-
-  lib: objects,
-
-  start: function() {
-    if (!this.isStarted()) {
-      this.patches.forEach(function(patch) { patch.start() })
-      this._isStarted = true
-    }
-  },
-
-  stop: function() {
-    if (this.isStarted()) {
-      this.patches.forEach(function(patch) { patch.stop() })
-      this._isStarted = false
-    }
-  },
-
-  isStarted: function() {
-    return this._isStarted
-  },
-  _isStarted: false,
-
-  getDefaultPatch: function() {
-    this._defaultPatch = new Patch()
-    this.getDefaultPatch = function() { return Pd._defaultPatch }
-    return this._defaultPatch
-  },
-
-  register: function(patch) {
-    if (this.patches.indexOf(patch) === -1) {
-      this.patches.push(patch)
-      patch.patchId = this._generateId()
-    }
-  },
-
-  registerNamedObject: function(obj) {
-    var storeNamedObject = function(oldName, newName) {
-      var objType = obj.type
-        , nameMap, objList
-      Pd._namedObjects[objType] = nameMap = Pd._namedObjects[objType] || {}
-      nameMap[newName] = objList = nameMap[newName] || []
-
-      // Adding new mapping
-      if (objList.indexOf(obj) === -1) {
-        if (obj.nameIsUnique && objList.length > 0)
-          throw new Error('there is already a ' + objType + ' with name "' + newName + '"')
-        objList.push(obj)
-      }
-
-      // Removing old mapping
-      if (oldName) {
-        objList = nameMap[oldName]
-        objList.splice(objList.indexOf(obj), 1)
-      }
-    }
-    obj.on('change:name', storeNamedObject)
-    if (obj.name) storeNamedObject(null, obj.name)
-  },
-  _namedObjects: {},
-
-  // Returns an object list given the object `type` and `name`.
-  getNamedObjects: function(type, name) {
-    return ((this._namedObjects[type] || {})[name] || [])
-  }
-
-}
-
-_.extend(Pd, utils.UniqueIdsMixin)
-if (typeof window !== 'undefined') window.Pd = Pd
-if (typeof webkitAudioContext !== 'undefined') Pd.WAAContext = new webkitAudioContext()
-
-},{"./lib/objects":2,"./lib/Patch":3,"./lib/utils":4,"underscore":5}],3:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , utils = require('./utils')
-  , BaseNode = require('./BaseNode')
-
-var Patch = module.exports = function() {
-  BaseNode.apply(this, arguments)
-
-  // Patch-specific attributes
-  this.objects = []
-  this.patchId = null         // A globally unique id for the patch
-
-  // The patch registers to Pd
-  require('../index').register(this)
-}
-
-_.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
-
-  type: 'patch',
-
-  init: function() {},
-
-  start: function() {
-    this.objects.forEach(function(obj) { obj.start() })
-  },
-
-  stop: function() {
-    this.objects.forEach(function(obj) { obj.stop() })
-  },
-
-  // Send a message to a named receiver inside the graph
-  send: function(name) {
-    this.emit.apply(this, ['msg:' + name]
-      .concat(Array.prototype.slice.call(arguments, 1)))
-  },
-
-  // Receive a message from a named sender inside the graph
-  receive: function(name, callback) {
-    this.on('msg:' + name, callback)
-  },
-
-  // Adds an object to the patch.
-  // Also causes the patch to automatically assign an id to that object.
-  // This id can be used to uniquely identify the object in the patch.
-  // Also, if the patch is playing, the `load` method of the object will be called.
-  register: function(obj) {
-    if (this.objects.indexOf(obj) === -1) {
-      var Pd = require('../index')
-        , id = this._generateId()
-      obj.id = id
-      obj.patch = this
-      this.objects[id] = obj
-      if (Pd.isStarted()) obj.start()
-    }
-  }
-
-})
-
-},{"./utils":4,"./BaseNode":6,"../index":1,"underscore":5}],7:[function(require,module,exports){
-var events = require('events');
-
-exports.isArray = isArray;
-exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
-exports.isRegExp = function(obj){return Object.prototype.toString.call(obj) === '[object RegExp]'};
-
-
-exports.print = function () {};
-exports.puts = function () {};
-exports.debug = function() {};
-
-exports.inspect = function(obj, showHidden, depth, colors) {
-  var seen = [];
-
-  var stylize = function(str, styleType) {
-    // http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
-    var styles =
-        { 'bold' : [1, 22],
-          'italic' : [3, 23],
-          'underline' : [4, 24],
-          'inverse' : [7, 27],
-          'white' : [37, 39],
-          'grey' : [90, 39],
-          'black' : [30, 39],
-          'blue' : [34, 39],
-          'cyan' : [36, 39],
-          'green' : [32, 39],
-          'magenta' : [35, 39],
-          'red' : [31, 39],
-          'yellow' : [33, 39] };
-
-    var style =
-        { 'special': 'cyan',
-          'number': 'blue',
-          'boolean': 'yellow',
-          'undefined': 'grey',
-          'null': 'bold',
-          'string': 'green',
-          'date': 'magenta',
-          // "name": intentionally not styling
-          'regexp': 'red' }[styleType];
-
-    if (style) {
-      return '\033[' + styles[style][0] + 'm' + str +
-             '\033[' + styles[style][1] + 'm';
-    } else {
-      return str;
-    }
-  };
-  if (! colors) {
-    stylize = function(str, styleType) { return str; };
-  }
-
-  function format(value, recurseTimes) {
-    // Provide a hook for user-specified inspect functions.
-    // Check that value is an object with an inspect function on it
-    if (value && typeof value.inspect === 'function' &&
-        // Filter out the util module, it's inspect function is special
-        value !== exports &&
-        // Also filter out any prototype objects using the circular check.
-        !(value.constructor && value.constructor.prototype === value)) {
-      return value.inspect(recurseTimes);
-    }
-
-    // Primitive types cannot have properties
-    switch (typeof value) {
-      case 'undefined':
-        return stylize('undefined', 'undefined');
-
-      case 'string':
-        var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-                                                 .replace(/'/g, "\\'")
-                                                 .replace(/\\"/g, '"') + '\'';
-        return stylize(simple, 'string');
-
-      case 'number':
-        return stylize('' + value, 'number');
-
-      case 'boolean':
-        return stylize('' + value, 'boolean');
-    }
-    // For some reason typeof null is "object", so special case here.
-    if (value === null) {
-      return stylize('null', 'null');
-    }
-
-    // Look up the keys of the object.
-    var visible_keys = Object_keys(value);
-    var keys = showHidden ? Object_getOwnPropertyNames(value) : visible_keys;
-
-    // Functions without properties can be shortcutted.
-    if (typeof value === 'function' && keys.length === 0) {
-      if (isRegExp(value)) {
-        return stylize('' + value, 'regexp');
-      } else {
-        var name = value.name ? ': ' + value.name : '';
-        return stylize('[Function' + name + ']', 'special');
-      }
-    }
-
-    // Dates without properties can be shortcutted
-    if (isDate(value) && keys.length === 0) {
-      return stylize(value.toUTCString(), 'date');
-    }
-
-    var base, type, braces;
-    // Determine the object type
-    if (isArray(value)) {
-      type = 'Array';
-      braces = ['[', ']'];
-    } else {
-      type = 'Object';
-      braces = ['{', '}'];
-    }
-
-    // Make functions say that they are functions
-    if (typeof value === 'function') {
-      var n = value.name ? ': ' + value.name : '';
-      base = (isRegExp(value)) ? ' ' + value : ' [Function' + n + ']';
-    } else {
-      base = '';
-    }
-
-    // Make dates with properties first say the date
-    if (isDate(value)) {
-      base = ' ' + value.toUTCString();
-    }
-
-    if (keys.length === 0) {
-      return braces[0] + base + braces[1];
-    }
-
-    if (recurseTimes < 0) {
-      if (isRegExp(value)) {
-        return stylize('' + value, 'regexp');
-      } else {
-        return stylize('[Object]', 'special');
-      }
-    }
-
-    seen.push(value);
-
-    var output = keys.map(function(key) {
-      var name, str;
-      if (value.__lookupGetter__) {
-        if (value.__lookupGetter__(key)) {
-          if (value.__lookupSetter__(key)) {
-            str = stylize('[Getter/Setter]', 'special');
-          } else {
-            str = stylize('[Getter]', 'special');
-          }
-        } else {
-          if (value.__lookupSetter__(key)) {
-            str = stylize('[Setter]', 'special');
-          }
-        }
-      }
-      if (visible_keys.indexOf(key) < 0) {
-        name = '[' + key + ']';
-      }
-      if (!str) {
-        if (seen.indexOf(value[key]) < 0) {
-          if (recurseTimes === null) {
-            str = format(value[key]);
-          } else {
-            str = format(value[key], recurseTimes - 1);
-          }
-          if (str.indexOf('\n') > -1) {
-            if (isArray(value)) {
-              str = str.split('\n').map(function(line) {
-                return '  ' + line;
-              }).join('\n').substr(2);
-            } else {
-              str = '\n' + str.split('\n').map(function(line) {
-                return '   ' + line;
-              }).join('\n');
-            }
-          }
-        } else {
-          str = stylize('[Circular]', 'special');
-        }
-      }
-      if (typeof name === 'undefined') {
-        if (type === 'Array' && key.match(/^\d+$/)) {
-          return str;
-        }
-        name = JSON.stringify('' + key);
-        if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-          name = name.substr(1, name.length - 2);
-          name = stylize(name, 'name');
-        } else {
-          name = name.replace(/'/g, "\\'")
-                     .replace(/\\"/g, '"')
-                     .replace(/(^"|"$)/g, "'");
-          name = stylize(name, 'string');
-        }
-      }
-
-      return name + ': ' + str;
-    });
-
-    seen.pop();
-
-    var numLinesEst = 0;
-    var length = output.reduce(function(prev, cur) {
-      numLinesEst++;
-      if (cur.indexOf('\n') >= 0) numLinesEst++;
-      return prev + cur.length + 1;
-    }, 0);
-
-    if (length > 50) {
-      output = braces[0] +
-               (base === '' ? '' : base + '\n ') +
-               ' ' +
-               output.join(',\n  ') +
-               ' ' +
-               braces[1];
-
-    } else {
-      output = braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
-    }
-
-    return output;
-  }
-  return format(obj, (typeof depth === 'undefined' ? 2 : depth));
-};
-
-
-function isArray(ar) {
-  return ar instanceof Array ||
-         Array.isArray(ar) ||
-         (ar && ar !== Object.prototype && isArray(ar.__proto__));
-}
-
-
-function isRegExp(re) {
-  return re instanceof RegExp ||
-    (typeof re === 'object' && Object.prototype.toString.call(re) === '[object RegExp]');
-}
-
-
-function isDate(d) {
-  if (d instanceof Date) return true;
-  if (typeof d !== 'object') return false;
-  var properties = Date.prototype && Object_getOwnPropertyNames(Date.prototype);
-  var proto = d.__proto__ && Object_getOwnPropertyNames(d.__proto__);
-  return JSON.stringify(proto) === JSON.stringify(properties);
-}
-
-function pad(n) {
-  return n < 10 ? '0' + n.toString(10) : n.toString(10);
-}
-
-var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'];
-
-// 26 Feb 16:19:34
-function timestamp() {
-  var d = new Date();
-  var time = [pad(d.getHours()),
-              pad(d.getMinutes()),
-              pad(d.getSeconds())].join(':');
-  return [d.getDate(), months[d.getMonth()], time].join(' ');
-}
-
-exports.log = function (msg) {};
-
-exports.pump = null;
-
-var Object_keys = Object.keys || function (obj) {
-    var res = [];
-    for (var key in obj) res.push(key);
-    return res;
-};
-
-var Object_getOwnPropertyNames = Object.getOwnPropertyNames || function (obj) {
-    var res = [];
-    for (var key in obj) {
-        if (Object.hasOwnProperty.call(obj, key)) res.push(key);
-    }
-    return res;
-};
-
-var Object_create = Object.create || function (prototype, properties) {
-    // from es5-shim
-    var object;
-    if (prototype === null) {
-        object = { '__proto__' : null };
-    }
-    else {
-        if (typeof prototype !== 'object') {
-            throw new TypeError(
-                'typeof prototype[' + (typeof prototype) + '] != \'object\''
-            );
-        }
-        var Type = function () {};
-        Type.prototype = prototype;
-        object = new Type();
-        object.__proto__ = prototype;
-    }
-    if (typeof properties !== 'undefined' && Object.defineProperties) {
-        Object.defineProperties(object, properties);
-    }
-    return object;
-};
-
-exports.inherits = function(ctor, superCtor) {
-  ctor.super_ = superCtor;
-  ctor.prototype = Object_create(superCtor.prototype, {
-    constructor: {
-      value: ctor,
-      enumerable: false,
-      writable: true,
-      configurable: true
-    }
-  });
-};
-
-var formatRegExp = /%[sdj%]/g;
-exports.format = function(f) {
-  if (typeof f !== 'string') {
-    var objects = [];
-    for (var i = 0; i < arguments.length; i++) {
-      objects.push(exports.inspect(arguments[i]));
-    }
-    return objects.join(' ');
-  }
-
-  var i = 1;
-  var args = arguments;
-  var len = args.length;
-  var str = String(f).replace(formatRegExp, function(x) {
-    if (x === '%%') return '%';
-    if (i >= len) return x;
-    switch (x) {
-      case '%s': return String(args[i++]);
-      case '%d': return Number(args[i++]);
-      case '%j': return JSON.stringify(args[i++]);
-      default:
-        return x;
-    }
-  });
-  for(var x = args[i]; i < len; x = args[++i]){
-    if (x === null || typeof x !== 'object') {
-      str += ' ' + x;
-    } else {
-      str += ' ' + exports.inspect(x);
-    }
-  }
-  return str;
-};
-
-},{"events":8}],2:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , expect = require('chai').expect
-  , portlets = require('./portlets')
-  , PdObject = require('./PdObject')
-
-exports['osc~'] = PdObject.extend({
-
-  init: function(freq) {
-    this.osc = require('../index').WAAContext.createOscillator()
-    this.osc.type = 'sine'
-    this.i(0).message(freq)
-  },
-
-  start: function() {
-    this.osc.start(0)
-  },
-
-  stop: function() {
-    this.osc.stop(0)
-  },
-
-  inletDefs: [
-    portlets['inlet'].extend({
-      getWAA: function() { return [this.obj.osc.frequency, 0] },
-      message: function(freq) {
-        expect(freq).to.be.a('number', 'osc~::frequency')
-        this.obj.osc.frequency.value = freq
-      }
-    })
-  ],
-
-  outletDefs: [
-    portlets['outlet~'].extend({
-      getWAA: function() { return [this.obj.osc, 0] }
-    })
-  ]
-
-})
-
-exports['dac~'] = PdObject.extend({
-
-  init: function(args) {
-    var WAAContext = require('../index').WAAContext
-      , merger = WAAContext.createChannelMerger()
-      , gainL = WAAContext.createGain()
-      , gainR = WAAContext.createGain()
-    merger.connect(WAAContext.destination)
-    gainL.connect(merger, 0, 0)
-    gainR.connect(merger, 0, 1)
-    this.channels = [gainL, gainR]
-  },
-
-  inletDefs: [
-    portlets['inlet~'].extend({
-      getWAA: function() { return [this.obj.channels[0], 0] }
-    }),
-    portlets['inlet~'].extend({
-      getWAA: function() { return [this.obj.channels[1], 0] }
-    })
-  ]
-
-})
-/*
-Pd.objects['receive'] = PdObject.extend(utils.NamedMixin, {
-
-  inletDefs: [],
-  outletDefs: [portlets['outlet']],
-  abbreviations: ['r'],
-
-  init: function(name) {
-    var onMsgReceived = this._messageHandler()
-    this.on('change:name', function(oldName, newName) {
-      var patch = this.patch
-      if (patch) {
-        if (oldName) patch.removeListener('msg:' + oldName, onMsgReceived)
-        patch.on('msg:' + newName, onMsgReceived)
-      }
-    })
-    this.setName(name)
-  },
-
-  _messageHandler: function() {
-    var self = this
-    return function() {
-      var outlet = self.outlets[0]
-      outlet.message.apply(outlet, arguments)
-    }
-  }
-
-})
-
-Pd.objects['send'] = Pd.NamedObject.extend({
-
-  inletTypes: ['inlet'],
-  outletTypes: [],
-  abbreviations: ['s'],
-
-  init: function(name) {
-    this.setName(name);
-  },
-
-  message: function(inletId) {
-    if (inletId === 0) {
-      var patch = this.patch,
-        args = Array.prototype.slice.call(arguments, 1);
-
-      patch.send.apply(patch, [this.name].concat(args));
-    }
-  }
-
-})
-*/
-
-// Set `type` attribute to objects (override the default value 'abstract')
-_.pairs(exports).forEach(function(pair) {
-  pair[1].prototype.type = pair[0]
-})
-
-/*
-var Pd = {
-
-  connect: function(portlet, portlet) {
-    
-  }
-
-}
-
-Pd.createObject = function(proto, args) {
-
-  if (!Pd.objects.hasOwnProperty(proto))
-    throw new Error('unknown object ' + proto)
-
-  var objDef = Pd.objects[proto]
-    , obj = objDef.create(args)
-
-  objDef.inlets.forEach(function(inletDef) {
-    initAudioParam(obj[inletDef.name], inletDef)
-  })
-
-  return obj
-}
-
-*/
-
-},{"./portlets":9,"./PdObject":10,"../index":1,"underscore":5,"chai":11}],4:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , expect = require('chai').expect
-
-
-module.exports.chainExtend = function() {
-  var sources = Array.prototype.slice.call(arguments, 0)
-    , parent = this
-    , child = function() { parent.apply(this, arguments) }
-
-  // Fix instanceof
-  child.prototype = new parent()
-
-  // extend with new properties
-  _.extend.apply(this, [child.prototype, parent.prototype].concat(sources))
-
-  child.extend = this.extend
-  return child
-}
-
-
-// Simple mixin to add functionalities for generating unique ids.
-// Each object extended with this mixin has a separate id counter.
-// Therefore ids are not unique globally but unique for object.
-module.exports.UniqueIdsMixin = {
-
-  // Every time it is called, this method returns a new unique id.
-  _generateId: function() {
-    this._idCounter++
-    return this._idCounter
-  },
-
-  // Counter used internally to assign a unique id to objects
-  // this counter should never be decremented to ensure the id unicity
-  _idCounter: -1
-}
-
-
-module.exports.NamedMixin = {
-
-  nameIsUnique: false,
-
-  setName: function(name) {
-    // This method is a simple hack to register the object
-    // first time the name is set.
-    this._setName(name)
-    require('../index').registerNamedObject(this)
-    this.setName = this._setName
-  },
-
-  _setName: function(name) {
-    var oldName = this.name
-    expect(name).to.be.a('string', 'name')
-    this.name = name
-    this.emit('change:name', oldName, name)
-  }
-
-}
-
-},{"../index":1,"underscore":5,"chai":11}],12:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -829,7 +52,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],8:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 (function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -1015,7 +238,122 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":12}],5:[function(require,module,exports){
+},{"__browserify_process":1}],3:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , objects = require('./lib/objects')
+  , Patch = require('./lib/Patch')
+  , utils = require('./lib/utils')
+  , EventEmitter = require('events').EventEmitter
+
+var Pd = module.exports = {
+
+  WAAContext: null,
+
+  lib: objects,
+
+  Patch: Patch,
+
+  start: function() {
+    if (!this.isStarted()) {
+      this.patches.forEach(function(patch) { patch.start() })
+      this._isStarted = true
+    }
+  },
+
+  stop: function() {
+    if (this.isStarted()) {
+      this.patches.forEach(function(patch) { patch.stop() })
+      this._isStarted = false
+    }
+  },
+
+  // Send a message to a named receiver inside the graph
+  send: function(name) {
+    this.emit.apply(this, ['msg:' + name].concat(_.toArray(arguments).slice(1)))
+  },
+
+  // Receive a message from a named sender inside the graph
+  receive: function(name, callback) {
+    this.on('msg:' + name, callback)
+  },
+
+  isStarted: function() {
+    return this._isStarted
+  },
+  _isStarted: false,
+
+  getDefaultPatch: function() {
+    this._defaultPatch = new Patch()
+    this.getDefaultPatch = function() { return Pd._defaultPatch }
+    return this._defaultPatch
+  },
+
+  register: function(patch) {
+    if (this.patches.indexOf(patch) === -1) {
+      this.patches.push(patch)
+      patch.patchId = this._generateId()
+    }
+  },
+  patches: [],
+
+  registerNamedObject: function(obj) {
+    var storeNamedObject = function(oldName, newName) {
+      var objType = obj.type
+        , nameMap, objList
+      Pd._namedObjects[objType] = nameMap = Pd._namedObjects[objType] || {}
+      nameMap[newName] = objList = nameMap[newName] || []
+
+      // Adding new mapping
+      if (objList.indexOf(obj) === -1) {
+        if (obj.nameIsUnique && objList.length > 0)
+          throw new Error('there is already a ' + objType + ' with name "' + newName + '"')
+        objList.push(obj)
+      }
+
+      // Removing old mapping
+      if (oldName) {
+        objList = nameMap[oldName]
+        objList.splice(objList.indexOf(obj), 1)
+      }
+    }
+    obj.on('change:name', storeNamedObject)
+    if (obj.name) storeNamedObject(null, obj.name)
+  },
+  _namedObjects: {},
+
+  // Returns an object list given the object `type` and `name`.
+  getNamedObjects: function(type, name) {
+    return ((this._namedObjects[type] || {})[name] || [])
+  }
+
+}
+
+_.extend(Pd, new EventEmitter())
+_.extend(Pd, utils.UniqueIdsMixin)
+if (typeof window !== 'undefined') window.Pd = Pd
+if (typeof webkitAudioContext !== 'undefined') Pd.WAAContext = new webkitAudioContext()
+
+},{"events":2,"./lib/objects":4,"./lib/Patch":5,"./lib/utils":6,"underscore":7}],7:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -2244,7 +1582,715 @@ EventEmitter.prototype.listeners = function(type) {
 }).call(this);
 
 })()
-},{}],9:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
+var events = require('events');
+
+exports.isArray = isArray;
+exports.isDate = function(obj){return Object.prototype.toString.call(obj) === '[object Date]'};
+exports.isRegExp = function(obj){return Object.prototype.toString.call(obj) === '[object RegExp]'};
+
+
+exports.print = function () {};
+exports.puts = function () {};
+exports.debug = function() {};
+
+exports.inspect = function(obj, showHidden, depth, colors) {
+  var seen = [];
+
+  var stylize = function(str, styleType) {
+    // http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+    var styles =
+        { 'bold' : [1, 22],
+          'italic' : [3, 23],
+          'underline' : [4, 24],
+          'inverse' : [7, 27],
+          'white' : [37, 39],
+          'grey' : [90, 39],
+          'black' : [30, 39],
+          'blue' : [34, 39],
+          'cyan' : [36, 39],
+          'green' : [32, 39],
+          'magenta' : [35, 39],
+          'red' : [31, 39],
+          'yellow' : [33, 39] };
+
+    var style =
+        { 'special': 'cyan',
+          'number': 'blue',
+          'boolean': 'yellow',
+          'undefined': 'grey',
+          'null': 'bold',
+          'string': 'green',
+          'date': 'magenta',
+          // "name": intentionally not styling
+          'regexp': 'red' }[styleType];
+
+    if (style) {
+      return '\033[' + styles[style][0] + 'm' + str +
+             '\033[' + styles[style][1] + 'm';
+    } else {
+      return str;
+    }
+  };
+  if (! colors) {
+    stylize = function(str, styleType) { return str; };
+  }
+
+  function format(value, recurseTimes) {
+    // Provide a hook for user-specified inspect functions.
+    // Check that value is an object with an inspect function on it
+    if (value && typeof value.inspect === 'function' &&
+        // Filter out the util module, it's inspect function is special
+        value !== exports &&
+        // Also filter out any prototype objects using the circular check.
+        !(value.constructor && value.constructor.prototype === value)) {
+      return value.inspect(recurseTimes);
+    }
+
+    // Primitive types cannot have properties
+    switch (typeof value) {
+      case 'undefined':
+        return stylize('undefined', 'undefined');
+
+      case 'string':
+        var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
+                                                 .replace(/'/g, "\\'")
+                                                 .replace(/\\"/g, '"') + '\'';
+        return stylize(simple, 'string');
+
+      case 'number':
+        return stylize('' + value, 'number');
+
+      case 'boolean':
+        return stylize('' + value, 'boolean');
+    }
+    // For some reason typeof null is "object", so special case here.
+    if (value === null) {
+      return stylize('null', 'null');
+    }
+
+    // Look up the keys of the object.
+    var visible_keys = Object_keys(value);
+    var keys = showHidden ? Object_getOwnPropertyNames(value) : visible_keys;
+
+    // Functions without properties can be shortcutted.
+    if (typeof value === 'function' && keys.length === 0) {
+      if (isRegExp(value)) {
+        return stylize('' + value, 'regexp');
+      } else {
+        var name = value.name ? ': ' + value.name : '';
+        return stylize('[Function' + name + ']', 'special');
+      }
+    }
+
+    // Dates without properties can be shortcutted
+    if (isDate(value) && keys.length === 0) {
+      return stylize(value.toUTCString(), 'date');
+    }
+
+    var base, type, braces;
+    // Determine the object type
+    if (isArray(value)) {
+      type = 'Array';
+      braces = ['[', ']'];
+    } else {
+      type = 'Object';
+      braces = ['{', '}'];
+    }
+
+    // Make functions say that they are functions
+    if (typeof value === 'function') {
+      var n = value.name ? ': ' + value.name : '';
+      base = (isRegExp(value)) ? ' ' + value : ' [Function' + n + ']';
+    } else {
+      base = '';
+    }
+
+    // Make dates with properties first say the date
+    if (isDate(value)) {
+      base = ' ' + value.toUTCString();
+    }
+
+    if (keys.length === 0) {
+      return braces[0] + base + braces[1];
+    }
+
+    if (recurseTimes < 0) {
+      if (isRegExp(value)) {
+        return stylize('' + value, 'regexp');
+      } else {
+        return stylize('[Object]', 'special');
+      }
+    }
+
+    seen.push(value);
+
+    var output = keys.map(function(key) {
+      var name, str;
+      if (value.__lookupGetter__) {
+        if (value.__lookupGetter__(key)) {
+          if (value.__lookupSetter__(key)) {
+            str = stylize('[Getter/Setter]', 'special');
+          } else {
+            str = stylize('[Getter]', 'special');
+          }
+        } else {
+          if (value.__lookupSetter__(key)) {
+            str = stylize('[Setter]', 'special');
+          }
+        }
+      }
+      if (visible_keys.indexOf(key) < 0) {
+        name = '[' + key + ']';
+      }
+      if (!str) {
+        if (seen.indexOf(value[key]) < 0) {
+          if (recurseTimes === null) {
+            str = format(value[key]);
+          } else {
+            str = format(value[key], recurseTimes - 1);
+          }
+          if (str.indexOf('\n') > -1) {
+            if (isArray(value)) {
+              str = str.split('\n').map(function(line) {
+                return '  ' + line;
+              }).join('\n').substr(2);
+            } else {
+              str = '\n' + str.split('\n').map(function(line) {
+                return '   ' + line;
+              }).join('\n');
+            }
+          }
+        } else {
+          str = stylize('[Circular]', 'special');
+        }
+      }
+      if (typeof name === 'undefined') {
+        if (type === 'Array' && key.match(/^\d+$/)) {
+          return str;
+        }
+        name = JSON.stringify('' + key);
+        if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
+          name = name.substr(1, name.length - 2);
+          name = stylize(name, 'name');
+        } else {
+          name = name.replace(/'/g, "\\'")
+                     .replace(/\\"/g, '"')
+                     .replace(/(^"|"$)/g, "'");
+          name = stylize(name, 'string');
+        }
+      }
+
+      return name + ': ' + str;
+    });
+
+    seen.pop();
+
+    var numLinesEst = 0;
+    var length = output.reduce(function(prev, cur) {
+      numLinesEst++;
+      if (cur.indexOf('\n') >= 0) numLinesEst++;
+      return prev + cur.length + 1;
+    }, 0);
+
+    if (length > 50) {
+      output = braces[0] +
+               (base === '' ? '' : base + '\n ') +
+               ' ' +
+               output.join(',\n  ') +
+               ' ' +
+               braces[1];
+
+    } else {
+      output = braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
+    }
+
+    return output;
+  }
+  return format(obj, (typeof depth === 'undefined' ? 2 : depth));
+};
+
+
+function isArray(ar) {
+  return ar instanceof Array ||
+         Array.isArray(ar) ||
+         (ar && ar !== Object.prototype && isArray(ar.__proto__));
+}
+
+
+function isRegExp(re) {
+  return re instanceof RegExp ||
+    (typeof re === 'object' && Object.prototype.toString.call(re) === '[object RegExp]');
+}
+
+
+function isDate(d) {
+  if (d instanceof Date) return true;
+  if (typeof d !== 'object') return false;
+  var properties = Date.prototype && Object_getOwnPropertyNames(Date.prototype);
+  var proto = d.__proto__ && Object_getOwnPropertyNames(d.__proto__);
+  return JSON.stringify(proto) === JSON.stringify(properties);
+}
+
+function pad(n) {
+  return n < 10 ? '0' + n.toString(10) : n.toString(10);
+}
+
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+              'Oct', 'Nov', 'Dec'];
+
+// 26 Feb 16:19:34
+function timestamp() {
+  var d = new Date();
+  var time = [pad(d.getHours()),
+              pad(d.getMinutes()),
+              pad(d.getSeconds())].join(':');
+  return [d.getDate(), months[d.getMonth()], time].join(' ');
+}
+
+exports.log = function (msg) {};
+
+exports.pump = null;
+
+var Object_keys = Object.keys || function (obj) {
+    var res = [];
+    for (var key in obj) res.push(key);
+    return res;
+};
+
+var Object_getOwnPropertyNames = Object.getOwnPropertyNames || function (obj) {
+    var res = [];
+    for (var key in obj) {
+        if (Object.hasOwnProperty.call(obj, key)) res.push(key);
+    }
+    return res;
+};
+
+var Object_create = Object.create || function (prototype, properties) {
+    // from es5-shim
+    var object;
+    if (prototype === null) {
+        object = { '__proto__' : null };
+    }
+    else {
+        if (typeof prototype !== 'object') {
+            throw new TypeError(
+                'typeof prototype[' + (typeof prototype) + '] != \'object\''
+            );
+        }
+        var Type = function () {};
+        Type.prototype = prototype;
+        object = new Type();
+        object.__proto__ = prototype;
+    }
+    if (typeof properties !== 'undefined' && Object.defineProperties) {
+        Object.defineProperties(object, properties);
+    }
+    return object;
+};
+
+exports.inherits = function(ctor, superCtor) {
+  ctor.super_ = superCtor;
+  ctor.prototype = Object_create(superCtor.prototype, {
+    constructor: {
+      value: ctor,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    }
+  });
+};
+
+var formatRegExp = /%[sdj%]/g;
+exports.format = function(f) {
+  if (typeof f !== 'string') {
+    var objects = [];
+    for (var i = 0; i < arguments.length; i++) {
+      objects.push(exports.inspect(arguments[i]));
+    }
+    return objects.join(' ');
+  }
+
+  var i = 1;
+  var args = arguments;
+  var len = args.length;
+  var str = String(f).replace(formatRegExp, function(x) {
+    if (x === '%%') return '%';
+    if (i >= len) return x;
+    switch (x) {
+      case '%s': return String(args[i++]);
+      case '%d': return Number(args[i++]);
+      case '%j': return JSON.stringify(args[i++]);
+      default:
+        return x;
+    }
+  });
+  for(var x = args[i]; i < len; x = args[++i]){
+    if (x === null || typeof x !== 'object') {
+      str += ' ' + x;
+    } else {
+      str += ' ' + exports.inspect(x);
+    }
+  }
+  return str;
+};
+
+},{"events":2}],5:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , utils = require('./utils')
+  , objects = require('./objects')
+  , BaseNode = require('./BaseNode')
+  , isInletObject = function(obj) {
+    var lib = require('./objects')
+    return [lib['inlet'], lib['inlet~']].some(function(type) {
+      return obj instanceof type
+    })
+  }
+  , isOutletObject = function(obj) {
+    var lib = require('./objects')
+    return [lib['outlet'], lib['outlet~']].some(function(type) {
+      return obj instanceof type
+    })
+  }
+
+var Patch = module.exports = function() {
+  BaseNode.apply(this, arguments)
+
+  // Patch-specific attributes
+  this.objects = []
+  this.patchId = null         // A globally unique id for the patch
+
+  // The patch registers to Pd
+  require('../index').register(this)
+}
+
+_.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
+
+  type: 'patch',
+
+  init: function() {},
+
+  start: function() {
+    this.objects.forEach(function(obj) { obj.start() })
+  },
+
+  stop: function() {
+    this.objects.forEach(function(obj) { obj.stop() })
+  },
+
+  // Adds an object to the patch.
+  // Also causes the patch to automatically assign an id to that object.
+  // This id can be used to uniquely identify the object in the patch.
+  // Also, if the patch is playing, the `load` method of the object will be called.
+  register: function(obj) {
+    if (this.objects.indexOf(obj) === -1) {
+      var Pd = require('../index')
+        , id = this._generateId()
+      obj.id = id
+      obj.patch = this
+      this.objects[id] = obj
+      if (Pd.isStarted()) obj.start()
+    }
+
+    // When [inlet], [outlet~], ... is added to a patch, we add their portlets
+    // to the patch's portlets
+    if (isInletObject(obj)) {
+      this.inlets.push(obj.inlets[0])
+    }
+    if (isOutletObject(obj)) {
+      this.outlets.push(obj.outlets[0])
+    }
+  }
+
+})
+
+},{"./utils":6,"./objects":4,"./BaseNode":9,"../index":3,"underscore":7}],4:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , expect = require('chai').expect
+  , portlets = require('./portlets')
+  , utils = require('./utils')
+  , PdObject = require('./PdObject')
+
+/**************************** dsp *********************************/
+// TODO: dsp signal to first inlet
+// TODO: phase
+exports['osc~'] = PdObject.extend({
+
+  init: function(freq) {
+    this.osc = require('../index').WAAContext.createOscillator()
+    this.osc.type = 'sine'
+    this.i(0).message(freq)
+  },
+
+  start: function() {
+    this.osc.start(0)
+  },
+
+  stop: function() {
+    this.osc.stop(0)
+  },
+
+  inletDefs: [
+    portlets['inlet'].extend({
+      getWAAConnectors: function() { return [this.obj.osc.frequency, 0] },
+      message: function(freq) {
+        expect(freq).to.be.a('number', 'osc~::frequency')
+        this.obj.osc.frequency.value = freq
+      }
+    })
+  ],
+
+  outletDefs: [
+    portlets['outlet~'].extend({
+      getWAAConnectors: function() { return [this.obj.osc, 0] }
+    })
+  ]
+
+})
+
+exports['dac~'] = PdObject.extend({
+
+  init: function(args) {
+    var WAAContext = require('../index').WAAContext
+      , merger = WAAContext.createChannelMerger()
+      , gainL = WAAContext.createGain()
+      , gainR = WAAContext.createGain()
+    merger.connect(WAAContext.destination)
+    gainL.connect(merger, 0, 0)
+    gainR.connect(merger, 0, 1)
+    this.channels = [gainL, gainR]
+  },
+
+  inletDefs: [
+    portlets['inlet~'].extend({
+      getWAAConnectors: function() { return [this.obj.channels[0], 0] }
+    }),
+    portlets['inlet~'].extend({
+      getWAAConnectors: function() { return [this.obj.channels[1], 0] }
+    })
+  ]
+
+})
+
+/**************************** glue *********************************/
+exports['receive'] = PdObject.extend(utils.NamedMixin, {
+
+  outletDefs: [portlets['outlet']],
+  abbreviations: ['r'],
+
+  init: function(name) {
+    var onMsgReceived = this._messageHandler()
+    this.on('change:name', function(oldName, newName) {
+      var Pd = require('../index')
+      if (oldName) Pd.removeListener('msg:' + oldName, onMsgReceived)
+      Pd.on('msg:' + newName, onMsgReceived)
+    })
+    this.setName(name)
+  },
+
+  _messageHandler: function() {
+    var self = this
+    return function() {
+      var outlet = self.outlets[0]
+      outlet.message.apply(outlet, arguments)
+    }
+  }
+
+})
+
+exports['send'] = PdObject.extend(utils.NamedMixin, {
+
+  inletDefs: [
+    portlets['inlet'].extend({
+      message: function() {
+        var Pd = require('../index')
+        Pd.emit.apply(Pd, ['msg:' + this.obj.name].concat(_.toArray(arguments)))
+      }
+    })
+  ],
+  abbreviations: ['s'],
+
+  init: function(name) { this.setName(name) }
+
+})
+
+/**************************** outlets/inlets *********************************/
+var InletInlet = portlets['inlet'].extend({
+  message: function() {
+    var outlet = this.obj.outlets[0]
+    outlet.message.apply(outlet, arguments)
+  }
+})
+
+var InletInletDsp = InletInlet.extend({
+  getWAAConnectors: function() { return [this.obj.mixer, 0] }
+})
+
+var OutletOutletDsp = portlets['outlet~'].extend({
+  message: function() {
+    var args = arguments
+    this.sinks.forEach(function(sink) {
+      sink.message.apply(sink, args)
+    })
+  },
+  getWAAConnectors: function() { return [this.obj.mixer, 0] }
+})
+
+var DspPortletObjectMixin = {
+  init: function() {
+    this.mixer = require('../index').WAAContext.createGain()
+    this.mixer.gain.value = 1
+  }
+}
+
+exports['outlet'] = PdObject.extend({
+  inletDefs: [ InletInlet ],
+  outletDefs: [ portlets['outlet'].extend({ crossPatch: true }) ]
+})
+
+exports['inlet'] = PdObject.extend({
+  inletDefs: [ InletInlet.extend({ crossPatch: true }) ],
+  outletDefs: [ portlets['outlet'] ]
+})
+
+exports['outlet~'] = PdObject.extend(DspPortletObjectMixin, {
+  inletDefs: [ InletInletDsp ],
+  outletDefs: [ OutletOutletDsp.extend({ crossPatch: true }) ]
+})
+
+exports['inlet~'] = PdObject.extend(DspPortletObjectMixin, {
+  inletDefs: [ InletInletDsp.extend({ crossPatch: true }) ],
+  outletDefs: [ OutletOutletDsp ]
+})
+
+// Set `type` attribute to objects (override the default value 'abstract')
+_.pairs(exports).forEach(function(pair) {
+  pair[1].prototype.type = pair[0]
+})
+
+},{"./portlets":10,"./utils":6,"./PdObject":11,"../index":3,"underscore":7,"chai":12}],6:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , expect = require('chai').expect
+
+
+module.exports.chainExtend = function() {
+  var sources = Array.prototype.slice.call(arguments, 0)
+    , parent = this
+    , child = function() { parent.apply(this, arguments) }
+
+  // Fix instanceof
+  child.prototype = new parent()
+
+  // extend with new properties
+  _.extend.apply(this, [child.prototype, parent.prototype].concat(sources))
+
+  child.extend = this.extend
+  return child
+}
+
+
+// Simple mixin to add functionalities for generating unique ids.
+// Each object extended with this mixin has a separate id counter.
+// Therefore ids are not unique globally but unique for object.
+module.exports.UniqueIdsMixin = {
+
+  // Every time it is called, this method returns a new unique id.
+  _generateId: function() {
+    this._idCounter++
+    return this._idCounter
+  },
+
+  // Counter used internally to assign a unique id to objects
+  // this counter should never be decremented to ensure the id unicity
+  _idCounter: -1
+}
+
+
+module.exports.NamedMixin = {
+
+  nameIsUnique: false,
+
+  setName: function(name) {
+    // This method is a simple hack to register the object
+    // first time the name is set.
+    this._setName(name)
+    require('../index').registerNamedObject(this)
+    this.setName = this._setName
+  },
+
+  _setName: function(name) {
+    var oldName = this.name
+    expect(name).to.be.a('string', 'name')
+    this.name = name
+    this.emit('change:name', oldName, name)
+  }
+
+}
+
+},{"../index":3,"underscore":7,"chai":12}],12:[function(require,module,exports){
+module.exports = require('./lib/chai');
+
+},{"./lib/chai":13}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2279,20 +2325,27 @@ inherits(BasePortlet, EventEmitter)
 
 _.extend(BasePortlet.prototype, {
 
+  // True if the portlet can connect objects belonging to different patches
+  crossPatch: false,
+
   init: function() {},
 
+  // Connects two portlets together
   connect: function(other) { throw new Error('not implemented') },
 
+  // Disconnects two portlets
   disconnect: function(other) { throw new Error('not implemented') },
 
   // Generic function for connecting the calling portlet 
   // with `otherPortlet`. Returns true if a connection was indeed established
   _genericConnect: function(allConn, otherPortlet) {
     if (allConn.indexOf(otherPortlet) !== -1) return false
-    if (this.obj.patch !== otherPortlet.obj.patch)
+    if (!(this.crossPatch || otherPortlet.crossPatch)
+    && this.obj.patch !== otherPortlet.obj.patch)
       throw new Error('cannot connect objects that belong to different patches')
     allConn.push(otherPortlet)
     otherPortlet.connect(this)
+    this.emit('connection', otherPortlet)
     return true
   },
 
@@ -2303,6 +2356,7 @@ _.extend(BasePortlet.prototype, {
     if (connInd === -1) return false
     allConn.splice(connInd, 1)
     otherPortlet.disconnect(this)
+    this.emit('disconnection', otherPortlet)
     return true
   }
 
@@ -2315,23 +2369,16 @@ var BaseInlet = BasePortlet.extend({
     this.sources = []
   },
 
-  // Connects the inlet to the outlet `source`. 
-  // If the connection already exists, nothing happens.
   connect: function(source) {
-    if (this._genericConnect(this.sources, source))
-      this.emit('connection', source)
+    this._genericConnect(this.sources, source)
   },
 
-  // Disconnects the inlet from the outlet `source`.
-  // If the connection didn't exist, nothing happens.
   disconnect: function(source) {
-    if (this._genericDisconnect(this.sources, source))
-      this.emit('disconnection', source)
+    this._genericDisconnect(this.sources, source)
   },
 
-  // message received callback
   message: function() {
-    this.obj.message.apply(this.obj, [this.id].concat(Array.prototype.slice.call(arguments)))
+    this.obj.message.apply(this.obj, [this.id].concat(_.toArray(arguments)))
   }
 
 })
@@ -2342,22 +2389,13 @@ var BaseOutlet = BasePortlet.extend({
     this.sinks = []
   },
 
-  // Connects the outlet to the inlet `sink`. 
-  // If the connection already exists, nothing happens.
   connect: function(sink) {
-    if (this._genericConnect(this.sinks, sink))
-      this.emit('connection', sink)
+    this._genericConnect(this.sinks, sink)
   },
 
-  // Disconnects the outlet from the inlet `sink`.
-  // If the connection didn't exist, nothing happens.
   disconnect: function(sink) {
-    if (this._genericDisconnect(this.sinks, sink))
-      this.emit('disconnection', sink)
-  },
-
-  // Sends a message to all sinks
-  message: function() { throw new Error('not implemented') }
+    this._genericDisconnect(this.sinks, sink)
+  }
 
 })
 
@@ -2380,7 +2418,7 @@ module.exports['outlet'] = BaseOutlet.extend({
 // dsp inlet.
 module.exports['inlet~'] = BaseInlet.extend({
 
-  getWAA: function() { throw new Error('Implement me') }
+  getWAAConnectors: function() { throw new Error('Implement me') }
 
 })
 
@@ -2393,17 +2431,17 @@ module.exports['outlet~'] = BaseOutlet.extend({
 
   connect: function(sink) {
     BaseOutlet.prototype.connect.call(this, sink)
-    var sinkWAA = sink.getWAA()
-      , sourceWAA = this.getWAA()
+    var sinkWAA = sink.getWAAConnectors()
+      , sourceWAA = this.getWAAConnectors()
     sourceWAA[0].connect(sinkWAA[0], sourceWAA[1], sinkWAA[1])
   },
 
-  getWAA: function() { throw new Error('Implement me') }
+  getWAAConnectors: function() { throw new Error('Implement me') }
 
 })
 
 
-},{"util":7,"events":8,"./utils":4,"underscore":5}],10:[function(require,module,exports){
+},{"util":8,"events":2,"./utils":6,"underscore":7}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2446,7 +2484,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
   type: 'abstract'
 })
 
-},{"util":7,"events":8,"./portlets":9,"./utils":4,"./BaseNode":6,"../index":1,"underscore":5}],6:[function(require,module,exports){
+},{"util":8,"events":2,"./portlets":10,"./utils":6,"./BaseNode":9,"../index":3,"underscore":7}],9:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2478,7 +2516,7 @@ var BaseNode = module.exports = function() {
   var self = this
     , args = _.toArray(arguments)
     , patch = args[args.length - 1]
-  if (patch instanceof require('./Patch')) args = args.slice(0, -1)
+  if (patch && patch instanceof require('./Patch')) args = args.slice(0, -1)
   else patch = null
   this.id = null                  // A patch-wide unique id for the object
   this.patch = null               // The patch containing that node
@@ -2529,10 +2567,7 @@ _.extend(BaseNode.prototype, {
 })
 
 
-},{"util":7,"events":8,"./portlets":9,"./utils":4,"./Patch":3,"underscore":5}],11:[function(require,module,exports){
-module.exports = require('./lib/chai');
-
-},{"./lib/chai":13}],13:[function(require,module,exports){
+},{"util":8,"events":2,"./portlets":10,"./utils":6,"./Patch":5,"underscore":7}],13:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2013 Jake Luer <jake@alogicalparadox.com>
@@ -2675,85 +2710,6 @@ AssertionError.prototype.toString = function() {
   return this.message;
 };
 
-},{}],18:[function(require,module,exports){
-(function(){/*!
- * chai
- * Copyright(c) 2011-2013 Jake Luer <jake@alogicalparadox.com>
- * MIT Licensed
- */
-
-module.exports = function (chai, util) {
-  var Assertion = chai.Assertion;
-
-  function loadShould () {
-    // modify Object.prototype to have `should`
-    Object.defineProperty(Object.prototype, 'should',
-      {
-        set: function (value) {
-          // See https://github.com/chaijs/chai/issues/86: this makes
-          // `whatever.should = someValue` actually set `someValue`, which is
-          // especially useful for `global.should = require('chai').should()`.
-          //
-          // Note that we have to use [[DefineProperty]] instead of [[Put]]
-          // since otherwise we would trigger this very setter!
-          Object.defineProperty(this, 'should', {
-            value: value,
-            enumerable: true,
-            configurable: true,
-            writable: true
-          });
-        }
-      , get: function(){
-          if (this instanceof String || this instanceof Number) {
-            return new Assertion(this.constructor(this));
-          } else if (this instanceof Boolean) {
-            return new Assertion(this == true);
-          }
-          return new Assertion(this);
-        }
-      , configurable: true
-    });
-
-    var should = {};
-
-    should.equal = function (val1, val2, msg) {
-      new Assertion(val1, msg).to.equal(val2);
-    };
-
-    should.Throw = function (fn, errt, errs, msg) {
-      new Assertion(fn, msg).to.Throw(errt, errs);
-    };
-
-    should.exist = function (val, msg) {
-      new Assertion(val, msg).to.exist;
-    }
-
-    // negation
-    should.not = {}
-
-    should.not.equal = function (val1, val2, msg) {
-      new Assertion(val1, msg).to.not.equal(val2);
-    };
-
-    should.not.Throw = function (fn, errt, errs, msg) {
-      new Assertion(fn, msg).to.not.Throw(errt, errs);
-    };
-
-    should.not.exist = function (val, msg) {
-      new Assertion(val, msg).to.not.exist;
-    }
-
-    should['throw'] = should['Throw'];
-    should.not['throw'] = should.not['Throw'];
-
-    return should;
-  };
-
-  chai.should = loadShould;
-  chai.Should = loadShould;
-};
-
-})()
 },{}],16:[function(require,module,exports){
 /*!
  * chai
@@ -4026,6 +3982,99 @@ module.exports = function (chai, _) {
   });
 };
 
+},{}],17:[function(require,module,exports){
+/*!
+ * chai
+ * Copyright(c) 2011-2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+module.exports = function (chai, util) {
+  chai.expect = function (val, message) {
+    return new chai.Assertion(val, message);
+  };
+};
+
+
+},{}],18:[function(require,module,exports){
+(function(){/*!
+ * chai
+ * Copyright(c) 2011-2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+module.exports = function (chai, util) {
+  var Assertion = chai.Assertion;
+
+  function loadShould () {
+    // modify Object.prototype to have `should`
+    Object.defineProperty(Object.prototype, 'should',
+      {
+        set: function (value) {
+          // See https://github.com/chaijs/chai/issues/86: this makes
+          // `whatever.should = someValue` actually set `someValue`, which is
+          // especially useful for `global.should = require('chai').should()`.
+          //
+          // Note that we have to use [[DefineProperty]] instead of [[Put]]
+          // since otherwise we would trigger this very setter!
+          Object.defineProperty(this, 'should', {
+            value: value,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+        }
+      , get: function(){
+          if (this instanceof String || this instanceof Number) {
+            return new Assertion(this.constructor(this));
+          } else if (this instanceof Boolean) {
+            return new Assertion(this == true);
+          }
+          return new Assertion(this);
+        }
+      , configurable: true
+    });
+
+    var should = {};
+
+    should.equal = function (val1, val2, msg) {
+      new Assertion(val1, msg).to.equal(val2);
+    };
+
+    should.Throw = function (fn, errt, errs, msg) {
+      new Assertion(fn, msg).to.Throw(errt, errs);
+    };
+
+    should.exist = function (val, msg) {
+      new Assertion(val, msg).to.exist;
+    }
+
+    // negation
+    should.not = {}
+
+    should.not.equal = function (val1, val2, msg) {
+      new Assertion(val1, msg).to.not.equal(val2);
+    };
+
+    should.not.Throw = function (fn, errt, errs, msg) {
+      new Assertion(fn, msg).to.not.Throw(errt, errs);
+    };
+
+    should.not.exist = function (val, msg) {
+      new Assertion(val, msg).to.not.exist;
+    }
+
+    should['throw'] = should['Throw'];
+    should.not['throw'] = should.not['Throw'];
+
+    return should;
+  };
+
+  chai.should = loadShould;
+  chai.Should = loadShould;
+};
+
+})()
 },{}],19:[function(require,module,exports){
 /*!
  * chai
@@ -5088,20 +5137,6 @@ module.exports = function (chai, util) {
   ('Throw', 'throws');
 };
 
-},{}],17:[function(require,module,exports){
-/*!
- * chai
- * Copyright(c) 2011-2013 Jake Luer <jake@alogicalparadox.com>
- * MIT Licensed
- */
-
-module.exports = function (chai, util) {
-  chai.expect = function (val, message) {
-    return new chai.Assertion(val, message);
-  };
-};
-
-
 },{}],14:[function(require,module,exports){
 /*!
  * chai
@@ -5346,28 +5381,7 @@ exports.overwriteMethod = require('./overwriteMethod');
 exports.addChainableMethod = require('./addChainableMethod');
 
 
-},{"./test":21,"./type":22,"./getMessage":23,"./getActual":24,"./inspect":25,"./objDisplay":26,"./flag":27,"./transferFlags":28,"./eql":29,"./getPathValue":30,"./getName":31,"./addProperty":32,"./addMethod":33,"./overwriteProperty":34,"./overwriteMethod":35,"./addChainableMethod":36}],24:[function(require,module,exports){
-/*!
- * Chai - getActual utility
- * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
- * MIT Licensed
- */
-
-/**
- * # getActual(object, [actual])
- *
- * Returns the `actual` value for an Assertion
- *
- * @param {Object} object (constructed Assertion)
- * @param {Arguments} chai.Assertion.prototype.assert arguments
- */
-
-module.exports = function (obj, args) {
-  var actual = args[4];
-  return 'undefined' !== typeof actual ? actual : obj._obj;
-};
-
-},{}],22:[function(require,module,exports){
+},{"./test":21,"./type":22,"./getMessage":23,"./getActual":24,"./inspect":25,"./objDisplay":26,"./flag":27,"./transferFlags":28,"./eql":29,"./getPathValue":30,"./getName":31,"./addProperty":32,"./addMethod":33,"./overwriteProperty":34,"./overwriteMethod":35,"./addChainableMethod":36}],22:[function(require,module,exports){
 /*!
  * Chai - type utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
@@ -5412,6 +5426,107 @@ module.exports = function (obj) {
   if (obj === undefined) return 'undefined';
   if (obj === Object(obj)) return 'object';
   return typeof obj;
+};
+
+},{}],24:[function(require,module,exports){
+/*!
+ * Chai - getActual utility
+ * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+/**
+ * # getActual(object, [actual])
+ *
+ * Returns the `actual` value for an Assertion
+ *
+ * @param {Object} object (constructed Assertion)
+ * @param {Arguments} chai.Assertion.prototype.assert arguments
+ */
+
+module.exports = function (obj, args) {
+  var actual = args[4];
+  return 'undefined' !== typeof actual ? actual : obj._obj;
+};
+
+},{}],27:[function(require,module,exports){
+/*!
+ * Chai - flag utility
+ * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+/**
+ * ### flag(object ,key, [value])
+ *
+ * Get or set a flag value on an object. If a
+ * value is provided it will be set, else it will
+ * return the currently set value or `undefined` if
+ * the value is not set.
+ *
+ *     utils.flag(this, 'foo', 'bar'); // setter
+ *     utils.flag(this, 'foo'); // getter, returns `bar`
+ *
+ * @param {Object} object (constructed Assertion
+ * @param {String} key
+ * @param {Mixed} value (optional)
+ * @name flag
+ * @api private
+ */
+
+module.exports = function (obj, key, value) {
+  var flags = obj.__flags || (obj.__flags = Object.create(null));
+  if (arguments.length === 3) {
+    flags[key] = value;
+  } else {
+    return flags[key];
+  }
+};
+
+},{}],28:[function(require,module,exports){
+/*!
+ * Chai - transferFlags utility
+ * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+/**
+ * ### transferFlags(assertion, object, includeAll = true)
+ *
+ * Transfer all the flags for `assertion` to `object`. If
+ * `includeAll` is set to `false`, then the base Chai
+ * assertion flags (namely `object`, `ssfi`, and `message`)
+ * will not be transferred.
+ *
+ *
+ *     var newAssertion = new Assertion();
+ *     utils.transferFlags(assertion, newAssertion);
+ *
+ *     var anotherAsseriton = new Assertion(myObj);
+ *     utils.transferFlags(assertion, anotherAssertion, false);
+ *
+ * @param {Assertion} assertion the assertion to transfer the flags from
+ * @param {Object} object the object to transfer the flags too; usually a new assertion
+ * @param {Boolean} includeAll
+ * @name getAllFlags
+ * @api private
+ */
+
+module.exports = function (assertion, object, includeAll) {
+  var flags = assertion.__flags || (assertion.__flags = Object.create(null));
+
+  if (!object.__flags) {
+    object.__flags = Object.create(null);
+  }
+
+  includeAll = arguments.length === 3 ? includeAll : true;
+
+  for (var flag in flags) {
+    if (includeAll ||
+        (flag !== 'object' && flag !== 'ssfi' && flag != 'message')) {
+      object.__flags[flag] = flags[flag];
+    }
+  }
 };
 
 },{}],30:[function(require,module,exports){
@@ -5540,38 +5655,85 @@ module.exports = function (func) {
   return match && match[1] ? match[1] : "";
 };
 
-},{}],27:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /*!
- * Chai - flag utility
+ * Chai - addProperty utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
  * MIT Licensed
  */
 
 /**
- * ### flag(object ,key, [value])
+ * ### addProperty (ctx, name, getter)
  *
- * Get or set a flag value on an object. If a
- * value is provided it will be set, else it will
- * return the currently set value or `undefined` if
- * the value is not set.
+ * Adds a property to the prototype of an object.
  *
- *     utils.flag(this, 'foo', 'bar'); // setter
- *     utils.flag(this, 'foo'); // getter, returns `bar`
+ *     utils.addProperty(chai.Assertion.prototype, 'foo', function () {
+ *       var obj = utils.flag(this, 'object');
+ *       new chai.Assertion(obj).to.be.instanceof(Foo);
+ *     });
  *
- * @param {Object} object (constructed Assertion
- * @param {String} key
- * @param {Mixed} value (optional)
- * @name flag
- * @api private
+ * Can also be accessed directly from `chai.Assertion`.
+ *
+ *     chai.Assertion.addProperty('foo', fn);
+ *
+ * Then can be used as any other assertion.
+ *
+ *     expect(myFoo).to.be.foo;
+ *
+ * @param {Object} ctx object to which the property is added
+ * @param {String} name of property to add
+ * @param {Function} getter function to be used for name
+ * @name addProperty
+ * @api public
  */
 
-module.exports = function (obj, key, value) {
-  var flags = obj.__flags || (obj.__flags = Object.create(null));
-  if (arguments.length === 3) {
-    flags[key] = value;
-  } else {
-    return flags[key];
-  }
+module.exports = function (ctx, name, getter) {
+  Object.defineProperty(ctx, name,
+    { get: function () {
+        var result = getter.call(this);
+        return result === undefined ? this : result;
+      }
+    , configurable: true
+  });
+};
+
+},{}],33:[function(require,module,exports){
+/*!
+ * Chai - addMethod utility
+ * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
+ * MIT Licensed
+ */
+
+/**
+ * ### .addMethod (ctx, name, method)
+ *
+ * Adds a method to the prototype of an object.
+ *
+ *     utils.addMethod(chai.Assertion.prototype, 'foo', function (str) {
+ *       var obj = utils.flag(this, 'object');
+ *       new chai.Assertion(obj).to.be.equal(str);
+ *     });
+ *
+ * Can also be accessed directly from `chai.Assertion`.
+ *
+ *     chai.Assertion.addMethod('foo', fn);
+ *
+ * Then can be used as any other assertion.
+ *
+ *     expect(fooStr).to.be.foo('bar');
+ *
+ * @param {Object} ctx object to which the method is added
+ * @param {String} name of method to add
+ * @param {Function} method function to be used for name
+ * @name addMethod
+ * @api public
+ */
+
+module.exports = function (ctx, name, method) {
+  ctx[name] = function () {
+    var result = method.apply(this, arguments);
+    return result === undefined ? this : result;
+  };
 };
 
 },{}],34:[function(require,module,exports){
@@ -5683,134 +5845,324 @@ module.exports = function (ctx, name, method) {
   }
 };
 
-},{}],32:[function(require,module,exports){
-/*!
- * Chai - addProperty utility
- * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
- * MIT Licensed
- */
+},{}],37:[function(require,module,exports){
+(function(){// UTILITY
+var util = require('util');
+var Buffer = require("buffer").Buffer;
+var pSlice = Array.prototype.slice;
 
-/**
- * ### addProperty (ctx, name, getter)
- *
- * Adds a property to the prototype of an object.
- *
- *     utils.addProperty(chai.Assertion.prototype, 'foo', function () {
- *       var obj = utils.flag(this, 'object');
- *       new chai.Assertion(obj).to.be.instanceof(Foo);
- *     });
- *
- * Can also be accessed directly from `chai.Assertion`.
- *
- *     chai.Assertion.addProperty('foo', fn);
- *
- * Then can be used as any other assertion.
- *
- *     expect(myFoo).to.be.foo;
- *
- * @param {Object} ctx object to which the property is added
- * @param {String} name of property to add
- * @param {Function} getter function to be used for name
- * @name addProperty
- * @api public
- */
-
-module.exports = function (ctx, name, getter) {
-  Object.defineProperty(ctx, name,
-    { get: function () {
-        var result = getter.call(this);
-        return result === undefined ? this : result;
-      }
-    , configurable: true
-  });
-};
-
-},{}],28:[function(require,module,exports){
-/*!
- * Chai - transferFlags utility
- * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
- * MIT Licensed
- */
-
-/**
- * ### transferFlags(assertion, object, includeAll = true)
- *
- * Transfer all the flags for `assertion` to `object`. If
- * `includeAll` is set to `false`, then the base Chai
- * assertion flags (namely `object`, `ssfi`, and `message`)
- * will not be transferred.
- *
- *
- *     var newAssertion = new Assertion();
- *     utils.transferFlags(assertion, newAssertion);
- *
- *     var anotherAsseriton = new Assertion(myObj);
- *     utils.transferFlags(assertion, anotherAssertion, false);
- *
- * @param {Assertion} assertion the assertion to transfer the flags from
- * @param {Object} object the object to transfer the flags too; usually a new assertion
- * @param {Boolean} includeAll
- * @name getAllFlags
- * @api private
- */
-
-module.exports = function (assertion, object, includeAll) {
-  var flags = assertion.__flags || (assertion.__flags = Object.create(null));
-
-  if (!object.__flags) {
-    object.__flags = Object.create(null);
-  }
-
-  includeAll = arguments.length === 3 ? includeAll : true;
-
-  for (var flag in flags) {
-    if (includeAll ||
-        (flag !== 'object' && flag !== 'ssfi' && flag != 'message')) {
-      object.__flags[flag] = flags[flag];
+function objectKeys(object) {
+  if (Object.keys) return Object.keys(object);
+  var result = [];
+  for (var name in object) {
+    if (Object.prototype.hasOwnProperty.call(object, name)) {
+      result.push(name);
     }
   }
+  return result;
+}
+
+// 1. The assert module provides functions that throw
+// AssertionError's when particular conditions are not met. The
+// assert module must conform to the following interface.
+
+var assert = module.exports = ok;
+
+// 2. The AssertionError is defined in assert.
+// new assert.AssertionError({ message: message,
+//                             actual: actual,
+//                             expected: expected })
+
+assert.AssertionError = function AssertionError(options) {
+  this.name = 'AssertionError';
+  this.message = options.message;
+  this.actual = options.actual;
+  this.expected = options.expected;
+  this.operator = options.operator;
+  var stackStartFunction = options.stackStartFunction || fail;
+
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, stackStartFunction);
+  }
+};
+util.inherits(assert.AssertionError, Error);
+
+function replacer(key, value) {
+  if (value === undefined) {
+    return '' + value;
+  }
+  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+    return value.toString();
+  }
+  if (typeof value === 'function' || value instanceof RegExp) {
+    return value.toString();
+  }
+  return value;
+}
+
+function truncate(s, n) {
+  if (typeof s == 'string') {
+    return s.length < n ? s : s.slice(0, n);
+  } else {
+    return s;
+  }
+}
+
+assert.AssertionError.prototype.toString = function() {
+  if (this.message) {
+    return [this.name + ':', this.message].join(' ');
+  } else {
+    return [
+      this.name + ':',
+      truncate(JSON.stringify(this.actual, replacer), 128),
+      this.operator,
+      truncate(JSON.stringify(this.expected, replacer), 128)
+    ].join(' ');
+  }
 };
 
-},{}],33:[function(require,module,exports){
-/*!
- * Chai - addMethod utility
- * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
- * MIT Licensed
- */
+// assert.AssertionError instanceof Error
 
-/**
- * ### .addMethod (ctx, name, method)
- *
- * Adds a method to the prototype of an object.
- *
- *     utils.addMethod(chai.Assertion.prototype, 'foo', function (str) {
- *       var obj = utils.flag(this, 'object');
- *       new chai.Assertion(obj).to.be.equal(str);
- *     });
- *
- * Can also be accessed directly from `chai.Assertion`.
- *
- *     chai.Assertion.addMethod('foo', fn);
- *
- * Then can be used as any other assertion.
- *
- *     expect(fooStr).to.be.foo('bar');
- *
- * @param {Object} ctx object to which the method is added
- * @param {String} name of method to add
- * @param {Function} method function to be used for name
- * @name addMethod
- * @api public
- */
+assert.AssertionError.__proto__ = Error.prototype;
 
-module.exports = function (ctx, name, method) {
-  ctx[name] = function () {
-    var result = method.apply(this, arguments);
-    return result === undefined ? this : result;
-  };
+// At present only the three keys mentioned above are used and
+// understood by the spec. Implementations or sub modules can pass
+// other keys to the AssertionError's constructor - they will be
+// ignored.
+
+// 3. All of the following functions must throw an AssertionError
+// when a corresponding condition is not met, with a message that
+// may be undefined if not provided.  All assertion methods provide
+// both the actual and expected values to the assertion error for
+// display purposes.
+
+function fail(actual, expected, message, operator, stackStartFunction) {
+  throw new assert.AssertionError({
+    message: message,
+    actual: actual,
+    expected: expected,
+    operator: operator,
+    stackStartFunction: stackStartFunction
+  });
+}
+
+// EXTENSION! allows for well behaved errors defined elsewhere.
+assert.fail = fail;
+
+// 4. Pure assertion tests whether a value is truthy, as determined
+// by !!guard.
+// assert.ok(guard, message_opt);
+// This statement is equivalent to assert.equal(true, guard,
+// message_opt);. To test strictly for the value true, use
+// assert.strictEqual(true, guard, message_opt);.
+
+function ok(value, message) {
+  if (!!!value) fail(value, true, message, '==', assert.ok);
+}
+assert.ok = ok;
+
+// 5. The equality assertion tests shallow, coercive equality with
+// ==.
+// assert.equal(actual, expected, message_opt);
+
+assert.equal = function equal(actual, expected, message) {
+  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
 };
 
-},{}],21:[function(require,module,exports){
+// 6. The non-equality assertion tests for whether two objects are not equal
+// with != assert.notEqual(actual, expected, message_opt);
+
+assert.notEqual = function notEqual(actual, expected, message) {
+  if (actual == expected) {
+    fail(actual, expected, message, '!=', assert.notEqual);
+  }
+};
+
+// 7. The equivalence assertion tests a deep equality relation.
+// assert.deepEqual(actual, expected, message_opt);
+
+assert.deepEqual = function deepEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
+  }
+};
+
+function _deepEqual(actual, expected) {
+  // 7.1. All identical values are equivalent, as determined by ===.
+  if (actual === expected) {
+    return true;
+
+  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
+    if (actual.length != expected.length) return false;
+
+    for (var i = 0; i < actual.length; i++) {
+      if (actual[i] !== expected[i]) return false;
+    }
+
+    return true;
+
+  // 7.2. If the expected value is a Date object, the actual value is
+  // equivalent if it is also a Date object that refers to the same time.
+  } else if (actual instanceof Date && expected instanceof Date) {
+    return actual.getTime() === expected.getTime();
+
+  // 7.3. Other pairs that do not both pass typeof value == 'object',
+  // equivalence is determined by ==.
+  } else if (typeof actual != 'object' && typeof expected != 'object') {
+    return actual == expected;
+
+  // 7.4. For all other Object pairs, including Array objects, equivalence is
+  // determined by having the same number of owned properties (as verified
+  // with Object.prototype.hasOwnProperty.call), the same set of keys
+  // (although not necessarily the same order), equivalent values for every
+  // corresponding key, and an identical 'prototype' property. Note: this
+  // accounts for both named and indexed properties on Arrays.
+  } else {
+    return objEquiv(actual, expected);
+  }
+}
+
+function isUndefinedOrNull(value) {
+  return value === null || value === undefined;
+}
+
+function isArguments(object) {
+  return Object.prototype.toString.call(object) == '[object Arguments]';
+}
+
+function objEquiv(a, b) {
+  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
+    return false;
+  // an identical 'prototype' property.
+  if (a.prototype !== b.prototype) return false;
+  //~~~I've managed to break Object.keys through screwy arguments passing.
+  //   Converting to array solves the problem.
+  if (isArguments(a)) {
+    if (!isArguments(b)) {
+      return false;
+    }
+    a = pSlice.call(a);
+    b = pSlice.call(b);
+    return _deepEqual(a, b);
+  }
+  try {
+    var ka = objectKeys(a),
+        kb = objectKeys(b),
+        key, i;
+  } catch (e) {//happens when one is a string literal and the other isn't
+    return false;
+  }
+  // having the same number of owned properties (keys incorporates
+  // hasOwnProperty)
+  if (ka.length != kb.length)
+    return false;
+  //the same set of keys (although not necessarily the same order),
+  ka.sort();
+  kb.sort();
+  //~~~cheap key test
+  for (i = ka.length - 1; i >= 0; i--) {
+    if (ka[i] != kb[i])
+      return false;
+  }
+  //equivalent values for every corresponding key, and
+  //~~~possibly expensive deep test
+  for (i = ka.length - 1; i >= 0; i--) {
+    key = ka[i];
+    if (!_deepEqual(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+// 8. The non-equivalence assertion tests for any deep inequality.
+// assert.notDeepEqual(actual, expected, message_opt);
+
+assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
+  }
+};
+
+// 9. The strict equality assertion tests strict equality, as determined by ===.
+// assert.strictEqual(actual, expected, message_opt);
+
+assert.strictEqual = function strictEqual(actual, expected, message) {
+  if (actual !== expected) {
+    fail(actual, expected, message, '===', assert.strictEqual);
+  }
+};
+
+// 10. The strict non-equality assertion tests for strict inequality, as
+// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
+
+assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
+  if (actual === expected) {
+    fail(actual, expected, message, '!==', assert.notStrictEqual);
+  }
+};
+
+function expectedException(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+
+  if (expected instanceof RegExp) {
+    return expected.test(actual);
+  } else if (actual instanceof expected) {
+    return true;
+  } else if (expected.call({}, actual) === true) {
+    return true;
+  }
+
+  return false;
+}
+
+function _throws(shouldThrow, block, expected, message) {
+  var actual;
+
+  if (typeof expected === 'string') {
+    message = expected;
+    expected = null;
+  }
+
+  try {
+    block();
+  } catch (e) {
+    actual = e;
+  }
+
+  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
+            (message ? ' ' + message : '.');
+
+  if (shouldThrow && !actual) {
+    fail('Missing expected exception' + message);
+  }
+
+  if (!shouldThrow && expectedException(actual, expected)) {
+    fail('Got unwanted exception' + message);
+  }
+
+  if ((shouldThrow && actual && expected &&
+      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
+    throw actual;
+  }
+}
+
+// 11. Expected to throw an error:
+// assert.throws(block, Error_opt, message_opt);
+
+assert.throws = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [true].concat(pSlice.call(arguments)));
+};
+
+// EXTENSION! This is annoying to write outside this module.
+assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [false].concat(pSlice.call(arguments)));
+};
+
+assert.ifError = function(err) { if (err) {throw err;}};
+
+})()
+},{"util":8,"buffer":38}],21:[function(require,module,exports){
 /*!
  * Chai - test utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
@@ -6207,7 +6559,7 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-},{"./getName":31,"./getProperties":37,"./getEnumerableProperties":38}],26:[function(require,module,exports){
+},{"./getName":31,"./getProperties":39,"./getEnumerableProperties":40}],26:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
@@ -6387,7 +6739,7 @@ function objEquiv(a, b, memos) {
 }
 
 })()
-},{"buffer":39,"./getEnumerableProperties":38}],36:[function(require,module,exports){
+},{"buffer":38,"./getEnumerableProperties":40}],36:[function(require,module,exports){
 /*!
  * Chai - addChainingMethod utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
@@ -6483,7 +6835,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   });
 };
 
-},{"./transferFlags":28}],37:[function(require,module,exports){
+},{"./transferFlags":28}],39:[function(require,module,exports){
 /*!
  * Chai - getProperties utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
@@ -6520,7 +6872,7 @@ module.exports = function getProperties(object) {
   return result;
 };
 
-},{}],38:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /*!
  * Chai - getEnumerableProperties utility
  * Copyright(c) 2012-2013 Jake Luer <jake@alogicalparadox.com>
@@ -6547,324 +6899,7 @@ module.exports = function getEnumerableProperties(object) {
   return result;
 };
 
-},{}],40:[function(require,module,exports){
-(function(){// UTILITY
-var util = require('util');
-var Buffer = require("buffer").Buffer;
-var pSlice = Array.prototype.slice;
-
-function objectKeys(object) {
-  if (Object.keys) return Object.keys(object);
-  var result = [];
-  for (var name in object) {
-    if (Object.prototype.hasOwnProperty.call(object, name)) {
-      result.push(name);
-    }
-  }
-  return result;
-}
-
-// 1. The assert module provides functions that throw
-// AssertionError's when particular conditions are not met. The
-// assert module must conform to the following interface.
-
-var assert = module.exports = ok;
-
-// 2. The AssertionError is defined in assert.
-// new assert.AssertionError({ message: message,
-//                             actual: actual,
-//                             expected: expected })
-
-assert.AssertionError = function AssertionError(options) {
-  this.name = 'AssertionError';
-  this.message = options.message;
-  this.actual = options.actual;
-  this.expected = options.expected;
-  this.operator = options.operator;
-  var stackStartFunction = options.stackStartFunction || fail;
-
-  if (Error.captureStackTrace) {
-    Error.captureStackTrace(this, stackStartFunction);
-  }
-};
-util.inherits(assert.AssertionError, Error);
-
-function replacer(key, value) {
-  if (value === undefined) {
-    return '' + value;
-  }
-  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
-    return value.toString();
-  }
-  if (typeof value === 'function' || value instanceof RegExp) {
-    return value.toString();
-  }
-  return value;
-}
-
-function truncate(s, n) {
-  if (typeof s == 'string') {
-    return s.length < n ? s : s.slice(0, n);
-  } else {
-    return s;
-  }
-}
-
-assert.AssertionError.prototype.toString = function() {
-  if (this.message) {
-    return [this.name + ':', this.message].join(' ');
-  } else {
-    return [
-      this.name + ':',
-      truncate(JSON.stringify(this.actual, replacer), 128),
-      this.operator,
-      truncate(JSON.stringify(this.expected, replacer), 128)
-    ].join(' ');
-  }
-};
-
-// assert.AssertionError instanceof Error
-
-assert.AssertionError.__proto__ = Error.prototype;
-
-// At present only the three keys mentioned above are used and
-// understood by the spec. Implementations or sub modules can pass
-// other keys to the AssertionError's constructor - they will be
-// ignored.
-
-// 3. All of the following functions must throw an AssertionError
-// when a corresponding condition is not met, with a message that
-// may be undefined if not provided.  All assertion methods provide
-// both the actual and expected values to the assertion error for
-// display purposes.
-
-function fail(actual, expected, message, operator, stackStartFunction) {
-  throw new assert.AssertionError({
-    message: message,
-    actual: actual,
-    expected: expected,
-    operator: operator,
-    stackStartFunction: stackStartFunction
-  });
-}
-
-// EXTENSION! allows for well behaved errors defined elsewhere.
-assert.fail = fail;
-
-// 4. Pure assertion tests whether a value is truthy, as determined
-// by !!guard.
-// assert.ok(guard, message_opt);
-// This statement is equivalent to assert.equal(true, guard,
-// message_opt);. To test strictly for the value true, use
-// assert.strictEqual(true, guard, message_opt);.
-
-function ok(value, message) {
-  if (!!!value) fail(value, true, message, '==', assert.ok);
-}
-assert.ok = ok;
-
-// 5. The equality assertion tests shallow, coercive equality with
-// ==.
-// assert.equal(actual, expected, message_opt);
-
-assert.equal = function equal(actual, expected, message) {
-  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
-};
-
-// 6. The non-equality assertion tests for whether two objects are not equal
-// with != assert.notEqual(actual, expected, message_opt);
-
-assert.notEqual = function notEqual(actual, expected, message) {
-  if (actual == expected) {
-    fail(actual, expected, message, '!=', assert.notEqual);
-  }
-};
-
-// 7. The equivalence assertion tests a deep equality relation.
-// assert.deepEqual(actual, expected, message_opt);
-
-assert.deepEqual = function deepEqual(actual, expected, message) {
-  if (!_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
-  }
-};
-
-function _deepEqual(actual, expected) {
-  // 7.1. All identical values are equivalent, as determined by ===.
-  if (actual === expected) {
-    return true;
-
-  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
-    if (actual.length != expected.length) return false;
-
-    for (var i = 0; i < actual.length; i++) {
-      if (actual[i] !== expected[i]) return false;
-    }
-
-    return true;
-
-  // 7.2. If the expected value is a Date object, the actual value is
-  // equivalent if it is also a Date object that refers to the same time.
-  } else if (actual instanceof Date && expected instanceof Date) {
-    return actual.getTime() === expected.getTime();
-
-  // 7.3. Other pairs that do not both pass typeof value == 'object',
-  // equivalence is determined by ==.
-  } else if (typeof actual != 'object' && typeof expected != 'object') {
-    return actual == expected;
-
-  // 7.4. For all other Object pairs, including Array objects, equivalence is
-  // determined by having the same number of owned properties (as verified
-  // with Object.prototype.hasOwnProperty.call), the same set of keys
-  // (although not necessarily the same order), equivalent values for every
-  // corresponding key, and an identical 'prototype' property. Note: this
-  // accounts for both named and indexed properties on Arrays.
-  } else {
-    return objEquiv(actual, expected);
-  }
-}
-
-function isUndefinedOrNull(value) {
-  return value === null || value === undefined;
-}
-
-function isArguments(object) {
-  return Object.prototype.toString.call(object) == '[object Arguments]';
-}
-
-function objEquiv(a, b) {
-  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
-    return false;
-  // an identical 'prototype' property.
-  if (a.prototype !== b.prototype) return false;
-  //~~~I've managed to break Object.keys through screwy arguments passing.
-  //   Converting to array solves the problem.
-  if (isArguments(a)) {
-    if (!isArguments(b)) {
-      return false;
-    }
-    a = pSlice.call(a);
-    b = pSlice.call(b);
-    return _deepEqual(a, b);
-  }
-  try {
-    var ka = objectKeys(a),
-        kb = objectKeys(b),
-        key, i;
-  } catch (e) {//happens when one is a string literal and the other isn't
-    return false;
-  }
-  // having the same number of owned properties (keys incorporates
-  // hasOwnProperty)
-  if (ka.length != kb.length)
-    return false;
-  //the same set of keys (although not necessarily the same order),
-  ka.sort();
-  kb.sort();
-  //~~~cheap key test
-  for (i = ka.length - 1; i >= 0; i--) {
-    if (ka[i] != kb[i])
-      return false;
-  }
-  //equivalent values for every corresponding key, and
-  //~~~possibly expensive deep test
-  for (i = ka.length - 1; i >= 0; i--) {
-    key = ka[i];
-    if (!_deepEqual(a[key], b[key])) return false;
-  }
-  return true;
-}
-
-// 8. The non-equivalence assertion tests for any deep inequality.
-// assert.notDeepEqual(actual, expected, message_opt);
-
-assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
-  if (_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
-  }
-};
-
-// 9. The strict equality assertion tests strict equality, as determined by ===.
-// assert.strictEqual(actual, expected, message_opt);
-
-assert.strictEqual = function strictEqual(actual, expected, message) {
-  if (actual !== expected) {
-    fail(actual, expected, message, '===', assert.strictEqual);
-  }
-};
-
-// 10. The strict non-equality assertion tests for strict inequality, as
-// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
-
-assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
-  if (actual === expected) {
-    fail(actual, expected, message, '!==', assert.notStrictEqual);
-  }
-};
-
-function expectedException(actual, expected) {
-  if (!actual || !expected) {
-    return false;
-  }
-
-  if (expected instanceof RegExp) {
-    return expected.test(actual);
-  } else if (actual instanceof expected) {
-    return true;
-  } else if (expected.call({}, actual) === true) {
-    return true;
-  }
-
-  return false;
-}
-
-function _throws(shouldThrow, block, expected, message) {
-  var actual;
-
-  if (typeof expected === 'string') {
-    message = expected;
-    expected = null;
-  }
-
-  try {
-    block();
-  } catch (e) {
-    actual = e;
-  }
-
-  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
-            (message ? ' ' + message : '.');
-
-  if (shouldThrow && !actual) {
-    fail('Missing expected exception' + message);
-  }
-
-  if (!shouldThrow && expectedException(actual, expected)) {
-    fail('Got unwanted exception' + message);
-  }
-
-  if ((shouldThrow && actual && expected &&
-      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
-    throw actual;
-  }
-}
-
-// 11. Expected to throw an error:
-// assert.throws(block, Error_opt, message_opt);
-
-assert.throws = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [true].concat(pSlice.call(arguments)));
-};
-
-// EXTENSION! This is annoying to write outside this module.
-assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [false].concat(pSlice.call(arguments)));
-};
-
-assert.ifError = function(err) { if (err) {throw err;}};
-
-})()
-},{"util":7,"buffer":39}],41:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -6950,7 +6985,7 @@ exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],39:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -8270,7 +8305,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":40,"./buffer_ieee754":41,"base64-js":42}],42:[function(require,module,exports){
+},{"assert":37,"./buffer_ieee754":41,"base64-js":42}],42:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -8356,5 +8391,5 @@ SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 	module.exports.fromByteArray = uint8ToBase64;
 }());
 
-},{}]},{},[1])
+},{}]},{},[3])
 ;

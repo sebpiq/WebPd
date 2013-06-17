@@ -28,9 +28,9 @@ var Pd = module.exports = {
 
   WAAContext: null,
 
-  patches: [],  
-
   lib: objects,
+
+  Patch: Patch,
 
   start: function() {
     if (!this.isStarted()) {
@@ -73,6 +73,7 @@ var Pd = module.exports = {
       patch.patchId = this._generateId()
     }
   },
+  patches: [],
 
   registerNamedObject: function(obj) {
     var storeNamedObject = function(oldName, newName) {

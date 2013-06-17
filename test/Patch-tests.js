@@ -10,11 +10,13 @@ describe('patch', function() {
 
     it('should register to Pd', function() {
       var patch = new Patch
+      assert.equal(patch.patch, null)
       assert.ok(_.contains(Pd.patches, patch))
       assert.ok(_.isNumber(patch.patchId))
     })
 
     describe('start', function() {
+
       var MyObject = PdObject.extend({
         start: function() { this.startCalled = true }
       })
@@ -30,9 +32,11 @@ describe('patch', function() {
         assert.ok(obj2.startCalled)
         assert.ok(obj3.startCalled)
       })
+
     })
 
     describe('stop', function() {
+
       var MyObject = PdObject.extend({
         stop: function() { this.stopCalled = true }
       })
@@ -48,6 +52,7 @@ describe('patch', function() {
         assert.ok(obj2.stopCalled)
         assert.ok(obj3.stopCalled)
       })
+
     })
 
     describe('register', function() {
@@ -59,6 +64,7 @@ describe('patch', function() {
         assert.ok(_.contains(patch.objects, obj))
         assert.ok(_.isNumber(obj.id))
       })
+
     })
 
   })
