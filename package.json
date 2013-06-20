@@ -11,7 +11,8 @@
   "keywords": ["sound", "pure data", "dsp"],
   "dependencies" : {
     "underscore": "1.4.x",
-    "chai": "1.6.x"
+    "chai": "1.6.x",
+    "pd-fileutils": ">= 0.3.0"
   },
   "devDependencies": {
     "mocha": "1.11.x",

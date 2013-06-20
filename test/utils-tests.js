@@ -163,6 +163,28 @@ describe('utils', function() {
       })
 
     })
+
+  })
+
+  describe('apply', function() {
+
+    var A = function(arg1, arg2, arg3) {
+      this.arg1 = arg1
+      this.arg2 = arg2
+      this.arg3 = arg3
+    }
+
+    A.prototype.b = function() {}
+
+    it('should be able to create nodes', function() {
+      var obj = utils.apply(A, [11, 22, 33])
+      assert.ok(obj instanceof A)
+      assert.equal(obj.arg1, 11)
+      assert.equal(obj.arg2, 22)
+      assert.equal(obj.arg3, 33)
+      assert.equal(obj.b, A.prototype.b)
+    })
+
   })
 
 })

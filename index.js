@@ -23,6 +23,7 @@ var _ = require('underscore')
   , Patch = require('./lib/Patch')
   , utils = require('./lib/utils')
   , EventEmitter = require('events').EventEmitter
+  , pdfu = require('pd-fileutils')
 
 var Pd = module.exports = {
 
@@ -74,6 +75,35 @@ var Pd = module.exports = {
     }
   },
   patches: [],
+
+  loadPatch: function(patchData, parent) {
+    var patch = new Patch(parent)
+      , createdObjs = {}
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+
+    // Creating nodes
+    patchData.nodes.forEach(function(nodeData) {
+      var proto = nodeData.proto
+        , obj
+      if (proto === 'pd') obj = Pd.loadPatch(nodeData.subpatch, patch)
+      else {
+        if (!Pd.lib.hasOwnProperty(proto))
+          throw new Error('unknown proto ' + proto)
+        obj = utils.apply(Pd.lib[proto], nodeData.args.concat(patch))
+      }
+      createdObjs[nodeData.id] = obj
+    })
+
+    // Creating connections
+    patchData.connections.forEach(function(conn) {
+      var sourceObj = createdObjs[conn.source.id]
+        , sinkObj = createdObjs[conn.sink.id]
+      if (!sourceObj || !sinkObj) throw new Error('invalid connection')
+      sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
+    })
+
+    return patch
+  },
 
   registerNamedObject: function(obj) {
     var storeNamedObject = function(oldName, newName) {

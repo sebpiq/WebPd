@@ -4,11 +4,7 @@ var assert = require('assert')
   , PdObject = require('../lib/PdObject')
   , Patch = require('../lib/Patch')
   , portlets = require('../lib/portlets')
-
-// Dummy Web Audio API context
-Pd.context = {
-  createGain: function() { return {gain: 1} }
-}
+Pd.WAAContext = require('./index').WAAContext
 
 var TestingMailBox = PdObject.extend({
   type: 'TestingMailBox',
@@ -24,6 +20,8 @@ var TestingMailBox = PdObject.extend({
   ],
   outletDefs: [ portlets['outlet'] ]
 })
+
+describe('lib', function() {
 
 describe('[send] / [receive]', function() {
   var send1, send2
@@ -112,5 +110,7 @@ describe('[outlet], [inlet], [outlet~], [inlet~]', function() {
     assert.deepEqual(mailbox2.received, [['bla', 111], ['blo', 222]])
     assert.deepEqual(mailbox3.received, [['bla', 111], ['blo', 222]])
   }) 
+
+})
 
 })
