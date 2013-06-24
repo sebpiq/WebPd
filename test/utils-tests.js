@@ -185,6 +185,16 @@ describe('utils', function() {
       assert.equal(obj.b, A.prototype.b)
     })
 
+    it('should work with `arguments`', function() {
+      var f = function() { return utils.apply(A, arguments) }
+        , obj = f(12, 23, 34)
+      assert.ok(obj instanceof A)
+      assert.equal(obj.arg1, 12)
+      assert.equal(obj.arg2, 23)
+      assert.equal(obj.arg3, 34)
+      assert.equal(obj.b, A.prototype.b)
+    })
+
   })
 
 })

@@ -25,6 +25,7 @@ var _ = require('underscore')
   , EventEmitter = require('events').EventEmitter
   , pdfu = require('pd-fileutils')
 
+
 var Pd = module.exports = {
 
   WAAContext: null,
@@ -76,17 +77,40 @@ var Pd = module.exports = {
   },
   patches: [],
 
-  loadPatch: function(patchData, parent) {
-    var patch = new Patch(parent)
-      , createdObjs = {}
+  // Loads a patch from a string (Pd file), or from an object (pd.json) 
+  loadPatch: function(patchData) {
+    var patch = utils.apply(Patch, patchData.args || [])
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+    this._preparePatch(patch, patchData)
+    return patch
+  },
+
+  // Registers the abstraction defined in `patchData` as `name`.
+  // `patchData` can be a string (Pd file), or an object (pd.json)
+  registerAbstraction: function(name, patchData) {
+    var CustomObject = function() {
+      var patch = utils.apply(Patch, arguments)
+      Pd._preparePatch(patch, patchData)
+      return patch
+    }
+    CustomObject.prototype = Patch.prototype
+    Pd.lib[name] = CustomObject
+  },
+  _abstractions: [],
+
+  _preparePatch: function(patch, patchData) {
+    var createdObjs = {}
 
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
         , obj
-      if (proto === 'pd') obj = Pd.loadPatch(nodeData.subpatch, patch)
-      else {
+      // subpatch
+      if (proto === 'pd') {
+        obj = utils.apply(Patch, (nodeData.args || []).concat(patch))
+        Pd._preparePatch(obj, nodeData.subpatch)
+      // or normal object
+      } else {
         if (!Pd.lib.hasOwnProperty(proto))
           throw new Error('unknown proto ' + proto)
         obj = utils.apply(Pd.lib[proto], nodeData.args.concat(patch))
@@ -101,8 +125,6 @@ var Pd = module.exports = {
       if (!sourceObj || !sinkObj) throw new Error('invalid connection')
       sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
     })
-
-    return patch
   },
 
   registerNamedObject: function(obj) {

@@ -9,10 +9,11 @@ describe('patch', function() {
   describe('Patch', function() {
 
     it('should register to Pd', function() {
-      var patch = new Patch
+      var patch = new Patch(1, 22, 333)
       assert.equal(patch.patch, null)
       assert.ok(_.contains(Pd.patches, patch))
       assert.ok(_.isNumber(patch.patchId))
+      assert.deepEqual(patch.args, [1, 22, 333])
     })
 
     describe('start', function() {

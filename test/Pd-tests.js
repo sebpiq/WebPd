@@ -70,6 +70,37 @@ describe('Pd', function() {
 
   })
 
+  /*describe('abstractions', function() {
+
+    it('should register abstractions rightly', function() {
+      var abstraction = {
+        nodes: [
+          {id: 0, proto: 'osc~', args: ['$1']},
+          {id: 1, proto: 'outlet~'}
+        ],
+        connections: [
+          {source: {id: 0, port: 0}, sink: {id: 1, port: 0}}
+        ]
+      }
+      Pd.registerAbstraction('dumbOsc', abstraction)
+      var obj = new Pd.lib['dumbOsc'](220)
+        , osc = obj.objects[0]
+        , outlet = obj.objects[1]
+
+      // Check instanciated abstraction
+      assert.ok(obj instanceof Patch)
+      assert.equal(obj.outlets.length, 1)
+      assert.equal(obj.inlets.length, 0)
+      assert.equal(obj.objects.length, 2)
+      
+      // Check objects and connections
+      assert.equal(osc.o(0).sinks.length, 1)
+      assert.equal(outlet.i(0).sources.length, 1)
+      assert.ok(osc.o(0).sinks[0] === outlet.i(0).sources[0])
+    })
+
+  })*/
+
   describe('loadPatch', function() {
     
     it('should load a simple patch properly', function() {

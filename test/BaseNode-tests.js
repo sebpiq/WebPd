@@ -75,5 +75,34 @@ describe('BaseNode', function() {
 
   })
 
+  describe('resolveArgs', function() {
+
+    it('should resolve $-args', function() {
+      var patch = new Patch(11, 'abc', 33)
+        , node = new BaseNode(patch)
+      assert.deepEqual(
+        node.resolveArgs([123, '$0', '$1', 456, '$2', '$3']),
+        [123, patch.patchId, 11, 456, 'abc', 33]
+      )
+    })
+
+    it('should throw an error if $-arg out of range', function() {
+      var patch = new Patch(11)
+        , node1 = new BaseNode(patch)
+        , node2 = new BaseNode
+      assert.throws(function() { node1.resolveArgs(['$5']) })
+      assert.throws(function() { node2.resolveArgs(['$0']) })
+    })
+
+    it('should resolve abbreviations', function() {
+      var node = new BaseNode
+      assert.deepEqual(
+        node.resolveArgs(['bla', 'bang', 'b', 'f', 'l', 'a', 's']), 
+        ['bla', 'bang', 'bang', 'float', 'list', 'anything', 'symbol']
+      )
+    })
+
+  })
+
 })
 
