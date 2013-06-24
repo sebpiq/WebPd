@@ -70,7 +70,7 @@ describe('Pd', function() {
 
   })
 
-  /*describe('abstractions', function() {
+  describe('abstractions', function() {
 
     it('should register abstractions rightly', function() {
       var abstraction = {
@@ -83,6 +83,7 @@ describe('Pd', function() {
         ]
       }
       Pd.registerAbstraction('dumbOsc', abstraction)
+
       var obj = new Pd.lib['dumbOsc'](220)
         , osc = obj.objects[0]
         , outlet = obj.objects[1]
@@ -96,10 +97,10 @@ describe('Pd', function() {
       // Check objects and connections
       assert.equal(osc.o(0).sinks.length, 1)
       assert.equal(outlet.i(0).sources.length, 1)
-      assert.ok(osc.o(0).sinks[0] === outlet.i(0).sources[0])
+      assert.ok(osc.o(0).sinks[0] === outlet.i(0))
     })
 
-  })*/
+  })
 
   describe('loadPatch', function() {
     

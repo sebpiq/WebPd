@@ -113,7 +113,7 @@ var Pd = module.exports = {
       } else {
         if (!Pd.lib.hasOwnProperty(proto))
           throw new Error('unknown proto ' + proto)
-        obj = utils.apply(Pd.lib[proto], nodeData.args.concat(patch))
+        obj = utils.apply(Pd.lib[proto], (nodeData.args || []).concat(patch))
       }
       createdObjs[nodeData.id] = obj
     })
