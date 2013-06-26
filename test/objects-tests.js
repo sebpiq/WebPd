@@ -113,4 +113,44 @@ describe('[outlet], [inlet], [outlet~], [inlet~]', function() {
 
 })
 
+describe('msg', function() {
+
+  it('should transmits always the same message if no $-args', function() {
+    var msg = new Pd.lib['msg'](11, '22')
+      , mailbox = new TestingMailBox
+    msg.o(0).connect(mailbox.i(0))
+
+    msg.i(0).message(22)
+    assert.deepEqual(mailbox.received, [[11, '22']])
+
+    msg.i(0).message('bang')
+    assert.deepEqual(mailbox.received, [[11, '22'], [11, '22']])
+
+    msg.i(0).message('bla', 123)
+    assert.deepEqual(mailbox.received, [[11, '22'], [11, '22'], [11, '22']])
+  })
+
+  it('should resolve $-args', function() {
+    var msg = new Pd.lib['msg']('$1', 33, '$0', '$3-HA')
+      , mailbox = new TestingMailBox
+    msg.o(0).connect(mailbox.i(0))
+
+    msg.i(0).message(22, 'bloblo', 44, 'blibli', 66)
+    assert.deepEqual(mailbox.received, [[22, 33, 0, '44-HA']])
+
+    msg.i(0).message('bloblo', 'bleble', 'blybly')
+    assert.deepEqual(mailbox.received, [[22, 33, 0, '44-HA'], ['bloblo', 33, 0, 'blybly-HA']])
+  })
+
+  it('should raise an error if $-arg out of range', function() {
+    var msg = new Pd.lib['msg']('$1', 33, '$0', '$3-HA')
+    assert.throws(function() { msg.i(0).message('ouch', 'ich') })
+    assert.throws(function() { msg.i(0).message(11) })
+    assert.throws(function() { msg.i(0).message('bang') })
+  })
+
+})
+
+
+
 })

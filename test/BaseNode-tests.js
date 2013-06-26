@@ -86,20 +86,32 @@ describe('BaseNode', function() {
       )
     })
 
-    it('should throw an error if $-arg out of range', function() {
-      var patch = new Patch(11)
-        , node1 = new BaseNode(patch)
-        , node2 = new BaseNode
-      assert.throws(function() { node1.resolveArgs(['$5']) })
-      assert.throws(function() { node2.resolveArgs(['$0']) })
-    })
-
     it('should resolve abbreviations', function() {
       var node = new BaseNode
       assert.deepEqual(
         node.resolveArgs(['bla', 'bang', 'b', 'f', 'l', 'a', 's']), 
         ['bla', 'bang', 'bang', 'float', 'list', 'anything', 'symbol']
       )
+    })
+
+  })
+
+  describe('getDollarResolver', function() {
+
+    it('should resolve $-args', function() {
+      var node = new BaseNode
+        , resolver = node.getDollarResolver([1])
+      assert.deepEqual(resolver([2, 'bla', 4]), [1])
+
+      resolver = node.getDollarResolver([1, '$1-bla-$3', 'bla', '$3'])
+      assert.deepEqual(resolver([0, 'bli', 'bla', 4, 5]), [1, 'bli-bla-4', 'bla', 4])
+      assert.deepEqual(resolver([0, 7, 'bloop', 'ploo', 5]), [1, '7-bla-ploo', 'bla', 'ploo'])
+    })
+
+    it('should throw an error if $-arg out of range', function() {
+      var node = new BaseNode
+        , resolver = node.getDollarResolver(['$5'])
+      assert.throws(function() { resolver([1, 2]) })
     })
 
   })
