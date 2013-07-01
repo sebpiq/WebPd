@@ -113,7 +113,7 @@ describe('[outlet], [inlet], [outlet~], [inlet~]', function() {
 
 })
 
-describe('msg', function() {
+describe('[msg]', function() {
 
   it('should transmits always the same message if no $-args', function() {
     var msg = new Pd.lib['msg'](11, '22')
