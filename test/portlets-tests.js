@@ -4,7 +4,7 @@ var assert = require('assert')
   , portlets = require('../lib/portlets')
 
 
-describe('portlets', function() {
+describe('#portlets', function() {
 
   var dummyObj = {patch: null}
     , received = []
@@ -40,7 +40,7 @@ describe('portlets', function() {
     assert.ok(!(inlet instanceof portlets['inlet']))
   })
 
-  describe('connect', function() {
+  describe('#connect', function() {
 
     it('should connect/disconnect properly', function() {
       var sink = new portlets['inlet'](dummyObj, 0)
@@ -84,7 +84,7 @@ describe('portlets', function() {
 
   })
 
-  describe('outlet', function() {
+  describe('#outlet', function() {
 
     var received = []
       , MyInlet = portlets['inlet'].extend({

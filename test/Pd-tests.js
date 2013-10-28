@@ -3,16 +3,15 @@ var _ = require('underscore')
   , assert = require('assert')
   , Patch = require('../lib/Patch')
   , Pd = require('../index')
-Pd.WAAContext = require('./index').WAAContext
 
-describe('Pd', function() {
+describe('#Pd', function() {
 
   beforeEach(function() {
     Pd.patches = []
     Pd._isStarted = false
   })
 
-  describe('start', function() {
+  describe('#start', function() {
 
     it('should start all the patches', function() {
       var MyPatch = function() { Patch.apply(this, arguments) }
@@ -35,7 +34,7 @@ describe('Pd', function() {
 
   })
 
-  describe('stop', function() {
+  describe('#stop', function() {
 
     it('should stop all the patches', function() {
       var MyPatch = function() { Patch.apply(this, arguments) }
@@ -60,7 +59,7 @@ describe('Pd', function() {
 
   })
 
-  describe('register', function() {
+  describe('#register', function() {
 
     it('should register the patch and give it an id', function() {
       var patch = new Patch()
@@ -70,7 +69,7 @@ describe('Pd', function() {
 
   })
 
-  describe('abstractions', function() {
+  describe('#abstractions', function() {
 
     it('should register abstractions rightly', function() {
       var abstraction = {
@@ -102,7 +101,7 @@ describe('Pd', function() {
 
   })
 
-  describe('loadPatch', function() {
+  describe('#loadPatch', function() {
     
     it('should load a simple patch properly', function() {
       var patchStr = fs.readFileSync(__dirname + '/patches/simple.pd').toString()
@@ -114,7 +113,7 @@ describe('Pd', function() {
 
       // Check objects
       assert.equal(osc.type, 'osc~')
-      assert.equal(osc.osc.frequency.value, 440)
+      assert.equal(osc.frequency, 440)
       assert.equal(dac.type, 'dac~')
 
       // Check connections
@@ -147,7 +146,7 @@ describe('Pd', function() {
       assert.equal(osc.type, 'osc~')
       assert.equal(inlet.type, 'inlet')
       assert.equal(outlet.type, 'outlet~')
-      assert.equal(osc.osc.frequency.value, 330)
+      assert.equal(osc.frequency, 330)
 
       // Check connections in subpatch
       assert.equal(inlet.o(0).sinks.length, 1)

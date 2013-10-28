@@ -28,8 +28,6 @@ var _ = require('underscore')
 
 var Pd = module.exports = {
 
-  WAAContext: null,
-
   lib: objects,
 
   Patch: Patch,
@@ -162,4 +160,3 @@ var Pd = module.exports = {
 _.extend(Pd, new EventEmitter())
 _.extend(Pd, utils.UniqueIdsMixin)
 if (typeof window !== 'undefined') window.Pd = Pd
-if (typeof webkitAudioContext !== 'undefined') Pd.WAAContext = new webkitAudioContext()

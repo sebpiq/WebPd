@@ -4,7 +4,6 @@ var assert = require('assert')
   , PdObject = require('../lib/PdObject')
   , Patch = require('../lib/Patch')
   , portlets = require('../lib/portlets')
-Pd.WAAContext = require('./index').WAAContext
 
 var TestingMailBox = PdObject.extend({
   type: 'TestingMailBox',
@@ -21,9 +20,9 @@ var TestingMailBox = PdObject.extend({
   outletDefs: [ portlets['outlet'] ]
 })
 
-describe('lib', function() {
+describe('#lib', function() {
 
-describe('[send] / [receive]', function() {
+describe('#[send] / [receive]', function() {
   var send1, send2
     , receive1, receive1bis, receive2
     , mailbox1, mailbox1bis, mailbox2
@@ -75,7 +74,7 @@ describe('[send] / [receive]', function() {
   })
 })
 
-describe('[outlet], [inlet], [outlet~], [inlet~]', function() {
+describe('#[outlet], [inlet], [outlet~], [inlet~]', function() {
 
   it('should update the patch\'s portlets', function() {
     var patch = new Patch
@@ -113,7 +112,7 @@ describe('[outlet], [inlet], [outlet~], [inlet~]', function() {
 
 })
 
-describe('[msg]', function() {
+describe('#[msg]', function() {
 
   it('should transmits always the same message if no $-args', function() {
     var msg = new Pd.lib['msg'](11, '22')

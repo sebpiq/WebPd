@@ -6,9 +6,9 @@ var assert = require('assert')
   , Patch = require('../lib/Patch')
 
 
-describe('objectbase', function() {
+describe('#objectbase', function() {
 
-  describe('Object', function() {
+  describe('#Object', function() {
 
     var MyObject = PdObject.extend({ type: 'MyObject' })
 

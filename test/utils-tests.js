@@ -6,9 +6,9 @@ var _ = require('underscore')
   , utils = require('../lib/utils')
 
 
-describe('utils', function() {
+describe('#utils', function() {
 
-  describe('chainExtend', function() {
+  describe('#chainExtend', function() {
 
     A = function() {}
     A.extend = utils.chainExtend
@@ -38,7 +38,7 @@ describe('utils', function() {
 
   })
 
-  describe('UniqueIdsMixin', function() {
+  describe('#UniqueIdsMixin', function() {
 
     var uniqueIds1 = _.extend({}, utils.UniqueIdsMixin)
       , uniqueIds2 = _.extend({}, utils.UniqueIdsMixin)
@@ -53,7 +53,7 @@ describe('utils', function() {
 
   })
 
-  describe('NamedMixin', function() {
+  describe('#NamedMixin', function() {
 
     beforeEach(function() { Pd._namedObjects = {} })
 
@@ -79,7 +79,7 @@ describe('utils', function() {
       type: 'uniqNamedObj2'
     })
 
-    describe('non-unique named objects', function() {
+    describe('#non-unique named objects', function() {
 
       it('should find the objects properly', function() {
         var obj1A = new MyNamedObject('obj1')
@@ -114,7 +114,7 @@ describe('utils', function() {
 
     })
 
-    describe('uniquely-named objects', function() {
+    describe('#uniquely-named objects', function() {
 
       it('should find the objects properly', function() {
         var obj1 = new MyUNamedObject1('obj1')
@@ -166,7 +166,7 @@ describe('utils', function() {
 
   })
 
-  describe('apply', function() {
+  describe('#apply', function() {
 
     var A = function(arg1, arg2, arg3) {
       this.arg1 = arg1

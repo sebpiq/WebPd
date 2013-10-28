@@ -5,7 +5,7 @@ var assert = require('assert')
   , Patch = require('../lib/Patch')
 
 
-describe('BaseNode', function() {
+describe('#BaseNode', function() {
 
   var MyInlet = portlets['inlet'].extend({})
 
@@ -56,7 +56,7 @@ describe('BaseNode', function() {
     assert.deepEqual(node.initArgs, [])
   })
 
-  describe('i/o', function() {
+  describe('#i/o', function() {
     
     it('should return the right inlet/outlet if it exists', function() {
       var node = new MyNode()
@@ -75,7 +75,7 @@ describe('BaseNode', function() {
 
   })
 
-  describe('resolveArgs', function() {
+  describe('#resolveArgs', function() {
 
     it('should resolve $-args', function() {
       var patch = new Patch(11, 'abc', 33)
@@ -96,7 +96,7 @@ describe('BaseNode', function() {
 
   })
 
-  describe('getDollarResolver', function() {
+  describe('#getDollarResolver', function() {
 
     it('should resolve $-args', function() {
       var node = new BaseNode
