@@ -4,6 +4,7 @@ var _ = require('underscore')
   , inherits = require('util').inherits
   , EventEmitter = require('events').EventEmitter
   , utils = require('../lib/utils')
+  , clock = utils.clock
 
 
 describe('#utils', function() {
@@ -196,6 +197,147 @@ describe('#utils', function() {
     })
 
   })
+
+  describe('clock', function() {
+
+    describe('_tick', function() {
+
+      beforeEach(function() {
+        clock.time = 0
+        clock.lookAheadTime = 0.1
+        clock._events = []
+      })
+
+      it('should execute simple events rightly', function() {
+        var called = []
+          , event1 = clock.schedule(function() { called.push(1) }, 3)
+          , event2 = clock.schedule(function() { called.push(2) }, 1.2)
+          , event3 = clock.schedule(function() { called.push(3) }, 1.1)    
+
+        // t=0 / look ahead=0.1
+        clock._tick()
+        assert.deepEqual(called, [])
+        clock.time += 1
+
+        // t=1 / look ahead=1.1
+        clock._tick()
+        assert.deepEqual(called, [3])
+        clock.time += 1
+
+        // t=2 / look ahead=2.1
+        clock._tick()
+        assert.deepEqual(called, [3, 2])
+        clock.time += 1
+
+        // t=3 / look ahead=3.1
+        clock._tick()
+        assert.deepEqual(called, [3, 2, 1])
+        clock.time += 1
+
+        // t=4 / look ahead=4.1
+        clock._tick()
+        assert.deepEqual(called, [3, 2, 1])
+        assert.deepEqual(clock._events, [])
+      })
+
+      it('should execute repeated events', function() {
+        var called = []
+          , event1 = clock.schedule(function() { called.push(1) }, 2)
+          , event2 = clock.schedule(function() { called.push(2) }, 1, true)
+        
+        // t=0 / look ahead=0.1
+        clock._tick()
+        assert.deepEqual(called, [])
+        clock.time += 1
+
+        // t=1 / look ahead=1.1
+        clock._tick()
+        assert.deepEqual(called, [2])
+        clock.time += 1
+     
+        // t=2 / look ahead=2.1
+        clock._tick()
+        assert.deepEqual(called, [2, 2, 1])
+        clock.time += 1
+
+        // t=3 / look ahead=3.1
+        clock._tick()
+        assert.deepEqual(called, [2, 2, 1, 2])
+        clock.time += 1
+
+        // t=4 / look ahead=4.1
+        clock._tick()
+        assert.deepEqual(called, [2, 2, 1, 2, 2])
+        clock.time += 1
+
+        clock.unschedule(event2)
+        // t=5 / look ahead=5.1
+        clock._tick()
+        assert.deepEqual(called, [2, 2, 1, 2, 2])
+      })
+
+    })
+
+    describe('_insertEvent', function() {
+
+      it('should insert events at the right position', function() {
+        clock._events = [{time: 2}, {time: 3}, {time: 7}, {time: 11}]
+
+        clock._insertEvent({time: 1})
+        assert.deepEqual(clock._events, [{time: 1}, {time: 2}, {time: 3},
+          {time: 7}, {time: 11}])
+
+        clock._insertEvent({time: 13})
+        assert.deepEqual(clock._events, [{time: 1}, {time: 2}, {time: 3},
+          {time: 7}, {time: 11}, {time: 13}])
+
+        clock._insertEvent({time: 9})
+        assert.deepEqual(clock._events, [{time: 1}, {time: 2}, {time: 3},
+          {time: 7}, {time: 9}, {time: 11}, {time: 13}])
+
+        clock._insertEvent({time: 2, bla: 34})
+        assert.deepEqual(clock._events, [{time: 1}, {time: 2, bla: 34}, {time: 2},
+          {time: 3}, {time: 7}, {time: 9}, {time: 11}, {time: 13}])
+      })
+
+    })
+
+    describe('_removeEvent', function() {
+
+      it('should remove events rightly', function() {
+        clock._events = [{time: 2}, {time: 3}, {time: 4},
+          {time: 10.5}, {time: 11}]
+
+        clock._removeEvent(clock._events[1])
+        assert.deepEqual(clock._events, [{time: 2}, {time: 4}, {time: 10.5},
+          {time: 11}])
+
+        clock._removeEvent(clock._events[0])
+        assert.deepEqual(clock._events, [{time: 4}, {time: 10.5}, {time: 11}])
+
+        clock._removeEvent(clock._events[clock._events.length - 1])
+        assert.deepEqual(clock._events, [{time: 4}, {time: 10.5}])
+      })
+
+    })
+
+    describe('_indexByTime', function() {
+      
+      it('should find the right index', function() {
+        clock._events = [{time: 2}, {time: 3}, {time: 7}, {time: 7},
+          {time: 7}, {time: 11}]
+
+        assert.equal(clock._indexByTime(3), 1)
+        assert.equal(clock._indexByTime(2), 0)
+        assert.equal(clock._indexByTime(11), 5)
+        assert.equal(clock._indexByTime(7), 2)
+        assert.equal(clock._indexByTime(6.5), 2)
+      })
+
+    })
+
+  })
+
 
 })
 

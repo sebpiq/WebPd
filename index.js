@@ -94,7 +94,6 @@ var Pd = module.exports = {
     CustomObject.prototype = Patch.prototype
     Pd.lib[name] = CustomObject
   },
-  _abstractions: [],
 
   _preparePatch: function(patch, patchData) {
     var createdObjs = {}
