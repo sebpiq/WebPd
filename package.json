@@ -9,6 +9,9 @@
     "url": "https://github.com/sebpiq/WebPd"
   },
   "keywords": ["sound", "pure data", "dsp"],
+  "scripts": {
+    "test": "istanbul cover _mocha -- test --reporter spec --recursive"
+  },
   "dependencies" : {
     "underscore": "1.4.x",
     "chai": "1.6.x",
@@ -16,6 +19,7 @@
   },
   "devDependencies": {
     "mocha": "1.11.x",
+    "istanbul": "0.1.x",
     "grunt": "0.4.x",
     "grunt-cli": "0.1.x",
     "grunt-simple-mocha": "0.4.x"
