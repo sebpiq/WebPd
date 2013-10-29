@@ -1,5 +1,4 @@
 var _ = require('underscore')
-  , Pd = require('../index')
   , assert = require('assert')
   , inherits = require('util').inherits
   , EventEmitter = require('events').EventEmitter
@@ -56,7 +55,7 @@ describe('#utils', function() {
 
   describe('#NamedMixin', function() {
 
-    beforeEach(function() { Pd._namedObjects = {} })
+    beforeEach(function() { utils.namedObjects._store = {} })
 
     var MyNamedObject = function(name) { this.setName(name) }
     inherits(MyNamedObject, EventEmitter)
@@ -86,9 +85,9 @@ describe('#utils', function() {
         var obj1A = new MyNamedObject('obj1')
           , obj1B = new MyNamedObject('obj1')
           , obj2 = new MyNamedObject('obj2')
-          , query1 = Pd.getNamedObjects('namedObj', 'obj1')
-          , query2 = Pd.getNamedObjects('namedObj', 'obj2')
-          , query3 = Pd.getNamedObjects('namedObj', 'obj3')
+          , query1 = utils.namedObjects.get('namedObj', 'obj1')
+          , query2 = utils.namedObjects.get('namedObj', 'obj2')
+          , query3 = utils.namedObjects.get('namedObj', 'obj3')
 
         assert.equal(query1.length, 2)
         assert.equal(query1[0], obj1A)
@@ -100,15 +99,15 @@ describe('#utils', function() {
 
       it('should update the register when changing name', function() {
         var obj = new MyNamedObject('obj1')
-          , query = Pd.getNamedObjects('namedObj', 'obj1')
+          , query = utils.namedObjects.get('namedObj', 'obj1')
 
         assert.equal(query.length, 1)
         assert.equal(query[0], obj)
 
         obj.setName('objONE')
-        query = Pd.getNamedObjects('namedObj', 'obj1')
+        query = utils.namedObjects.get('namedObj', 'obj1')
         assert.equal(query.length, 0)
-        query = Pd.getNamedObjects('namedObj', 'objONE')
+        query = utils.namedObjects.get('namedObj', 'objONE')
         assert.equal(query.length, 1)
         assert.equal(query[0], obj)
       })
@@ -121,10 +120,10 @@ describe('#utils', function() {
         var obj1 = new MyUNamedObject1('obj1')
           , obj2 = new MyUNamedObject1('obj2')
           , obj3 = new MyUNamedObject2('obj1')
-          , query1 = Pd.getNamedObjects('uniqNamedObj1', 'obj1')
-          , query2 = Pd.getNamedObjects('uniqNamedObj1', 'obj2')
-          , query3 = Pd.getNamedObjects('uniqNamedObj2', 'obj1')
-          , query4 = Pd.getNamedObjects('uniqNamedObj1', 'obj3')
+          , query1 = utils.namedObjects.get('uniqNamedObj1', 'obj1')
+          , query2 = utils.namedObjects.get('uniqNamedObj1', 'obj2')
+          , query3 = utils.namedObjects.get('uniqNamedObj2', 'obj1')
+          , query4 = utils.namedObjects.get('uniqNamedObj1', 'obj3')
 
         assert.equal(query1.length, 1)
         assert.equal(query1[0], obj1)
@@ -150,15 +149,15 @@ describe('#utils', function() {
 
       it('should update the register when changing name', function() {
         var obj = new MyNamedObject('obj1')
-          , query = Pd.getNamedObjects('namedObj', 'obj1')
+          , query = utils.namedObjects.get('namedObj', 'obj1')
 
         assert.equal(query.length, 1)
         assert.equal(query[0], obj)
 
         obj.setName('objONE')
-        query = Pd.getNamedObjects('namedObj', 'obj1')
+        query = utils.namedObjects.get('namedObj', 'obj1')
         assert.equal(query.length, 0)
-        query = Pd.getNamedObjects('namedObj', 'objONE')
+        query = utils.namedObjects.get('namedObj', 'objONE')
         assert.equal(query.length, 1)
         assert.equal(query[0], obj)
       })

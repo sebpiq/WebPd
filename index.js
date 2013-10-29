@@ -122,36 +122,6 @@ var Pd = module.exports = {
       if (!sourceObj || !sinkObj) throw new Error('invalid connection')
       sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
     })
-  },
-
-  registerNamedObject: function(obj) {
-    var storeNamedObject = function(oldName, newName) {
-      var objType = obj.type
-        , nameMap, objList
-      Pd._namedObjects[objType] = nameMap = Pd._namedObjects[objType] || {}
-      nameMap[newName] = objList = nameMap[newName] || []
-
-      // Adding new mapping
-      if (objList.indexOf(obj) === -1) {
-        if (obj.nameIsUnique && objList.length > 0)
-          throw new Error('there is already a ' + objType + ' with name "' + newName + '"')
-        objList.push(obj)
-      }
-
-      // Removing old mapping
-      if (oldName) {
-        objList = nameMap[oldName]
-        objList.splice(objList.indexOf(obj), 1)
-      }
-    }
-    obj.on('change:name', storeNamedObject)
-    if (obj.name) storeNamedObject(null, obj.name)
-  },
-  _namedObjects: {},
-
-  // Returns an object list given the object `type` and `name`.
-  getNamedObjects: function(type, name) {
-    return ((this._namedObjects[type] || {})[name] || [])
   }
 
 }
