@@ -24,6 +24,10 @@ var _ = require('underscore')
   , utils = require('./lib/utils')
   , pdfu = require('pd-fileutils')
   , pdGlob = require('./lib/global')
+  , audio
+pdGlob.defaultPatch = new Patch()
+pdGlob.clock = new utils.Clock()
+audio = require('./lib/audio-driver')
 
 
 var Pd = module.exports = {
@@ -36,6 +40,7 @@ var Pd = module.exports = {
   start: function() {
     if (!pdGlob.isStarted) {
       pdGlob.patches.forEach(function(patch) { patch.start() })
+      audio.start()
       pdGlob.isStarted = true
     }
   },
@@ -44,6 +49,7 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.patches.forEach(function(patch) { patch.stop() })
+      audio.stop()
       pdGlob.isStarted = false
     }
   },
@@ -114,7 +120,5 @@ var Pd = module.exports = {
   }
 
 }
-
-pdGlob.defaultPatch = new Patch()
 
 if (typeof window !== 'undefined') window.Pd = Pd

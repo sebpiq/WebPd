@@ -3,7 +3,6 @@ var _ = require('underscore')
   , inherits = require('util').inherits
   , EventEmitter = require('events').EventEmitter
   , utils = require('../lib/utils')
-  , clock = utils.clock
 
 
 describe('#utils', function() {
@@ -197,18 +196,13 @@ describe('#utils', function() {
 
   })
 
-  describe('clock', function() {
+  describe('#Clock', function() {
 
-    describe('_tick', function() {
-
-      beforeEach(function() {
-        clock.time = 0
-        clock.lookAheadTime = 0.1
-        clock._events = []
-      })
+    describe('#_tick', function() {
 
       it('should execute simple events rightly', function() {
-        var called = []
+        var clock = new utils.Clock(0.1)
+          , called = []
           , event1 = clock.schedule(function() { called.push(1) }, 3)
           , event2 = clock.schedule(function() { called.push(2) }, 1.2)
           , event3 = clock.schedule(function() { called.push(3) }, 1.1)    
@@ -240,7 +234,8 @@ describe('#utils', function() {
       })
 
       it('should execute repeated events', function() {
-        var called = []
+        var clock = new utils.Clock(0.1)
+          , called = []
           , event1 = clock.schedule(function() { called.push(1) }, 2)
           , event2 = clock.schedule(function() { called.push(2) }, 1, true)
         
@@ -280,6 +275,8 @@ describe('#utils', function() {
     describe('_insertEvent', function() {
 
       it('should insert events at the right position', function() {
+        var clock = new utils.Clock(0.1)
+
         clock._events = [{time: 2}, {time: 3}, {time: 7}, {time: 11}]
 
         clock._insertEvent({time: 1})
@@ -304,6 +301,8 @@ describe('#utils', function() {
     describe('_removeEvent', function() {
 
       it('should remove events rightly', function() {
+        var clock = new utils.Clock(0.1)
+
         clock._events = [{time: 2}, {time: 3}, {time: 4},
           {time: 10.5}, {time: 11}]
 
@@ -323,6 +322,8 @@ describe('#utils', function() {
     describe('_indexByTime', function() {
       
       it('should find the right index', function() {
+        var clock = new utils.Clock(0.1)
+
         clock._events = [{time: 2}, {time: 3}, {time: 7}, {time: 7},
           {time: 7}, {time: 11}]
 
