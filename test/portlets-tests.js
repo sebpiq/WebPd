@@ -47,9 +47,9 @@ describe('#portlets', function() {
         , source = new portlets['outlet'](dummyObj, 1)
 
       sink.connect(source)
-      assert.deepEqual(sink.sources, [source])
+      assert.deepEqual(sink.connections, [source])
       sink.disconnect(source)
-      assert.deepEqual(sink.sources, [])
+      assert.deepEqual(sink.connections, [])
     })
 
     it('should reject connection if portlet\'s objects are in different patches', function() {

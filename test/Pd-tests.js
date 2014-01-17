@@ -95,9 +95,9 @@ describe('#Pd', function() {
       assert.equal(obj.objects.length, 2)
       
       // Check objects and connections
-      assert.equal(osc.o(0).sinks.length, 1)
-      assert.equal(outlet.i(0).sources.length, 1)
-      assert.ok(osc.o(0).sinks[0] === outlet.i(0))
+      assert.equal(osc.o(0).connections.length, 1)
+      assert.equal(outlet.i(0).connections.length, 1)
+      assert.ok(osc.o(0).connections[0] === outlet.i(0))
     })
 
   })
@@ -118,11 +118,11 @@ describe('#Pd', function() {
       assert.equal(dac.type, 'dac~')
 
       // Check connections
-      assert.equal(osc.o(0).sinks.length, 1)
-      assert.ok(osc.o(0).sinks[0] === dac.i(0))
-      assert.equal(dac.i(0).sources.length, 1)
-      assert.equal(dac.i(1).sources.length, 0)
-      assert.ok(dac.i(0).sources[0] === osc.o(0))
+      assert.equal(osc.o(0).connections.length, 1)
+      assert.ok(osc.o(0).connections[0] === dac.i(0))
+      assert.equal(dac.i(0).connections.length, 1)
+      assert.equal(dac.i(1).connections.length, 0)
+      assert.ok(dac.i(0).connections[0] === osc.o(0))
     })
 
     it('should load a patch with a subpatch properly', function() {
@@ -150,17 +150,17 @@ describe('#Pd', function() {
       assert.equal(osc.frequency, 330)
 
       // Check connections in subpatch
-      assert.equal(inlet.o(0).sinks.length, 1)
-      assert.ok(inlet.o(0).sinks[0] === osc.i(0))
-      assert.equal(osc.o(0).sinks.length, 1)
-      assert.ok(osc.o(0).sinks[0] === outlet.i(0))
+      assert.equal(inlet.o(0).connections.length, 1)
+      assert.ok(inlet.o(0).connections[0] === osc.i(0))
+      assert.equal(osc.o(0).connections.length, 1)
+      assert.ok(osc.o(0).connections[0] === outlet.i(0))
 
       // Check connections in root patch
-      assert.equal(msg.o(0).sinks.length, 1)
-      assert.ok(msg.o(0).sinks[0] === subpatch.i(0))
-      assert.equal(subpatch.o(0).sinks.length, 2)
-      assert.ok(subpatch.o(0).sinks[0] === dac.i(0))
-      assert.ok(subpatch.o(0).sinks[1] === dac.i(1))
+      assert.equal(msg.o(0).connections.length, 1)
+      assert.ok(msg.o(0).connections[0] === subpatch.i(0))
+      assert.equal(subpatch.o(0).connections.length, 2)
+      assert.ok(subpatch.o(0).connections[0] === dac.i(0))
+      assert.ok(subpatch.o(0).connections[1] === dac.i(1))
     })
 
   })
