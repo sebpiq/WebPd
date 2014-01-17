@@ -1,9 +1,9 @@
 var assert = require('assert')
   , _ = require('underscore')
-  , Pd = require('../index')
-  , portlets = require('../lib/portlets')
-  , PdObject = require('../lib/PdObject')
-  , Patch = require('../lib/Patch')
+  , Pd = require('../../index')
+  , portlets = require('../../lib/core/portlets')
+  , PdObject = require('../../lib/core/PdObject')
+  , Patch = require('../../lib/core/Patch')
 
 
 describe('#objectbase', function() {

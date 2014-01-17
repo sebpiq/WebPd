@@ -19,10 +19,10 @@
  */
 
 var _ = require('underscore')
-  , objects = require('./lib/objects')
-  , Patch = require('./lib/Patch')
-  , utils = require('./lib/utils')
   , pdfu = require('pd-fileutils')
+  , objects = require('./lib/objects')
+  , Patch = require('./lib/core/Patch')
+  , utils = require('./lib/core/utils')
   , pdGlob = require('./lib/global')
   , audio
 pdGlob.defaultPatch = new Patch()

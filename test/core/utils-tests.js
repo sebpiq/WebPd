@@ -2,7 +2,7 @@ var _ = require('underscore')
   , assert = require('assert')
   , inherits = require('util').inherits
   , EventEmitter = require('events').EventEmitter
-  , utils = require('../lib/utils')
+  , utils = require('../../lib/core/utils')
 
 
 describe('#utils', function() {

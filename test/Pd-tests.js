@@ -1,9 +1,9 @@
 var _ = require('underscore')
   , fs = require('fs')
   , assert = require('assert')
-  , Patch = require('../lib/Patch')
-  , Pd = require('../index')
+  , Patch = require('../lib/core/Patch')
   , pdGlob = require('../lib/global')
+  , Pd = require('../index')
 
 describe('#Pd', function() {
 

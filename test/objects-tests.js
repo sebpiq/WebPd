@@ -1,9 +1,9 @@
 var assert = require('assert')
   , _ = require('underscore')
   , Pd = require('../index')
-  , PdObject = require('../lib/PdObject')
-  , Patch = require('../lib/Patch')
-  , portlets = require('../lib/portlets')
+  , PdObject = require('../lib/core/PdObject')
+  , Patch = require('../lib/core/Patch')
+  , portlets = require('../lib/core/portlets')
 
 var TestingMailBox = PdObject.extend({
   type: 'TestingMailBox',

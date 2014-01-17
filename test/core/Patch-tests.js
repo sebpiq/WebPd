@@ -1,8 +1,8 @@
 var assert = require('assert')
   , _ = require('underscore')
-  , Patch = require('../lib/Patch')
-  , PdObject = require('../lib/PdObject')
-  , pdGlob = require('../lib/global')
+  , Patch = require('../../lib/core/Patch')
+  , PdObject = require('../../lib/core/PdObject')
+  , pdGlob = require('../../lib/global')
 
 describe('#patch', function() {
 

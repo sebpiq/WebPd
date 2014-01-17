@@ -1,6 +1,6 @@
 var _ = require('underscore')
   , assert = require('assert')
-  , Patch = require('../lib/Patch')
+  , Patch = require('../lib/core/Patch')
   , pdGlob = require('../lib/global')
 
 
