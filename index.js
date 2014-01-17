@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -22,8 +22,8 @@ var _ = require('underscore')
   , objects = require('./lib/objects')
   , Patch = require('./lib/Patch')
   , utils = require('./lib/utils')
-  , EventEmitter = require('events').EventEmitter
   , pdfu = require('pd-fileutils')
+  , pdGlob = require('./lib/global')
 
 
 var Pd = module.exports = {
@@ -32,48 +32,37 @@ var Pd = module.exports = {
 
   Patch: Patch,
 
+  // Start dsp
   start: function() {
-    if (!this.isStarted()) {
-      this.patches.forEach(function(patch) { patch.start() })
-      this._isStarted = true
+    if (!pdGlob.isStarted) {
+      pdGlob.patches.forEach(function(patch) { patch.start() })
+      pdGlob.isStarted = true
     }
   },
 
+  // Stop dsp
   stop: function() {
-    if (this.isStarted()) {
-      this.patches.forEach(function(patch) { patch.stop() })
-      this._isStarted = false
+    if (pdGlob.isStarted) {
+      pdGlob.patches.forEach(function(patch) { patch.stop() })
+      pdGlob.isStarted = false
     }
   },
+
+  // Returns true if the dsp is started, false otherwise
+  isStarted: function() { return pdGlob.isStarted },
 
   // Send a message to a named receiver inside the graph
   send: function(name) {
-    this.emit.apply(this, ['msg:' + name].concat(_.toArray(arguments).slice(1)))
+    pdGlob.emitter.emit.apply(pdGlob.emitter, ['msg:' + name].concat(_.toArray(arguments).slice(1)))
   },
 
   // Receive a message from a named sender inside the graph
   receive: function(name, callback) {
-    this.on('msg:' + name, callback)
+    pdGlob.emitter.on('msg:' + name, callback)
   },
 
-  isStarted: function() {
-    return this._isStarted
-  },
-  _isStarted: false,
-
-  getDefaultPatch: function() {
-    this._defaultPatch = new Patch()
-    this.getDefaultPatch = function() { return Pd._defaultPatch }
-    return this._defaultPatch
-  },
-
-  register: function(patch) {
-    if (this.patches.indexOf(patch) === -1) {
-      this.patches.push(patch)
-      patch.patchId = this._generateId()
-    }
-  },
-  patches: [],
+  // Returns the default patch
+  getDefaultPatch: function() { return pdGlob.defaultPatch },
 
   // Loads a patch from a string (Pd file), or from an object (pd.json) 
   loadPatch: function(patchData) {
@@ -126,6 +115,6 @@ var Pd = module.exports = {
 
 }
 
-_.extend(Pd, new EventEmitter())
-_.extend(Pd, utils.UniqueIdsMixin)
+pdGlob.defaultPatch = new Patch()
+
 if (typeof window !== 'undefined') window.Pd = Pd

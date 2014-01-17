@@ -3,12 +3,13 @@ var _ = require('underscore')
   , assert = require('assert')
   , Patch = require('../lib/Patch')
   , Pd = require('../index')
+  , pdGlob = require('../lib/global')
 
 describe('#Pd', function() {
 
   beforeEach(function() {
-    Pd.patches = []
-    Pd._isStarted = false
+    pdGlob.patches = []
+    pdGlob.isStarted = false
   })
 
   describe('#start', function() {
@@ -63,7 +64,7 @@ describe('#Pd', function() {
 
     it('should register the patch and give it an id', function() {
       var patch = new Patch()
-      assert.ok(_.contains(Pd.patches, patch))
+      assert.ok(_.contains(pdGlob.patches, patch))
       assert.ok(_.isNumber(patch.patchId))
     })
 
