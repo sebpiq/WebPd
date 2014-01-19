@@ -5,16 +5,17 @@ var assert = require('assert')
   , Patch = require('../../lib/core/Patch')
 
 
-describe('#BaseNode', function() {
+describe('core.BaseNode', function() {
 
-  var MyInlet = portlets['inlet'].extend({})
+  var MyInlet = portlets.Inlet.extend({})
+  var MyOutlet = portlets.Outlet.extend({})
 
   var MyNode = function() { BaseNode.apply(this, arguments) }
   _.extend(MyNode.prototype, BaseNode.prototype, {
 
     init: function() { this.initArgs = _.toArray(arguments) },
-    inletDefs: [MyInlet, portlets['inlet~']],
-    outletDefs: [portlets['outlet'], portlets['outlet~'], portlets['outlet']]
+    inletDefs: [MyInlet, portlets.Inlet],
+    outletDefs: [portlets.Outlet, MyOutlet, portlets.Outlet]
 
   })
 
@@ -23,7 +24,7 @@ describe('#BaseNode', function() {
     assert.equal(node.inlets.length, 2)
     assert.equal(node.outlets.length, 3)
     assert.ok(node.inlets[0] instanceof MyInlet)
-    assert.ok(node.inlets[1] instanceof portlets['inlet~'])
+    assert.ok(node.inlets[1] instanceof portlets.Inlet)
 
     node.inlets.forEach(function(inlet, i) {
       assert.equal(inlet.id, i)
@@ -32,9 +33,9 @@ describe('#BaseNode', function() {
       assert.equal(outlet.id, i)
     })
 
-    assert.ok(node.outlets[0] instanceof portlets['outlet'])
-    assert.ok(node.outlets[1] instanceof portlets['outlet~'])
-    assert.ok(node.outlets[2] instanceof portlets['outlet'])
+    assert.ok(node.outlets[0] instanceof portlets.Outlet)
+    assert.ok(node.outlets[1] instanceof MyOutlet)
+    assert.ok(node.outlets[2] instanceof portlets.Outlet)
   })
 
   it('should handle creation arguments rightly', function() {
@@ -56,7 +57,7 @@ describe('#BaseNode', function() {
     assert.deepEqual(node.initArgs, [])
   })
 
-  describe('#i/o', function() {
+  describe('.i/o', function() {
     
     it('should return the right inlet/outlet if it exists', function() {
       var node = new MyNode()
@@ -75,7 +76,7 @@ describe('#BaseNode', function() {
 
   })
 
-  describe('#resolveArgs', function() {
+  describe('.resolveArgs', function() {
 
     it('should resolve $-args', function() {
       var patch = new Patch(11, 'abc', 33)
@@ -96,7 +97,7 @@ describe('#BaseNode', function() {
 
   })
 
-  describe('#getDollarResolver', function() {
+  describe('.getDollarResolver', function() {
 
     it('should resolve $-args', function() {
       var node = new BaseNode

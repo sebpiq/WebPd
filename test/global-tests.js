@@ -6,7 +6,7 @@ var _ = require('underscore')
 
 describe('global', function() {
   
-  describe('#register', function() {
+  describe('.register', function() {
 
     it('should register the patch and give it an id', function() {
       var patch = new Patch()

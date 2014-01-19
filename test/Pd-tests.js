@@ -5,14 +5,14 @@ var _ = require('underscore')
   , pdGlob = require('../lib/global')
   , Pd = require('../index')
 
-describe('#Pd', function() {
+describe('Pd', function() {
 
   beforeEach(function() {
     pdGlob.patches = []
     pdGlob.isStarted = false
   })
 
-  describe('#start', function() {
+  describe('.start', function() {
 
     it('should start all the patches', function() {
       var MyPatch = function() { Patch.apply(this, arguments) }
@@ -35,7 +35,7 @@ describe('#Pd', function() {
 
   })
 
-  describe('#stop', function() {
+  describe('.stop', function() {
 
     it('should stop all the patches', function() {
       var MyPatch = function() { Patch.apply(this, arguments) }
@@ -60,7 +60,7 @@ describe('#Pd', function() {
 
   })
 
-  describe('#register', function() {
+  describe('.register', function() {
 
     it('should register the patch and give it an id', function() {
       var patch = new Patch()
@@ -70,7 +70,7 @@ describe('#Pd', function() {
 
   })
 
-  describe('#abstractions', function() {
+  describe('.registerAbstraction', function() {
 
     it('should register abstractions rightly', function() {
       var abstraction = {
@@ -102,7 +102,7 @@ describe('#Pd', function() {
 
   })
 
-  describe('#loadPatch', function() {
+  describe('.loadPatch', function() {
     
     it('should load a simple patch properly', function() {
       var patchStr = fs.readFileSync(__dirname + '/patches/simple.pd').toString()

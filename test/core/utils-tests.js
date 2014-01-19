@@ -5,9 +5,9 @@ var _ = require('underscore')
   , utils = require('../../lib/core/utils')
 
 
-describe('#utils', function() {
+describe('core.utils', function() {
 
-  describe('#chainExtend', function() {
+  describe('.chainExtend', function() {
 
     A = function() {}
     A.extend = utils.chainExtend
@@ -39,7 +39,7 @@ describe('#utils', function() {
 
   })
 
-  describe('#UniqueIdsMixin', function() {
+  describe('.UniqueIdsMixin', function() {
 
     var uniqueIds1 = _.extend({}, utils.UniqueIdsMixin)
       , uniqueIds2 = _.extend({}, utils.UniqueIdsMixin)
@@ -54,7 +54,7 @@ describe('#utils', function() {
 
   })
 
-  describe('#NamedMixin', function() {
+  describe('.NamedMixin', function() {
 
     beforeEach(function() { utils.namedObjects._store = {} })
 
@@ -80,94 +80,86 @@ describe('#utils', function() {
       type: 'uniqNamedObj2'
     })
 
-    describe('#non-unique named objects', function() {
+    it('should find the objects properly if name not unique', function() {
+      var obj1A = new MyNamedObject('obj1')
+        , obj1B = new MyNamedObject('obj1')
+        , obj2 = new MyNamedObject('obj2')
+        , query1 = utils.namedObjects.get('namedObj', 'obj1')
+        , query2 = utils.namedObjects.get('namedObj', 'obj2')
+        , query3 = utils.namedObjects.get('namedObj', 'obj3')
 
-      it('should find the objects properly', function() {
-        var obj1A = new MyNamedObject('obj1')
-          , obj1B = new MyNamedObject('obj1')
-          , obj2 = new MyNamedObject('obj2')
-          , query1 = utils.namedObjects.get('namedObj', 'obj1')
-          , query2 = utils.namedObjects.get('namedObj', 'obj2')
-          , query3 = utils.namedObjects.get('namedObj', 'obj3')
-
-        assert.equal(query1.length, 2)
-        assert.equal(query1[0], obj1A)
-        assert.equal(query1[1], obj1B)
-        assert.equal(query2.length, 1)
-        assert.equal(query2[0], obj2)
-        assert.equal(query3.length, 0)
-      })
-
-      it('should update the register when changing name', function() {
-        var obj = new MyNamedObject('obj1')
-          , query = utils.namedObjects.get('namedObj', 'obj1')
-
-        assert.equal(query.length, 1)
-        assert.equal(query[0], obj)
-
-        obj.setName('objONE')
-        query = utils.namedObjects.get('namedObj', 'obj1')
-        assert.equal(query.length, 0)
-        query = utils.namedObjects.get('namedObj', 'objONE')
-        assert.equal(query.length, 1)
-        assert.equal(query[0], obj)
-      })
-
+      assert.equal(query1.length, 2)
+      assert.equal(query1[0], obj1A)
+      assert.equal(query1[1], obj1B)
+      assert.equal(query2.length, 1)
+      assert.equal(query2[0], obj2)
+      assert.equal(query3.length, 0)
     })
 
-    describe('#uniquely-named objects', function() {
+    it('should update the register when changing name (not unique)', function() {
+      var obj = new MyNamedObject('obj1')
+        , query = utils.namedObjects.get('namedObj', 'obj1')
 
-      it('should find the objects properly', function() {
+      assert.equal(query.length, 1)
+      assert.equal(query[0], obj)
+
+      obj.setName('objONE')
+      query = utils.namedObjects.get('namedObj', 'obj1')
+      assert.equal(query.length, 0)
+      query = utils.namedObjects.get('namedObj', 'objONE')
+      assert.equal(query.length, 1)
+      assert.equal(query[0], obj)
+    })
+
+    it('should find the objects properly if name is unique', function() {
+      var obj1 = new MyUNamedObject1('obj1')
+        , obj2 = new MyUNamedObject1('obj2')
+        , obj3 = new MyUNamedObject2('obj1')
+        , query1 = utils.namedObjects.get('uniqNamedObj1', 'obj1')
+        , query2 = utils.namedObjects.get('uniqNamedObj1', 'obj2')
+        , query3 = utils.namedObjects.get('uniqNamedObj2', 'obj1')
+        , query4 = utils.namedObjects.get('uniqNamedObj1', 'obj3')
+
+      assert.equal(query1.length, 1)
+      assert.equal(query1[0], obj1)
+      assert.equal(query2.length, 1)
+      assert.equal(query2[0], obj2)
+      assert.equal(query3.length, 1)
+      assert.equal(query3[0], obj3)
+      assert.equal(query4.length, 0)
+    })
+
+    it('should throw an error when registering two objects same type, same name (name unique)', function() {
+      assert.throws(function() {
         var obj1 = new MyUNamedObject1('obj1')
-          , obj2 = new MyUNamedObject1('obj2')
-          , obj3 = new MyUNamedObject2('obj1')
-          , query1 = utils.namedObjects.get('uniqNamedObj1', 'obj1')
-          , query2 = utils.namedObjects.get('uniqNamedObj1', 'obj2')
-          , query3 = utils.namedObjects.get('uniqNamedObj2', 'obj1')
-          , query4 = utils.namedObjects.get('uniqNamedObj1', 'obj3')
-
-        assert.equal(query1.length, 1)
-        assert.equal(query1[0], obj1)
-        assert.equal(query2.length, 1)
-        assert.equal(query2[0], obj2)
-        assert.equal(query3.length, 1)
-        assert.equal(query3[0], obj3)
-        assert.equal(query4.length, 0)
+          , obj2 = new MyUNamedObject1('obj1')
       })
 
-      it('should throw an error when registering two objects same type, same name', function() {
-        assert.throws(function() {
-          var obj1 = new MyUNamedObject1('obj1')
-            , obj2 = new MyUNamedObject1('obj1')
-        })
-
-        var obj1 = new MyUNamedObject1('obj3')
-          , obj2 = new MyUNamedObject1('obj4')
-        assert.throws(function() {
-          obj2.setName('obj3')
-        })
+      var obj1 = new MyUNamedObject1('obj3')
+        , obj2 = new MyUNamedObject1('obj4')
+      assert.throws(function() {
+        obj2.setName('obj3')
       })
+    })
 
-      it('should update the register when changing name', function() {
-        var obj = new MyNamedObject('obj1')
-          , query = utils.namedObjects.get('namedObj', 'obj1')
+    it('should update the register when changing name (name unique)', function() {
+      var obj = new MyNamedObject('obj1')
+        , query = utils.namedObjects.get('namedObj', 'obj1')
 
-        assert.equal(query.length, 1)
-        assert.equal(query[0], obj)
+      assert.equal(query.length, 1)
+      assert.equal(query[0], obj)
 
-        obj.setName('objONE')
-        query = utils.namedObjects.get('namedObj', 'obj1')
-        assert.equal(query.length, 0)
-        query = utils.namedObjects.get('namedObj', 'objONE')
-        assert.equal(query.length, 1)
-        assert.equal(query[0], obj)
-      })
-
+      obj.setName('objONE')
+      query = utils.namedObjects.get('namedObj', 'obj1')
+      assert.equal(query.length, 0)
+      query = utils.namedObjects.get('namedObj', 'objONE')
+      assert.equal(query.length, 1)
+      assert.equal(query[0], obj)
     })
 
   })
 
-  describe('#apply', function() {
+  describe('.apply', function() {
 
     var A = function(arg1, arg2, arg3) {
       this.arg1 = arg1
@@ -198,9 +190,9 @@ describe('#utils', function() {
 
   })
 
-  describe('#Clock', function() {
+  describe('.Clock', function() {
 
-    describe('#_tick', function() {
+    describe('._tick', function() {
 
       it('should execute simple events rightly', function() {
         var clock = new utils.Clock(0.1)

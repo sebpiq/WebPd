@@ -27,7 +27,7 @@ var _ = require('underscore')
   , audio
 pdGlob.defaultPatch = new Patch()
 pdGlob.clock = new utils.Clock()
-audio = require('./lib/audio-driver')
+audio = require('./lib/audio')
 
 
 var Pd = module.exports = {

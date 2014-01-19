@@ -4,9 +4,9 @@ var assert = require('assert')
   , PdObject = require('../../lib/core/PdObject')
   , pdGlob = require('../../lib/global')
 
-describe('#patch', function() {
+describe('core.patch', function() {
 
-  describe('#Patch', function() {
+  describe('.Patch', function() {
 
     it('should register itself', function() {
       var patch = new Patch(1, 22, 333)
@@ -16,7 +16,7 @@ describe('#patch', function() {
       assert.deepEqual(patch.args, [1, 22, 333])
     })
 
-    describe('#start', function() {
+    describe('.start', function() {
 
       var MyObject = PdObject.extend({
         start: function() { this.startCalled = true }
@@ -36,7 +36,7 @@ describe('#patch', function() {
 
     })
 
-    describe('#stop', function() {
+    describe('.stop', function() {
 
       var MyObject = PdObject.extend({
         stop: function() { this.stopCalled = true }
@@ -56,7 +56,7 @@ describe('#patch', function() {
 
     })
 
-    describe('#register', function() {
+    describe('.register', function() {
 
       it('should assign the object an id and add it to the patch', function() {
         var patch = new Patch
