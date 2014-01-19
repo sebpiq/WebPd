@@ -23,6 +23,8 @@ describe('#utils', function() {
     it('should work with instanceof', function() {
       assert.ok(b instanceof B)
       assert.ok(b instanceof A)
+      assert.ok(c instanceof B)
+      assert.ok(c instanceof A)
     })
 
     it('should work with inherited parameters', function() {
