@@ -58,12 +58,24 @@ describe('core.patch', function() {
 
     describe('.register', function() {
 
+      var MyEndPoint = PdObject.extend({
+        endPoint: true
+      })
+
       it('should assign the object an id and add it to the patch', function() {
         var patch = new Patch
           , obj = new PdObject([], patch)
         assert.ok(obj.patch === patch)
         assert.ok(_.contains(patch.objects, obj))
         assert.ok(_.isNumber(obj.id))
+      })
+
+      it('should store endpoints', function() {
+        var patch = new Patch
+          , obj = new PdObject([], patch)
+          , endPointObj = new MyEndPoint([], patch)
+        assert.ok(!_.contains(patch.endPoints, obj))
+        assert.ok(_.contains(patch.endPoints, endPointObj))
       })
 
     })

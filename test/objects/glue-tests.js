@@ -7,7 +7,7 @@ var assert = require('assert')
 
 describe('objects.glue', function() {  
 
-  describe('.[send] / .[receive]', function() {
+  describe('[send] / [receive]', function() {
     var send1, send2
       , receive1, receive1bis, receive2
       , mailbox1, mailbox1bis, mailbox2
@@ -59,7 +59,7 @@ describe('objects.glue', function() {
     })
   })
 
-  describe('#[msg]', function() {
+  describe('[msg]', function() {
 
     it('should transmits always the same message if no $-args', function() {
       var msg = new Pd.lib['msg'](11, '22')

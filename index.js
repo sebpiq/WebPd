@@ -24,10 +24,9 @@ var _ = require('underscore')
   , Patch = require('./lib/core/Patch')
   , utils = require('./lib/core/utils')
   , pdGlob = require('./lib/global')
-  , audio
 pdGlob.defaultPatch = new Patch()
 pdGlob.clock = new utils.Clock()
-audio = require('./lib/audio')
+pdGlob.audio = require('./lib/audio')
 
 
 var Pd = module.exports = {
@@ -40,7 +39,7 @@ var Pd = module.exports = {
   start: function() {
     if (!pdGlob.isStarted) {
       pdGlob.patches.forEach(function(patch) { patch.start() })
-      audio.start()
+      pdGlob.audio.start()
       pdGlob.isStarted = true
     }
   },
@@ -49,7 +48,7 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.patches.forEach(function(patch) { patch.stop() })
-      audio.stop()
+      pdGlob.audio.stop()
       pdGlob.isStarted = false
     }
   },
