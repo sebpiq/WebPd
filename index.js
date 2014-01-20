@@ -26,6 +26,7 @@ var _ = require('underscore')
   , pdGlob = require('./lib/global')
 pdGlob.defaultPatch = new Patch()
 pdGlob.clock = new utils.Clock()
+pdGlob.namedObjects = new utils.NamedObjectStore()
 pdGlob.audio = require('./lib/audio')
 
 

@@ -3,6 +3,7 @@ var _ = require('underscore')
   , inherits = require('util').inherits
   , EventEmitter = require('events').EventEmitter
   , utils = require('../../lib/core/utils')
+  , pdGlob = require('../../lib/global')
 
 
 describe('core.utils', function() {
@@ -56,7 +57,7 @@ describe('core.utils', function() {
 
   describe('.NamedMixin', function() {
 
-    beforeEach(function() { utils.namedObjects._store = {} })
+    beforeEach(function() { pdGlob.namedObjects = new utils.NamedObjectStore() })
 
     var MyNamedObject = function(name) { this.setName(name) }
     inherits(MyNamedObject, EventEmitter)
@@ -84,9 +85,9 @@ describe('core.utils', function() {
       var obj1A = new MyNamedObject('obj1')
         , obj1B = new MyNamedObject('obj1')
         , obj2 = new MyNamedObject('obj2')
-        , query1 = utils.namedObjects.get('namedObj', 'obj1')
-        , query2 = utils.namedObjects.get('namedObj', 'obj2')
-        , query3 = utils.namedObjects.get('namedObj', 'obj3')
+        , query1 = pdGlob.namedObjects.get('namedObj', 'obj1')
+        , query2 = pdGlob.namedObjects.get('namedObj', 'obj2')
+        , query3 = pdGlob.namedObjects.get('namedObj', 'obj3')
 
       assert.equal(query1.length, 2)
       assert.equal(query1[0], obj1A)
@@ -98,15 +99,15 @@ describe('core.utils', function() {
 
     it('should update the register when changing name (not unique)', function() {
       var obj = new MyNamedObject('obj1')
-        , query = utils.namedObjects.get('namedObj', 'obj1')
+        , query = pdGlob.namedObjects.get('namedObj', 'obj1')
 
       assert.equal(query.length, 1)
       assert.equal(query[0], obj)
 
       obj.setName('objONE')
-      query = utils.namedObjects.get('namedObj', 'obj1')
+      query = pdGlob.namedObjects.get('namedObj', 'obj1')
       assert.equal(query.length, 0)
-      query = utils.namedObjects.get('namedObj', 'objONE')
+      query = pdGlob.namedObjects.get('namedObj', 'objONE')
       assert.equal(query.length, 1)
       assert.equal(query[0], obj)
     })
@@ -115,10 +116,10 @@ describe('core.utils', function() {
       var obj1 = new MyUNamedObject1('obj1')
         , obj2 = new MyUNamedObject1('obj2')
         , obj3 = new MyUNamedObject2('obj1')
-        , query1 = utils.namedObjects.get('uniqNamedObj1', 'obj1')
-        , query2 = utils.namedObjects.get('uniqNamedObj1', 'obj2')
-        , query3 = utils.namedObjects.get('uniqNamedObj2', 'obj1')
-        , query4 = utils.namedObjects.get('uniqNamedObj1', 'obj3')
+        , query1 = pdGlob.namedObjects.get('uniqNamedObj1', 'obj1')
+        , query2 = pdGlob.namedObjects.get('uniqNamedObj1', 'obj2')
+        , query3 = pdGlob.namedObjects.get('uniqNamedObj2', 'obj1')
+        , query4 = pdGlob.namedObjects.get('uniqNamedObj1', 'obj3')
 
       assert.equal(query1.length, 1)
       assert.equal(query1[0], obj1)
@@ -144,15 +145,15 @@ describe('core.utils', function() {
 
     it('should update the register when changing name (name unique)', function() {
       var obj = new MyNamedObject('obj1')
-        , query = utils.namedObjects.get('namedObj', 'obj1')
+        , query = pdGlob.namedObjects.get('namedObj', 'obj1')
 
       assert.equal(query.length, 1)
       assert.equal(query[0], obj)
 
       obj.setName('objONE')
-      query = utils.namedObjects.get('namedObj', 'obj1')
+      query = pdGlob.namedObjects.get('namedObj', 'obj1')
       assert.equal(query.length, 0)
-      query = utils.namedObjects.get('namedObj', 'objONE')
+      query = pdGlob.namedObjects.get('namedObj', 'objONE')
       assert.equal(query.length, 1)
       assert.equal(query[0], obj)
     })
