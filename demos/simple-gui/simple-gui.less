@@ -1,0 +1,234 @@
+@menubarHeight: 6%;
+@sidebarWidth: 22%;
+@blue1: #008DCF;
+@blue2: #006da0;
+@hoverBg: #ffe;
+@popUpBg: #ffd;
+
+.roundedCorners(@radius: 4px) {
+    -webkit-border-radius: @radius;
+    -moz-border-radius: @radius;
+    border-radius: @radius;
+}
+.button {
+    .roundedCorners;
+    padding: 0.1em 0.3em;
+    cursor: pointer;
+    &:hover {
+        background-color: @hoverBg;
+    }
+}
+button, input[type=submit], input[type=reset] {
+    .button;
+    color: @blue2;
+    padding: 0.2em 0.5em;
+    font-size: 105%;
+    background-color: lightGrey;
+    border: 1px solid @blue2;
+}
+
+body {
+    background-color: white;
+    margin: 0;
+    padding: 0;
+    font-family: 'Didact Gothic', sans-serif;
+}
+a { 
+    text-decoration: none;
+    color: @blue1;
+    &:visited { color: @blue1; }
+}
+
+#menubar {
+    height: @menubarHeight;
+    min-height: 2.5em;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    background-color: #eee;
+
+    h1 {
+        display: inline-block;
+        padding-left: 0.3em;
+        margin: 0;
+    }
+
+    ul.menu {
+        margin: 0;
+        padding: 0;
+        padding-left: 1em;
+        display: inline-block;
+        position: relative;
+        bottom: 0.4em;
+        .menuItem {
+            display: inline-block;
+            a {
+                .button;
+            }
+        }
+    }
+
+    #loadPatch {
+        display: inline-block;
+        form { margin: 0; }
+        textarea {
+            display: block;
+            border: 1px solid LightGrey;
+            margin-bottom: 1em;
+        }
+        /* handling states expanded/collapsed */
+        form {
+            display: none;
+            text-align: right;
+        }
+        &.expanded {
+            position: absolute;
+            background-color: @popUpBg;
+            box-shadow: 2px 2px 10px #888888;
+            padding: 1em;
+            form { display: block; }
+            .expand { display: none; }
+        }
+    }
+}
+
+#sidebar {
+    background-color: #eee;
+    height: 100% - @menubarHeight;
+    width: @sidebarWidth;
+    position: fixed;
+    right: 0;
+    top: @menubarHeight;
+    overflow: auto;
+
+    ul {
+        background-color: white;
+        padding-left: 0;
+        list-style: none;
+        padding-bottom: 0.1em;
+        padding-top: 0.1em;
+
+        li {
+            background-color: #eee;
+            margin-bottom: 0.1em;
+            padding-left: 0.5em;
+            padding-bottom: 0.3em;
+            &:hover {
+                background-color: @hoverBg;
+                cursor: pointer;
+            }
+
+            form { margin-bottom: 0; }
+            .expand, .collapse {
+                font-size: 150%;
+                font-weight: bold;
+                margin-right: 0.5em;
+                display: inline-block;
+                width: 0.5em;
+            }
+            .expand:hover, .collapse:hover {
+                color: LightGrey;
+            }
+            .objType {
+                font-size: 125%;
+                display: inline-block;
+            }
+            /* handling states expanded/collapsed */
+            form, .collapse { display: none; }
+            &.expanded {
+                .collapse { display: inline-block; }
+                form { display: block; }
+                .expand { display: none; }
+            }
+        }
+    }
+}
+
+#commandLog {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100% - @sidebarWidth;
+    code { width: auto; }
+    .controls {
+        padding-bottom: 0.4em;
+        a {
+            .button;
+            &.expand { border: 1px solid @blue1; }
+        }
+    }
+    &.expanded {
+        .controls { 
+            text-align: right;
+            position: absolute;
+            margin: 0 0.3em 0 0.2em;
+            width: 100%;
+            top: 0;
+            right: 0;
+        }
+    }
+    /* handling states expanded/collapsed */
+    code, .collapse { display: none; }
+    &.expanded {
+        .collapse { display: inline-block; }
+        code { display: block; }
+        .expand { display: none; }
+    }
+}
+
+#canvasContainer {
+    width: 100%;
+    height: 100% - @menubarHeight;
+    position: fixed;
+    top: @menubarHeight;
+}
+
+#canvas {
+    cursor: move;
+    position: relative;
+
+    rect.object {
+        stroke: black;
+        fill: white;
+    }
+    rect.overlay {
+        fill-opacity: 0;
+    }
+    rect.portlet {
+        stroke: #555;
+        fill: #555;
+    }
+    rect.outlet {
+        cursor: crosshair;
+    }
+    text {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    rect.connectPortlet {
+        fill: @blue2;
+        &.inlet {
+            cursor: crosshair;
+        }
+    }
+    line.connection {
+        stroke: black;
+        stroke-width: 2px;
+    }
+    line.newConnection {
+        stroke: @blue2;
+        stroke-width: 2px;
+    }
+    line.selected, g.selected {
+        stroke: @blue2;
+        stroke-width: 3px;
+    }
+    circle.sendMessage:hover {
+        cursor: pointer;
+        fill: @blue2;
+    }
+}

@@ -4,20 +4,6 @@ module.exports = function(grunt) {
 
 
     grunt.initConfig({
-        lint: {
-            all: ['grunt.js', 'lib/WebPd/*.js', 'test/*.js']
-        },
-        jshint: {
-            options: {
-                eqeqeq: true,
-                quotmark: 'single',
-                undef: false,       // TODO: This option prohibits the use of explicitly undeclared variables.
-                unused: true,
-                boss: true,        // This option suppresses warnings about the use of assignments in cases where comparisons are expected.
-                sub: true,         // This option suppresses warnings about using [] notation when it can be expressed in dot notation.
-                indent: 4
-            }
-        },
         pkg: '<json:package.json>',
         meta: {
             banner: '/*\n' +
@@ -36,7 +22,6 @@ module.exports = function(grunt) {
             dist: {
                 src: ['<banner>',
                     'lib/eventemitter2/eventemitter2.js',
-                    'lib/sink/sink.js',
                     'lib/WebPd/main.js',
                     'lib/WebPd/audiodriver.js',
                     'lib/WebPd/portlets.js',
@@ -47,7 +32,7 @@ module.exports = function(grunt) {
                 dest: 'dist/webpd-latest.js'
             }
         },
-        min: {
+        uglify: {
             dist: {
                 src: ['dist/webpd-latest.js'],
                 dest: 'dist/webpd-latest.min.js'
@@ -58,20 +43,23 @@ module.exports = function(grunt) {
         }
     });
 
-    grunt.registerTask('default', 'lint test concat min');
+    grunt.loadNpmTasks('grunt-contrib-concat');
+    grunt.loadNpmTasks('grunt-contrib-uglify');
+    grunt.loadNpmTasks('grunt-contrib-qunit');
 
-    grunt.registerTask('build', 'concat min');
+    grunt.registerTask('default', ['test', 'concat', 'uglify']);
+
+    grunt.registerTask('build', ['concat', 'uglify']);
 
     grunt.registerTask('test', 'qunit');
 
     // Task the CI server will execute
-    // TODO: lint
     grunt.registerTask('travis', 'build qunit');
 
-    grunt.registerTask('release', 'concat min release-task');
+    grunt.registerTask('release', ['concat', 'uglify', 'release-task']);
     grunt.registerTask('release-task', 'Make a new release, creates a git tag and a release file in "dist/"', function() {
         grunt.task.requires('concat');
-        grunt.task.requires('min');
+        grunt.task.requires('uglify');
 
         var sys = require('sys'),
             exec = require('child_process').exec,

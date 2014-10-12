@@ -15,8 +15,10 @@
     ],
     "dependencies" : {},
     "devDependencies": {
-        "grunt": "~0.3.16",
-        "jQuery": "~1.7.3"
+        "jQuery": "~1.7.3",
+        "grunt-contrib-concat": "0.5.x",
+        "grunt-contrib-uglify": "0.6.x",
+        "grunt-contrib-qunit": "0.5.x"
     },
     "license": "Standard Improved BSD License",
     "scripts": {
