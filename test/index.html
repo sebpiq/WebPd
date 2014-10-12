@@ -12,6 +12,10 @@
     <script>
         Pd.debugMode = true;
 
+        // Dummy AudioContext for testing
+        window.AudioContext = function() {}
+        window.AudioContext.prototype.createScriptProcessor = function() { return {} }
+
         /******************** some test utilities ************************/
 
         // turns an array or Float32 into an array
