@@ -21,6 +21,7 @@ module.exports = function(grunt) {
         concat: {
             dist: {
                 src: ['<banner>',
+                    'lib/AudioContextMonkeyPatch.js',
                     'lib/eventemitter2/eventemitter2.js',
                     'lib/WebPd/main.js',
                     'lib/WebPd/audiodriver.js',
