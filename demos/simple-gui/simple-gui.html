@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Simple GUI</title>
+    <script src="../../dist/webpd-latest.js"></script>
+    <script src="../js/jquery-1.7.2.min.js"></script>
+    <script src="../js/d3.v2.min.js"></script>
+    <script src="../js/jquery.syntaxhighlighter.min.js"></script>
+    <script src="../js/mustache.min.js"></script>
+    <link href='http://fonts.googleapis.com/css?family=Didact+Gothic' rel='stylesheet' type='text/css'>
+    <script src="simple-gui.js"></script>
+	<script>
+        // Console logging calls to WebPd's dynamic patching API
+        var WebPdCommandLog = {
+
+            // The element to write logs into
+            elem: null,
+            
+            // The number of commands displayed at the same time
+            limit: 6,
+
+            // Total number of commands issued
+            count: 0,
+
+            // The commands currently displayed
+            buffer: [],
+
+            // Logs a new command
+            log: function(command) {
+                if (this.buffer.length >= this.limit) this.buffer.splice(0, 1);
+                this.buffer.push(command);
+                this.count++;
+                var code = $('<code>', {class: 'highlight'}).text(this.buffer.join('\n'));
+                this.elem.empty().append(code);
+                this.elem.syntaxHighlight();
+                if (this.count > this.limit) {
+                    var start = this.count - this.limit + 1
+                    code.find('>ol').attr({start: start});
+                }
+            }
+        };
+        $.SyntaxHighlighter.init();
+
+
+        // Starting the whole mess
+        $(function() {
+            
+            // Creating canvas and setting-up user events
+            gui.canvas = d3.select('svg#canvas');
+            // set canvas moving
+            var offset = {x: 0, y: 0};
+            gui.canvas.call(d3.behavior.drag()
+                .on("drag", function(d) {
+                    offset.x += d3.event.dx;
+                    offset.y += d3.event.dy;
+                    gui.canvas.style({top: offset.y, left: offset.x});
+                })
+            );
+            gui.canvas.on('click', function() { gui.setSelection(); });
+            $('body').keyup(function(event) {
+                if (event.keyCode == 46) gui.deleteSelection();
+            });
+
+            // Adding the console for loggin WebPd API calls
+            gui.commandLog = WebPdCommandLog;
+            WebPdCommandLog.elem = $('#commandLog .codeContainer');
+            $('#commandLog .collapse, #commandLog .expand').click(function(event) {
+                event.preventDefault();
+                $('#commandLog').toggleClass('expanded');
+            });
+
+            // Creating and starting the WebPd patch
+            gui.patch = gui.eval('var ', 'patch = new Pd.Patch();');
+            gui.eval('patch.play();');
+
+            // Creating the list of objects in the sidebar
+            $.each(Pd.objects, function(objType) {
+                var objLi = Mustache.to_html($('#template-newObject').text(), {objType: objType});
+                objLi = $(objLi);
+                $('#sidebar ul').append(objLi);
+
+                // Toggle expanded/collapsed when clicking on the object 
+                // in the list
+                objLi.click(function(event) {
+                    var elem = $(this);
+                    if (elem.hasClass('expanded')) {
+                        elem.removeClass('expanded');
+                        elem.find('input[type=text]').val('');
+                    } else {
+                        $('#sidebar li').removeClass('expanded');
+                        elem.addClass('expanded');
+                        elem.find('input[type=text]').focus();
+                    }
+                    event.preventDefault();
+                });
+
+                // Prevent the form from collapsing when clicking on the input 
+                objLi.find('input').click(function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+
+                // Creating the object when submiting the form
+                objLi.find('input[type=submit]').click(function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // Get the creation args and parse them to a javascript array
+                    var args = objLi.find('input[type=text]').val();
+                    gui.newObject(objType, Pd.compat.parseArgs(args));
+                    objLi.click();
+                });
+            });
+
+            // Patch loader
+            $('#loadPatch form').submit(function(event) {
+                event.preventDefault();
+                var i, objects = gui.patch.getAllObjects(), length = objects.length;
+                for (var i = 0; i < length; i++) {
+                    gui.removeObject(objects[i]);
+                }
+                var textarea = $(this).find('textarea');
+                try {
+                    gui.patch = gui.eval('var patch = ', 'Pd.compat.parse(patchText);', {
+                        patchText: textarea.val()
+                    });
+                } catch (err) {
+                    alert('Error loading patch : ' + err)
+                }
+                // Offset the objects to place them at positive coordinates on the canvas. 
+                var xList = [], yList = [], xMin, xMax, yMin, yMax;
+                gui.patch.getAllObjects().map(function(obj) {
+                    obj._guiData.x *= 2;
+                    obj._guiData.y *= 2;
+                    xList.push(obj._guiData.x);
+                    yList.push(obj._guiData.y);
+                });
+                xMin = Math.min.apply(Math, xList);
+                yMin = Math.min.apply(Math, yList);
+                xMax = Math.max.apply(Math, xList);
+                yMax = Math.max.apply(Math, yList);
+                gui.patch.getAllObjects().map(function(obj) {
+                    obj._guiData.x -= xMin;
+                    obj._guiData.y -= yMin;
+                });
+                gui.canvas.style({'width': xMax - xMin + 500, 'height': yMax - yMin + 500}); 
+
+                textarea.val('');
+                gui.refresh();
+                gui.patch.play();
+            });
+            $('#loadPatch .expand').click(function(event) {
+                event.preventDefault();
+                $('#loadPatch').addClass('expanded');
+            });
+            $('#loadPatch input').click(function(event) {
+                $('#loadPatch').removeClass('expanded');
+            });
+
+            $('#stopPatch a').click(function(event) {
+                event.preventDefault();
+                gui.patch.stop();
+            });
+            $('#playPatch a').click(function(event) {
+                event.preventDefault();
+                gui.patch.play();
+            });
+        });
+	</script>
+    <link rel="stylesheet/less" type="text/css" href="simple-gui.less">
+    <script src="../js/less-1.4.1.min.js"></script>
+</head>
+<script id="template-newObject" type="text/x-mustache-template">
+    <li>
+        <a class="expand" href="">+</a>
+        <a class="collapse" href="">-</a>
+        <span class="objType">{{objType}}</span>
+        <form>
+            <input type="text" />
+            <input type="submit" value="Create" />
+        </form>
+    </li>
+</script>
+<body>
+    <button id="stopPatch">Stop</button>
+    <div id="canvasContainer">
+        <svg id="canvas"></svg>
+    </div>
+    <div id="menubar">
+        <h1>WebPd GUI</h1>
+        <ul class="menu">
+            <li class="menuItem" id="stopPatch"><a href="">Stop</a></li>
+            <li class="menuItem" id="playPatch"><a href="">Play</a></li>
+            <li class="menuItem" id="loadPatch">
+                <a class="expand" href="">Load patch</a>
+                <form>
+                    <textarea rows="20" cols="30" placeholder="Paste the code here"></textarea>
+                    <input type="submit" value="Load" />
+                    <input type="reset" value="Cancel" />
+                </form>
+            </li>
+        </ul>
+    </div>
+    <div id="sidebar">
+        <ul></ul>
+    </div>
+    <div id="commandLog">
+        <div class="controls">
+            <a class="collapse" href="">< API calls</a>
+            <a class="expand" href="">> API calls</a>
+        </div>
+        <div class="codeContainer"></div>
+    </div>
+</body>
+</html>
