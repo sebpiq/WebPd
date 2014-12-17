@@ -1,6 +1,7 @@
 var assert = require('assert')
   , _ = require('underscore')
   , Patch = require('../../lib/core/Patch')
+  , portlets = require('../../lib/core/portlets')
   , PdObject = require('../../lib/core/PdObject')
   , pdGlob = require('../../lib/global')
 
@@ -19,7 +20,27 @@ describe('core.patch', function() {
     describe('.start', function() {
 
       var MyObject = PdObject.extend({
-        start: function() { this.startCalled = true }
+        start: function() { this.startCalled = true },
+        inletDefs: [
+          portlets.Inlet.extend({
+            init: function() { this.connectionCalled = 0 },
+            connection: function() { this.connectionCalled++ }
+          }),
+          portlets.Inlet.extend({
+            init: function() { this.connectionCalled = 0 },
+            connection: function() { this.connectionCalled++ }
+          })
+        ],
+        outletDefs: [
+          portlets.Outlet.extend({
+            init: function() { this.connectionCalled = 0 },
+            connection: function() { this.connectionCalled++ }
+          }),
+          portlets.Outlet.extend({
+            init: function() { this.connectionCalled = 0 },
+            connection: function() { this.connectionCalled++ }
+          })
+        ]
       })
 
       it('should call all the objects\' start methods', function() {
@@ -27,11 +48,34 @@ describe('core.patch', function() {
           , obj1 = new MyObject([], patch)
           , obj2 = new MyObject([], patch)
           , obj3 = new MyObject([], patch)
+
         assert.ok(!obj1.startCalled)
         patch.start()
         assert.ok(obj1.startCalled)
         assert.ok(obj2.startCalled)
         assert.ok(obj3.startCalled)
+      })
+
+      it('should call connection callbacks again on portlets', function() {
+        var patch = new Patch
+          , obj1 = new MyObject([], patch)
+          , obj2 = new MyObject([], patch)
+          , obj3 = new MyObject([], patch)
+        obj1.o(0).connect(obj2.i(0))
+        obj1.o(1).connect(obj2.i(0))
+        obj2.o(0).connect(obj3.i(1))
+        assert.equal(obj1.o(0).connectionCalled, 1)
+        assert.equal(obj1.o(1).connectionCalled, 1)
+        assert.equal(obj2.o(0).connectionCalled, 1)
+        assert.equal(obj2.i(0).connectionCalled, 2)
+        assert.equal(obj3.i(1).connectionCalled, 1)
+        
+        patch.start()
+        assert.equal(obj1.o(0).connectionCalled, 2)
+        assert.equal(obj1.o(1).connectionCalled, 2)
+        assert.equal(obj2.o(0).connectionCalled, 2)
+        assert.equal(obj2.i(0).connectionCalled, 4)
+        assert.equal(obj3.i(1).connectionCalled, 2)
       })
 
     })

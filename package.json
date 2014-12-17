@@ -8,14 +8,19 @@
     "type": "git",
     "url": "https://github.com/sebpiq/WebPd"
   },
-  "keywords": ["sound", "pure data", "dsp"],
+  "keywords": [
+    "sound",
+    "pure data",
+    "dsp"
+  ],
   "scripts": {
     "test": "istanbul cover _mocha -- test --reporter spec --recursive"
   },
-  "dependencies" : {
+  "dependencies": {
     "underscore": "1.4.x",
     "chai": "1.6.x",
-    "pd-fileutils": ">= 0.3.0"
+    "pd-fileutils": ">= 0.3.0",
+    "waaclock": "0.4.x"
   },
   "devDependencies": {
     "mocha": "1.11.x",

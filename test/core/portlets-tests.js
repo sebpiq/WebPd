@@ -23,29 +23,6 @@ describe('core.portlets', function() {
   describe('.connect/disconnect', function() {
 
     var dummyObj = {patch: null}
-      , received = []
-      , setupInletHandlers = function(inlet) {
-        inlet.on('connection', function(source) {
-          received.push(['inlet connection', inlet.id, source.id])
-        })
-
-        inlet.on('disconnection', function(source) {
-          received.push(['inlet disconnection', inlet.id, source.id])
-        })
-      }
-      , setupOutletHandlers = function(outlet) {
-        outlet.on('connection', function(sink) {
-          received.push(['outlet connection', outlet.id, sink.id])
-        })
-
-        outlet.on('disconnection', function(sink) {
-          received.push(['outlet disconnection', outlet.id, sink.id])
-        })
-      }
-
-    beforeEach(function() {
-      received = []
-    })
 
     it('should connect/disconnect properly', function() {
       var sink = new portlets.Inlet(dummyObj, 0)
@@ -69,8 +46,23 @@ describe('core.portlets', function() {
     it('should emit the right events when connecting/disconnecting', function() {
       var sink = new portlets.Inlet(dummyObj, 0)
         , source = new portlets.Outlet(dummyObj, 1)
-      setupInletHandlers(sink)
-      setupOutletHandlers(source)
+        , received = []
+      
+      sink.connection = function(source) {
+        received.push(['inlet connection', this.id, source.id])
+      }
+
+      sink.disconnection = function(source) {
+        received.push(['inlet disconnection', this.id, source.id])
+      }
+
+      source.connection = function(sink) {
+        received.push(['outlet connection', this.id, sink.id])
+      }
+
+      source.disconnection = function(sink) {
+        received.push(['outlet disconnection', this.id, sink.id])
+      }
 
       sink.connect(source)
       assert.deepEqual(received, [
