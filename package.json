@@ -18,16 +18,18 @@
   },
   "dependencies": {
     "underscore": "1.4.x",
-    "chai": "1.6.x",
+    "chai": "1.10.x",
     "pd-fileutils": ">= 0.3.0",
     "waaclock": "0.4.x"
   },
   "devDependencies": {
     "mocha": "1.11.x",
     "istanbul": "0.1.x",
-    "grunt": "0.4.x",
-    "grunt-cli": "0.1.x",
-    "grunt-simple-mocha": "0.4.x",
+    "gulp": "3.8.x",
+    "gulp-util": "3.0.x",
+    "browserify": "7.0.x",
+    "run-sequence": "1.0.x",
+    "vinyl-source-stream": "1.0.x",
     "chai-stats": "0.3.x"
   },
   "license": "Standard Improved BSD License"

@@ -1,3 +1,0 @@
-describe('objects.dsp', function() {
-
-})

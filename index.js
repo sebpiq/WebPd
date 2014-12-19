@@ -47,6 +47,12 @@ var Pd = module.exports = {
 
   Patch: Patch,
 
+  // Returns the current sample rate
+  getSampleRate: function() { return pdGlob.settings.sampleRate },
+
+  // Returns the default patch
+  getDefaultPatch: function() { return pdGlob.defaultPatch },
+
   // Start dsp
   start: function() {
     if (!pdGlob.isStarted) {
@@ -77,9 +83,6 @@ var Pd = module.exports = {
   receive: function(name, callback) {
     pdGlob.emitter.on('msg:' + name, callback)
   },
-
-  // Returns the default patch
-  getDefaultPatch: function() { return pdGlob.defaultPatch },
 
   // Loads a patch from a string (Pd file), or from an object (pd.json) 
   loadPatch: function(patchData) {
@@ -128,7 +131,10 @@ var Pd = module.exports = {
       if (!sourceObj || !sinkObj) throw new Error('invalid connection')
       sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
     })
-  }
+  },
+
+  // Exposing this mostly for testing
+  _glob: pdGlob
 
 }
 
