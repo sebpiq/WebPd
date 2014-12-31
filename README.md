@@ -149,21 +149,18 @@ and point your browser to [localhost:8000/demos/processing-storm/processing-stor
 Instructions for building webpd.js
 ------------------------------------
 
-To build `webpd.js` and `webpd-min.js` yourself, you will need [node.js](http://nodejs.org/) and [Grunt](https://github.com/gruntjs/grunt).
-Follow the instructions to install those, then in WebPd's root folder run :
-
-    grunt build
+To build `webpd.js` and `webpd-min.js` yourself, you will need [node.js](http://nodejs.org/) and [gulp.js](http://gulpjs.com/).
+Follow the instructions to install those, then in WebPd's root folder run `gulp lib:browserify`
 
 
 Instructions for running the tests
 ------------------------------------
 
-You can run the tests either with grunt, by running the command :
+`node node_modules/waatest/bin/scaffold.js ./waatest`
 
-    grunt test
+`gulp test.browser:browserify`
 
-Or by opening `test/index.html` in your browser.
-
+open `waatest/index.html` in your web browser
 
 Contributing
 ------------

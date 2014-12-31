@@ -26,20 +26,8 @@ var _ = require('underscore')
   , utils = require('./lib/core/utils')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
-
 pdGlob.defaultPatch = new Patch()
 pdGlob.namedObjects = new utils.NamedObjectStore()
-
-if (typeof AudioContext !== 'undefined') {
-  pdGlob.audio = new waa.Audio()
-  pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
-
-// TODO : handle other environments better than like this
-} else {
-  var interfaces = require('./lib/core/interfaces')
-  pdGlob.audio = interfaces.Audio
-  pdGlob.clock = interfaces.Clock
-}
 
 
 var Pd = module.exports = {
@@ -55,8 +43,18 @@ var Pd = module.exports = {
   getDefaultPatch: function() { return pdGlob.defaultPatch },
 
   // Start dsp
-  start: function() {
+  start: function(audio) {
     if (!pdGlob.isStarted) {
+      if (typeof AudioContext !== 'undefined') {
+        pdGlob.audio = audio || new waa.Audio(pdGlob.settings.channelCount)
+        pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
+
+      // TODO : handle other environments better than like this
+      } else {
+        var interfaces = require('./lib/core/interfaces')
+        pdGlob.audio = interfaces.Audio
+        pdGlob.clock = interfaces.Clock
+      }
       pdGlob.isStarted = true
       pdGlob.audio.start()
       pdGlob.patches.forEach(function(patch) { patch.start() })
@@ -480,6 +478,26 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
 })
 
 },{"../global":8,"./BaseNode":2,"./portlets":6,"./utils":7,"events":20,"underscore":63,"util":24}],5:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+ 
 // Scheduler to handle timing
 exports.Clock = {
 
@@ -823,6 +841,7 @@ exports.namedObjects = null
 
 var _ = require('underscore')
   , expect = require('chai').expect
+  , WAAOffset = require('waaoffset')
   , utils = require('../core/utils')
   , PdObject = require('../core/PdObject')
   , portlets = require('./portlets')
@@ -855,8 +874,11 @@ exports['osc~'] = PdObject.extend({
 
   start: function() {
     this._oscNode = pdGlob.audio.context.createOscillator()
+    this._oscNode.setPeriodicWave(pdGlob.audio.context.createPeriodicWave(
+      new Float32Array([0, 1]), new Float32Array([0, 0])))
     this._oscNode.start(0)
     this.o(0).waa = { node: this._oscNode, output: 0 }
+    this.i(0).waa = { node: this._oscNode.frequency, output: 0 }
     this.i(0).message(this.frequency)
   },
 
@@ -867,6 +889,43 @@ exports['osc~'] = PdObject.extend({
 
 })
 
+
+exports['line~'] = PdObject.extend({
+
+  inletDefs: [
+
+    portlets.Inlet.extend({
+      message: function(value, time) {
+        expect(value).to.be.a('number', 'line~::value')
+        if (time) {
+          expect(time).to.be.a('number', 'line~::time')
+          this.obj._offsetNode.offset.linearRampToValueAtTime(value, 
+            pdGlob.audio.context.currentTime + time / 1000)
+        } else
+          this.obj._offsetNode.offset.setValueAtTime(value, 0)
+      }
+    })
+
+  ],
+
+  outletDefs: [portlets.DspOutlet],
+
+  init: function() {},
+
+  start: function() {
+    this._offsetNode = new WAAOffset(pdGlob.audio.context)
+    this._offsetNode.offset.setValueAtTime(0, 0)
+    this.o(0).waa = { node: this._offsetNode, output: 0 }
+  },
+
+  stop: function() {
+    this._offsetNode.disconnect()
+    this._offsetNode = null
+  }
+
+})
+
+
 exports['dac~'] = PdObject.extend({
 
   endPoint: true,
@@ -874,21 +933,15 @@ exports['dac~'] = PdObject.extend({
   inletDefs: [portlets.DspInlet, portlets.DspInlet],
 
   start: function() {
-    this._channelMerger = pdGlob.audio.context.createChannelMerger(pdGlob.settings.channelCount)
-    this._channelMerger.connect(pdGlob.audio.context.destination)
-    this._gainLeft = pdGlob.audio.context.createGain()
-    this._gainRight = pdGlob.audio.context.createGain()
-    this._gainLeft.connect(this._channelMerger, 0, 0)
-    this._gainRight.connect(this._channelMerger, 0, 1)
-    this.i(0).waa = { node: this._gainLeft, input: 0 }
-    this.i(1).waa = { node: this._gainRight, input: 1 }
+    this.i(0).waa = { node: pdGlob.audio.channels[0], input: 0 }
+    this.i(1).waa = { node: pdGlob.audio.channels[1], input: 1 }
   }
 
 })
 
 }
 
-},{"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":63}],10:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":63,"waaoffset":66}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1084,14 +1137,26 @@ var Outlet = exports.Outlet = BaseOutlet.extend({
 })
 
 // dsp inlet.
-var DspInlet = exports.DspInlet = BaseInlet.extend({})
+var DspInlet = exports.DspInlet = BaseInlet.extend({
+
+  hasDspSource: function() {
+    return _.filter(this.connections, function(outlet) {
+      return outlet instanceof DspOutlet
+    }).length > 0
+  }
+
+})
 
 // dsp outlet.
 var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
 
   connection: function(inlet) {
-    if (pdGlob.isStarted)
-      this.waa.node.connect(inlet.waa.node, this.waa.output, inlet.waa.input)
+    if (pdGlob.isStarted) {
+      if (inlet.waa.node instanceof AudioParam)
+        this.waa.node.connect(inlet.waa.node, this.waa.output)
+      else
+        this.waa.node.connect(inlet.waa.node, this.waa.output, inlet.waa.input)
+    }
   },
 
   disconnection: function(inlet) {
@@ -1150,8 +1215,16 @@ exports.declareObjects = function(exports) {
 }
 
 },{"../core/PdObject":4,"../core/portlets":6,"../core/utils":7,"../global":8,"chai":25,"dsp":57,"underscore":63}],13:[function(require,module,exports){
-var Audio = module.exports = function() {
+var Audio = module.exports = function(channelCount) {
+  var ch
   this.context = new AudioContext()
+  this._channelMerger = this.context.createChannelMerger(channelCount)
+  this._channelMerger.connect(this.context.destination)
+  this.channels = []
+  for (ch = 0; ch < channelCount; ch++) {
+    this.channels.push(this.context.createGain())
+    this.channels[ch].connect(this._channelMerger, 0, ch)
+  }
 }
 
 Audio.prototype.start = function() {}
@@ -11638,4 +11711,33 @@ _.extend(WAAClock.prototype, {
   }
 })
 
-},{"events":20,"underscore":63,"util":24}]},{},[1]);
+},{"events":20,"underscore":63,"util":24}],66:[function(require,module,exports){
+var WAAOffset = require('./lib/WAAOffset')
+module.exports = WAAOffset
+if (typeof window !== 'undefined') window.WAAOffset = WAAOffset
+},{"./lib/WAAOffset":67}],67:[function(require,module,exports){
+var WAAOffset = module.exports = function(context) {
+  this.context = context
+
+  // Ones generator
+  this._ones = context.createOscillator()
+  this._ones.frequency.value = 0
+  this._ones.setPeriodicWave(context.createPeriodicWave(
+    new Float32Array([0, 1]), new Float32Array([0, 0])))
+  this._ones.start(0)
+
+  // Multiplier
+  this._output = context.createGain()
+  this._ones.connect(this._output)
+  this.offset = this._output.gain
+  this.offset.value = 0
+}
+
+WAAOffset.prototype.connect = function() {
+  this._output.connect.apply(this._output, arguments)
+}
+
+WAAOffset.prototype.disconnect = function() {
+  this._output.disconnect.apply(this._output, arguments)
+}
+},{}]},{},[1]);

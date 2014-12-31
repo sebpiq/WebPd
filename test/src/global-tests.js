@@ -1,7 +1,7 @@
 var _ = require('underscore')
   , assert = require('assert')
-  , Patch = require('../lib/core/Patch')
-  , pdGlob = require('../lib/global')
+  , Patch = require('../../lib/core/Patch')
+  , pdGlob = require('../../lib/global')
 
 
 describe('global', function() {

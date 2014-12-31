@@ -1,7 +1,7 @@
 var assert = require('assert')
   , _ = require('underscore')
-  , portlets = require('../../lib/objects/portlets')
-  , PdObject = require('../../lib/core/PdObject')
+  , portlets = require('../../../lib/objects/portlets')
+  , PdObject = require('../../../lib/core/PdObject')
 
 exports.TestingMailBox = PdObject.extend({
   type: 'TestingMailBox',

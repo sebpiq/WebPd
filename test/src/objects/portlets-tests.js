@@ -1,15 +1,11 @@
 var assert = require('assert')
-  , chai = require('chai')
-  , expect = chai.expect
-  , chaiStats = require('chai-stats')
   , _ = require('underscore')
-  , interfaces = require('../../lib/core/interfaces')
-  , portlets = require('../../lib/objects/portlets')
-  , Patch = require('../../lib/core/Patch')
-  , Pd = require('../../index')
-  , pdGlob = require('../../lib/global')
+  , interfaces = require('../../../lib/core/interfaces')
+  , portlets = require('../../../lib/objects/portlets')
+  , Patch = require('../../../lib/core/Patch')
+  , Pd = require('../../../index')
+  , pdGlob = require('../../../lib/global')
   , TestingMailBox = require('./utils').TestingMailBox
-chai.use(chaiStats)
 
 describe('objects.portlets', function() {
 
@@ -34,6 +30,43 @@ describe('objects.portlets', function() {
         inlet2.message('c')
         assert.deepEqual(dummyObj.received, [[0, 'a', 'b'], [2, 'c']])
       })
+    })
+
+  })
+
+  describe('.DspInlet', function() {
+
+    describe('hasDspSource', function() {
+
+      it('should return `true` if the inlet has at least one dsp source', function() {
+        var dspInlet = new portlets.DspInlet({}, 11)
+          , outlet1 = new portlets.Outlet({}, 1)
+          , outlet2 = new portlets.Outlet({}, 2)
+          , dspOutlet1 = new portlets.DspOutlet({}, 22)
+          , dspOutlet2 = new portlets.DspOutlet({}, 33)
+
+        assert.equal(dspInlet.hasDspSource(), false)
+
+        outlet1.connect(dspInlet)
+        outlet2.connect(dspInlet)
+        assert.equal(dspInlet.hasDspSource(), false)
+
+        dspOutlet1.connect(dspInlet)
+        assert.equal(dspInlet.hasDspSource(), true)
+
+        dspOutlet2.connect(dspInlet)
+        assert.equal(dspInlet.hasDspSource(), true)
+
+        outlet1.disconnect(dspInlet)
+        assert.equal(dspInlet.hasDspSource(), true)
+
+        dspOutlet1.disconnect(dspInlet)
+        assert.equal(dspInlet.hasDspSource(), true)
+
+        dspOutlet2.disconnect(dspInlet)
+        assert.equal(dspInlet.hasDspSource(), false)
+      })
+
     })
 
   })

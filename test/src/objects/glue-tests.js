@@ -1,8 +1,8 @@
 var assert = require('assert')
   , _ = require('underscore')
-  , Pd = require('../../index')
-  , Patch = require('../../lib/core/Patch')
-  , portlets = require('../../lib/objects/portlets')
+  , Pd = require('../../../index')
+  , Patch = require('../../../lib/core/Patch')
+  , portlets = require('../../../lib/objects/portlets')
   , TestingMailBox = require('./utils').TestingMailBox
 
 describe('objects.glue', function() {  

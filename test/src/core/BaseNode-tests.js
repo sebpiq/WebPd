@@ -1,8 +1,8 @@
 var assert = require('assert')
   , _ = require('underscore')
-  , portlets = require('../../lib/core/portlets')
-  , BaseNode = require('../../lib/core/BaseNode')
-  , Patch = require('../../lib/core/Patch')
+  , portlets = require('../../../lib/core/portlets')
+  , BaseNode = require('../../../lib/core/BaseNode')
+  , Patch = require('../../../lib/core/Patch')
 
 
 describe('core.BaseNode', function() {

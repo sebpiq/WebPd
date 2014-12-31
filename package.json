@@ -20,17 +20,20 @@
     "underscore": "1.4.x",
     "chai": "1.10.x",
     "pd-fileutils": ">= 0.3.0",
-    "waaclock": "0.4.x"
+    "waaclock": "0.4.x",
+    "waaoffset": "0.1.x"
   },
   "devDependencies": {
     "mocha": "1.11.x",
     "istanbul": "0.1.x",
     "gulp": "3.8.x",
     "gulp-util": "3.0.x",
+    "gulp-rename": "1.2.x",
     "browserify": "7.0.x",
     "run-sequence": "1.0.x",
     "vinyl-source-stream": "1.0.x",
-    "chai-stats": "0.3.x"
+    "async": "0.9.x",
+    "waatest": "git://github.com/sebpiq/WAATest.git#master"
   },
   "license": "Standard Improved BSD License"
 }

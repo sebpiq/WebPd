@@ -1,35 +1,47 @@
 var _ = require('underscore')
-  , chai = require('chai')
-  , chaiStats = require('chai-stats')
-chai.use(chaiStats)
+  , waatest = require('waatest')
 
-exports.expectSamples = function(expected, done) {
+exports.expectSamples = function(onStarted, expected, done) {
+  waatest.utils.expectSamples(function(context) {
+    var channelCount = expected.length
+      , audio = new TestAudio(channelCount, context)
+    Pd.start(audio)
+    onStarted()
+  }, expected, done)
+}
+
+
+/*
+// Generate one audio block, compare it with `expected` and calls `done(err)`
+exports.expectSamples = function(onStarted, expected, done) {
   var channelCount = expected.length
     , frameCount = expected[0].length
-    , context = new OfflineAudioContext(channelCount, frameCount, Pd.getSampleRate())
-  Pd._glob.audio.context = context
+    , audio = new TestAudio(channelCount, frameCount)
 
-  context.oncomplete = function(event) {
+  audio.context.oncomplete = function(event) {
     var ch, actual = []
-    for (ch = 0; ch < channelCount; ch++) {  
+    for (ch = 0; ch < channelCount; ch++)  
       actual.push(_.toArray(event.renderedBuffer.getChannelData(ch)))
-      expected[ch] = _.toArray(expected[ch])
-    }
-    for (ch = 0; ch < channelCount; ch++) {
-      try {
-        chai.assert.deepAlmostEqual(
-          _.toArray(event.renderedBuffer.getChannelData(ch)),
-          _.toArray(expected[ch])
-        , 4)
-      } catch (err) {
-        if (err instanceof chai.AssertionError)
-          done(new chai.AssertionError('expected \n' + actual.map(JSON.stringify).join('\n')
-            + '\n to be about equal \n' + expected.map(JSON.stringify).join('\n')))
-        else done(err)
-      }
-    }
+    try { assertBlocksEqual(actual, expected) } catch(err) { done(err) }
     done()
   }
-  Pd.start()
-  context.startRendering()
+  Pd.start(audio)
+  if ()onStarted()
+  audio.context.startRendering()
 }
+*/
+
+// Audio engine for testing
+var TestAudio = function(channelCount, context) {
+  var ch
+  this.context = context
+  this._channelMerger = this.context.createChannelMerger(channelCount)
+  this._channelMerger.connect(this.context.destination)
+  this.channels = []
+  for (ch = 0; ch < channelCount; ch++) {
+    this.channels.push(this.context.createGain())
+    this.channels[ch].connect(this._channelMerger, 0, ch)
+  }
+}
+TestAudio.prototype.start = function() {}
+TestAudio.prototype.stop = function() {}

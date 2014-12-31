@@ -1,7 +1,7 @@
 var assert = require('assert')
   , _ = require('underscore')
-  , utils = require('../../lib/core/utils')
-  , portlets = require('../../lib/core/portlets')
+  , utils = require('../../../lib/core/utils')
+  , portlets = require('../../../lib/core/portlets')
 
 
 describe('core.portlets', function() {

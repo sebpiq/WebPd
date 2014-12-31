@@ -2,8 +2,8 @@ var _ = require('underscore')
   , assert = require('assert')
   , inherits = require('util').inherits
   , EventEmitter = require('events').EventEmitter
-  , utils = require('../../lib/core/utils')
-  , pdGlob = require('../../lib/global')
+  , utils = require('../../../lib/core/utils')
+  , pdGlob = require('../../../lib/global')
 
 
 describe('core.utils', function() {

@@ -25,20 +25,8 @@ var _ = require('underscore')
   , utils = require('./lib/core/utils')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
-
 pdGlob.defaultPatch = new Patch()
 pdGlob.namedObjects = new utils.NamedObjectStore()
-
-if (typeof AudioContext !== 'undefined') {
-  pdGlob.audio = new waa.Audio()
-  pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
-
-// TODO : handle other environments better than like this
-} else {
-  var interfaces = require('./lib/core/interfaces')
-  pdGlob.audio = interfaces.Audio
-  pdGlob.clock = interfaces.Clock
-}
 
 
 var Pd = module.exports = {
@@ -54,8 +42,18 @@ var Pd = module.exports = {
   getDefaultPatch: function() { return pdGlob.defaultPatch },
 
   // Start dsp
-  start: function() {
+  start: function(audio) {
     if (!pdGlob.isStarted) {
+      if (typeof AudioContext !== 'undefined') {
+        pdGlob.audio = audio || new waa.Audio(pdGlob.settings.channelCount)
+        pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
+
+      // TODO : handle other environments better than like this
+      } else {
+        var interfaces = require('./lib/core/interfaces')
+        pdGlob.audio = interfaces.Audio
+        pdGlob.clock = interfaces.Clock
+      }
       pdGlob.isStarted = true
       pdGlob.audio.start()
       pdGlob.patches.forEach(function(patch) { patch.start() })

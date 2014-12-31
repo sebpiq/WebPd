@@ -1,9 +1,9 @@
 var assert = require('assert')
   , _ = require('underscore')
-  , Patch = require('../../lib/core/Patch')
-  , portlets = require('../../lib/core/portlets')
-  , PdObject = require('../../lib/core/PdObject')
-  , pdGlob = require('../../lib/global')
+  , Patch = require('../../../lib/core/Patch')
+  , portlets = require('../../../lib/core/portlets')
+  , PdObject = require('../../../lib/core/PdObject')
+  , pdGlob = require('../../../lib/global')
 
 describe('core.patch', function() {
 
