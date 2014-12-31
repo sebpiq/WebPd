@@ -62,23 +62,23 @@ describe('dsp.osc~', function() {
   })
 
   it('take a input signal to modulate the frequency', function(done) {
-    var osc = new Pd.lib['osc~'](440)
+    var osc = new Pd.lib['osc~']()
       , dac = new Pd.lib['dac~']()
       , line = new Pd.lib['line~']()
       , k = 2*Math.PI / Pd.getSampleRate()
-      , phases = [], acc = 0
-    _.range(10).forEach(function(i) {
+      , phases = [0], acc = 0
+    _.range(9).forEach(function(i) {
       acc += (i * 10) * k
       phases.push(acc)
     })
     osc.o(0).connect(dac.i(0))
-    //line.o(0).connect(osc.i(0))
+    line.o(0).connect(osc.i(0))
 
     helpers.expectSamples(function() {
       line.i(0).message(4410, 10) // [0, 10, 20, 30, ...]
     },
     [
-      phases,
+      phases.map(cos),
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ], done)
   })
