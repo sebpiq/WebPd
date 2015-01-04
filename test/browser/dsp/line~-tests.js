@@ -9,8 +9,9 @@ describe('dsp.line~', function() {
   })
 
   it('should have value 0 by default', function(done) {
-    var line = new Pd.lib['line~']()
-      , dac = new Pd.lib['dac~']()
+    var patch = Pd.createPatch()
+      , line = patch.createObject('line~')
+      , dac = patch.createObject('dac~')
 
     helpers.expectSamples(function() {
       line.o(0).connect(dac.i(0))
@@ -21,8 +22,9 @@ describe('dsp.line~', function() {
   })
 
   it('should update value when sending a message to inlet 0', function(done) {
-    var line = new Pd.lib['line~']()
-      , dac = new Pd.lib['dac~']()
+    var patch = Pd.createPatch()
+      , line = patch.createObject('line~')
+      , dac = patch.createObject('dac~')
 
     helpers.expectSamples(function() {
       line.o(0).connect(dac.i(0))
@@ -34,8 +36,9 @@ describe('dsp.line~', function() {
   })
 
   it('should output a ramp when sending a list of numbers to inlet 0', function(done) {
-    var line = new Pd.lib['line~']()
-      , dac = new Pd.lib['dac~']()
+    var patch = Pd.createPatch()
+      , line = patch.createObject('line~')
+      , dac = patch.createObject('dac~')
 
     helpers.expectSamples(function() {
       line.o(0).connect(dac.i(0))

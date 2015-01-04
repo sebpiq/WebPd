@@ -21,20 +21,15 @@
 
 var _ = require('underscore')
   , pdfu = require('pd-fileutils')
-  , objects = require('./lib/objects')
   , Patch = require('./lib/core/Patch')
   , utils = require('./lib/core/utils')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
-pdGlob.defaultPatch = new Patch()
-pdGlob.namedObjects = new utils.NamedObjectStore()
+  , patchIds = _.extend({}, utils.UniqueIdsMixin)
+require('./lib/objects').declareObjects(pdGlob.library)
 
 
 var Pd = module.exports = {
-
-  lib: objects,
-
-  Patch: Patch,
 
   // Returns the current sample rate
   getSampleRate: function() { return pdGlob.settings.sampleRate },
@@ -45,6 +40,9 @@ var Pd = module.exports = {
   // Start dsp
   start: function(audio) {
     if (!pdGlob.isStarted) {
+      pdGlob.defaultPatch = pdGlob.defaultPatch || new Patch()
+      pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
+
       if (typeof AudioContext !== 'undefined') {
         pdGlob.audio = audio || new waa.Audio(pdGlob.settings.channelCount)
         pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
@@ -52,12 +50,13 @@ var Pd = module.exports = {
       // TODO : handle other environments better than like this
       } else {
         var interfaces = require('./lib/core/interfaces')
-        pdGlob.audio = interfaces.Audio
+        pdGlob.audio = audio || interfaces.Audio
         pdGlob.clock = interfaces.Clock
       }
-      pdGlob.isStarted = true
+
       pdGlob.audio.start()
-      pdGlob.patches.forEach(function(patch) { patch.start() })
+      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].start()
+      pdGlob.isStarted = true
     }
   },
 
@@ -65,7 +64,7 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.isStarted = false
-      pdGlob.patches.forEach(function(patch) { patch.stop() })
+      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].stop()
       pdGlob.audio.stop()
     }
   },
@@ -83,9 +82,18 @@ var Pd = module.exports = {
     pdGlob.emitter.on('msg:' + name, callback)
   },
 
+  // Create a new patch
+  createPatch: function() {
+    var patch = new Patch()
+    patch.patchId = patchIds._generateId()
+    pdGlob.patches[patch.patchId] = patch
+    if (pdGlob.isStarted) patch.start()
+    return patch
+  },
+
   // Loads a patch from a string (Pd file), or from an object (pd.json) 
   loadPatch: function(patchData) {
-    var patch = utils.apply(Patch, patchData.args || [])
+    var patch = new Patch(patchData.args || [])
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     this._preparePatch(patch, patchData)
     return patch
@@ -94,13 +102,13 @@ var Pd = module.exports = {
   // Registers the abstraction defined in `patchData` as `name`.
   // `patchData` can be a string (Pd file), or an object (pd.json)
   registerAbstraction: function(name, patchData) {
-    var CustomObject = function() {
-      var patch = utils.apply(Patch, arguments)
+    var CustomObject = function(args) {
+      var patch = new Patch(args)
       Pd._preparePatch(patch, patchData)
       return patch
     }
     CustomObject.prototype = Patch.prototype
-    Pd.lib[name] = CustomObject
+    pdGlob.library[name] = CustomObject
   },
 
   _preparePatch: function(patch, patchData) {
@@ -109,17 +117,8 @@ var Pd = module.exports = {
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
-        , obj
-      // subpatch
-      if (proto === 'pd') {
-        obj = utils.apply(Patch, (nodeData.args || []).concat(patch))
-        Pd._preparePatch(obj, nodeData.subpatch)
-      // or normal object
-      } else {
-        if (!Pd.lib.hasOwnProperty(proto))
-          throw new Error('unknown proto ' + proto)
-        obj = utils.apply(Pd.lib[proto], (nodeData.args || []).concat(patch))
-      }
+        , obj = patch.createObject(proto, nodeData.args || [])
+      if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
 
@@ -165,25 +164,15 @@ var _ = require('underscore')
   , EventEmitter = require('events').EventEmitter
   , portlets = require('./portlets')
   , utils = require('./utils')
-
-
-// Regular expressions to deal with dollar-args
-var dollarVarRe = /\$(\d+)/,
-    dollarVarReGlob = /\$(\d+)/g
+  
 
 // Base class for objects and patches. Example :
 //
-//     var node1 = new MyNode(arg1, arg2, arg3, parentPatch)
-//     var node2 = new MyNode(arg1, arg2, arg3)
+//     var node = new MyNode(arg1, arg2, arg3)
 //
-// The parent patch of the node - if the node has one - must be passed as last argument.
-// The other arguments are handled by subclasses.
-var BaseNode = module.exports = function() {
+var BaseNode = module.exports = function(args) {
+  args = args || []
   var self = this
-    , args = _.toArray(arguments)
-    , patch = args[args.length - 1]
-  if (patch && patch instanceof require('./Patch')) args = args.slice(0, -1)
-  else patch = null
   this.id = null                  // A patch-wide unique id for the object
   this.patch = null               // The patch containing that node
 
@@ -194,9 +183,6 @@ var BaseNode = module.exports = function() {
   this.outlets = this.outletDefs.map(function(outletType, i) {
     return new outletType(self, i)
   })
-
-  if (patch) patch.register(this)
-  if (this.doResolveArgs) args = this.resolveArgs(args)
 
   // initializes the object, handling the creation arguments
   this.init.apply(this, args)
@@ -220,7 +206,6 @@ _.extend(BaseNode.prototype, {
   inletDefs: [],
 
   // This method is called when the object is created.
-  // At this stage, `patch` can still be null
   init: function() {},
 
   // This method is called when dsp is started,
@@ -248,90 +233,22 @@ _.extend(BaseNode.prototype, {
 
 /********************** More Private API *********************/
 
-  // Takes a list of object arguments which might contain abbreviations
-  // and dollar arguments, and returns a copy of that list, abbreviations
-  // replaced by the corresponding full word.
-  resolveArgs: function(args) {
-    var cleaned = args.slice(0)
-      , patchArgs = this.patch ? [this.patch.patchId].concat(this.patch.args) : []
-      , matched
-
-    // Resolve abbreviations
-    args.forEach(function(arg, i) {
-      if (arg === 'b') cleaned[i] = 'bang'
-      else if (arg === 'f') cleaned[i] = 'float'
-      else if (arg === 's') cleaned[i] = 'symbol'
-      else if (arg === 'a') cleaned[i] = 'anything'
-      else if (arg === 'l') cleaned[i] = 'list'
-    })
-
-    // Resolve dollar-args
-    return this.getDollarResolver(cleaned)(patchArgs)
+  // Calls `start` on object's portlets
+  startPortlets: function() {
+    this.outlets.forEach(function(outlet) { outlet.start() })
+    this.inlets.forEach(function(inlet) { inlet.start() })
   },
 
-
-  // Returns a function `resolver(inArray)`. For example :
-  //
-  //     resolver = obj.getDollarResolver([56, '$1', 'bla', '$2-$1'])
-  //     resolver([89, 'bli']) // [56, 89, 'bla', 'bli-89']
-  //
-  getDollarResolver: function(rawOutArray) {
-    rawOutArray = rawOutArray.slice(0)
-
-    // Simple helper to throw en error if the index is out of range
-    var getElem = function(array, ind) {
-      if (ind >= array.length || ind < 0) 
-        throw new Error('$' + (ind + 1) + ': argument number out of range')
-      return array[ind]
-    }
-
-    // Creates an array of transfer functions `inVal -> outVal`.
-    var transfer = rawOutArray.map(function(rawOutVal) {
-      var matchOnce = dollarVarRe.exec(rawOutVal)
-
-      // If the transfer is a dollar var :
-      //      ['bla', 789] - ['$1'] -> ['bla']
-      if (matchOnce && matchOnce[0] === rawOutVal) {
-        return (function(rawOutVal) {
-          var inInd = parseInt(matchOnce[1], 10)
-          return function(inArray) { return getElem(inArray, inInd) }
-        })(rawOutVal)
-
-      // If the transfer is a string containing dollar var :
-      //      ['bla', 789] - ['bla$2'] -> ['bla789']
-      } else if (matchOnce) {
-        return (function(rawOutVal) {
-          var allMatches = []
-            , matched
-          while (matched = dollarVarReGlob.exec(rawOutVal)) {
-            allMatches.push([matched[0], parseInt(matched[1], 10)])
-          }
-          return function(inArray) {
-            var outVal = rawOutVal.substr(0)
-            allMatches.forEach(function(matched) {
-              outVal = outVal.replace(matched[0], getElem(inArray, matched[1]))
-            })
-            return outVal
-          }
-        })(rawOutVal)
-
-      // Else the input doesn't matter
-      } else {
-        return (function(outVal) {
-          return function() { return outVal }
-        })(rawOutVal)
-      }
-    })
-
-    return function(inArray) {
-      return transfer.map(function(func, i) { return func(inArray) })
-    } 
+  // Call `stop` on object's portlets
+  stopPortlets: function() {
+    this.outlets.forEach(function(outlet) { outlet.stop() })
+    this.inlets.forEach(function(inlet) { inlet.stop() })
   }
 
 })
 
 
-},{"./Patch":3,"./portlets":6,"./utils":7,"events":20,"underscore":63,"util":24}],3:[function(require,module,exports){
+},{"./portlets":6,"./utils":7,"events":20,"underscore":63,"util":24}],3:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -357,18 +274,14 @@ var _ = require('underscore')
   , BaseNode = require('./BaseNode')
   , pdGlob = require('../global')
 
+
 var Patch = module.exports = function() {
   BaseNode.apply(this, arguments)
-
-  // Patch-specific attributes
   this.objects = []
   this.endPoints = [] 
   this.patchId = null         // A globally unique id for the patch
   this.sampleRate = pdGlob.settings.sampleRate
   this.blockSize = pdGlob.settings.blockSize
-
-  // The patch registers itself
-  pdGlob.register(this)
 }
 
 _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
@@ -381,58 +294,87 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
 
   start: function() {
     this.objects.forEach(function(obj) { obj.start() })
-    // Calls the `connection` callbacks on all objects inlets/outlets
-    this.objects.forEach(function(obj) {
-      obj.outlets.forEach(function(outlet) {
-        outlet.connections.forEach(outlet.connection.bind(outlet))
-      })
-      obj.inlets.forEach(function(inlet) {
-        inlet.connections.forEach(inlet.connection.bind(inlet))
-      })
-    })
+    this.objects.forEach(function(obj) { obj.startPortlets() })
   },
 
   stop: function() {
     this.objects.forEach(function(obj) { obj.stop() })
+    this.objects.forEach(function(obj) { obj.stopPortlets() })
   },
 
   // Adds an object to the patch.
   // Also causes the patch to automatically assign an id to that object.
   // This id can be used to uniquely identify the object in the patch.
   // Also, if the patch is playing, the `start` method of the object will be called.
-  register: function(obj) {
-    if (this.objects.indexOf(obj) === -1) {
-      var id = this._generateId()
-      obj.id = id
-      obj.patch = this
-      this.objects[id] = obj
-      if (obj.endPoint) this.endPoints.push(obj)
-      if (pdGlob.isStarted) obj.start()
+  createObject: function(type, objArgs) {
+    var obj
+    objArgs = objArgs || []
+
+    // Check that `type` is valid and create the object  
+    if (pdGlob.library.hasOwnProperty(type)) {
+      var constructor = pdGlob.library[type]
+      if (constructor.prototype.doResolveArgs)
+        objArgs = this.resolveArgs(objArgs)
+      obj = new constructor(objArgs)
+    } else throw new Error('unknown object ' + type)
+
+    // Assign object unique id and add it to the patch
+    obj.id = this._generateId()
+    obj.patch = this
+    this.objects[obj.id] = obj
+    if (obj.endPoint) this.endPoints.push(obj)
+
+    // Start the object if Pd is started
+    if (pdGlob.isStarted) {
+      obj.start()
+      obj.startPortlets()
     }
 
     // When [inlet], [outlet~], ... is added to a patch, we add their portlets
     // to the patch's portlets
     if (isInletObject(obj)) this.inlets.push(obj.inlets[0])
     if (isOutletObject(obj)) this.outlets.push(obj.outlets[0])
+
+    return obj
+  },
+
+
+  // Takes a list of object arguments which might contain abbreviations
+  // and dollar arguments, and returns a copy of that list, abbreviations
+  // replaced by the corresponding full word.
+  resolveArgs: function(args) {
+    var cleaned = args.slice(0)
+      , patchArgs = [this.patchId].concat(this.args)
+      , matched
+
+    // Resolve abbreviations
+    args.forEach(function(arg, i) {
+      if (arg === 'b') cleaned[i] = 'bang'
+      else if (arg === 'f') cleaned[i] = 'float'
+      else if (arg === 's') cleaned[i] = 'symbol'
+      else if (arg === 'a') cleaned[i] = 'anything'
+      else if (arg === 'l') cleaned[i] = 'list'
+    })
+
+    // Resolve dollar-args
+    return utils.getDollarResolver(cleaned)(patchArgs)
   }
 
 })
 
 var isInletObject = function(obj) {
-  var library = require('../objects')
-  return [library['inlet'], library['inlet~']].some(function(type) {
+  return [pdGlob.library['inlet'], pdGlob.library['inlet~']].some(function(type) {
     return obj instanceof type
   })
 }
 
 var isOutletObject = function(obj) {
-  var library = require('../objects')
-  return [library['outlet'], library['outlet~']].some(function(type) {
+  return [pdGlob.library['outlet'], pdGlob.library['outlet~']].some(function(type) {
     return obj instanceof type
   })
 }
 
-},{"../global":8,"../objects":11,"./BaseNode":2,"./utils":7,"underscore":63}],4:[function(require,module,exports){
+},{"../global":8,"./BaseNode":2,"./utils":7,"underscore":63}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -459,25 +401,19 @@ var _ = require('underscore')
   , portlets = require('./portlets')
   , utils = require('./utils')
   , BaseNode = require('./BaseNode')
+  , Patch = require('./Patch')
   , pdGlob = require('../global')
 
 var PdObject = module.exports = function() {
   BaseNode.apply(this, arguments)
-
-  // Because our inheritance system needs to instantiate
-  // a dummy object of the parent class, we need to make sure that
-  // this dummy object is not registered 
-  if (this.type !== 'abstract' && !this.patch)
-    pdGlob.defaultPatch.register(this)
 }
 PdObject.extend = utils.chainExtend
 
 _.extend(PdObject.prototype, BaseNode.prototype, {
-  type: 'abstract',
   doResolveArgs: true
 })
 
-},{"../global":8,"./BaseNode":2,"./portlets":6,"./utils":7,"events":20,"underscore":63,"util":24}],5:[function(require,module,exports){
+},{"../global":8,"./BaseNode":2,"./Patch":3,"./portlets":6,"./utils":7,"events":20,"underscore":63,"util":24}],5:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -563,6 +499,12 @@ _.extend(Portlet.prototype, {
   // This method is called when the portlet is initialized.
   init: function() {},
 
+  // This method is called when the object is started
+  start: function() {},
+
+  // This method is called after all objects have been stopped
+  stop: function() {},
+
   // This method is called when the portlet receives a message.
   message: function() {},
 
@@ -639,8 +581,71 @@ var Outlet = exports.Outlet = Portlet.extend({})
 var _ = require('underscore')
   , expect = require('chai').expect
 
+// Regular expressions to deal with dollar-args
+var dollarVarRe = /\$(\d+)/,
+    dollarVarReGlob = /\$(\d+)/g
 
-module.exports.chainExtend = function() {
+
+// Returns a function `resolver(inArray)`. For example :
+//
+//     resolver = obj.getDollarResolver([56, '$1', 'bla', '$2-$1'])
+//     resolver([89, 'bli']) // [56, 89, 'bla', 'bli-89']
+//
+exports.getDollarResolver = function(rawOutArray) {
+  rawOutArray = rawOutArray.slice(0)
+
+  // Simple helper to throw en error if the index is out of range
+  var getElem = function(array, ind) {
+    if (ind >= array.length || ind < 0) 
+      throw new Error('$' + (ind + 1) + ': argument number out of range')
+    return array[ind]
+  }
+
+  // Creates an array of transfer functions `inVal -> outVal`.
+  var transfer = rawOutArray.map(function(rawOutVal) {
+    var matchOnce = dollarVarRe.exec(rawOutVal)
+
+    // If the transfer is a dollar var :
+    //      ['bla', 789] - ['$1'] -> ['bla']
+    if (matchOnce && matchOnce[0] === rawOutVal) {
+      return (function(rawOutVal) {
+        var inInd = parseInt(matchOnce[1], 10)
+        return function(inArray) { return getElem(inArray, inInd) }
+      })(rawOutVal)
+
+    // If the transfer is a string containing dollar var :
+    //      ['bla', 789] - ['bla$2'] -> ['bla789']
+    } else if (matchOnce) {
+      return (function(rawOutVal) {
+        var allMatches = []
+          , matched
+        while (matched = dollarVarReGlob.exec(rawOutVal)) {
+          allMatches.push([matched[0], parseInt(matched[1], 10)])
+        }
+        return function(inArray) {
+          var outVal = rawOutVal.substr(0)
+          allMatches.forEach(function(matched) {
+            outVal = outVal.replace(matched[0], getElem(inArray, matched[1]))
+          })
+          return outVal
+        }
+      })(rawOutVal)
+
+    // Else the input doesn't matter
+    } else {
+      return (function(outVal) {
+        return function() { return outVal }
+      })(rawOutVal)
+    }
+  })
+
+  return function(inArray) {
+    return transfer.map(function(func, i) { return func(inArray) })
+  } 
+}
+
+
+exports.chainExtend = function() {
   var sources = Array.prototype.slice.call(arguments, 0)
     , parent = this
     , child = function() { parent.apply(this, arguments) }
@@ -656,18 +661,10 @@ module.exports.chainExtend = function() {
 }
 
 
-// Hack to be able to instantiate a new object "apply-style"
-module.exports.apply = function(constr, args) {
-  var F = function() { return constr.apply(this, args) }
-  F.prototype = constr.prototype
-  return new F()
-}
-
-
 // Simple mixin to add functionalities for generating unique ids.
 // Each object extended with this mixin has a separate id counter.
 // Therefore ids are not unique globally but unique for object.
-module.exports.UniqueIdsMixin = {
+exports.UniqueIdsMixin = {
 
   // Every time it is called, this method returns a new unique id.
   _generateId: function() {
@@ -682,7 +679,7 @@ module.exports.UniqueIdsMixin = {
 
 
 // Simple mixin for named objects, such as [send] or [table] 
-module.exports.NamedMixin = {
+exports.NamedMixin = {
 
   nameIsUnique: false,
 
@@ -704,7 +701,7 @@ module.exports.NamedMixin = {
 }
 
 // Store for named objects. Objects are stored by pair (<obj.type>, <obj.name>)
-var NamedObjectStore = module.exports.NamedObjectStore = function() {
+var NamedObjectStore = exports.NamedObjectStore = function() {
   this._store = {}
 }
 
@@ -768,7 +765,6 @@ _.extend(NamedObjectStore.prototype, {
 var _ = require('underscore')
   , utils = require('./core/utils')
   , EventEmitter = require('events').EventEmitter
-  , patchIds = _.extend({}, utils.UniqueIdsMixin)
 
 
 // Global settings
@@ -793,18 +789,12 @@ exports.isStarted = false
 var emitter = exports.emitter = new EventEmitter()
 
 
-// Registering a newly created patch 
-exports.register = function(patch) {
-  if (this.patches.indexOf(patch) === -1) {
-    this.patches.push(patch)
-    patch.patchId = patchIds._generateId()
-  }
-}
-exports.patches = []
+// The library of objects that can be created
+exports.library = {}
 
 
-// The patch to which new objects are added to by default
-exports.defaultPatch = null
+// List of all patches currently open
+exports.patches = {}
 
 
 // Audio engine. Must implement the `interfaces.Audio`
@@ -847,99 +837,116 @@ var _ = require('underscore')
   , portlets = require('./portlets')
   , pdGlob = require('../global')
 
-exports.declareObjects = function(exports) {
+exports.declareObjects = function(library) {
 
-// TODO: dsp signal to first inlet
-// TODO: phase
-exports['osc~'] = PdObject.extend({
+  // TODO: phase
+  library['osc~'] = PdObject.extend({
 
-  inletDefs: [
+    type: 'osc~',
 
-    portlets.DspInlet.extend({
-      message: function(frequency) {
-        if (!this.hasDspSource()) {
-          expect(frequency).to.be.a('number', 'osc~::frequency')
-          this.obj.frequency = frequency
-          if (this.obj._oscNode)
-            this.obj._oscNode.frequency.setValueAtTime(frequency, 0)
+    inletDefs: [
+
+      portlets.DspInlet.extend({
+        message: function(frequency) {
+          if (!this.hasDspSource()) {
+            expect(frequency).to.be.a('number', 'osc~::frequency')
+            this.obj.frequency = frequency
+            if (this.obj._oscNode)
+              this.obj._oscNode.frequency.setValueAtTime(frequency, 0)
+          }
         }
-      }
-    })
+      }),
 
-  ],
+      portlets.Inlet.extend({
+        message: function(phase) {
+          if (this.obj._oscNode) {
+            expect(frequency).to.be.a('number', 'osc~::phase')
+            this.obj._createOscillator(phase)
+          }
+        }
+      })
 
-  outletDefs: [portlets.DspOutlet],
+    ],
 
-  init: function(frequency) {
-    this.frequency = frequency || 0
-  },
+    outletDefs: [portlets.DspOutlet],
 
-  start: function() {
-    this._oscNode = pdGlob.audio.context.createOscillator()
-    this._oscNode.setPeriodicWave(pdGlob.audio.context.createPeriodicWave(
-      new Float32Array([0, 1]), new Float32Array([0, 0])))
-    this._oscNode.start(0)
-    this.o(0).waa = { node: this._oscNode, output: 0 }
-    this.i(0).waa = { node: this._oscNode.frequency, output: 0 }
-    this.i(0).message(this.frequency)
-  },
+    init: function(frequency) {
+      this.frequency = frequency || 0
+    },
 
-  stop: function() {
-    this._oscNode.stop(0)
-    this._oscNode = null
-  }
+    start: function() {
+      this._createOscillator(0)
+    },
 
-})
+    stop: function() {
+      this._oscNode.stop(0)
+      this._oscNode = null
+    },
 
+    _createOscillator: function(phase) {
+      this._oscNode = pdGlob.audio.context.createOscillator()
+      this._oscNode.setPeriodicWave(pdGlob.audio.context.createPeriodicWave(
+        new Float32Array([0, 1]), new Float32Array([0, 0])))
+      this._oscNode.start(0)
+      this.o(0).setWaa(this._oscNode, 0)
+      this.i(0).setWaa(this._oscNode.frequency, 0)
+      this.i(0).message(this.frequency)
+    }
 
-exports['line~'] = PdObject.extend({
-
-  inletDefs: [
-
-    portlets.Inlet.extend({
-      message: function(value, time) {
-        expect(value).to.be.a('number', 'line~::value')
-        if (time) {
-          expect(time).to.be.a('number', 'line~::time')
-          this.obj._offsetNode.offset.linearRampToValueAtTime(value, 
-            pdGlob.audio.context.currentTime + time / 1000)
-        } else
-          this.obj._offsetNode.offset.setValueAtTime(value, 0)
-      }
-    })
-
-  ],
-
-  outletDefs: [portlets.DspOutlet],
-
-  init: function() {},
-
-  start: function() {
-    this._offsetNode = new WAAOffset(pdGlob.audio.context)
-    this._offsetNode.offset.setValueAtTime(0, 0)
-    this.o(0).waa = { node: this._offsetNode, output: 0 }
-  },
-
-  stop: function() {
-    this._offsetNode.disconnect()
-    this._offsetNode = null
-  }
-
-})
+  })
 
 
-exports['dac~'] = PdObject.extend({
+  library['line~'] = PdObject.extend({
 
-  endPoint: true,
+    type: 'line~',
 
-  inletDefs: [portlets.DspInlet, portlets.DspInlet],
+    inletDefs: [
 
-  start: function() {
-    this.i(0).waa = { node: pdGlob.audio.channels[0], input: 0 }
-    this.i(1).waa = { node: pdGlob.audio.channels[1], input: 1 }
-  }
+      portlets.Inlet.extend({
+        message: function(value, time) {
+          expect(value).to.be.a('number', 'line~::value')
+          if (time) {
+            expect(time).to.be.a('number', 'line~::time')
+            this.obj._offsetNode.offset.linearRampToValueAtTime(value, 
+              pdGlob.audio.context.currentTime + time / 1000)
+          } else
+            this.obj._offsetNode.offset.setValueAtTime(value, 0)
+        }
+      })
 
-})
+    ],
+
+    outletDefs: [portlets.DspOutlet],
+
+    init: function() {},
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._offsetNode.offset.setValueAtTime(0, 0)
+      this.o(0).setWaa(this._offsetNode, 0)
+    },
+
+    stop: function() {
+      this._offsetNode = null
+    }
+
+  })
+
+
+  library['dac~'] = PdObject.extend({
+
+    type: 'dac~',
+
+    endPoint: true,
+
+    inletDefs: [portlets.DspInlet, portlets.DspInlet],
+
+    start: function() {
+      this.i(0).setWaa(pdGlob.audio.channels[0], 0)
+      this.i(1).setWaa(pdGlob.audio.channels[1], 1)
+    }
+
+  })
 
 }
 
@@ -967,101 +974,112 @@ var _ = require('underscore')
   , expect = require('chai').expect
   , utils = require('../core/utils')
   , PdObject = require('../core/PdObject')
+  , Patch = require('../core/Patch')
   , pdGlob = require('../global')
   , portlets = require('./portlets')
 
-exports.declareObjects = function(exports) {
+exports.declareObjects = function(library) {
 
-exports['receive'] = PdObject.extend(utils.NamedMixin, {
+  library['receive'] = PdObject.extend(utils.NamedMixin, {
 
-  outletDefs: [portlets.Outlet],
-  abbreviations: ['r'],
+    type: 'receive',
 
-  init: function(name) {
-    var onMsgReceived = this._messageHandler()
-    this.on('change:name', function(oldName, newName) {
-      if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, onMsgReceived)
-      pdGlob.emitter.on('msg:' + newName, onMsgReceived)
-    })
-    this.setName(name)
-  },
+    outletDefs: [portlets.Outlet],
+    abbreviations: ['r'],
 
-  _messageHandler: function() {
-    var self = this
-    return function() {
-      var outlet = self.outlets[0]
-      outlet.message.apply(outlet, arguments)
+    init: function(name) {
+      var onMsgReceived = this._messageHandler()
+      this.on('change:name', function(oldName, newName) {
+        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, onMsgReceived)
+        pdGlob.emitter.on('msg:' + newName, onMsgReceived)
+      })
+      this.setName(name)
+    },
+
+    _messageHandler: function() {
+      var self = this
+      return function() {
+        var outlet = self.outlets[0]
+        outlet.message.apply(outlet, arguments)
+      }
     }
-  }
 
-})
+  })
 
-exports['send'] = PdObject.extend(utils.NamedMixin, {
+  library['send'] = PdObject.extend(utils.NamedMixin, {
 
-  inletDefs: [
+    type: 'send',
 
-    portlets.Inlet.extend({
-      message: function() {
-        pdGlob.emitter.emit.apply(pdGlob.emitter, ['msg:' + this.obj.name].concat(_.toArray(arguments)))
-      }
-    })
+    inletDefs: [
 
-  ],
+      portlets.Inlet.extend({
+        message: function() {
+          pdGlob.emitter.emit.apply(pdGlob.emitter, ['msg:' + this.obj.name].concat(_.toArray(arguments)))
+        }
+      })
 
-  abbreviations: ['s'],
+    ],
 
-  init: function(name) { this.setName(name) }
+    abbreviations: ['s'],
 
-})
+    init: function(name) { this.setName(name) }
 
-exports['msg'] = PdObject.extend({
+  })
 
-  doResolveArgs: false,
+  library['msg'] = PdObject.extend({
 
-  inletDefs: [
+    type: 'msg',
 
-    portlets.Inlet.extend({
-      message: function() {
-        var outlet = this.obj.outlets[0]
-          , msg = _.toArray(arguments)
-        // For some reason in Pd $0 in a message is always 0.
-        msg.unshift(0)
-        outlet.message.apply(outlet, this.obj.resolver(msg))
-      }
-    })
+    doResolveArgs: false,
 
-  ],
+    inletDefs: [
 
-  outletDefs: [portlets.Outlet],
+      portlets.Inlet.extend({
+        message: function() {
+          var outlet = this.obj.outlets[0]
+            , msg = _.toArray(arguments)
+          // For some reason in Pd $0 in a message is always 0.
+          msg.unshift(0)
+          outlet.message.apply(outlet, this.obj.resolver(msg))
+        }
+      })
 
-  init: function() {
-    this.resolver = this.getDollarResolver(_.toArray(arguments))
-  }
+    ],
 
-})
+    outletDefs: [portlets.Outlet],
 
-exports['print'] = PdObject.extend({
+    init: function() {
+      this.resolver = utils.getDollarResolver(_.toArray(arguments))
+    }
 
-  inletDefs: [
+  })
 
-    portlets.Inlet.extend({
-      message: function() {
-        msg = _.toArray(arguments)
-        console.log.apply(console, this.obj.prefix ? [this.obj.prefix].conct(msg) : msg)
-      }
-    })
+  library['print'] = PdObject.extend({
 
-  ],
+    type: 'print',
 
-  init: function(prefix) {
-    this.prefix = (prefix || 'print');
-  }
+    inletDefs: [
 
-})
+      portlets.Inlet.extend({
+        message: function() {
+          msg = _.toArray(arguments)
+          console.log.apply(console, this.obj.prefix ? [this.obj.prefix].conct(msg) : msg)
+        }
+      })
+
+    ],
+
+    init: function(prefix) {
+      this.prefix = (prefix || 'print');
+    }
+
+  })
+
+  library['pd'] = Patch
 
 }
 
-},{"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":63}],11:[function(require,module,exports){
+},{"../core/Patch":3,"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":63}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1083,16 +1101,11 @@ exports['print'] = PdObject.extend({
  */
 var _ = require('underscore')
 
-require('./glue').declareObjects(exports)
-require('./dsp').declareObjects(exports)
-require('./portlets').declareObjects(exports)
-
-// Set `type` attribute to objects (override the default value 'abstract')
-_.pairs(exports).forEach(function(pair) {
-  pair[1].prototype.type = pair[0]
-})
-
-
+exports.declareObjects = function(library) {
+  require('./glue').declareObjects(library)
+  require('./dsp').declareObjects(library)
+  require('./portlets').declareObjects(library)
+}
 },{"./dsp":9,"./glue":10,"./portlets":12,"underscore":63}],12:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
@@ -1122,6 +1135,7 @@ var _ = require('underscore')
   , BaseInlet = require('../core/portlets').Inlet
   , BaseOutlet = require('../core/portlets').Outlet
   , pdGlob = require('../global')
+  , AudioParam = typeof window !== 'undefined' ? window.AudioParam : function() {} // for testing purpose
 
 // message inlet.
 var Inlet = exports.Inlet = BaseInlet.extend({})
@@ -1145,6 +1159,21 @@ var DspInlet = exports.DspInlet = BaseInlet.extend({
     return _.filter(this.connections, function(outlet) {
       return outlet instanceof DspOutlet
     }).length > 0
+  },
+
+  setWaa: function(node, input) {
+    var self = this
+    if (pdGlob.isStarted) {
+      _.chain(this.connections)
+        .filter(function(outlet) { return outlet instanceof DspOutlet })
+        .forEach(function(outlet) { outlet._waaDisconnect(self) }).value()
+    }
+    this._waa = { node: node, input: input }
+    if (pdGlob.isStarted) {
+      _.chain(this.connections)
+        .filter(function(outlet) { return outlet instanceof DspOutlet })
+        .forEach(function(outlet) { outlet._waaConnect(self) }).value()
+    }
   }
 
 })
@@ -1152,28 +1181,81 @@ var DspInlet = exports.DspInlet = BaseInlet.extend({
 // dsp outlet.
 var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
 
+  init: function() {
+    this._waaConnections = []
+  },
+
+  start: function() {
+    // Because ATM we cannot disconnect one node from another node
+    // without disconnecting all, we have to create a gain node for each
+    // new connection.
+    this._waaConnectAll()
+  },
+
+  stop: function() {
+    this._waaDisconnectAll()
+    this._waaConnections = []
+  },
+
   connection: function(inlet) {
-    if (pdGlob.isStarted) {
-      if (inlet.waa.node instanceof AudioParam) {
-        inlet.waa.node.setValueAtTime(0, 0) // remove offset from AudioParam
-        this.waa.node.connect(inlet.waa.node, this.waa.output)
-      } else
-        this.waa.node.connect(inlet.waa.node, this.waa.output, inlet.waa.input)
-    }
+    if (!(inlet instanceof DspInlet)) 
+      throw new Error('can only connect to DSP inlet')
+    if (pdGlob.isStarted) this._waaConnect(inlet)
   },
 
   disconnection: function(inlet) {
-    if (pdGlob.isStarted)
-      this.waa.node.disconnect(inlet.waa.node, this.waa.output)
+    if (pdGlob.isStarted) this._waaDisconnect(inlet)
   },
 
   message: function() {
     throw new Error ('dsp outlet received a message')
+  },
+
+  setWaa: function(node, output) {
+    var self = this
+    if (pdGlob.isStarted) this._waaDisconnectAll()
+    this._waa = { node: node, output: output }
+    if (pdGlob.isStarted) this._waaConnectAll()
+  },
+
+  _waaConnect: function(inlet) {
+    var gainNode = pdGlob.audio.context.createGain()
+    this._waa.node.connect(gainNode, this._waa.output)
+    this._waaConnections.push({ inlet: inlet, gainNode: gainNode })
+
+    if (inlet._waa.node instanceof AudioParam) {
+      inlet._waa.node.setValueAtTime(0, 0) // remove offset from AudioParam
+      gainNode.connect(inlet._waa.node, this._waa.output)
+    } else
+      gainNode.connect(inlet._waa.node, 0, inlet._waa.input)
+  },
+
+  _waaDisconnect: function(inlet) {
+    // Search for the right waaConnection
+    var waaConnection = this._waaConnections.filter(function(waaConnection) {
+      return waaConnection.inlet === inlet
+    })[0]
+
+    // Disconnect the gain node, and remove the waaConnection from the list
+    waaConnection.gainNode.disconnect()
+    this._waaConnections = this._waaConnections.filter(function(waaConnection) {
+      return waaConnection.inlet !== inlet
+    })
+  },
+
+  _waaConnectAll: function() {
+    // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
+    this.connections.forEach(this._waaConnect.bind(this))
+  },
+
+  _waaDisconnectAll: function() {
+    // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
+    this.connections.forEach(this._waaDisconnect.bind(this))
   }
 
 })
 
-exports.declareObjects = function(exports) {
+exports.declareObjects = function(library) {
 
   var InletInlet = Inlet.extend({
     message: function() {
@@ -1182,7 +1264,12 @@ exports.declareObjects = function(exports) {
     }
   })
 
-  var InletInletDsp = InletInlet.extend({})
+  var InletInletDsp = DspInlet.extend({
+    message: function() {
+      var outlet = this.obj.outlets[0]
+      outlet.message.apply(outlet, arguments)
+    }
+  })
 
   var OutletOutletDsp = DspOutlet.extend({
     message: function() {
@@ -1195,22 +1282,26 @@ exports.declareObjects = function(exports) {
     }
   })
 
-  exports['outlet'] = PdObject.extend({
+  library['outlet'] = PdObject.extend({
+    type: 'outlet',
     inletDefs: [ InletInlet ],
     outletDefs: [ Outlet.extend({ crossPatch: true }) ]
   })
 
-  exports['inlet'] = PdObject.extend({
+  library['inlet'] = PdObject.extend({
+    type: 'inlet',
     inletDefs: [ InletInlet.extend({ crossPatch: true }) ],
     outletDefs: [ Outlet ]
   })
 
-  exports['outlet~'] = PdObject.extend({
+  library['outlet~'] = PdObject.extend({
+    type: 'outlet~',
     inletDefs: [ InletInletDsp ],
     outletDefs: [ OutletOutletDsp.extend({ crossPatch: true }) ]
   })
 
-  exports['inlet~'] = PdObject.extend({
+  library['inlet~'] = PdObject.extend({
+    type: 'inlet~',
     inletDefs: [ InletInletDsp.extend({ crossPatch: true }) ],
     outletDefs: [ OutletOutletDsp ]
   })

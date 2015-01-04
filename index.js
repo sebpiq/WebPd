@@ -20,18 +20,15 @@
 
 var _ = require('underscore')
   , pdfu = require('pd-fileutils')
-  , objects = require('./lib/objects')
   , Patch = require('./lib/core/Patch')
   , utils = require('./lib/core/utils')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
+  , patchIds = _.extend({}, utils.UniqueIdsMixin)
+require('./lib/objects').declareObjects(pdGlob.library)
 
 
 var Pd = module.exports = {
-
-  lib: objects,
-
-  Patch: Patch,
 
   // Returns the current sample rate
   getSampleRate: function() { return pdGlob.settings.sampleRate },
@@ -56,9 +53,9 @@ var Pd = module.exports = {
         pdGlob.clock = interfaces.Clock
       }
 
-      pdGlob.isStarted = true
       pdGlob.audio.start()
-      pdGlob.patches.forEach(function(patch) { patch.start() })
+      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].start()
+      pdGlob.isStarted = true
     }
   },
 
@@ -66,7 +63,7 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.isStarted = false
-      pdGlob.patches.forEach(function(patch) { patch.stop() })
+      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].stop()
       pdGlob.audio.stop()
     }
   },
@@ -84,9 +81,18 @@ var Pd = module.exports = {
     pdGlob.emitter.on('msg:' + name, callback)
   },
 
+  // Create a new patch
+  createPatch: function() {
+    var patch = new Patch()
+    patch.patchId = patchIds._generateId()
+    pdGlob.patches[patch.patchId] = patch
+    if (pdGlob.isStarted) patch.start()
+    return patch
+  },
+
   // Loads a patch from a string (Pd file), or from an object (pd.json) 
   loadPatch: function(patchData) {
-    var patch = utils.apply(Patch, patchData.args || [])
+    var patch = new Patch(patchData.args || [])
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     this._preparePatch(patch, patchData)
     return patch
@@ -95,13 +101,13 @@ var Pd = module.exports = {
   // Registers the abstraction defined in `patchData` as `name`.
   // `patchData` can be a string (Pd file), or an object (pd.json)
   registerAbstraction: function(name, patchData) {
-    var CustomObject = function() {
-      var patch = utils.apply(Patch, arguments)
+    var CustomObject = function(args) {
+      var patch = new Patch(args)
       Pd._preparePatch(patch, patchData)
       return patch
     }
     CustomObject.prototype = Patch.prototype
-    Pd.lib[name] = CustomObject
+    pdGlob.library[name] = CustomObject
   },
 
   _preparePatch: function(patch, patchData) {
@@ -110,17 +116,8 @@ var Pd = module.exports = {
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
-        , obj
-      // subpatch
-      if (proto === 'pd') {
-        obj = utils.apply(Patch, (nodeData.args || []).concat(patch))
-        Pd._preparePatch(obj, nodeData.subpatch)
-      // or normal object
-      } else {
-        if (!Pd.lib.hasOwnProperty(proto))
-          throw new Error('unknown proto ' + proto)
-        obj = utils.apply(Pd.lib[proto], (nodeData.args || []).concat(patch))
-      }
+        , obj = patch.createObject(proto, nodeData.args || [])
+      if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
 

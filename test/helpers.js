@@ -4,9 +4,10 @@ var _ = require('underscore')
   , pdGlob = require('../lib/global')
 
 exports.afterEach = function() {
-  pdGlob.patches = []
-  pdGlob.defaultPatch = null
   pdGlob.namedObjects = null
+  pdGlob.patches = {}
+  pdGlob.library = {}
+  require('../lib/objects').declareObjects(pdGlob.library)
   Pd.stop()
 }
 

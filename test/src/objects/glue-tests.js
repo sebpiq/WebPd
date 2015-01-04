@@ -3,13 +3,20 @@ var assert = require('assert')
   , Pd = require('../../../index')
   , Patch = require('../../../lib/core/Patch')
   , portlets = require('../../../lib/objects/portlets')
+  , pdGlob = require('../../../lib/global')
   , helpers = require('../../helpers')
   , TestingMailBox = require('./utils').TestingMailBox
 
 
 describe('objects.glue', function() {  
 
-  beforeEach(function() { Pd.start() })
+  var patch
+
+  beforeEach(function() {
+    patch = Pd.createPatch()
+    pdGlob.library['testingmailbox'] = TestingMailBox
+    Pd.start()
+  })
 
   afterEach(function() { helpers.afterEach() })
 
@@ -19,16 +26,16 @@ describe('objects.glue', function() {
       , mailbox1, mailbox1bis, mailbox2
 
     beforeEach(function() {
-      send1 = new Pd.lib['send']('no1')
-      send2 = new Pd.lib['send']('no2')
+      send1 = patch.createObject('send', ['no1'])
+      send2 = patch.createObject('send', ['no2'])
 
-      receive1 = new Pd.lib['receive']('no1')
-      receive1bis = new Pd.lib['receive']('no1')
-      receive2 = new Pd.lib['receive']('no2')
+      receive1 = patch.createObject('receive', ['no1'])
+      receive1bis = patch.createObject('receive', ['no1'])
+      receive2 = patch.createObject('receive', ['no2'])
 
-      mailbox1 = new TestingMailBox()
-      mailbox1bis = new TestingMailBox()
-      mailbox2 = new TestingMailBox()
+      mailbox1 = patch.createObject('testingmailbox')
+      mailbox1bis = patch.createObject('testingmailbox')
+      mailbox2 = patch.createObject('testingmailbox')
 
       receive1.o(0).connect(mailbox1.i(0))
       receive1bis.o(0).connect(mailbox1bis.i(0))
@@ -68,8 +75,8 @@ describe('objects.glue', function() {
   describe('[msg]', function() {
 
     it('should transmits always the same message if no $-args', function() {
-      var msg = new Pd.lib['msg'](11, '22')
-        , mailbox = new TestingMailBox
+      var msg = patch.createObject('msg', [11, '22'])
+        , mailbox = patch.createObject('testingmailbox')
       msg.o(0).connect(mailbox.i(0))
 
       msg.i(0).message(22)
@@ -83,8 +90,8 @@ describe('objects.glue', function() {
     })
 
     it('should resolve $-args', function() {
-      var msg = new Pd.lib['msg']('$1', 33, '$0', '$3-HA')
-        , mailbox = new TestingMailBox
+      var msg = patch.createObject('msg', ['$1', 33, '$0', '$3-HA'])
+        , mailbox = patch.createObject('testingmailbox')
       msg.o(0).connect(mailbox.i(0))
 
       msg.i(0).message(22, 'bloblo', 44, 'blibli', 66)
@@ -95,7 +102,7 @@ describe('objects.glue', function() {
     })
 
     it('should raise an error if $-arg out of range', function() {
-      var msg = new Pd.lib['msg']('$1', 33, '$0', '$3-HA')
+      var msg = patch.createObject('msg', ['$1', 33, '$0', '$3-HA'])
       assert.throws(function() { msg.i(0).message('ouch', 'ich') })
       assert.throws(function() { msg.i(0).message(11) })
       assert.throws(function() { msg.i(0).message('bang') })

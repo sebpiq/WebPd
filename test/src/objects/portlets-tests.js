@@ -37,11 +37,34 @@ describe('objects.portlets', function() {
     }
   })
 
+  var DummySink = DummyObject.extend({
+    inletDefs: [portlets.DspInlet, portlets.DspInlet],
+    start: function() {
+      this.i(0).setWaa(new DummyAudioNode())
+      this.i(1).setWaa(new DummyAudioNode())
+    }
+  })
+
+  var DummySource = DummyObject.extend({
+    outletDefs: [portlets.DspOutlet, portlets.DspOutlet],
+    start: function() {
+      this.o(0).setWaa(new DummyAudioNode())
+      this.o(1).setWaa(new DummyAudioNode())
+    }
+  })
+
   var dummyAudio = {
     start: function() {},
     stop: function() {},
     context: new DummyAudioContext()
   }
+
+  beforeEach(function() {
+    pdGlob.library['testingmailbox'] = TestingMailBox
+    pdGlob.library['dummyobject'] = DummyObject
+    pdGlob.library['dummysink'] = DummySink
+    pdGlob.library['dummysource'] = DummySource
+  })
 
   afterEach(function() { helpers.afterEach() })
 
@@ -51,7 +74,8 @@ describe('objects.portlets', function() {
 
       it('should transmit messages to the object', function() {
         Pd.start(dummyAudio)
-        var dummyObj = new DummyObject()
+        var patch = Pd.createPatch()
+          , dummyObj = patch.createObject('dummyobject')
           , inlet0 = new portlets.Inlet(dummyObj, 0)
           , inlet1 = new portlets.Inlet(dummyObj, 1)
           , inlet2 = new portlets.Inlet(dummyObj, 2)
@@ -112,14 +136,10 @@ describe('objects.portlets', function() {
 
       it('should maintain web audio connections', function() {
         Pd.start(dummyAudio)
-        var DummySink = DummyObject.extend({
-          inletDefs: [portlets.DspInlet, portlets.DspInlet]
-        })
-        var DummySource = DummyObject.extend({
-          outletDefs: [portlets.DspOutlet, portlets.DspOutlet]
-        })
-        var dummySink = new DummySink()
-          , dummySource = new DummySource()
+
+        var patch = Pd.createPatch()
+          , dummySink = patch.createObject('dummysink')
+          , dummySource = patch.createObject('dummysource')
           , sourceNode1 = new DummyAudioNode()
           , sourceNode2 = new DummyAudioNode()
           , sourceNode1bis = new DummyAudioNode()
@@ -235,6 +255,15 @@ describe('objects.portlets', function() {
         assert.deepEqual(sinkNode1bis.calls, [])
       })
 
+      it('shouldnt crash if connecting before Pd is started', function() {
+        var patch = Pd.createPatch()
+          , dummySink = patch.createObject('dummysink')
+          , dummySource = patch.createObject('dummysource')
+        dummySource.o(0).connect(dummySink.i(0))
+
+        Pd.start(dummyAudio)
+      })
+
     })
 
     describe('connect', function() {
@@ -308,23 +337,23 @@ describe('objects.portlets', function() {
   describe('[outlet] / [inlet] / [outlet~] / [inlet~]', function() {
 
     it('should update the patch\'s portlets', function() {
-      var patch = new Patch
+      var patch = Pd.createPatch()
       assert.deepEqual(patch.inlets, [])
 
-      var outletObj = new Pd.lib['outlet'](patch)
-        , inletDspObj = new Pd.lib['inlet~'](patch)
+      var outletObj = patch.createObject('outlet')
+        , inletDspObj = patch.createObject('inlet~')
       assert.deepEqual(patch.inlets, [inletDspObj.inlets[0]])
       assert.deepEqual(patch.outlets, [outletObj.outlets[0]])
     })
 
     it('should transmit messages from outside / inside of the patch', function() {
-      var patch = new Patch
-        , subpatch = new Patch(patch)
-        , mailbox1 = new TestingMailBox(patch)
-        , mailbox2 = new TestingMailBox(subpatch)
-        , mailbox3 = new TestingMailBox(patch)
-        , inlet = new Pd.lib['inlet'](subpatch)
-        , outlet = new Pd.lib['outlet'](subpatch)
+      var patch = Pd.createPatch()
+        , subpatch = patch.createObject('pd')
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = subpatch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+        , inlet = subpatch.createObject('inlet')
+        , outlet = subpatch.createObject('outlet')
 
       mailbox1.o(0).connect(subpatch.i(0))
       mailbox2.i(0).connect(inlet.o(0))

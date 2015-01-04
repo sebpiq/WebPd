@@ -43,6 +43,24 @@ describe('core.utils', function() {
 
   })
 
+  describe('.getDollarResolver', function() {
+
+    it('should resolve $-args', function() {
+      var resolver = utils.getDollarResolver([1])
+      assert.deepEqual(resolver([2, 'bla', 4]), [1])
+
+      resolver = utils.getDollarResolver([1, '$1-bla-$3', 'bla', '$3'])
+      assert.deepEqual(resolver([0, 'bli', 'bla', 4, 5]), [1, 'bli-bla-4', 'bla', 4])
+      assert.deepEqual(resolver([0, 7, 'bloop', 'ploo', 5]), [1, '7-bla-ploo', 'bla', 'ploo'])
+    })
+
+    it('should throw an error if $-arg out of range', function() {
+      var resolver = utils.getDollarResolver(['$5'])
+      assert.throws(function() { resolver([1, 2]) })
+    })
+
+  })
+
   describe('.UniqueIdsMixin', function() {
 
     var uniqueIds1 = _.extend({}, utils.UniqueIdsMixin)
@@ -159,37 +177,6 @@ describe('core.utils', function() {
       query = pdGlob.namedObjects.get('namedObj', 'objONE')
       assert.equal(query.length, 1)
       assert.equal(query[0], obj)
-    })
-
-  })
-
-  describe('.apply', function() {
-
-    var A = function(arg1, arg2, arg3) {
-      this.arg1 = arg1
-      this.arg2 = arg2
-      this.arg3 = arg3
-    }
-
-    A.prototype.b = function() {}
-
-    it('should be able to create nodes', function() {
-      var obj = utils.apply(A, [11, 22, 33])
-      assert.ok(obj instanceof A)
-      assert.equal(obj.arg1, 11)
-      assert.equal(obj.arg2, 22)
-      assert.equal(obj.arg3, 33)
-      assert.equal(obj.b, A.prototype.b)
-    })
-
-    it('should work with `arguments`', function() {
-      var f = function() { return utils.apply(A, arguments) }
-        , obj = f(12, 23, 34)
-      assert.ok(obj instanceof A)
-      assert.equal(obj.arg1, 12)
-      assert.equal(obj.arg2, 23)
-      assert.equal(obj.arg3, 34)
-      assert.equal(obj.b, A.prototype.b)
     })
 
   })

@@ -13,22 +13,5 @@ describe('core.PdObject', function() {
 
   afterEach(function() { helpers.afterEach() })
 
-  it('should register to its patch', function() {
-    var patch = new Patch
-      , obj = new MyObject([], patch)
-    assert.ok(_.contains(patch.objects, obj))
-    assert.ok(_.isNumber(obj.id))
-    assert.ok(obj.patch, patch)
-  })
-
-  it('should register to the default patch if no patch given', function() {
-    Pd.start()
-    var obj = new MyObject([])
-      , patch = Pd.getDefaultPatch()
-    assert.ok(_.contains(patch.objects, obj))
-    assert.ok(_.isNumber(obj.id))
-    assert.ok(obj.patch, patch)
-  })
-
 })
 

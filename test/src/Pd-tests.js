@@ -15,15 +15,16 @@ describe('Pd', function() {
   describe('.start', function() {
 
     it('should start all the patches', function() {
-      var MyPatch = function() { Patch.apply(this, arguments) }
-      _.extend(MyPatch.prototype, Patch.prototype, {
-        init: function() { this.startCalled = 0 },
-        start: function() { this.startCalled++ }
-      })
+      var createPatch = function() {
+        var patch = Pd.createPatch()
+        patch.startCalled = 0
+        patch.start = function() { this.startCalled++ }
+        return patch
+      }
 
-      var patch1 = new MyPatch()
-        , patch2 = new MyPatch()
-        , patch3 = new MyPatch()
+      var patch1 = createPatch()
+        , patch2 = createPatch()
+        , patch3 = createPatch()
       assert.ok(!Pd.isStarted())
       assert.equal(patch1.startCalled, 0)
       Pd.start()
@@ -38,14 +39,16 @@ describe('Pd', function() {
   describe('.stop', function() {
 
     it('should stop all the patches', function() {
-      var MyPatch = function() { Patch.apply(this, arguments) }
-      _.extend(MyPatch.prototype, Patch.prototype, {
-        init: function() { this.stopCalled = 0 },
-        stop: function() { this.stopCalled++ }
-      })
-      var patch1 = new MyPatch()
-        , patch2 = new MyPatch()
-        , patch3 = new MyPatch()
+      var createPatch = function() {
+        var patch = Pd.createPatch()
+        patch.stopCalled = 0
+        patch.stop = function() { this.stopCalled++ }
+        return patch
+      }
+
+      var patch1 = createPatch()
+        , patch2 = createPatch()
+        , patch3 = createPatch()
       assert.ok(!Pd.isStarted())
       assert.equal(patch1.stopCalled, 0)
       Pd.stop()
@@ -60,11 +63,11 @@ describe('Pd', function() {
 
   })
 
-  describe('.register', function() {
+  describe('.createPatch', function() {
 
     it('should register the patch and give it an id', function() {
-      var patch = new Patch()
-      assert.ok(_.contains(pdGlob.patches, patch))
+      var patch = Pd.createPatch()
+      assert.ok(_.contains(_.values(pdGlob.patches), patch))
       assert.ok(_.isNumber(patch.patchId))
     })
 
@@ -84,7 +87,8 @@ describe('Pd', function() {
       }
       Pd.registerAbstraction('dumbOsc', abstraction)
 
-      var obj = new Pd.lib['dumbOsc'](220)
+      var patch = Pd.createPatch()
+        , obj = patch.createObject('dumbOsc', [220])
         , osc = obj.objects[0]
         , outlet = obj.objects[1]
 
