@@ -1,5 +1,14 @@
 var _ = require('underscore')
   , waatest = require('waatest')
+  , Pd = require('../index')
+  , pdGlob = require('../lib/global')
+
+exports.afterEach = function() {
+  pdGlob.patches = []
+  pdGlob.defaultPatch = null
+  pdGlob.namedObjects = null
+  Pd.stop()
+}
 
 exports.expectSamples = function(onStarted, expected, done) {
   waatest.utils.expectSamples(function(context) {
@@ -9,27 +18,6 @@ exports.expectSamples = function(onStarted, expected, done) {
     onStarted()
   }, expected, done)
 }
-
-
-/*
-// Generate one audio block, compare it with `expected` and calls `done(err)`
-exports.expectSamples = function(onStarted, expected, done) {
-  var channelCount = expected.length
-    , frameCount = expected[0].length
-    , audio = new TestAudio(channelCount, frameCount)
-
-  audio.context.oncomplete = function(event) {
-    var ch, actual = []
-    for (ch = 0; ch < channelCount; ch++)  
-      actual.push(_.toArray(event.renderedBuffer.getChannelData(ch)))
-    try { assertBlocksEqual(actual, expected) } catch(err) { done(err) }
-    done()
-  }
-  Pd.start(audio)
-  if ()onStarted()
-  audio.context.startRendering()
-}
-*/
 
 // Audio engine for testing
 var TestAudio = function(channelCount, context) {

@@ -4,9 +4,12 @@ var _ = require('underscore')
   , EventEmitter = require('events').EventEmitter
   , utils = require('../../../lib/core/utils')
   , pdGlob = require('../../../lib/global')
+  , helpers = require('../../helpers')
 
 
 describe('core.utils', function() {
+
+  afterEach(function() { helpers.afterEach() })
 
   describe('.chainExtend', function() {
 

@@ -3,6 +3,7 @@ var assert = require('assert')
   , portlets = require('../../../lib/objects/portlets')
   , PdObject = require('../../../lib/core/PdObject')
 
+
 exports.TestingMailBox = PdObject.extend({
   type: 'TestingMailBox',
   init: function() { this.received = [] },

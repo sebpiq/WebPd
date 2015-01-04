@@ -25,8 +25,6 @@ var _ = require('underscore')
   , utils = require('./lib/core/utils')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
-pdGlob.defaultPatch = new Patch()
-pdGlob.namedObjects = new utils.NamedObjectStore()
 
 
 var Pd = module.exports = {
@@ -44,6 +42,9 @@ var Pd = module.exports = {
   // Start dsp
   start: function(audio) {
     if (!pdGlob.isStarted) {
+      pdGlob.defaultPatch = pdGlob.defaultPatch || new Patch()
+      pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
+
       if (typeof AudioContext !== 'undefined') {
         pdGlob.audio = audio || new waa.Audio(pdGlob.settings.channelCount)
         pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
@@ -51,9 +52,10 @@ var Pd = module.exports = {
       // TODO : handle other environments better than like this
       } else {
         var interfaces = require('./lib/core/interfaces')
-        pdGlob.audio = interfaces.Audio
+        pdGlob.audio = audio || interfaces.Audio
         pdGlob.clock = interfaces.Clock
       }
+
       pdGlob.isStarted = true
       pdGlob.audio.start()
       pdGlob.patches.forEach(function(patch) { patch.start() })

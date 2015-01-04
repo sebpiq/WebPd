@@ -1,16 +1,16 @@
 var _ = require('underscore')
   , fs = require('fs')
   , assert = require('assert')
+  , helpers = require('../helpers')
   , Patch = require('../../lib/core/Patch')
   , pdGlob = require('../../lib/global')
   , Pd = require('../../index')
+  , helpers = require('../helpers')
+
 
 describe('Pd', function() {
 
-  beforeEach(function() {
-    pdGlob.patches = []
-    pdGlob.isStarted = false
-  })
+  afterEach(function() { helpers.afterEach() })
 
   describe('.start', function() {
 

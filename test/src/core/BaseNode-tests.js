@@ -3,6 +3,7 @@ var assert = require('assert')
   , portlets = require('../../../lib/core/portlets')
   , BaseNode = require('../../../lib/core/BaseNode')
   , Patch = require('../../../lib/core/Patch')
+  , helpers = require('../../helpers')
 
 
 describe('core.BaseNode', function() {
@@ -18,6 +19,8 @@ describe('core.BaseNode', function() {
     outletDefs: [portlets.Outlet, MyOutlet, portlets.Outlet]
 
   })
+
+  afterEach(function() { helpers.afterEach() })
 
   it('should create inlets and outlets automatically', function() {
     var node = new MyNode()

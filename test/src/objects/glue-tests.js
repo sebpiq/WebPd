@@ -3,9 +3,15 @@ var assert = require('assert')
   , Pd = require('../../../index')
   , Patch = require('../../../lib/core/Patch')
   , portlets = require('../../../lib/objects/portlets')
+  , helpers = require('../../helpers')
   , TestingMailBox = require('./utils').TestingMailBox
 
+
 describe('objects.glue', function() {  
+
+  beforeEach(function() { Pd.start() })
+
+  afterEach(function() { helpers.afterEach() })
 
   describe('[send] / [receive]', function() {
     var send1, send2

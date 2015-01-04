@@ -4,10 +4,42 @@ var assert = require('assert')
   , portlets = require('../../../lib/core/portlets')
   , PdObject = require('../../../lib/core/PdObject')
   , pdGlob = require('../../../lib/global')
+  , helpers = require('../../helpers')
+
 
 describe('core.patch', function() {
 
   describe('.Patch', function() {
+
+    var PortletMixin = {
+      init: function() {
+        this.startCalled = 0
+        this.stopCalled = 0
+        this.connectionCalled = 0
+        this.disconnectionCalled = 0
+      },
+      start: function() { this.startCalled++ },
+      stop: function() { this.stopCalled++ },
+      connection: function() { this.connectionCalled++ },
+      disconnection: function() { this.disconnectionCalled++ }
+    }
+
+    var MyInlet = portlets.Inlet.extend(PortletMixin)
+
+    var MyOutlet = portlets.Outlet.extend(PortletMixin)
+
+    var MyObject = PdObject.extend({
+      init: function() {
+        this.startCalled = 0
+        this.stopCalled = 0
+      },
+      start: function() { this.startCalled++ },
+      stop: function() { this.stopCalled++ },
+      inletDefs: [ MyInlet, MyInlet ],
+      outletDefs: [ MyOutlet, MyOutlet ]
+    })
+
+    afterEach(function() { helpers.afterEach() })
 
     it('should register itself', function() {
       var patch = new Patch(1, 22, 333)
@@ -19,83 +51,55 @@ describe('core.patch', function() {
 
     describe('.start', function() {
 
-      var MyObject = PdObject.extend({
-        start: function() { this.startCalled = true },
-        inletDefs: [
-          portlets.Inlet.extend({
-            init: function() { this.connectionCalled = 0 },
-            connection: function() { this.connectionCalled++ }
-          }),
-          portlets.Inlet.extend({
-            init: function() { this.connectionCalled = 0 },
-            connection: function() { this.connectionCalled++ }
-          })
-        ],
-        outletDefs: [
-          portlets.Outlet.extend({
-            init: function() { this.connectionCalled = 0 },
-            connection: function() { this.connectionCalled++ }
-          }),
-          portlets.Outlet.extend({
-            init: function() { this.connectionCalled = 0 },
-            connection: function() { this.connectionCalled++ }
-          })
-        ]
-      })
-
-      it('should call all the objects\' start methods', function() {
+      it('should call objects\' and portlets start methods', function() {
         var patch = new Patch
           , obj1 = new MyObject([], patch)
           , obj2 = new MyObject([], patch)
-          , obj3 = new MyObject([], patch)
 
-        assert.ok(!obj1.startCalled)
-        patch.start()
-        assert.ok(obj1.startCalled)
-        assert.ok(obj2.startCalled)
-        assert.ok(obj3.startCalled)
-      })
+        assert.equal(obj1.startCalled, 0)
+        assert.equal(obj1.o(0).startCalled, 0)
 
-      it('should call connection callbacks again on portlets', function() {
-        var patch = new Patch
-          , obj1 = new MyObject([], patch)
-          , obj2 = new MyObject([], patch)
-          , obj3 = new MyObject([], patch)
-        obj1.o(0).connect(obj2.i(0))
-        obj1.o(1).connect(obj2.i(0))
-        obj2.o(0).connect(obj3.i(1))
-        assert.equal(obj1.o(0).connectionCalled, 1)
-        assert.equal(obj1.o(1).connectionCalled, 1)
-        assert.equal(obj2.o(0).connectionCalled, 1)
-        assert.equal(obj2.i(0).connectionCalled, 2)
-        assert.equal(obj3.i(1).connectionCalled, 1)
-        
         patch.start()
-        assert.equal(obj1.o(0).connectionCalled, 2)
-        assert.equal(obj1.o(1).connectionCalled, 2)
-        assert.equal(obj2.o(0).connectionCalled, 2)
-        assert.equal(obj2.i(0).connectionCalled, 4)
-        assert.equal(obj3.i(1).connectionCalled, 2)
+        assert.equal(obj1.startCalled, 1)
+        assert.equal(obj2.startCalled, 1)
+
+        assert.equal(obj1.o(0).startCalled, 1)
+        assert.equal(obj1.o(1).startCalled, 1)
+        assert.equal(obj1.i(0).startCalled, 1)
+        assert.equal(obj1.i(1).startCalled, 1)
+
+        assert.equal(obj2.o(0).startCalled, 1)
+        assert.equal(obj2.o(1).startCalled, 1)
+        assert.equal(obj2.i(0).startCalled, 1)
+        assert.equal(obj2.i(1).startCalled, 1)
       })
 
     })
 
     describe('.stop', function() {
 
-      var MyObject = PdObject.extend({
-        stop: function() { this.stopCalled = true }
-      })
-
-      it('should call all the objects\' stop methods', function() {
+      it('should call all the objects and portlets stop methods', function() {
         var patch = new Patch
           , obj1 = new MyObject([], patch)
           , obj2 = new MyObject([], patch)
           , obj3 = new MyObject([], patch)
-        assert.ok(!obj1.stopCalled)
+        assert.equal(obj1.stopCalled, 0)
+        assert.equal(obj1.o(0).stopCalled, 0)
         patch.stop()
-        assert.ok(obj1.stopCalled)
-        assert.ok(obj2.stopCalled)
-        assert.ok(obj3.stopCalled)
+
+        assert.equal(obj1.stopCalled, 1)
+        assert.equal(obj2.stopCalled, 1)
+        assert.equal(obj3.stopCalled, 1)
+
+        assert.equal(obj1.o(0).stopCalled, 1)
+        assert.equal(obj1.o(1).stopCalled, 1)
+        assert.equal(obj1.i(0).stopCalled, 1)
+        assert.equal(obj1.i(1).stopCalled, 1)
+
+        assert.equal(obj2.o(0).stopCalled, 1)
+        assert.equal(obj2.o(1).stopCalled, 1)
+        assert.equal(obj2.i(0).stopCalled, 1)
+        assert.equal(obj2.i(1).stopCalled, 1)
       })
 
     })

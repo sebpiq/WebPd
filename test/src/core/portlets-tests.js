@@ -2,9 +2,12 @@ var assert = require('assert')
   , _ = require('underscore')
   , utils = require('../../../lib/core/utils')
   , portlets = require('../../../lib/core/portlets')
+  , helpers = require('../../helpers')
 
 
 describe('core.portlets', function() {
+
+  afterEach(function() { helpers.afterEach() })
 
   describe('.extend', function() {
 
@@ -43,7 +46,7 @@ describe('core.portlets', function() {
       sink.connect(source2)
     })
 
-    it('should emit the right events when connecting/disconnecting', function() {
+    it('should call the connection/disconnection methods', function() {
       var sink = new portlets.Inlet(dummyObj, 0)
         , source = new portlets.Outlet(dummyObj, 1)
         , received = []
