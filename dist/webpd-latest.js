@@ -839,7 +839,6 @@ var _ = require('underscore')
 
 exports.declareObjects = function(library) {
 
-  // TODO: phase
   library['osc~'] = PdObject.extend({
 
     type: 'osc~',
@@ -906,12 +905,46 @@ exports.declareObjects = function(library) {
 
       portlets.Inlet.extend({
         message: function(value, time) {
-          expect(value).to.be.a('number', 'line~::value')
-          if (time) {
-            expect(time).to.be.a('number', 'line~::time')
-            this.obj._offsetNode.offset.linearRampToValueAtTime(value, 
-              pdGlob.audio.context.currentTime + time / 1000)
-          } else
+          if (this.obj._offsetNode) {
+            expect(value).to.be.a('number', 'line~::value')
+            if (time) {
+              expect(time).to.be.a('number', 'line~::time')
+              this.obj._offsetNode.offset.linearRampToValueAtTime(value, 
+                pdGlob.audio.context.currentTime + time / 1000)
+            } else
+              this.obj._offsetNode.offset.setValueAtTime(value, 0)
+          }
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.DspOutlet],
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._offsetNode.offset.setValueAtTime(0, 0)
+      this.o(0).setWaa(this._offsetNode, 0)
+    },
+
+    stop: function() {
+      this._offsetNode = null
+    }
+
+  })
+
+
+  library['sig~'] = PdObject.extend({
+
+    type: 'sig~',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(value) {
+          expect(value).to.be.a('number', 'sig~::value')
+          this.obj.value = value
+          if (this.obj._offsetNode)
             this.obj._offsetNode.offset.setValueAtTime(value, 0)
         }
       })
@@ -920,12 +953,15 @@ exports.declareObjects = function(library) {
 
     outletDefs: [portlets.DspOutlet],
 
-    init: function() {},
+    init: function(value) {
+      this.value = value || 0
+    },
 
     start: function() {
       this._offsetNode = new WAAOffset(pdGlob.audio.context)
       this._offsetNode.offset.setValueAtTime(0, 0)
       this.o(0).setWaa(this._offsetNode, 0)
+      this.i(0).message(this.value)
     },
 
     stop: function() {
