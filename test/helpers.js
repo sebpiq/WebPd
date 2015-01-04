@@ -17,7 +17,10 @@ exports.expectSamples = function(onStarted, expected, done) {
       , audio = new TestAudio(channelCount, context)
     Pd.start(audio)
     onStarted()
-  }, expected, done)
+  }, expected, function(err) {
+    Pd.stop()
+    done(err)
+  })
 }
 
 // Audio engine for testing

@@ -859,10 +859,9 @@ exports.declareObjects = function(library) {
 
       portlets.Inlet.extend({
         message: function(phase) {
-          if (this.obj._oscNode) {
-            expect(frequency).to.be.a('number', 'osc~::phase')
+          expect(phase).to.be.a('number', 'osc~::phase')
+          if (pdGlob.isStarted)
             this.obj._createOscillator(phase)
-          }
         }
       })
 
@@ -884,9 +883,12 @@ exports.declareObjects = function(library) {
     },
 
     _createOscillator: function(phase) {
+      phase = phase * 2 * Math.PI 
       this._oscNode = pdGlob.audio.context.createOscillator()
       this._oscNode.setPeriodicWave(pdGlob.audio.context.createPeriodicWave(
-        new Float32Array([0, 1]), new Float32Array([0, 0])))
+        new Float32Array([0, Math.cos(phase)]),
+        new Float32Array([0, Math.sin(-phase)])
+      ))
       this._oscNode.start(0)
       this.o(0).setWaa(this._oscNode, 0)
       this.i(0).setWaa(this._oscNode.frequency, 0)

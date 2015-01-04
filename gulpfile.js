@@ -11,7 +11,7 @@ libWatcher.on('change', function(event) {
   console.log('File '+event.path+' was '+event.type+', running tasks...')
 })
 
-var browserTestWatcher = gulp.watch(['./test/**/*.js'], ['test.browser:browserify'])
+var browserTestWatcher = gulp.watch(['./test/**/*.js', 'waatest/lib-build.js'], ['test.browser:browserify'])
 browserTestWatcher.on('change', function(event) {
   console.log('File '+event.path+' was '+event.type+', running tasks...')
 })
