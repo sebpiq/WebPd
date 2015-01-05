@@ -32,8 +32,8 @@ describe('objects.portlets', function() {
   var DummyObject = PdObject.extend({
     type: 'dummy',
     init: function() { this.received = [] },
-    message: function() {
-      this.received.push(_.toArray(arguments))
+    message: function(args) {
+      this.received.push(args)
     }
   })
 
@@ -67,27 +67,6 @@ describe('objects.portlets', function() {
   })
 
   afterEach(function() { helpers.afterEach() })
-
-  describe('.Inlet', function() {
-
-    describe('.message', function() {
-
-      it('should transmit messages to the object', function() {
-        Pd.start(dummyAudio)
-        var patch = Pd.createPatch()
-          , dummyObj = patch.createObject('dummyobject')
-          , inlet0 = new portlets.Inlet(dummyObj, 0)
-          , inlet1 = new portlets.Inlet(dummyObj, 1)
-          , inlet2 = new portlets.Inlet(dummyObj, 2)
-
-        inlet0.message('a', 'b')
-        assert.deepEqual(dummyObj.received, [[0, 'a', 'b']])
-        inlet2.message('c')
-        assert.deepEqual(dummyObj.received, [[0, 'a', 'b'], [2, 'c']])
-      })
-    })
-
-  })
 
   describe('.DspInlet', function() {
 
@@ -360,12 +339,12 @@ describe('objects.portlets', function() {
       mailbox2.o(0).connect(outlet.i(0))
       mailbox3.i(0).connect(subpatch.o(0))
       
-      mailbox1.i(0).message('bla', 111)
+      mailbox1.i(0).message(['bla', 111])
       assert.deepEqual(mailbox1.received, [['bla', 111]])
       assert.deepEqual(mailbox2.received, [['bla', 111]])
       assert.deepEqual(mailbox3.received, [['bla', 111]])
 
-      mailbox2.i(0).message('blo', 222)
+      mailbox2.i(0).message(['blo', 222])
       assert.deepEqual(mailbox2.received, [['bla', 111], ['blo', 222]])
       assert.deepEqual(mailbox3.received, [['bla', 111], ['blo', 222]])
     }) 

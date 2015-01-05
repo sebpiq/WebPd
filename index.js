@@ -33,9 +33,6 @@ var Pd = module.exports = {
   // Returns the current sample rate
   getSampleRate: function() { return pdGlob.settings.sampleRate },
 
-  // Returns the default patch
-  getDefaultPatch: function() { return pdGlob.defaultPatch },
-
   // Start dsp
   start: function(audio) {
     if (!pdGlob.isStarted) {
@@ -72,8 +69,8 @@ var Pd = module.exports = {
   isStarted: function() { return pdGlob.isStarted },
 
   // Send a message to a named receiver inside the graph
-  send: function(name) {
-    pdGlob.emitter.emit.apply(pdGlob.emitter, ['msg:' + name].concat(_.toArray(arguments).slice(1)))
+  send: function(name, args) {
+    pdGlob.emitter.emit('msg:' + name, args)
   },
 
   // Receive a message from a named sender inside the graph

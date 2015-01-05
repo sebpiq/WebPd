@@ -34,9 +34,6 @@ var Pd = module.exports = {
   // Returns the current sample rate
   getSampleRate: function() { return pdGlob.settings.sampleRate },
 
-  // Returns the default patch
-  getDefaultPatch: function() { return pdGlob.defaultPatch },
-
   // Start dsp
   start: function(audio) {
     if (!pdGlob.isStarted) {
@@ -73,8 +70,8 @@ var Pd = module.exports = {
   isStarted: function() { return pdGlob.isStarted },
 
   // Send a message to a named receiver inside the graph
-  send: function(name) {
-    pdGlob.emitter.emit.apply(pdGlob.emitter, ['msg:' + name].concat(_.toArray(arguments).slice(1)))
+  send: function(name, args) {
+    pdGlob.emitter.emit('msg:' + name, args)
   },
 
   // Receive a message from a named sender inside the graph
@@ -185,7 +182,7 @@ var BaseNode = module.exports = function(args) {
   })
 
   // initializes the object, handling the creation arguments
-  this.init.apply(this, args)
+  this.init(args)
 }
 inherits(BaseNode, EventEmitter)
 
@@ -288,8 +285,8 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
 
   type: 'patch',
 
-  init: function() {
-    this.args = _.toArray(arguments)
+  init: function(args) {
+    this.args = args
   },
 
   start: function() {
@@ -506,7 +503,7 @@ _.extend(Portlet.prototype, {
   stop: function() {},
 
   // This method is called when the portlet receives a message.
-  message: function() {},
+  message: function(args) {},
 
   // This method is called when the portlet gets a new connection,
   // and when the portlet's object is started it is called again.
@@ -546,13 +543,7 @@ _.extend(Portlet.prototype, {
 Portlet.extend = utils.chainExtend
 
 // Base inlet
-var Inlet = exports.Inlet = Portlet.extend({
-
-  message: function() {
-    this.obj.message.apply(this.obj, [this.id].concat(_.toArray(arguments)))
-  }
-
-})
+var Inlet = exports.Inlet = Portlet.extend({})
 
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
@@ -839,6 +830,8 @@ var _ = require('underscore')
 
 exports.declareObjects = function(library) {
 
+  // TODO : When phase is set, the current oscillator will be immediately disconnected,
+  // while ideally, it should be disconnected only at `futureTime` 
   library['osc~'] = PdObject.extend({
 
     type: 'osc~',
@@ -846,18 +839,20 @@ exports.declareObjects = function(library) {
     inletDefs: [
 
       portlets.DspInlet.extend({
-        message: function(frequency) {
+        message: function(args) {
+          var frequency = args[0]
           if (!this.hasDspSource()) {
             expect(frequency).to.be.a('number', 'osc~::frequency')
             this.obj.frequency = frequency
             if (this.obj._oscNode)
-              this.obj._oscNode.frequency.setValueAtTime(frequency, 0)
+              this.obj._oscNode.frequency.setValueAtTime(frequency, pdGlob.futureTime || 0)
           }
         }
       }),
 
       portlets.Inlet.extend({
-        message: function(phase) {
+        message: function(args) {
+          var phase = args[0]
           expect(phase).to.be.a('number', 'osc~::phase')
           if (pdGlob.isStarted)
             this.obj._createOscillator(phase)
@@ -868,8 +863,8 @@ exports.declareObjects = function(library) {
 
     outletDefs: [portlets.DspOutlet],
 
-    init: function(frequency) {
-      this.frequency = frequency || 0
+    init: function(args) {
+      this.frequency = args[0] || 0
     },
 
     start: function() {
@@ -888,10 +883,10 @@ exports.declareObjects = function(library) {
         new Float32Array([0, Math.cos(phase)]),
         new Float32Array([0, Math.sin(-phase)])
       ))
-      this._oscNode.start(0)
+      this._oscNode.start(pdGlob.futureTime || 0)
       this.o(0).setWaa(this._oscNode, 0)
       this.i(0).setWaa(this._oscNode.frequency, 0)
-      this.i(0).message(this.frequency)
+      this.i(0).message([this.frequency])
     }
 
   })
@@ -904,22 +899,31 @@ exports.declareObjects = function(library) {
     inletDefs: [
 
       portlets.Inlet.extend({
-        message: function(value, time) {
+        message: function(args) {
+          var value = args[0]
+            , time = args[1]
+
           if (this.obj._offsetNode) {
             expect(value).to.be.a('number', 'line~::value')
             if (time) {
               expect(time).to.be.a('number', 'line~::time')
-              this.obj._offsetNode.offset.linearRampToValueAtTime(value, 
-                pdGlob.audio.context.currentTime + time / 1000)
+              var endTime = (pdGlob.futureTime || pdGlob.audio.context.currentTime) + time / 1000
+              this.obj._offsetNode.offset.setValueAtTime(this.obj.target, pdGlob.futureTime || 0)
+              this.obj._offsetNode.offset.linearRampToValueAtTime(value, endTime)
             } else
-              this.obj._offsetNode.offset.setValueAtTime(value, 0)
+              this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime || 0)
           }
+          this.obj.target = value
         }
       })
 
     ],
 
     outletDefs: [portlets.DspOutlet],
+
+    init: function() {
+      this.target = 0
+    },
 
     start: function() {
       this._offsetNode = new WAAOffset(pdGlob.audio.context)
@@ -941,11 +945,12 @@ exports.declareObjects = function(library) {
     inletDefs: [
 
       portlets.Inlet.extend({
-        message: function(value) {
+        message: function(args) {
+          var value = args[0]
           expect(value).to.be.a('number', 'sig~::value')
           this.obj.value = value
           if (this.obj._offsetNode)
-            this.obj._offsetNode.offset.setValueAtTime(value, 0)
+            this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime || 0)
         }
       })
 
@@ -953,15 +958,15 @@ exports.declareObjects = function(library) {
 
     outletDefs: [portlets.DspOutlet],
 
-    init: function(value) {
-      this.value = value || 0
+    init: function(args) {
+      this.value = args[0] || 0
     },
 
     start: function() {
       this._offsetNode = new WAAOffset(pdGlob.audio.context)
       this._offsetNode.offset.setValueAtTime(0, 0)
       this.o(0).setWaa(this._offsetNode, 0)
-      this.i(0).message(this.value)
+      this.i(0).message([this.value])
     },
 
     stop: function() {
@@ -1025,8 +1030,9 @@ exports.declareObjects = function(library) {
     outletDefs: [portlets.Outlet],
     abbreviations: ['r'],
 
-    init: function(name) {
-      var onMsgReceived = this._messageHandler()
+    init: function(args) {
+      var name = args[0]
+        , onMsgReceived = this._messageHandler()
       this.on('change:name', function(oldName, newName) {
         if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, onMsgReceived)
         pdGlob.emitter.on('msg:' + newName, onMsgReceived)
@@ -1034,11 +1040,10 @@ exports.declareObjects = function(library) {
       this.setName(name)
     },
 
-    _messageHandler: function() {
+    _messageHandler: function(args) {
       var self = this
-      return function() {
-        var outlet = self.outlets[0]
-        outlet.message.apply(outlet, arguments)
+      return function(args) {
+        self.outlets[0].message(args)
       }
     }
 
@@ -1051,8 +1056,8 @@ exports.declareObjects = function(library) {
     inletDefs: [
 
       portlets.Inlet.extend({
-        message: function() {
-          pdGlob.emitter.emit.apply(pdGlob.emitter, ['msg:' + this.obj.name].concat(_.toArray(arguments)))
+        message: function(args) {
+          pdGlob.emitter.emit('msg:' + this.obj.name, args)
         }
       })
 
@@ -1060,7 +1065,7 @@ exports.declareObjects = function(library) {
 
     abbreviations: ['s'],
 
-    init: function(name) { this.setName(name) }
+    init: function(args) { this.setName(args[0]) }
 
   })
 
@@ -1073,12 +1078,11 @@ exports.declareObjects = function(library) {
     inletDefs: [
 
       portlets.Inlet.extend({
-        message: function() {
-          var outlet = this.obj.outlets[0]
-            , msg = _.toArray(arguments)
+        message: function(args) {
           // For some reason in Pd $0 in a message is always 0.
-          msg.unshift(0)
-          outlet.message.apply(outlet, this.obj.resolver(msg))
+          args = args.slice(0)
+          args.unshift(0)
+          this.obj.outlets[0].message(this.obj.resolver(args))
         }
       })
 
@@ -1086,8 +1090,8 @@ exports.declareObjects = function(library) {
 
     outletDefs: [portlets.Outlet],
 
-    init: function() {
-      this.resolver = utils.getDollarResolver(_.toArray(arguments))
+    init: function(args) {
+      this.resolver = utils.getDollarResolver(args)
     }
 
   })
@@ -1099,16 +1103,15 @@ exports.declareObjects = function(library) {
     inletDefs: [
 
       portlets.Inlet.extend({
-        message: function() {
-          msg = _.toArray(arguments)
-          console.log.apply(console, this.obj.prefix ? [this.obj.prefix].conct(msg) : msg)
+        message: function(args) {
+          console.log(this.obj.prefix ? [this.obj.prefix].concat(args) : args)
         }
       })
 
     ],
 
-    init: function(prefix) {
-      this.prefix = (prefix || 'print');
+    init: function(args) {
+      this.prefix = (args[0] || 'print');
     }
 
   })
@@ -1175,23 +1178,27 @@ var _ = require('underscore')
   , pdGlob = require('../global')
   , AudioParam = typeof window !== 'undefined' ? window.AudioParam : function() {} // for testing purpose
 
-// message inlet.
-var Inlet = exports.Inlet = BaseInlet.extend({})
 
-// message outlet. Dispatches messages to all the sinks
-var Outlet = exports.Outlet = BaseOutlet.extend({
+// Mixin for common inlet functionalities
+var InletMixin = {
 
-  message: function() {
-    var args = arguments
-    this.connections.forEach(function(sink) {
-      sink.message.apply(sink, args)
-    })
+  // Allows to deal with Web Audio API's way of scheduling things.
+  // This sends a message, but flags it to be executed in the future.
+  // That way DSP objects that can schedule stuff, have a bit of time
+  // before the event must actually happen.
+  future: function(time, args) {
+    pdGlob.futureTime = time
+    this.message(args)
+    delete pdGlob.futureTime
   }
 
-})
+}
+
+// message inlet.
+var Inlet = exports.Inlet = BaseInlet.extend(InletMixin)
 
 // dsp inlet.
-var DspInlet = exports.DspInlet = BaseInlet.extend({
+var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
 
   hasDspSource: function() {
     return _.filter(this.connections, function(outlet) {
@@ -1212,6 +1219,17 @@ var DspInlet = exports.DspInlet = BaseInlet.extend({
         .filter(function(outlet) { return outlet instanceof DspOutlet })
         .forEach(function(outlet) { outlet._waaConnect(self) }).value()
     }
+  }
+
+})
+
+// message outlet. Dispatches messages to all the sinks
+var Outlet = exports.Outlet = BaseOutlet.extend({
+
+  message: function(args) {
+    this.connections.forEach(function(sink) {
+      sink.message(args)
+    })
   }
 
 })
@@ -1296,26 +1314,23 @@ var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
 exports.declareObjects = function(library) {
 
   var InletInlet = Inlet.extend({
-    message: function() {
-      var outlet = this.obj.outlets[0]
-      outlet.message.apply(outlet, arguments)
+    message: function(args) {
+      this.obj.outlets[0].message(args)
     }
   })
 
   var InletInletDsp = DspInlet.extend({
-    message: function() {
-      var outlet = this.obj.outlets[0]
-      outlet.message.apply(outlet, arguments)
+    message: function(args) {
+      this.obj.outlets[0].message(args)
     }
   })
 
   var OutletOutletDsp = DspOutlet.extend({
-    message: function() {
-      var args = arguments
+    message: function(args) {
       // Normal dsp outlets cannot receive messages,
       // but this one just transmits them unchanged.
       this.sinks.forEach(function(sink) {
-        sink.message.apply(sink, args)
+        sink.message(args)
       })
     }
   })

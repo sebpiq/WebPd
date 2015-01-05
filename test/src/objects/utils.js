@@ -9,10 +9,9 @@ exports.TestingMailBox = PdObject.extend({
   init: function() { this.received = [] },
   inletDefs: [
     portlets.Inlet.extend({
-      message: function() {
-        var outlet = this.obj.outlets[0]
-        this.obj.received.push(_.toArray(arguments))
-        outlet.message.apply(outlet, arguments)
+      message: function(args) {
+        this.obj.outlets[0].message(args)
+        this.obj.received.push(args)
       }
     })
   ],

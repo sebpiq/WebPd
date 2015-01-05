@@ -43,7 +43,7 @@ describe('objects.glue', function() {
     })
 
     it('should send messages through inlet to all receivers', function() {
-      send1.i(0).message('bla', 'bli', 'blu')
+      send1.i(0).message(['bla', 'bli', 'blu'])
       assert.deepEqual(mailbox1.received, [['bla', 'bli', 'blu']])
       assert.deepEqual(mailbox1bis.received, [['bla', 'bli', 'blu']])
       assert.deepEqual(mailbox2.received, [])
@@ -51,8 +51,8 @@ describe('objects.glue', function() {
 
     it('should send messages to Pd.receive as well', function() {
       var received = []
-      Pd.receive('no2', function() { received.push(_.toArray(arguments)) })
-      Pd.send('no2', 'bla', 888)
+      Pd.receive('no2', function(args) { received.push(args) })
+      Pd.send('no2', ['bla', 888])
       assert.deepEqual(mailbox1.received, [])
       assert.deepEqual(mailbox1bis.received, [])
       assert.deepEqual(mailbox2.received, [['bla', 888]])
@@ -62,12 +62,12 @@ describe('objects.glue', function() {
     it('should send messages to Pd.receive as well', function() {
       // First change only receiver name
       receive1.setName('num1')
-      send1.i(0).message('blop', 'blep', 'blup')
+      send1.i(0).message(['blop', 'blep', 'blup'])
       assert.deepEqual(mailbox1.received, [])
 
       // Then change also sender name
       send1.setName('num1')
-      send1.i(0).message(1, 11, 111)
+      send1.i(0).message([1, 11, 111])
       assert.deepEqual(mailbox1.received, [[1, 11, 111]])
     })
   })
@@ -79,13 +79,13 @@ describe('objects.glue', function() {
         , mailbox = patch.createObject('testingmailbox')
       msg.o(0).connect(mailbox.i(0))
 
-      msg.i(0).message(22)
+      msg.i(0).message([22])
       assert.deepEqual(mailbox.received, [[11, '22']])
 
-      msg.i(0).message('bang')
+      msg.i(0).message(['bang'])
       assert.deepEqual(mailbox.received, [[11, '22'], [11, '22']])
 
-      msg.i(0).message('bla', 123)
+      msg.i(0).message(['bla', 123])
       assert.deepEqual(mailbox.received, [[11, '22'], [11, '22'], [11, '22']])
     })
 
@@ -94,18 +94,18 @@ describe('objects.glue', function() {
         , mailbox = patch.createObject('testingmailbox')
       msg.o(0).connect(mailbox.i(0))
 
-      msg.i(0).message(22, 'bloblo', 44, 'blibli', 66)
+      msg.i(0).message([22, 'bloblo', 44, 'blibli', 66])
       assert.deepEqual(mailbox.received, [[22, 33, 0, '44-HA']])
 
-      msg.i(0).message('bloblo', 'bleble', 'blybly')
+      msg.i(0).message(['bloblo', 'bleble', 'blybly'])
       assert.deepEqual(mailbox.received, [[22, 33, 0, '44-HA'], ['bloblo', 33, 0, 'blybly-HA']])
     })
 
     it('should raise an error if $-arg out of range', function() {
       var msg = patch.createObject('msg', ['$1', 33, '$0', '$3-HA'])
-      assert.throws(function() { msg.i(0).message('ouch', 'ich') })
-      assert.throws(function() { msg.i(0).message(11) })
-      assert.throws(function() { msg.i(0).message('bang') })
+      assert.throws(function() { msg.i(0).message(['ouch', 'ich']) })
+      assert.throws(function() { msg.i(0).message([11]) })
+      assert.throws(function() { msg.i(0).message(['bang']) })
     })
 
   })

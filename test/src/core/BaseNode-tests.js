@@ -14,7 +14,7 @@ describe('core.BaseNode', function() {
   var MyNode = function() { BaseNode.apply(this, arguments) }
   _.extend(MyNode.prototype, BaseNode.prototype, {
 
-    init: function() { this.initArgs = _.toArray(arguments) },
+    init: function(args) { this.initArgs = args },
     inletDefs: [MyInlet, portlets.Inlet],
     outletDefs: [portlets.Outlet, MyOutlet, portlets.Outlet]
 

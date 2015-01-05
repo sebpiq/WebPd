@@ -14,7 +14,8 @@
     "dsp"
   ],
   "scripts": {
-    "test": "istanbul cover _mocha -- test --reporter spec --recursive"
+    "test": "mocha --reporter list --recursive test/src",
+    "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive"
   },
   "dependencies": {
     "underscore": "1.4.x",
