@@ -23,6 +23,17 @@ exports.expectSamples = function(onStarted, expected, done) {
   })
 }
 
+exports.renderSamples = function(channelCount, frameCount, onStarted, done) {
+  waatest.utils.renderSamples(channelCount, frameCount, function(context) {
+    var audio = new TestAudio(channelCount, context)
+    Pd.start(audio)
+    onStarted()
+  }, function(err, block) {
+    Pd.stop()
+    done(err, block)
+  })
+}
+
 // Audio engine for testing
 var TestAudio = function(channelCount, context) {
   var ch
