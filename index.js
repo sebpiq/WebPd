@@ -80,18 +80,20 @@ var Pd = module.exports = {
 
   // Create a new patch
   createPatch: function() {
-    var patch = new Patch()
-    patch.patchId = patchIds._generateId()
-    pdGlob.patches[patch.patchId] = patch
+    var patch = this._createPatch()
     if (pdGlob.isStarted) patch.start()
     return patch
   },
 
-  // Loads a patch from a string (Pd file), or from an object (pd.json) 
+  // Loads a patch from a string (Pd file), or from an object (pd.json)
+  // TODO : problems of scheduling on load, for example executing [loadbang] ???
+  //         should we use the `futureTime` hack? 
   loadPatch: function(patchData) {
-    var patch = new Patch(patchData.args || [])
+    var patch = this._createPatch()
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     this._preparePatch(patch, patchData)
+    patch.objects.forEach(function(obj) { obj.load() })
+    if (pdGlob.isStarted) patch.start()
     return patch
   },
 
@@ -105,6 +107,13 @@ var Pd = module.exports = {
     }
     CustomObject.prototype = Patch.prototype
     pdGlob.library[name] = CustomObject
+  },
+
+  _createPatch: function() {
+    var patch = new Patch()
+    patch.patchId = patchIds._generateId()
+    pdGlob.patches[patch.patchId] = patch
+    return patch
   },
 
   _preparePatch: function(patch, patchData) {

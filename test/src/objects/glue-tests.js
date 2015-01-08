@@ -110,5 +110,169 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[text]', function() {
+
+    it('should create rightly', function() {
+      var text = patch.createObject('text')
+        , textBla = patch.createObject('text', ['Je suis un texte'])
+      assert.equal(textBla.text, 'Je suis un texte')
+    })
+
+  })
+
+  describe('[loadbang]', function() {
+
+    it('should send bang on load', function() {
+      var loadbang = patch.createObject('loadbang')
+        , mailbox = patch.createObject('testingmailbox')
+      loadbang.o(0).connect(mailbox.i(0))
+      loadbang.load()
+      assert.deepEqual(mailbox.received, [['bang']])
+    })
+
+  })
+
+  describe('[+]', function() {
+
+    it('should have 0 as a default value', function() {
+      var add = patch.createObject('+')
+        , mailbox = patch.createObject('testingmailbox')
+      add.o(0).connect(mailbox.i(0))
+      
+      add.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[0]])
+      
+      add.i(0).message([12])
+      assert.deepEqual(mailbox.received, [[0], [12]])
+    })
+
+    it('should take an initial value as argument', function() {
+      var add = patch.createObject('+', [9])
+        , mailbox = patch.createObject('testingmailbox')
+      add.o(0).connect(mailbox.i(0))
+
+      add.i(0).message([11.5])
+      assert.deepEqual(mailbox.received, [[20.5]])
+      
+      add.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[20.5], [20.5]])
+    })
+
+    it('should change the value if message on inlet 1', function() {
+      var add = patch.createObject('+', [9])
+        , mailbox = patch.createObject('testingmailbox')
+      add.o(0).connect(mailbox.i(0))
+
+      add.i(1).message([118.78])
+      add.i(0).message([23.5])
+
+      assert.deepEqual(mailbox.received, [[142.28]])
+    })
+
+  })
+
+  describe('[-]', function() {
+    // This uses the same code as [+] so no need for full tests
+
+    it('should just work', function() {
+      var sub = patch.createObject('-', [10])
+        , mailbox = patch.createObject('testingmailbox')
+      sub.o(0).connect(mailbox.i(0))
+      
+      sub.i(0).message([12])
+      assert.deepEqual(mailbox.received, [[2]])
+    })
+
+  })
+
+  describe('[*]', function() {
+    // This uses the same code as [+] so no need for full tests
+
+    it('should just work', function() {
+      var mult = patch.createObject('*', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      mult.o(0).connect(mailbox.i(0))
+      
+      mult.i(0).message([3])
+      assert.deepEqual(mailbox.received, [[33]])
+    })
+
+  })
+
+  describe('[/]', function() {
+    // This uses the same code as [+] so no need for full tests
+
+    it('should just work', function() {
+      var div = patch.createObject('/', [4])
+        , mailbox = patch.createObject('testingmailbox')
+      div.o(0).connect(mailbox.i(0))
+      
+      div.i(0).message([44])
+      assert.deepEqual(mailbox.received, [[11]])
+    })
+
+  })
+
+  describe('[mod]', function() {
+    // This uses the same code as [+] so no need for full tests
+
+    it('should just work', function() {
+      var mod = patch.createObject('%', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      mod.o(0).connect(mailbox.i(0))
+      
+      mod.i(0).message([46])
+      assert.deepEqual(mailbox.received, [[2]])
+    })
+
+  })
+
+  describe('[float]', function() {
+
+    it('should have 0 as default value', function() {
+      var float = patch.createObject('float')
+        , mailbox = patch.createObject('testingmailbox')
+      float.o(0).connect(mailbox.i(0))
+
+      float.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[0]])
+    })
+
+    it('should output values previously received', function() {
+      var float = patch.createObject('float')
+        , mailbox = patch.createObject('testingmailbox')
+      float.o(0).connect(mailbox.i(0))
+
+      float.i(0).message([2])
+      assert.deepEqual(mailbox.received, [[2]])
+      
+      float.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[2], [2]])
+    })
+
+    it('should set the creation argument as initial value', function() {
+      var float = patch.createObject('float', [6])
+        , mailbox = patch.createObject('testingmailbox')
+      float.o(0).connect(mailbox.i(0))
+
+      float.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[6]])
+    })
+
+    it('should change the value when sending to inlet 1', function() {
+      var float = patch.createObject('float')
+        , mailbox = patch.createObject('testingmailbox')
+      float.o(0).connect(mailbox.i(0))
+
+      float.i(1).message([3])
+      float.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[3]])
+
+      float.i(1).message([4])
+      float.i(0).message([5])
+      assert.deepEqual(mailbox.received, [[3], [5]])
+    })
+
+  })
 
 })
