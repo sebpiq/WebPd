@@ -275,4 +275,117 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[spigot]', function() {
+
+    it('should block or let through messages from inlet 0', function() {
+      var spigot = patch.createObject('spigot')
+        , mailbox = patch.createObject('testingmailbox')
+      spigot.o(0).connect(mailbox.i(0))
+
+      spigot.i(0).message([1, 23, 'bla'])
+      assert.deepEqual(mailbox.received, [])
+
+      spigot.i(1).message([1])
+      spigot.i(0).message([1, 23, 'bla'])
+      assert.deepEqual(mailbox.received, [[1, 23, 'bla']])
+
+      spigot.i(1).message([0])
+      spigot.i(0).message([2266])
+      assert.deepEqual(mailbox.received, [[1, 23, 'bla']])
+    })
+
+    it('should accept argument as initial value', function() {
+      var spigot = patch.createObject('spigot', [8])
+        , mailbox = patch.createObject('testingmailbox')
+      spigot.o(0).connect(mailbox.i(0))
+
+      spigot.i(0).message(['2266'])
+      assert.deepEqual(mailbox.received, [['2266']])
+    })
+
+  })
+
+  describe('[trigger]', function() {
+
+    it('should be [trigger bang bang] by default', function() {
+      var trigger = patch.createObject('trigger')
+        , mailbox = patch.createObject('testingmailbox')
+
+      assert.equal(trigger.outlets.length, 2)
+      trigger.o(0).connect(mailbox.i(0))
+      trigger.o(1).connect(mailbox.i(0))
+
+      trigger.i(0).message([1, 2, 3])
+      assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+    })
+
+    it('should output the right type', function() {
+      var trigger = patch.createObject('trigger', ['float', 'bang', 'symbol', 'list', 'anything'])
+        , mailbox = patch.createObject('testingmailbox')
+
+      assert.deepEqual(trigger.outlets.length, 5)
+      trigger.o(0).connect(mailbox.i(0))
+      trigger.o(1).connect(mailbox.i(0))
+      trigger.o(2).connect(mailbox.i(0))
+      trigger.o(3).connect(mailbox.i(0))
+      trigger.o(4).connect(mailbox.i(0))
+
+      trigger.i(0).message([1])
+      assert.deepEqual(mailbox.received, [[1], [1], ['float'], ['bang'], [1]])
+      mailbox.received = []
+
+      trigger.i(0).message([1, 'pol', 3])
+      assert.deepEqual(mailbox.received, [[1, 'pol', 3], [1, 'pol', 3], ['float'], ['bang'], [1]])
+      mailbox.received = []
+
+      trigger.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['symbol'], ['bang'], [0]])
+    })
+
+  })
+
+  describe('[pack]', function() {
+
+    it('should by default be [pack f f]', function() {
+      var pack = patch.createObject('pack')
+        , mailbox = patch.createObject('testingmailbox')
+      assert.equal(pack.inlets.length, 2)
+      pack.o(0).connect(mailbox.i(0))
+
+      pack.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[0, 0]])
+      
+      pack.i(1).message([1])
+      assert.deepEqual(mailbox.received, [[0, 0]])
+
+      pack.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[0, 0], [0, 1]])
+
+      pack.i(0).message([2])
+      assert.deepEqual(mailbox.received, [[0, 0], [0, 1], [2, 1]])
+    })
+
+    it('should pack with the right type', function() {
+      var pack = patch.createObject('pack', ['symbol', 's', 'f', 'float', 100, 'bla'])
+        , mailbox = patch.createObject('testingmailbox')
+      assert.equal(pack.inlets.length, 6)
+      pack.o(0).connect(mailbox.i(0))
+
+      pack.i(0).message(['prout'])
+      assert.deepEqual(mailbox.received, [['prout', 'symbol', 0, 0, 100, 'bla']])
+      mailbox.received = []
+
+      pack.i(1).message(['blo'])
+      pack.i(2).message([999])
+      pack.i(3).message([3])
+      pack.i(4).message([101])
+      pack.i(5).message(['blu'])
+      assert.deepEqual(mailbox.received, [])
+
+      pack.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['prout', 'blo', 999, 3, 101, 'blu']])
+    })
+
+  })
+
 })
