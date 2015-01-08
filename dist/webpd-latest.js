@@ -977,7 +977,7 @@ exports.declareObjects = function(library) {
   })
 
 
-  var _FilterFrequencyInlet = portlets.Inlet.extend({
+  var _FilterFrequencyInletMixin = {
     message: function(args) {
       var frequency = args[0]
       expect(frequency).to.be.a('number', this.obj.type + '::frequency')
@@ -985,11 +985,21 @@ exports.declareObjects = function(library) {
       if (this.obj._filterNode)
         this.obj._filterNode.frequency.setValueAtTime(frequency, pdGlob.futureTime || 0)
     }
-  })
+  }
+
+  var _FilterQInletMixin = {
+    message: function(args) {
+      var Q = args[0]
+      expect(Q).to.be.a('number', this.obj.type + '::Q')
+      this.obj.Q = Q
+      if (this.obj._filterNode)
+        this.obj._filterNode.Q.setValueAtTime(Q, pdGlob.futureTime || 0)
+    }
+  }
 
   var _BaseFilter = PdObject.extend({
 
-    inletDefs: [portlets.DspInlet, _FilterFrequencyInlet],
+    inletDefs: [portlets.DspInlet, portlets.Inlet.extend(_FilterFrequencyInletMixin)],
     outletDefs: [portlets.DspOutlet],
 
     init: function(args) {
@@ -1011,7 +1021,24 @@ exports.declareObjects = function(library) {
 
   })
 
+  var _BaseBandFilter = _BaseFilter.extend({
+    waaFilterType: 'bandpass',
 
+    init: function(args) {
+      _BaseFilter.prototype.init.call(this, args)
+      this.Q = args[1] || 1
+    },
+
+    start: function(args) {
+      _BaseFilter.prototype.start.call(this, args)
+      this._filterNode.Q.setValueAtTime(this.Q, 0)
+      this.i(2).message([this.Q])
+    }
+
+  })
+
+
+  // TODO: tests for filters
   library['lop~'] = _BaseFilter.extend({
     type: 'lop~',
     waaFilterType: 'lowpass'
@@ -1024,34 +1051,29 @@ exports.declareObjects = function(library) {
   })
 
 
-  library['bp~'] = _BaseFilter.extend({
+  library['bp~'] = _BaseBandFilter.extend({
     type: 'bp~',
-    waaFilterType: 'bandpass',
 
     inletDefs: [
       portlets.DspInlet,
-      _FilterFrequencyInlet,
+      portlets.Inlet.extend(_FilterFrequencyInletMixin),
+      portlets.Inlet.extend(_FilterQInletMixin)
+    ]
+  })
 
-      portlets.Inlet.extend({
-        message: function(args) {
-          var Q = args[0]
-          expect(Q).to.be.a('number', 'bp~::Q')
-          this.obj.Q = Q
-          if (this.obj._filterNode)
-            this.obj._filterNode.Q.setValueAtTime(Q, pdGlob.futureTime || 0)
-        }
-      })
+
+  library['vcf~'] = _BaseBandFilter.extend({
+    type: 'vcf~',
+
+    inletDefs: [
+      portlets.DspInlet,
+      portlets.DspInlet.extend(_FilterFrequencyInletMixin),
+      portlets.Inlet.extend(_FilterQInletMixin)
     ],
 
-    init: function(args) {
-      _BaseFilter.prototype.init.call(this, args)
-      this.Q = args[1] || 1
-    },
-
     start: function(args) {
-      _BaseFilter.prototype.start.call(this, args)
-      this._filterNode.Q.setValueAtTime(this.Q, 0)
-      this.i(2).message([this.Q])
+      _BaseBandFilter.prototype.start.call(this, args)
+      this.i(1).setWaa(this._filterNode.frequency, 0)
     }
 
   })
