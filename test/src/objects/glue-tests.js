@@ -388,4 +388,193 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[select]', function() {
+
+    it('should create by default [sel 0]', function() {
+      var select = patch.createObject('select')
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+      
+      assert.equal(select.inlets.length, 2)
+      assert.equal(select.outlets.length, 2)
+      select.o(0).connect(mailbox1.i(0))
+      select.o(1).connect(mailbox2.i(0))
+
+      select.i(0).message([33])
+      assert.deepEqual(mailbox1.received, [])
+      assert.deepEqual(mailbox2.received, [[33]])
+
+      select.i(0).message([0])
+      assert.deepEqual(mailbox1.received, [['bang']])
+      assert.deepEqual(mailbox2.received, [[33]])
+    })
+
+    it('should change the filter if only one arg and sending a message to inlet 1', function() {
+      var select = patch.createObject('select', ['bla'])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+
+      assert.equal(select.inlets.length, 2)
+      assert.equal(select.outlets.length, 2)
+      select.o(0).connect(mailbox1.i(0))
+      select.o(1).connect(mailbox2.i(0))
+
+      select.i(0).message([33])
+      assert.deepEqual(mailbox1.received, [])
+      assert.deepEqual(mailbox2.received, [[33]])
+
+      select.i(0).message(['bla'])
+      assert.deepEqual(mailbox1.received, [['bang']])
+      assert.deepEqual(mailbox2.received, [[33]])
+      mailbox1.received = []
+      mailbox2.received = []
+
+      select.i(1).message([1234])
+      select.i(0).message(['bla'])
+      assert.deepEqual(mailbox1.received, [])
+      assert.deepEqual(mailbox2.received, [['bla']])
+
+      select.i(0).message([1234])
+      assert.deepEqual(mailbox1.received, [['bang']])
+      assert.deepEqual(mailbox2.received, [['bla']])
+    })
+
+    it('should accept more than 1 argument', function() {
+      var select = patch.createObject('select', [1, 2, 'bla'])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+        , mailbox4 = patch.createObject('testingmailbox')
+      
+      assert.equal(select.inlets.length, 1)
+      assert.equal(select.outlets.length, 4)
+      select.o(0).connect(mailbox1.i(0))
+      select.o(1).connect(mailbox2.i(0))
+      select.o(2).connect(mailbox3.i(0))
+      select.o(3).connect(mailbox4.i(0))
+
+      select.i(0).message([1])
+      assert.deepEqual(mailbox1.received, [['bang']])
+      assert.deepEqual(mailbox2.received, [])
+      assert.deepEqual(mailbox3.received, [])
+      assert.deepEqual(mailbox4.received, [])
+
+      select.i(0).message(['bla'])
+      assert.deepEqual(mailbox1.received, [['bang']])
+      assert.deepEqual(mailbox2.received, [])
+      assert.deepEqual(mailbox3.received, [['bang']])
+      assert.deepEqual(mailbox4.received, [])
+
+      select.i(0).message(['blablabla'])
+      assert.deepEqual(mailbox1.received, [['bang']])
+      assert.deepEqual(mailbox2.received, [])
+      assert.deepEqual(mailbox3.received, [['bang']])
+      assert.deepEqual(mailbox4.received, [['blablabla']])
+    })
+
+  })
+
+  describe('[moses]', function() {
+
+    it('should split messages coming-in in 2 flows', function() {
+      var moses = patch.createObject('moses', [3.55])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+      moses.o(0).connect(mailbox1.i(0))
+      moses.o(1).connect(mailbox2.i(0))
+
+      moses.i(0).message([1])
+      assert.deepEqual(mailbox1.received, [[1]])
+      assert.deepEqual(mailbox2.received, [])
+
+      moses.i(0).message([3.55])
+      assert.deepEqual(mailbox1.received, [[1]])
+      assert.deepEqual(mailbox2.received, [[3.55]])
+
+      moses.i(0).message([90])
+      assert.deepEqual(mailbox1.received, [[1]])
+      assert.deepEqual(mailbox2.received, [[3.55], [90]])
+    })
+
+    it('should change the split when sending to inlet 1', function() {
+      var moses = patch.createObject('moses', [3.55])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+      moses.o(0).connect(mailbox1.i(0))
+      moses.o(1).connect(mailbox2.i(0))
+
+      moses.i(0).message([9])
+      assert.deepEqual(mailbox1.received, [])
+      assert.deepEqual(mailbox2.received, [[9]])
+
+      moses.i(1).message([9.65])
+      moses.i(0).message([9])
+      assert.deepEqual(mailbox1.received, [[9]])
+      assert.deepEqual(mailbox2.received, [[9]])
+
+      moses.i(0).message([9.7])
+      assert.deepEqual(mailbox1.received, [[9]])
+      assert.deepEqual(mailbox2.received, [[9], [9.7]])
+    })
+
+  })
+
+  describe('[mtof]', function() {
+
+    it('should translate midi to frequency', function() {
+      var round = Math.round
+        , mtof = patch.createObject('mtof')
+        , mailbox = patch.createObject('testingmailbox')
+      mtof.o(0).connect(mailbox.i(0))
+
+      // < -1500
+      mtof.i(0).message([-1790])
+      assert.deepEqual(mailbox.received, [[0]])
+
+      // >= 1500
+      mtof.i(0).message([1500])
+      assert.equal(round(mailbox.received[1][0]), round(8.17579891564 * Math.exp(0.0577622650 * 1499)))
+      mtof.i(0).message([2000])
+      assert.equal(round(mailbox.received[2][0]), round(8.17579891564 * Math.exp(0.0577622650 * 1499)))
+
+      // -1500 < val < 1500
+      mtof.i(0).message([69])
+      assert.equal(round(round(mailbox.received[3][0])), 440)
+    })
+
+  })
+
+  describe('[random]', function() {
+
+    it('should output random integer below the max', function() {
+      var randObj = patch.createObject('random', [3])
+        , mailbox = patch.createObject('testingmailbox')
+        , numbers = [0, 0, 0]
+        , i
+      randObj.o(0).connect(mailbox.i(0))
+
+      for (i = 0; i < 20; i++) {
+        randObj.i(0).message(['bang'])
+        numbers[mailbox.received.slice(-1)[0][0]]++
+      }
+      assert.equal(numbers.length, 3)
+      assert.notEqual(numbers[0], 0)
+      assert.notEqual(numbers[1], 0)
+      assert.notEqual(numbers[2], 0)
+
+      randObj.i(1).message([4])
+      numbers = [0, 0, 0, 0]
+      for (i = 0; i < 20; i++) {
+        randObj.i(0).message(['bang'])
+        numbers[mailbox.received.slice(-1)[0][0]]++
+      }
+      assert.equal(numbers.length, 4)
+      assert.notEqual(numbers[0], 0)
+      assert.notEqual(numbers[1], 0)
+      assert.notEqual(numbers[2], 0)
+      assert.notEqual(numbers[3], 0)
+    })
+
+  })
+
 })
