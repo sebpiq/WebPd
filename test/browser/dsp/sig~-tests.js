@@ -46,7 +46,7 @@ describe('dsp.sig~', function() {
       helpers.expectSamples(function() {
         sig.o(0).connect(dac.i(0))
         sig.i(0).message([11])
-        sig.i(0).future(3 * (1 / Pd.getSampleRate()), [33])
+        sig.i(0).future(3 * (1 / Pd.getSampleRate()) * 1000, [33])
       }, [
         [11, 11, 11, 33, 33, 33, 33, 33, 33, 33],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

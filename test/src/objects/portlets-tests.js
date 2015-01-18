@@ -114,7 +114,7 @@ describe('objects.portlets', function() {
     describe('setWaa', function() {
 
       it('should maintain web audio connections', function() {
-        Pd.start(dummyAudio)
+        Pd.start({audio: dummyAudio})
 
         var patch = Pd.createPatch()
           , dummySink = patch.createObject('dummysink')
@@ -240,7 +240,7 @@ describe('objects.portlets', function() {
           , dummySource = patch.createObject('dummysource')
         dummySource.o(0).connect(dummySink.i(0))
 
-        Pd.start(dummyAudio)
+        Pd.start({audio: dummyAudio})
       })
 
     })

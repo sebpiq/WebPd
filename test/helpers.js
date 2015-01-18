@@ -15,7 +15,7 @@ exports.expectSamples = function(onStarted, expected, done) {
   waatest.utils.expectSamples(function(context) {
     var channelCount = expected.length
       , audio = new TestAudio(channelCount, context)
-    Pd.start(audio)
+    Pd.start({audio: audio})
     onStarted()
   }, expected, function(err) {
     Pd.stop()
@@ -37,6 +37,9 @@ exports.renderSamples = function(channelCount, frameCount, onStarted, done) {
 // Audio engine for testing
 var TestAudio = function(channelCount, context) {
   var ch
+  Object.defineProperty(this, 'time', {
+    get: function() { return context.currentTime * 1000 }
+  })
   this.context = context
   this._channelMerger = this.context.createChannelMerger(channelCount)
   this._channelMerger.connect(this.context.destination)
@@ -48,3 +51,23 @@ var TestAudio = function(channelCount, context) {
 }
 TestAudio.prototype.start = function() {}
 TestAudio.prototype.stop = function() {}
+
+var TestClock = exports.TestClock = function() {
+  this.events = []
+  this.time = 0
+}
+TestClock.prototype.schedule = function(func, time, repetition) {
+  var event = { func: func, time: time, repetition: repetition }
+  this.events.push(event)
+  if (event.time === this.time) event.func()
+  return event
+}
+TestClock.prototype.unschedule = function(event) { this.events = _.without(this.events, event) },
+TestClock.prototype.tick = function() {
+  var self = this
+  this.events.forEach(function(e) {
+    if (e.repetition) {
+      if (self.time >= e.time && ((self.time - e.time) % e.repetition) === 0) e.func()
+    } else if (e.time === self.time) e.func()
+  })
+}

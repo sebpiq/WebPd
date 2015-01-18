@@ -35,20 +35,21 @@ var Pd = module.exports = {
   getSampleRate: function() { return pdGlob.settings.sampleRate },
 
   // Start dsp
-  start: function(audio) {
+  start: function(opts) {
+    opts = opts || {}
     if (!pdGlob.isStarted) {
       pdGlob.defaultPatch = pdGlob.defaultPatch || new Patch()
       pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
       if (typeof AudioContext !== 'undefined') {
-        pdGlob.audio = audio || new waa.Audio(pdGlob.settings.channelCount)
-        pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
+        pdGlob.audio = opts.audio || new waa.Audio(pdGlob.settings.channelCount)
+        pdGlob.clock = opts.clock || new waa.Clock({ audioContext: pdGlob.audio.context })
 
       // TODO : handle other environments better than like this
       } else {
         var interfaces = require('./lib/core/interfaces')
-        pdGlob.audio = audio || interfaces.Audio
-        pdGlob.clock = interfaces.Clock
+        pdGlob.audio = opts.audio || interfaces.Audio
+        pdGlob.clock = opts.clock || interfaces.Clock
       }
 
       pdGlob.audio.start()
@@ -81,18 +82,20 @@ var Pd = module.exports = {
 
   // Create a new patch
   createPatch: function() {
-    var patch = new Patch()
-    patch.patchId = patchIds._generateId()
-    pdGlob.patches[patch.patchId] = patch
+    var patch = this._createPatch()
     if (pdGlob.isStarted) patch.start()
     return patch
   },
 
-  // Loads a patch from a string (Pd file), or from an object (pd.json) 
+  // Loads a patch from a string (Pd file), or from an object (pd.json)
+  // TODO : problems of scheduling on load, for example executing [loadbang] ???
+  //         should we use the `futureTime` hack? 
   loadPatch: function(patchData) {
-    var patch = new Patch(patchData.args || [])
+    var patch = this._createPatch()
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     this._preparePatch(patch, patchData)
+    patch.objects.forEach(function(obj) { obj.load() })
+    if (pdGlob.isStarted) patch.start()
     return patch
   },
 
@@ -106,6 +109,13 @@ var Pd = module.exports = {
     }
     CustomObject.prototype = Patch.prototype
     pdGlob.library[name] = CustomObject
+  },
+
+  _createPatch: function() {
+    var patch = new Patch()
+    patch.patchId = patchIds._generateId()
+    pdGlob.patches[patch.patchId] = patch
+    return patch
   },
 
   _preparePatch: function(patch, patchData) {
@@ -211,6 +221,9 @@ _.extend(BaseNode.prototype, {
 
   // This method is called when dsp is stopped
   stop: function() {},
+
+  // Executed only when a patch is loaded
+  load: function() {},
 
 
 /************************* Public API **********************/
@@ -845,7 +858,7 @@ exports.declareObjects = function(library) {
             expect(frequency).to.be.a('number', 'osc~::frequency')
             this.obj.frequency = frequency
             if (this.obj._oscNode)
-              this.obj._oscNode.frequency.setValueAtTime(frequency, pdGlob.futureTime || 0)
+              this.obj._oscNode.frequency.setValueAtTime(frequency, pdGlob.futureTime / 1000 || 0)
           }
         }
       }),
@@ -883,7 +896,7 @@ exports.declareObjects = function(library) {
         new Float32Array([0, Math.cos(phase)]),
         new Float32Array([0, Math.sin(-phase)])
       ))
-      this._oscNode.start(pdGlob.futureTime || 0)
+      this._oscNode.start(pdGlob.futureTime / 1000 || 0)
       this.o(0).setWaa(this._oscNode, 0)
       this.i(0).setWaa(this._oscNode.frequency, 0)
       this.i(0).message([this.frequency])
@@ -908,11 +921,11 @@ exports.declareObjects = function(library) {
             expect(value).to.be.a('number', 'line~::value')
             if (time) {
               expect(time).to.be.a('number', 'line~::time')
-              var endTime = (pdGlob.futureTime || pdGlob.audio.context.currentTime) + time / 1000
-              this.obj._offsetNode.offset.setValueAtTime(this.obj.target, pdGlob.futureTime || 0)
+              var endTime = (pdGlob.futureTime / 1000 || pdGlob.audio.time / 1000) + time / 1000
+              this.obj._offsetNode.offset.setValueAtTime(this.obj.target, pdGlob.futureTime / 1000 || 0)
               this.obj._offsetNode.offset.linearRampToValueAtTime(value, endTime)
             } else
-              this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime || 0)
+              this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime / 1000 || 0)
           }
           this.obj.target = value
         }
@@ -951,7 +964,7 @@ exports.declareObjects = function(library) {
           expect(value).to.be.a('number', 'sig~::value')
           this.obj.value = value
           if (this.obj._offsetNode)
-            this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime || 0)
+            this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime / 1000 || 0)
         }
       })
 
@@ -983,7 +996,7 @@ exports.declareObjects = function(library) {
       expect(frequency).to.be.a('number', this.obj.type + '::frequency')
       this.obj.frequency = frequency
       if (this.obj._filterNode)
-        this.obj._filterNode.frequency.setValueAtTime(frequency, pdGlob.futureTime || 0)
+        this.obj._filterNode.frequency.setValueAtTime(frequency, pdGlob.futureTime / 1000 || 0)
     }
   }
 
@@ -993,7 +1006,7 @@ exports.declareObjects = function(library) {
       expect(Q).to.be.a('number', this.obj.type + '::Q')
       this.obj.Q = Q
       if (this.obj._filterNode)
-        this.obj._filterNode.Q.setValueAtTime(Q, pdGlob.futureTime || 0)
+        this.obj._filterNode.Q.setValueAtTime(Q, pdGlob.futureTime / 1000 || 0)
     }
   }
 
@@ -1126,7 +1139,7 @@ var _ = require('underscore')
 
 exports.declareObjects = function(library) {
 
-  library['receive'] = PdObject.extend(utils.NamedMixin, {
+  library['receive'] = library['r'] = PdObject.extend(utils.NamedMixin, {
 
     type: 'receive',
 
@@ -1152,7 +1165,7 @@ exports.declareObjects = function(library) {
 
   })
 
-  library['send'] = PdObject.extend(utils.NamedMixin, {
+  library['send'] = library['s'] = PdObject.extend(utils.NamedMixin, {
 
     type: 'send',
 
@@ -1215,6 +1228,518 @@ exports.declareObjects = function(library) {
 
     init: function(args) {
       this.prefix = (args[0] || 'print');
+    }
+
+  })
+
+  library['text'] = PdObject.extend({
+
+    init: function(args) {
+      this.text = args[0]
+    }
+
+  })
+
+  library['loadbang'] = PdObject.extend({
+
+    outletDefs: [portlets.Outlet],
+
+    load: function() {
+      this.o(0).message(['bang'])
+    }
+
+  })
+
+  library['float'] = library['f'] = PdObject.extend({
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val !== 'bang') this.obj.setVal(val)
+          this.obj.o(0).message([this.obj.val])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setVal(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', 'float::value')
+      this.val = val
+    }
+
+  })
+
+  var _ArithmBase = PdObject.extend({
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val !== 'bang') { 
+            expect(val).to.be.a('number', this.obj.type + '::value')  
+            this.obj.lastResult = this.obj.compute(val)
+          }
+          this.obj.o(0).message([this.obj.lastResult])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          expect(val).to.be.a('number', this.obj.type + '::value')
+          this.obj.val = val
+        }
+      })
+    ],
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.val = val || 0
+      this.lastResult = 0
+    },
+    
+    // Must be overriden
+    compute: function(val) { return }
+  })
+
+  library['+'] = _ArithmBase.extend({
+    compute: function(val) { return val + this.val }
+  })
+
+  library['-'] = _ArithmBase.extend({
+    compute: function(val) { return val - this.val }
+  })
+
+  library['*'] = _ArithmBase.extend({
+    compute: function(val) { return val * this.val }
+  })
+
+  library['/'] = _ArithmBase.extend({
+    compute: function(val) { return val / this.val }
+  })
+
+  library['mod'] = library['%'] = _ArithmBase.extend({
+    compute: function(val) { return val % this.val }
+  })
+
+  library['spigot'] = PdObject.extend({
+
+    inletDefs: [
+      
+      portlets.Inlet.extend({
+        message: function(args) {
+          if (this.obj.passing) this.obj.o(0).message(args)
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setPassing(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setPassing(val || 0)
+    },
+
+    setPassing: function(val) {
+      expect(val).to.be.a('number', 'spigot::passing')
+      this.passing = Boolean(val)
+    }
+
+  })
+
+  library['trigger'] = library['t'] = PdObject.extend({
+
+    inletDefs: [
+      portlets.Inlet.extend({
+
+        message: function(args) {
+          var i, length, filter, msg
+
+          for (i = this.obj.filters.length - 1; i >= 0; i--) {
+            filter = this.obj.filters[i]
+            if (filter === 'bang')
+              this.obj.o(i).message(['bang'])
+            else if (filter === 'list' || filter === 'anything')
+              this.obj.o(i).message(args)
+            else if (filter === 'float') {
+              msg = args[0]
+              if (_.isNumber(msg)) this.obj.o(i).message([msg])
+              else this.obj.o(i).message([0])
+            } else if (filter === 'symbol') {
+              msg = args[0]
+              if (msg === 'bang') this.obj.o(i).message(['symbol'])
+              else if (_.isNumber(msg)) this.obj.o(i).message(['float'])
+              else if (_.isString(msg)) this.obj.o(i).message([msg])
+              else throw new Error('Got unexpected input ' + args)
+            }
+          }
+        }
+
+      })
+    ],
+
+    init: function(args) {
+      var i, length
+      if (args.length === 0)
+        args = ['bang', 'bang']
+      for (i = 0, length = args.length; i < length; i++)
+        this.outlets.push(new portlets.Outlet(this, i))
+      this.filters = args
+    }
+
+  })
+
+  var _PackInlet0 = portlets.Inlet.extend({
+    message: function(args) {
+      var msg = args[0]
+      if (msg !== 'bang') this.obj.memory[0] = msg
+      this.obj.o(0).message(this.obj.memory.slice(0))
+    }
+  })
+
+  var _PackInletN = portlets.Inlet.extend({
+    message: function(args) {
+      var msg = args[0]
+      this.obj.memory[this.id] = msg
+    }
+  })
+
+  library['pack'] = PdObject.extend({
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var i, length = args.length
+
+      if (length === 0) args = ['float', 'float']
+      length = args.length
+      this.filters = args
+      this.memory = new Array(length)
+
+      for (i = 0; i < length; i++) {
+        if (i === 0)
+          this.inlets[i] = new _PackInlet0(this, i)
+        else 
+          this.inlets[i] = new _PackInletN(this, i)
+        if (args[i] === 'float') this.memory[i] = 0
+        else if (args[i] === 'symbol') this.memory[i] = 'symbol'
+        else this.memory[i] = args[i]
+      }
+    }
+
+  })
+
+  library['select'] = library['sel'] = PdObject.extend({
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var ind, msg = args[0]
+          if ((ind = this.obj.filters.indexOf(msg)) !== -1)
+            this.obj.o(ind).message(['bang'])
+          else this.obj.outlets.slice(-1)[0].message([msg])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          if (this.obj.filters.length <= 1) this.obj.filters = args
+        }
+      })
+
+    ],
+
+    init: function(args) {
+      var i, length
+      if (args.length === 0) args = [0]
+      if (args.length > 1) this.inlets.pop() 
+
+      for (i = 0, length = args.length; i < length; i++)
+        this.outlets[i] = new portlets.Outlet(this, i)
+      this.outlets[i] = new portlets.Outlet(this, i)
+      this.filters = args
+    }
+
+  })
+
+  library['moses'] = PdObject.extend({
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          expect(val).to.be.a('number', 'moses::value')
+          if (val < this.obj.val) this.obj.o(0).message([val])
+          else this.obj.o(1).message([val])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setVal(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet, portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', 'moses::value')
+      this.val = val
+    }
+
+  })
+
+  library['mtof'] = PdObject.extend({
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        // TODO: round output ?
+        message: function(args) {
+          var out = 0
+            , note = args[0]
+          expect(note).to.be.a('number', 'mtof::value')
+          if (note <= -1500) out = 0
+          else if (note > 1499) out = this.obj.maxMidiNote
+          else out = 8.17579891564 * Math.exp((0.0577622650 * note))
+          this.obj.o(0).message([out])
+        }
+      })
+    ],
+
+    outletDefs: [portlets.Outlet],
+    maxMidiNote: 8.17579891564 * Math.exp((0.0577622650 * 1499))
+  })
+
+  library['random'] = PdObject.extend({
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang')
+            this.obj.o(0).message([Math.floor(Math.random() * this.obj.max)])
+          else if (msg === 'seed') 1 // TODO: seeding, not available with `Math.rand`
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          this.obj.setMax(msg)
+        }
+      })
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var maxInt = args[0]
+      this.setMax(maxInt || 1)
+    },
+
+    setMax: function(maxInt) {
+      expect(maxInt).to.be.a('number', 'random::max')
+      this.max = maxInt
+    }
+
+  })
+
+  library['metro'] = PdObject.extend({
+
+    inletDefs: [
+    
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang') this.obj._restartMetroTick()
+          else if (msg === 'stop') this.obj._stopMetroTick() 
+          else {
+            expect(msg).to.be.a('number', 'metro::command')
+            if (msg === 0) this.obj._stopMetroTick()
+            else this.obj._restartMetroTick()
+          }
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var rate = args[0]
+          this.obj.setRate(rate)
+          this.obj._metroTick = this.obj._metroTickRateChange
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var rate = args[0]
+      this.setRate(rate || 0)
+      this._metroHandle = null
+      this._metroTick = this._metroTickNormal
+    },
+
+    // Metronome rate, in ms per tick
+    setRate: function(rate) {
+      expect(rate).to.be.a('number', 'metro::rate')
+      this.rate = rate
+    },
+
+    _startMetroTick: function() {
+      var self = this
+      if (this._metroHandle === null) {
+        this._metroHandle = pdGlob.clock.schedule(function() {
+          self._metroTick()
+        }, pdGlob.futureTime || pdGlob.clock.time, this.rate)
+      }
+    },
+
+    _stopMetroTick: function() {
+      if (this._metroHandle !== null) {
+        pdGlob.clock.unschedule(this._metroHandle)
+        this._metroHandle = null
+      }
+    },
+
+    _restartMetroTick: function() {
+      this._stopMetroTick()
+      this._startMetroTick()
+    },
+
+    _metroTickNormal: function() { this.outlets[0].message(['bang']) },
+
+    // On next tick, restarts the interval and switches to normal ticking.
+    _metroTickRateChange: function() {
+      this._metroTick = this._metroTickNormal
+      this._restartMetroTick()
+    }
+  })
+
+  library['delay'] = library['del'] = PdObject.extend({
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang') {
+            this.obj._stopDelay()
+            this.obj._startDelay()
+          } else if (msg === 'stop') {
+            this.obj._stopDelay() 
+          } else {
+            this.obj.setDelay(msg)
+            this.obj._stopDelay()
+            this.obj._startDelay()
+          }
+        }
+      }),
+      
+      portlets.Inlet.extend({
+        message: function(args) {
+          var delay = args[0]
+          this.obj.setDelay(delay)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var delay = args[0]
+      this.setDelay(delay || 0)
+      this._delayHandle = null
+    },
+
+    // Delay time, in ms
+    setDelay: function(delay) {
+      expect(delay).to.be.a('number', 'delay::time')
+      this.delay = delay
+    },
+
+    _startDelay: function() {
+      var self = this
+      if (this._delayHandle === null) {
+        this._delayHandle = pdGlob.clock.schedule(function() {
+          self.outlets[0].message(['bang'])
+        }, (pdGlob.futureTime || pdGlob.clock.time) + this.delay)
+      }
+    },
+
+    _stopDelay: function() {
+      if (this._delayHandle !== null) {
+        pdGlob.clock.unschedule(this._delayHandle)
+        this._delayHandle = null
+      }
+    }
+  })
+
+  // TODO: How does it work in pd ?
+  library['timer'] = PdObject.extend({
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          expect(msg).to.be.equal('bang', 'timer::startStop')
+          this.obj.refTime = (pdGlob.futureTime || pdGlob.clock.time)
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          expect(msg).to.be.equal('bang', 'timer::measure')
+          this.obj.outlets[0].message([(pdGlob.futureTime || pdGlob.clock.time) - this.obj.refTime])
+        }
+      })
+
+    ],
+    
+    outletDefs: [portlets.Outlet],
+
+    init: function() {
+      // Reference time, the timer count starts from this  
+      this.refTime = 0
     }
 
   })
@@ -1492,8 +2017,10 @@ var Clock = module.exports = function(config) {
   })
 }
 
-Clock.prototype.schedule = function(func, relativeTime, isRepeated) {
-  return this._waaClock.setTimeout(func, relativeTime)
+Clock.prototype.schedule = function(func, time, repetition) {
+  var event = this._waaClock.callbackAtTime(func, time / 1000)
+  if (repetition) event.repeat(repetition / 1000)
+  return event
 }
 
 Clock.prototype.unschedule = function(event) {

@@ -577,4 +577,198 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[metro]', function() {
+
+    var clock
+    beforeEach(function() { clock = new helpers.TestClock() })
+
+    it('shouĺd start/stop the metro when sending to first inlet', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var metro = patch.createObject('metro', [1000])
+        , mailbox = patch.createObject('testingmailbox')
+      metro.o(0).connect(mailbox.i(0))
+      
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+
+      clock.time = 10000
+      metro.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['bang']])
+
+      clock.time = 10900
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang']])
+
+      clock.time = 11000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+
+      clock.time = 12000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang']])
+
+      // stopping metro
+      mailbox.received = []
+      metro.i(0).message([0])
+      clock.time = 13000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+
+      // metro started again
+      metro.i(0).message([123])
+      assert.deepEqual(mailbox.received, [['bang']])
+
+      clock.time = 14000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+    })
+
+    it('should change the rate when sending to the second inlet', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var metro = patch.createObject('metro', [1000])
+        , mailbox = patch.createObject('testingmailbox')
+      metro.o(0).connect(mailbox.i(0))
+
+      clock.time = 10000
+      metro.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['bang']])
+
+      metro.i(1).message([1200])
+      clock.time = 11000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+
+      clock.time = 12000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+      clock.time = 12200
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang']])
+    })
+
+  })
+
+  describe('[delay]', function() {
+
+    var clock
+    beforeEach(function() { clock = new helpers.TestClock() })
+
+    it('should send a bang after the delay time', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var delay = patch.createObject('delay', [1100])
+        , mailbox = patch.createObject('testingmailbox')
+      delay.o(0).connect(mailbox.i(0))
+
+      delay.i(0).message(['bang'])
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+      clock.time = 1000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+      clock.time = 1100
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang']])
+    })
+
+    it('should have 0 as a default value', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var delay = patch.createObject('delay')
+        , mailbox = patch.createObject('testingmailbox')
+      delay.o(0).connect(mailbox.i(0))
+
+      delay.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['bang']])
+    })
+
+    it('should start a delay when sending a number on first inlet', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var delay = patch.createObject('delay', [3000])
+        , mailbox = patch.createObject('testingmailbox')
+      delay.o(0).connect(mailbox.i(0))
+
+      delay.i(0).message([1111])
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+      clock.time = 1110
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+      clock.time = 1111
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang']])
+    })
+
+    it('should start change delay time when sending number on inlet 1', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var delay = patch.createObject('delay', [3000])
+        , mailbox = patch.createObject('testingmailbox')
+      delay.o(0).connect(mailbox.i(0))
+
+      delay.i(1).message([201])
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+      clock.time = 201
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+
+      delay.i(0).message(['bang'])
+      clock.time = 401
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
+      clock.time = 402
+      delay.i(1).message([1000]) // shouldnt make a difference
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang']])
+
+      delay.i(0).message(['bang'])
+      clock.time = 1401
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang']])
+      clock.time = 1402
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+    })
+
+  })
+
+  describe('[timer]', function() {
+
+    var clock
+    beforeEach(function() { clock = new helpers.TestClock() })
+
+    it('should be started on creation', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var timer = patch.createObject('timer')
+        , mailbox = patch.createObject('testingmailbox')
+      timer.o(0).connect(mailbox.i(0))
+
+      clock.time = 1222
+      timer.i(1).message(['bang'])
+      assert.deepEqual(mailbox.received, [[1222]])
+    })
+
+    it('should be reset when sending a message on the first inlet', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var timer = patch.createObject('timer')
+        , mailbox = patch.createObject('testingmailbox')
+      timer.o(0).connect(mailbox.i(0))
+
+      clock.time = 3010
+      timer.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [])
+
+      clock.time = 4000
+      timer.i(1).message(['bang'])
+      assert.deepEqual(mailbox.received, [[990]])
+    })
+
+  })
+
 })

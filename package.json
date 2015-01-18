@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "test": "mocha --reporter list --recursive test/src",
+    "test:browser:build": "gulp test.browser:build",
     "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive"
   },
   "dependencies": {

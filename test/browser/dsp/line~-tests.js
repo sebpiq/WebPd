@@ -65,8 +65,8 @@ describe('dsp.line~', function() {
 
       helpers.expectSamples(function() {
         line.i(0).message([100])
-        line.i(0).future(5 * (1 / Pd.getSampleRate()), [1])
-        line.i(0).future(5 * (1 / Pd.getSampleRate()), [442, 10])
+        line.i(0).future(5 * (1 / Pd.getSampleRate()) * 1000, [1])
+        line.i(0).future(5 * (1 / Pd.getSampleRate()) * 1000, [442, 10])
       }, [
         [100, 100, 100, 100, 100, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

@@ -108,7 +108,7 @@ describe('dsp.osc~', function() {
       osc.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {
-        osc.i(0).future((1 / Pd.getSampleRate()) * 5, [660])
+        osc.i(0).future((1 / Pd.getSampleRate()) * 5 * 1000, [660])
       }, [
         phases.map(cos),
         [0, 0, 0, 0, 0, 0, 0, 0, 0]

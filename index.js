@@ -34,20 +34,21 @@ var Pd = module.exports = {
   getSampleRate: function() { return pdGlob.settings.sampleRate },
 
   // Start dsp
-  start: function(audio) {
+  start: function(opts) {
+    opts = opts || {}
     if (!pdGlob.isStarted) {
       pdGlob.defaultPatch = pdGlob.defaultPatch || new Patch()
       pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
       if (typeof AudioContext !== 'undefined') {
-        pdGlob.audio = audio || new waa.Audio(pdGlob.settings.channelCount)
-        pdGlob.clock = new waa.Clock({ audioContext: pdGlob.audio.context })
+        pdGlob.audio = opts.audio || new waa.Audio(pdGlob.settings.channelCount)
+        pdGlob.clock = opts.clock || new waa.Clock({ audioContext: pdGlob.audio.context })
 
       // TODO : handle other environments better than like this
       } else {
         var interfaces = require('./lib/core/interfaces')
-        pdGlob.audio = audio || interfaces.Audio
-        pdGlob.clock = interfaces.Clock
+        pdGlob.audio = opts.audio || interfaces.Audio
+        pdGlob.clock = opts.clock || interfaces.Clock
       }
 
       pdGlob.audio.start()
