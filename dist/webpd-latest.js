@@ -836,6 +836,7 @@ exports.namedObjects = null
 var _ = require('underscore')
   , expect = require('chai').expect
   , WAAOffset = require('waaoffset')
+  , WAAWhiteNoise = require('waawhitenoise')
   , utils = require('../core/utils')
   , PdObject = require('../core/PdObject')
   , portlets = require('./portlets')
@@ -904,6 +905,23 @@ exports.declareObjects = function(library) {
 
   })
 
+  library['noise~'] = PdObject.extend({
+
+    outletDefs: [portlets.DspOutlet],
+
+    start: function() {
+      this._noiseNode = new WAAWhiteNoise(pdGlob.audio.context)
+      this._noiseNode.start(0)
+      this.o(0).setWaa(this._noiseNode, 0)
+    },
+
+    stop: function() {
+      this._noiseNode.stop(0)
+      this._noiseNode.disconnect()
+      this._noiseNode = null
+    }
+
+  })
 
   // TODO : doesn't work when interrupting a line
   library['line~'] = PdObject.extend({
@@ -1102,14 +1120,14 @@ exports.declareObjects = function(library) {
 
     start: function() {
       this.i(0).setWaa(pdGlob.audio.channels[0], 0)
-      this.i(1).setWaa(pdGlob.audio.channels[1], 1)
+      this.i(1).setWaa(pdGlob.audio.channels[1], 0)
     }
 
   })
 
 }
 
-},{"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":62,"waaoffset":65}],10:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":62,"waaoffset":65,"waawhitenoise":67}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -11456,5 +11474,44 @@ WAAOffset.prototype.connect = function() {
 
 WAAOffset.prototype.disconnect = function() {
   this._output.disconnect.apply(this._output, arguments)
+}
+},{}],67:[function(require,module,exports){
+var WAAWhiteNoise = require('./lib/WAAWhiteNoise')
+module.exports = WAAWhiteNoise
+if (typeof window !== 'undefined') window.WAAWhiteNoise = WAAWhiteNoise
+},{"./lib/WAAWhiteNoise":68}],68:[function(require,module,exports){
+var WAAWhiteNoise = module.exports = function(context) {
+  this.context = context
+
+  // Generate a random buffer
+  this._buffer = context.createBuffer(1, 131072, context.sampleRate)
+  var channelArray = this._buffer.getChannelData(0), i
+  for (i = 0; i < 131072; i++) 
+    channelArray[i] = (Math.random() * 2) - 1
+
+  this._prepareOutput()
+}
+
+WAAWhiteNoise.prototype.connect = function() {
+  this._output.connect.apply(this._output, arguments)
+}
+
+WAAWhiteNoise.prototype.disconnect = function() {
+  this._output.disconnect.apply(this._output, arguments)
+}
+
+WAAWhiteNoise.prototype.start = function() {
+  this._output.start.apply(this._output, arguments)
+}
+
+WAAWhiteNoise.prototype.stop = function() {
+  this._output.stop.apply(this._output, arguments)
+  this._prepareOutput()
+}
+
+WAAWhiteNoise.prototype._prepareOutput = function() {
+  this._output = this.context.createBufferSource()
+  this._output.buffer = this._buffer
+  this._output.loop = true
 }
 },{}]},{},[1]);

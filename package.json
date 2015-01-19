@@ -23,7 +23,8 @@
     "chai": "1.10.x",
     "pd-fileutils": ">= 0.3.0",
     "waaclock": "0.4.x",
-    "waaoffset": "0.1.x"
+    "waaoffset": "0.1.x",
+    "waawhitenoise": "0.1.x"
   },
   "devDependencies": {
     "mocha": "1.11.x",
