@@ -1,4 +1,4 @@
-**NEWS** : A big refactoring is underway. Main goal is to port all WebPd to Web Audio API. You can follow progress here : https://github.com/sebpiq/WebPd/tree/develop
+**NEWS** : A big refactoring is underway. Main goal is to port all WebPd to Web Audio API. You can follow progress here : https://github.com/sebpiq/WebPd/tree/waa
 
 
 [![Build Status](https://travis-ci.org/sebpiq/WebPd.png)](https://travis-ci.org/sebpiq/WebPd)
