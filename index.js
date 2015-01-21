@@ -101,6 +101,7 @@ var Pd = module.exports = {
   // Registers the abstraction defined in `patchData` as `name`.
   // `patchData` can be a string (Pd file), or an object (pd.json)
   registerAbstraction: function(name, patchData) {
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     var CustomObject = function(args) {
       var patch = new Patch(args)
       Pd._preparePatch(patch, patchData)

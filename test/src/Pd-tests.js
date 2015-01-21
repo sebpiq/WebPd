@@ -1,5 +1,6 @@
 var _ = require('underscore')
   , fs = require('fs')
+  , path = require('path')
   , assert = require('assert')
   , helpers = require('../helpers')
   , Patch = require('../../lib/core/Patch')
@@ -103,6 +104,28 @@ describe('Pd', function() {
       assert.equal(outlet.i(0).connections.length, 1)
       assert.ok(osc.o(0).connections[0] === outlet.i(0))
     })
+
+    it('should register abstractions as string as well', function() {
+      var abstractionStr = fs.readFileSync(path.join(__dirname, 'patches/dumbOsc.pd')).toString()
+      Pd.registerAbstraction('dumbOsc', abstractionStr)
+
+      var patch = Pd.createPatch()
+        , obj = patch.createObject('dumbOsc', [220])
+        , osc = obj.objects[0]
+        , outlet = obj.objects[1]
+
+      // Check instanciated abstraction
+      assert.ok(obj instanceof Patch)
+      assert.equal(obj.outlets.length, 1)
+      assert.equal(obj.inlets.length, 0)
+      assert.equal(obj.objects.length, 2)
+      
+      // Check objects and connections
+      assert.equal(osc.o(0).connections.length, 1)
+      assert.equal(outlet.i(0).connections.length, 1)
+      assert.ok(osc.o(0).connections[0] === outlet.i(0))
+    })
+
 
   })
 
