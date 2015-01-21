@@ -924,7 +924,7 @@ exports.declareObjects = function(library) {
 
   })
 
-  // TODO : doesn't work when interrupting a line
+  // TODO : doesn't work when interrupting a line (probably)
   library['line~'] = PdObject.extend({
 
     type: 'line~',
@@ -932,31 +932,113 @@ exports.declareObjects = function(library) {
     inletDefs: [
 
       portlets.Inlet.extend({
-        message: function(args) {
-          var value = args[0]
-            , time = args[1]
 
-          if (this.obj._offsetNode) {
-            expect(value).to.be.a('number', 'line~::value')
-            if (time) {
-              expect(time).to.be.a('number', 'line~::time')
-              var endTime = (pdGlob.futureTime / 1000 || pdGlob.audio.time / 1000) + time / 1000
-              this.obj._offsetNode.offset.setValueAtTime(this.obj.target, pdGlob.futureTime / 1000 || 0)
-              this.obj._offsetNode.offset.linearRampToValueAtTime(value, endTime)
-            } else
-              this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime / 1000 || 0)
+        init: function() {
+          this._queue = []
+          this._lastValue = 0
+        },
+
+        _interpolate: function(line, time) {
+          return (time - line.t1) * (line.v2 - line.v1) / (line.t2 - line.t1) + line.v1
+        },
+
+        // Refresh the queue to `time`, removing old lines and setting `_lastValue`
+        // if appropriate.
+        _refreshQueue: function(time) {
+          if (this._queue.length === 0) return
+          var i = 0, line, oldLines
+          while ((line = this._queue[i++]) && time >= line.t2) 1
+          oldLines = this._queue.slice(0, i - 1)
+          this._queue = this._queue.slice(i - 1)
+          if (this._queue.length === 0)
+            this._lastValue = oldLines[oldLines.length - 1].v2
+        },
+
+        // push a line to the queue, overriding the lines that were after it,
+        // and creating new lines if interrupting something in its middle.
+        _pushToQueue: function(t1, v2, duration) {
+          var i = 0, line, newLines = []
+          
+          // Find the insertion point in the queue and remove lines that are overriden 
+          while ((line = this._queue[i++]) && t1 >= line.t2) 1
+          this._queue = this._queue.slice(0, i)
+
+          if (this._queue.length) {
+            var lastLine = this._queue[this._queue.length - 1]
+
+            // If the new line interrupts the last in the queue, we have to interpolate
+            // a new line
+            if (t1 < lastLine.t2) {
+              this._queue = this._queue.slice(0, -1)
+              line = {
+                t1: lastLine.t1, v1: lastLine.v1,
+                t2: t1, v2: this._interpolate(lastLine, t1)
+              }
+              newLines.push(line)
+              this._queue.push(line)
+
+            // Otherwise, we have to fill-in the gap with a straight line
+            } else if (t1 > lastLine.t2) {
+              line = {
+                t1: lastLine.t2, v1: lastLine.v2,
+                t2: t1, v2: lastLine.v2
+              }
+              newLines.push(line)
+              this._queue.push(line)
+            }
+
+          // If there isn't any value in the queue yet, we fill in the gap with
+          // a straight line from `_lastValue` all the way to `t1` 
+          } else {
+            line = {
+              t1: 0, v1: this._lastValue,
+              t2: t1, v2: this._lastValue
+            }
+            newLines.push(line)
+            this._queue.push(line)
           }
-          this.obj.target = value
+
+          // Finally create the line and add it to the queue
+          line = {
+            t1: t1, v1: this._queue[this._queue.length - 1].v2,
+            t2: t1 + duration, v2: v2
+          }
+          newLines.push(line)
+          this._queue.push(line)
+          return newLines
+        },
+
+        message: function(args) {
+          var self = this
+          if (this.obj._offsetNode) {
+            var v2 = args[0]
+              , t1 = (pdGlob.futureTime || pdGlob.audio.time)
+              , duration = args[1] || 0
+
+            // Deal with arguments
+            expect(v2).to.be.a('number', 'line~::target')
+            if (duration)
+              expect(duration).to.be.a('number', 'line~::duration')
+
+            // Refresh the queue to current time and push the new line
+            this._refreshQueue(pdGlob.audio.time)
+            var newLines = this._pushToQueue(t1, v2, duration)
+
+            // Cancel everything that was after the new lines, and schedule them
+            this.obj._offsetNode.offset.cancelScheduledValues(newLines[0].t1 / 1000 + 0.000001)
+            newLines.forEach(function(line) {
+              if (line.t1 !== line.t2)
+                self.obj._offsetNode.offset.linearRampToValueAtTime(line.v2, line.t2 / 1000)
+              else
+                self.obj._offsetNode.offset.setValueAtTime(line.v2, line.t2 / 1000)
+            })          
+          }
         }
       })
 
     ],
 
     outletDefs: [portlets.DspOutlet],
-
-    init: function() {
-      this.target = 0
-    },
 
     start: function() {
       this._offsetNode = new WAAOffset(pdGlob.audio.context)
