@@ -102,6 +102,7 @@ var Pd = module.exports = {
   // Registers the abstraction defined in `patchData` as `name`.
   // `patchData` can be a string (Pd file), or an object (pd.json)
   registerAbstraction: function(name, patchData) {
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     var CustomObject = function(args) {
       var patch = new Patch(args)
       Pd._preparePatch(patch, patchData)
@@ -1105,6 +1106,147 @@ exports.declareObjects = function(library) {
     start: function(args) {
       _BaseBandFilter.prototype.start.call(this, args)
       this.i(1).setWaa(this._filterNode.frequency, 0)
+    }
+
+  })
+
+
+  var _DspArithmBase = PdObject.extend({
+
+    outletDefs: [portlets.DspOutlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', this.type + '::val')
+      this.val = val
+    }
+
+  })
+
+  // Mixin for inlet 1 of Dsp arithmetics objects *~, +~, ...
+  var _DspArithmValInletMixin = {
+    
+    message: function(args) {
+      var val = args[0]
+      this.obj.setVal(val)
+      if (!this.hasDspSource()) this._setValNoDsp(val)
+    },
+    
+    disconnection: function(outlet) {
+      portlets.DspInlet.prototype.disconnection.apply(this, arguments) 
+      if (outlet instanceof portlets.DspOutlet && !this.hasDspSource())
+        this._setValNoDsp(this.obj.val)
+    }
+  }
+
+
+  library['*~'] = _DspArithmBase.extend({
+
+    inletDefs: [
+
+      portlets.DspInlet,
+
+      portlets.DspInlet.extend(_DspArithmValInletMixin, {
+        _setValNoDsp: function(val) {
+          console.log(pdGlob.futureTime)
+          if (this.obj._gainNode)
+            this.obj._gainNode.gain.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
+        }
+      })
+
+    ],
+
+    start: function() {
+      this._gainNode = pdGlob.audio.context.createGain()
+      this.i(0).setWaa(this._gainNode, 0)
+      this.i(1).setWaa(this._gainNode.gain, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
+    },
+
+    stop: function() {
+      this._gainNode = null
+    }
+
+  })
+
+
+  library['+~'] = _DspArithmBase.extend({
+
+    inletDefs: [
+
+      portlets.DspInlet,
+
+      portlets.DspInlet.extend(_DspArithmValInletMixin, {
+        _setValNoDsp: function(val) { 
+          if (this.obj._offsetNode)
+            this.obj._offsetNode.offset.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
+        }
+      })
+
+    ],
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._gainNode = pdGlob.audio.context.createGain()
+      this._gainNode.gain.value = 1
+      this._offsetNode.offset.value = 0
+      this._offsetNode.connect(this._gainNode, 0, 0)
+      this.i(0).setWaa(this._gainNode, 0)
+      this.i(1).setWaa(this._offsetNode.offset, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
+    },
+
+    stop: function() {
+      this._offsetNode.disconnect()
+      this._gainNode = null
+      this._offsetNode = null
+    }
+
+  })
+
+
+  library['-~'] = _DspArithmBase.extend({
+
+    inletDefs: [
+
+      portlets.DspInlet,
+
+      portlets.DspInlet.extend(_DspArithmValInletMixin, {
+        _setValNoDsp: function(val) { 
+          if (this.obj._offsetNode)
+            this.obj._offsetNode.offset.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
+        }
+      })
+
+    ],
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._gainNode = pdGlob.audio.context.createGain()
+      this._negateGainNode = pdGlob.audio.context.createGain()
+      this._gainNode.gain.value = 1
+      this._negateGainNode.gain.value = -1
+      this._offsetNode.offset.value = 0
+      this._offsetNode.connect(this._negateGainNode, 0, 0)
+      this._negateGainNode.connect(this._gainNode, 0, 0)
+      this.i(0).setWaa(this._gainNode, 0)
+      this.i(1).setWaa(this._offsetNode.offset, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
+    },
+
+    stop: function() {
+      this._negateGainNode.disconnect()
+      this._offsetNode.disconnect()
+      this._gainNode = null
+      this._negateGainNode = null
+      this._offsetNode = null
     }
 
   })
