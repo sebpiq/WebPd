@@ -25,8 +25,10 @@ var _ = require('underscore')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
   , patchIds = _.extend({}, utils.UniqueIdsMixin)
-require('./lib/objects').declareObjects(pdGlob.library)
 
+// Various initializations
+require('./lib/objects').declareObjects(pdGlob.library)
+pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
 var Pd = module.exports = {
 
@@ -37,7 +39,6 @@ var Pd = module.exports = {
   start: function(opts) {
     opts = opts || {}
     if (!pdGlob.isStarted) {
-      pdGlob.defaultPatch = pdGlob.defaultPatch || new Patch()
       pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
       if (typeof AudioContext !== 'undefined') {
@@ -52,7 +53,10 @@ var Pd = module.exports = {
       }
 
       pdGlob.audio.start()
-      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].start()
+      for (var patchId in pdGlob.patches) {
+        pdGlob.patches[patchId].start()
+        pdGlob.patches[patchId].startPortlets()
+      }
       pdGlob.isStarted = true
     }
   },
@@ -61,7 +65,10 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.isStarted = false
-      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].stop()
+      for (var patchId in pdGlob.patches) {
+        pdGlob.patches[patchId].stop()
+        pdGlob.patches[patchId].stopPortlets()
+      }
       pdGlob.audio.stop()
     }
   },

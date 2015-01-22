@@ -1,2277 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , pdfu = require('pd-fileutils')
-  , Patch = require('./lib/core/Patch')
-  , utils = require('./lib/core/utils')
-  , waa = require('./lib/waa')
-  , pdGlob = require('./lib/global')
-  , patchIds = _.extend({}, utils.UniqueIdsMixin)
-require('./lib/objects').declareObjects(pdGlob.library)
-
-
-var Pd = module.exports = {
-
-  // Returns the current sample rate
-  getSampleRate: function() { return pdGlob.settings.sampleRate },
-
-  // Start dsp
-  start: function(opts) {
-    opts = opts || {}
-    if (!pdGlob.isStarted) {
-      pdGlob.defaultPatch = pdGlob.defaultPatch || new Patch()
-      pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
-
-      if (typeof AudioContext !== 'undefined') {
-        pdGlob.audio = opts.audio || new waa.Audio(pdGlob.settings.channelCount)
-        pdGlob.clock = opts.clock || new waa.Clock({ audioContext: pdGlob.audio.context })
-
-      // TODO : handle other environments better than like this
-      } else {
-        var interfaces = require('./lib/core/interfaces')
-        pdGlob.audio = opts.audio || interfaces.Audio
-        pdGlob.clock = opts.clock || interfaces.Clock
-      }
-
-      pdGlob.audio.start()
-      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].start()
-      pdGlob.isStarted = true
-    }
-  },
-
-  // Stop dsp
-  stop: function() {
-    if (pdGlob.isStarted) {
-      pdGlob.isStarted = false
-      for (var patchId in pdGlob.patches) pdGlob.patches[patchId].stop()
-      pdGlob.audio.stop()
-    }
-  },
-
-  // Returns true if the dsp is started, false otherwise
-  isStarted: function() { return pdGlob.isStarted },
-
-  // Send a message to a named receiver inside the graph
-  send: function(name, args) {
-    pdGlob.emitter.emit('msg:' + name, args)
-  },
-
-  // Receive a message from a named sender inside the graph
-  receive: function(name, callback) {
-    pdGlob.emitter.on('msg:' + name, callback)
-  },
-
-  // Create a new patch
-  createPatch: function() {
-    var patch = this._createPatch()
-    if (pdGlob.isStarted) patch.start()
-    return patch
-  },
-
-  // Loads a patch from a string (Pd file), or from an object (pd.json)
-  // TODO : problems of scheduling on load, for example executing [loadbang] ???
-  //         should we use the `futureTime` hack? 
-  loadPatch: function(patchData) {
-    var patch = this._createPatch()
-    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
-    this._preparePatch(patch, patchData)
-    patch.objects.forEach(function(obj) { obj.load() })
-    if (pdGlob.isStarted) patch.start()
-    return patch
-  },
-
-  // Registers the abstraction defined in `patchData` as `name`.
-  // `patchData` can be a string (Pd file), or an object (pd.json)
-  registerAbstraction: function(name, patchData) {
-    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
-    var CustomObject = function(args) {
-      var patch = new Patch(args)
-      Pd._preparePatch(patch, patchData)
-      return patch
-    }
-    CustomObject.prototype = Patch.prototype
-    pdGlob.library[name] = CustomObject
-  },
-
-  _createPatch: function() {
-    var patch = new Patch()
-    patch.patchId = patchIds._generateId()
-    pdGlob.patches[patch.patchId] = patch
-    return patch
-  },
-
-  _preparePatch: function(patch, patchData) {
-    var createdObjs = {}
-
-    // Creating nodes
-    patchData.nodes.forEach(function(nodeData) {
-      var proto = nodeData.proto
-        , obj = patch.createObject(proto, nodeData.args || [])
-      if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
-      createdObjs[nodeData.id] = obj
-    })
-
-    // Creating connections
-    patchData.connections.forEach(function(conn) {
-      var sourceObj = createdObjs[conn.source.id]
-        , sinkObj = createdObjs[conn.sink.id]
-      if (!sourceObj || !sinkObj) throw new Error('invalid connection')
-      sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
-    })
-  },
-
-  // Exposing this mostly for testing
-  _glob: pdGlob
-
-}
-
-if (typeof window !== 'undefined') window.Pd = Pd
-
-},{"./lib/core/Patch":3,"./lib/core/interfaces":5,"./lib/core/utils":7,"./lib/global":8,"./lib/objects":11,"./lib/waa":15,"pd-fileutils":57,"underscore":62}],2:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , inherits = require('util').inherits
-  , EventEmitter = require('events').EventEmitter
-  , portlets = require('./portlets')
-  , utils = require('./utils')
-  
-
-// Base class for objects and patches. Example :
-//
-//     var node = new MyNode(arg1, arg2, arg3)
-//
-var BaseNode = module.exports = function(args) {
-  args = args || []
-  var self = this
-  this.id = null                  // A patch-wide unique id for the object
-  this.patch = null               // The patch containing that node
-
-  // create inlets and outlets specified in the object's proto
-  this.inlets = this.inletDefs.map(function(inletType, i) {
-    return new inletType(self, i)
-  })
-  this.outlets = this.outletDefs.map(function(outletType, i) {
-    return new outletType(self, i)
-  })
-
-  // initializes the object, handling the creation arguments
-  this.init(args)
-}
-inherits(BaseNode, EventEmitter)
-
-
-_.extend(BaseNode.prototype, {
-
-/******************** Methods to implement *****************/
-
-  // True if the node is an endpoint of the graph (e.g. [dac~])
-  endPoint: false,
-
-  // The node will process its arguments by automatically replacing
-  // abbreviations such as 'f' or 'b', and replacing dollar-args
-  doResolveArgs: false,
-
-  // Lists of the class of portlets.
-  outletDefs: [], 
-  inletDefs: [],
-
-  // This method is called when the object is created.
-  init: function() {},
-
-  // This method is called when dsp is started,
-  // or when the object is added to a patch that is already started.
-  start: function() {},
-
-  // This method is called when dsp is stopped
-  stop: function() {},
-
-  // Executed only when a patch is loaded
-  load: function() {},
-
-
-/************************* Public API **********************/
-
-  // Returns inlet `id` if it exists.
-  i: function(id) {
-    if (id < this.inlets.length) return this.inlets[id]
-    else throw (new Error('invalid inlet ' + id))
-  },
-
-  // Returns outlet `id` if it exists.
-  o: function(id) {
-    if (id < this.outlets.length) return this.outlets[id]
-    else throw (new Error('invalid outlet ' + id))
-  },
-
-
-/********************** More Private API *********************/
-
-  // Calls `start` on object's portlets
-  startPortlets: function() {
-    this.outlets.forEach(function(outlet) { outlet.start() })
-    this.inlets.forEach(function(inlet) { inlet.start() })
-  },
-
-  // Call `stop` on object's portlets
-  stopPortlets: function() {
-    this.outlets.forEach(function(outlet) { outlet.stop() })
-    this.inlets.forEach(function(inlet) { inlet.stop() })
-  }
-
-})
-
-
-},{"./portlets":6,"./utils":7,"events":20,"underscore":62,"util":24}],3:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , utils = require('./utils')
-  , BaseNode = require('./BaseNode')
-  , pdGlob = require('../global')
-
-
-var Patch = module.exports = function() {
-  BaseNode.apply(this, arguments)
-  this.objects = []
-  this.endPoints = [] 
-  this.patchId = null         // A globally unique id for the patch
-  this.sampleRate = pdGlob.settings.sampleRate
-  this.blockSize = pdGlob.settings.blockSize
-}
-
-_.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
-
-  type: 'patch',
-
-  init: function(args) {
-    this.args = args
-  },
-
-  start: function() {
-    this.objects.forEach(function(obj) { obj.start() })
-    this.objects.forEach(function(obj) { obj.startPortlets() })
-  },
-
-  stop: function() {
-    this.objects.forEach(function(obj) { obj.stop() })
-    this.objects.forEach(function(obj) { obj.stopPortlets() })
-  },
-
-  // Adds an object to the patch.
-  // Also causes the patch to automatically assign an id to that object.
-  // This id can be used to uniquely identify the object in the patch.
-  // Also, if the patch is playing, the `start` method of the object will be called.
-  createObject: function(type, objArgs) {
-    var obj
-    objArgs = objArgs || []
-
-    // Check that `type` is valid and create the object  
-    if (pdGlob.library.hasOwnProperty(type)) {
-      var constructor = pdGlob.library[type]
-      if (constructor.prototype.doResolveArgs)
-        objArgs = this.resolveArgs(objArgs)
-      obj = new constructor(objArgs)
-    } else throw new Error('unknown object ' + type)
-
-    // Assign object unique id and add it to the patch
-    obj.id = this._generateId()
-    obj.patch = this
-    this.objects[obj.id] = obj
-    if (obj.endPoint) this.endPoints.push(obj)
-
-    // Start the object if Pd is started
-    if (pdGlob.isStarted) {
-      obj.start()
-      obj.startPortlets()
-    }
-
-    // When [inlet], [outlet~], ... is added to a patch, we add their portlets
-    // to the patch's portlets
-    if (isInletObject(obj)) this.inlets.push(obj.inlets[0])
-    if (isOutletObject(obj)) this.outlets.push(obj.outlets[0])
-
-    return obj
-  },
-
-
-  // Takes a list of object arguments which might contain abbreviations
-  // and dollar arguments, and returns a copy of that list, abbreviations
-  // replaced by the corresponding full word.
-  resolveArgs: function(args) {
-    var cleaned = args.slice(0)
-      , patchArgs = [this.patchId].concat(this.args)
-      , matched
-
-    // Resolve abbreviations
-    args.forEach(function(arg, i) {
-      if (arg === 'b') cleaned[i] = 'bang'
-      else if (arg === 'f') cleaned[i] = 'float'
-      else if (arg === 's') cleaned[i] = 'symbol'
-      else if (arg === 'a') cleaned[i] = 'anything'
-      else if (arg === 'l') cleaned[i] = 'list'
-    })
-
-    // Resolve dollar-args
-    return utils.getDollarResolver(cleaned)(patchArgs)
-  }
-
-})
-
-var isInletObject = function(obj) {
-  return [pdGlob.library['inlet'], pdGlob.library['inlet~']].some(function(type) {
-    return obj instanceof type
-  })
-}
-
-var isOutletObject = function(obj) {
-  return [pdGlob.library['outlet'], pdGlob.library['outlet~']].some(function(type) {
-    return obj instanceof type
-  })
-}
-
-},{"../global":8,"./BaseNode":2,"./utils":7,"underscore":62}],4:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , inherits = require('util').inherits
-  , EventEmitter = require('events').EventEmitter
-  , portlets = require('./portlets')
-  , utils = require('./utils')
-  , BaseNode = require('./BaseNode')
-  , Patch = require('./Patch')
-  , pdGlob = require('../global')
-
-var PdObject = module.exports = function() {
-  BaseNode.apply(this, arguments)
-}
-PdObject.extend = utils.chainExtend
-
-_.extend(PdObject.prototype, BaseNode.prototype, {
-  doResolveArgs: true
-})
-
-},{"../global":8,"./BaseNode":2,"./Patch":3,"./portlets":6,"./utils":7,"events":20,"underscore":62,"util":24}],5:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
- 
-// Scheduler to handle timing
-exports.Clock = {
-
-  // Current time of the clock in milliseconds
-  time: 0,
-
-  // Schedule `func` to run in `relativeTime` from now. Returns an `Event`
-  schedule: function(func, relativeTime, isRepeated) {},
-
-  // Unschedule `event`
-  unschedule: function(event) {}
-}
-
-// Audio engine
-exports.Audio = {
-
-  // Start the audio
-  start: function() {},
-
-  // Stop the audio
-  stop: function() {}
-}
-},{}],6:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , inherits = require('util').inherits
-  , utils = require('./utils')
-
-// Base for outlets and inlets. Mostly handles connections and disconnections
-var Portlet = exports.Portlet = function(obj, id) {
-  this.obj = obj
-  this.id = id
-  this.connections = []
-  this.init()
-}
-
-_.extend(Portlet.prototype, {
-
-/******************** Methods to implement *****************/
-
-  // True if the portlet can connect objects belonging to different patches
-  crossPatch: false,
-
-  // This method is called when the portlet is initialized.
-  init: function() {},
-
-  // This method is called when the object is started
-  start: function() {},
-
-  // This method is called after all objects have been stopped
-  stop: function() {},
-
-  // This method is called when the portlet receives a message.
-  message: function(args) {},
-
-  // This method is called when the portlet gets a new connection,
-  // and when the portlet's object is started it is called again.
-  connection: function(otherPortlet) {},
-
-  // This method is called when the portlet gets disconnected.
-  disconnection: function(otherPortlet) {},
-
-
-/************************* Public API **********************/
-
-  // Connects the calling portlet with `otherPortlet` 
-  // Returns true if a connection was indeed established.
-  connect: function(otherPortlet) {
-    if (this.connections.indexOf(otherPortlet) !== -1) return false
-    if (!(this.crossPatch || otherPortlet.crossPatch)
-    && this.obj.patch !== otherPortlet.obj.patch)
-      throw new Error('cannot connect objects that belong to different patches')
-    this.connections.push(otherPortlet)
-    otherPortlet.connect(this)
-    this.connection(otherPortlet)
-    return true
-  },
-
-  // Generic function for disconnecting the calling portlet 
-  // from  `otherPortlet`. Returns true if a disconnection was indeed made
-  disconnect: function(otherPortlet) {
-    var connInd = this.connections.indexOf(otherPortlet)
-    if (connInd === -1) return false
-    this.connections.splice(connInd, 1)
-    otherPortlet.disconnect(this)
-    this.disconnection(otherPortlet)
-    return true
-  }
-
-})
-Portlet.extend = utils.chainExtend
-
-// Base inlet
-var Inlet = exports.Inlet = Portlet.extend({})
-
-// Base outlet
-var Outlet = exports.Outlet = Portlet.extend({})
-
-},{"./utils":7,"underscore":62,"util":24}],7:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , expect = require('chai').expect
-
-// Regular expressions to deal with dollar-args
-var dollarVarRe = /\$(\d+)/,
-    dollarVarReGlob = /\$(\d+)/g
-
-
-// Returns a function `resolver(inArray)`. For example :
-//
-//     resolver = obj.getDollarResolver([56, '$1', 'bla', '$2-$1'])
-//     resolver([89, 'bli']) // [56, 89, 'bla', 'bli-89']
-//
-exports.getDollarResolver = function(rawOutArray) {
-  rawOutArray = rawOutArray.slice(0)
-
-  // Simple helper to throw en error if the index is out of range
-  var getElem = function(array, ind) {
-    if (ind >= array.length || ind < 0) 
-      throw new Error('$' + (ind + 1) + ': argument number out of range')
-    return array[ind]
-  }
-
-  // Creates an array of transfer functions `inVal -> outVal`.
-  var transfer = rawOutArray.map(function(rawOutVal) {
-    var matchOnce = dollarVarRe.exec(rawOutVal)
-
-    // If the transfer is a dollar var :
-    //      ['bla', 789] - ['$1'] -> ['bla']
-    if (matchOnce && matchOnce[0] === rawOutVal) {
-      return (function(rawOutVal) {
-        var inInd = parseInt(matchOnce[1], 10)
-        return function(inArray) { return getElem(inArray, inInd) }
-      })(rawOutVal)
-
-    // If the transfer is a string containing dollar var :
-    //      ['bla', 789] - ['bla$2'] -> ['bla789']
-    } else if (matchOnce) {
-      return (function(rawOutVal) {
-        var allMatches = []
-          , matched
-        while (matched = dollarVarReGlob.exec(rawOutVal)) {
-          allMatches.push([matched[0], parseInt(matched[1], 10)])
-        }
-        return function(inArray) {
-          var outVal = rawOutVal.substr(0)
-          allMatches.forEach(function(matched) {
-            outVal = outVal.replace(matched[0], getElem(inArray, matched[1]))
-          })
-          return outVal
-        }
-      })(rawOutVal)
-
-    // Else the input doesn't matter
-    } else {
-      return (function(outVal) {
-        return function() { return outVal }
-      })(rawOutVal)
-    }
-  })
-
-  return function(inArray) {
-    return transfer.map(function(func, i) { return func(inArray) })
-  } 
-}
-
-
-exports.chainExtend = function() {
-  var sources = Array.prototype.slice.call(arguments, 0)
-    , parent = this
-    , child = function() { parent.apply(this, arguments) }
-
-  // Fix instanceof
-  child.prototype = new parent()
-
-  // extend with new properties
-  _.extend.apply(this, [child.prototype, parent.prototype].concat(sources))
-
-  child.extend = this.extend
-  return child
-}
-
-
-// Simple mixin to add functionalities for generating unique ids.
-// Each object extended with this mixin has a separate id counter.
-// Therefore ids are not unique globally but unique for object.
-exports.UniqueIdsMixin = {
-
-  // Every time it is called, this method returns a new unique id.
-  _generateId: function() {
-    this._idCounter++
-    return this._idCounter
-  },
-
-  // Counter used internally to assign a unique id to objects
-  // this counter should never be decremented to ensure the id unicity
-  _idCounter: -1
-}
-
-
-// Simple mixin for named objects, such as [send] or [table] 
-exports.NamedMixin = {
-
-  nameIsUnique: false,
-
-  setName: function(name) {
-    // This method is a simple hack to register the object
-    // first time the name is set.
-    this._setName(name)
-    require('../global').namedObjects.register(this)
-    this.setName = this._setName
-  },
-
-  _setName: function(name) {
-    var oldName = this.name
-    expect(name).to.be.a('string', 'name')
-    this.name = name
-    this.emit('change:name', oldName, name)
-  }
-
-}
-
-// Store for named objects. Objects are stored by pair (<obj.type>, <obj.name>)
-var NamedObjectStore = exports.NamedObjectStore = function() {
-  this._store = {}
-}
-
-_.extend(NamedObjectStore.prototype, {
-
-  // Registers a named object in the store.
-  register: function(obj) {
-    var self = this
-    var storeNamedObject = function(oldName, newName) {
-      var objType = obj.type
-        , nameMap
-        , objList
-      self._store[objType] = nameMap = self._store[objType] || {}
-      nameMap[newName] = objList = nameMap[newName] || []
-
-      // Adding new mapping
-      if (objList.indexOf(obj) === -1) {
-        if (obj.nameIsUnique && objList.length > 0)
-          throw new Error('there is already a ' + objType + ' with name "' + newName + '"')
-        objList.push(obj)
-      }
-
-      // Removing old mapping
-      if (oldName) {
-        objList = nameMap[oldName]
-        objList.splice(objList.indexOf(obj), 1)
-      }
-    }
-    obj.on('change:name', storeNamedObject)
-    if (obj.name) storeNamedObject(null, obj.name)
-  },
-
-  // Returns an object list given the object `type` and `name`.
-  get: function(type, name) {
-    return ((this._store[type] || {})[name] || [])
-  }
-
-})
-
-},{"../global":8,"chai":25,"underscore":62}],8:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , utils = require('./core/utils')
-  , EventEmitter = require('events').EventEmitter
-
-
-// Global settings
-exports.settings = {
-
-  // Current sample rate
-  sampleRate: 44100,
-  
-  // Current block size
-  blockSize: 16384,
-
-  // Current number of channels
-  channelCount: 2
-}
-
-
-// true if dsp is started, false otherwise 
-exports.isStarted = false
-
-
-// Global event emitter
-var emitter = exports.emitter = new EventEmitter()
-
-
-// The library of objects that can be created
-exports.library = {}
-
-
-// List of all patches currently open
-exports.patches = {}
-
-
-// Audio engine. Must implement the `interfaces.Audio`
-exports.audio = null
-
-
-// The clock used to schedule stuff. Must implement the `interfaces.Clock`
-exports.clock = null
-
-
-// Store containing named objects (e.g. arrays, [delread~], ...).
-exports.namedObjects = null
-
-},{"./core/utils":7,"events":20,"underscore":62}],9:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , expect = require('chai').expect
-  , WAAOffset = require('waaoffset')
-  , WAAWhiteNoise = require('waawhitenoise')
-  , utils = require('../core/utils')
-  , PdObject = require('../core/PdObject')
-  , portlets = require('./portlets')
-  , pdGlob = require('../global')
-
-exports.declareObjects = function(library) {
-
-  // TODO : When phase is set, the current oscillator will be immediately disconnected,
-  // while ideally, it should be disconnected only at `futureTime` 
-  library['osc~'] = PdObject.extend({
-
-    type: 'osc~',
-
-    inletDefs: [
-
-      portlets.DspInlet.extend({
-        message: function(args) {
-          var frequency = args[0]
-          if (!this.hasDspSource()) {
-            expect(frequency).to.be.a('number', 'osc~::frequency')
-            this.obj.frequency = frequency
-            if (this.obj._oscNode)
-              this.obj._oscNode.frequency.setValueAtTime(frequency, pdGlob.futureTime / 1000 || 0)
-          }
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var phase = args[0]
-          expect(phase).to.be.a('number', 'osc~::phase')
-          if (pdGlob.isStarted)
-            this.obj._createOscillator(phase)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.DspOutlet],
-
-    init: function(args) {
-      this.frequency = args[0] || 0
-    },
-
-    start: function() {
-      this._createOscillator(0)
-    },
-
-    stop: function() {
-      this._oscNode.stop(0)
-      this._oscNode = null
-    },
-
-    _createOscillator: function(phase) {
-      phase = phase * 2 * Math.PI 
-      this._oscNode = pdGlob.audio.context.createOscillator()
-      this._oscNode.setPeriodicWave(pdGlob.audio.context.createPeriodicWave(
-        new Float32Array([0, Math.cos(phase)]),
-        new Float32Array([0, Math.sin(-phase)])
-      ))
-      this._oscNode.start(pdGlob.futureTime / 1000 || 0)
-      this.o(0).setWaa(this._oscNode, 0)
-      this.i(0).setWaa(this._oscNode.frequency, 0)
-      this.i(0).message([this.frequency])
-    }
-
-  })
-
-  library['noise~'] = PdObject.extend({
-
-    outletDefs: [portlets.DspOutlet],
-
-    start: function() {
-      this._noiseNode = new WAAWhiteNoise(pdGlob.audio.context)
-      this._noiseNode.start(0)
-      this.o(0).setWaa(this._noiseNode, 0)
-    },
-
-    stop: function() {
-      this._noiseNode.stop(0)
-      this._noiseNode.disconnect()
-      this._noiseNode = null
-    }
-
-  })
-
-  // TODO : doesn't work when interrupting a line (probably)
-  library['line~'] = PdObject.extend({
-
-    type: 'line~',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-
-        init: function() {
-          this._queue = []
-          this._lastValue = 0
-        },
-
-        _interpolate: function(line, time) {
-          return (time - line.t1) * (line.v2 - line.v1) / (line.t2 - line.t1) + line.v1
-        },
-
-        // Refresh the queue to `time`, removing old lines and setting `_lastValue`
-        // if appropriate.
-        _refreshQueue: function(time) {
-          if (this._queue.length === 0) return
-          var i = 0, line, oldLines
-          while ((line = this._queue[i++]) && time >= line.t2) 1
-          oldLines = this._queue.slice(0, i - 1)
-          this._queue = this._queue.slice(i - 1)
-          if (this._queue.length === 0)
-            this._lastValue = oldLines[oldLines.length - 1].v2
-        },
-
-        // push a line to the queue, overriding the lines that were after it,
-        // and creating new lines if interrupting something in its middle.
-        _pushToQueue: function(t1, v2, duration) {
-          var i = 0, line, newLines = []
-          
-          // Find the insertion point in the queue and remove lines that are overriden 
-          while ((line = this._queue[i++]) && t1 >= line.t2) 1
-          this._queue = this._queue.slice(0, i)
-
-          if (this._queue.length) {
-            var lastLine = this._queue[this._queue.length - 1]
-
-            // If the new line interrupts the last in the queue, we have to interpolate
-            // a new line
-            if (t1 < lastLine.t2) {
-              this._queue = this._queue.slice(0, -1)
-              line = {
-                t1: lastLine.t1, v1: lastLine.v1,
-                t2: t1, v2: this._interpolate(lastLine, t1)
-              }
-              newLines.push(line)
-              this._queue.push(line)
-
-            // Otherwise, we have to fill-in the gap with a straight line
-            } else if (t1 > lastLine.t2) {
-              line = {
-                t1: lastLine.t2, v1: lastLine.v2,
-                t2: t1, v2: lastLine.v2
-              }
-              newLines.push(line)
-              this._queue.push(line)
-            }
-
-          // If there isn't any value in the queue yet, we fill in the gap with
-          // a straight line from `_lastValue` all the way to `t1` 
-          } else {
-            line = {
-              t1: 0, v1: this._lastValue,
-              t2: t1, v2: this._lastValue
-            }
-            newLines.push(line)
-            this._queue.push(line)
-          }
-
-          // Finally create the line and add it to the queue
-          line = {
-            t1: t1, v1: this._queue[this._queue.length - 1].v2,
-            t2: t1 + duration, v2: v2
-          }
-          newLines.push(line)
-          this._queue.push(line)
-          return newLines
-        },
-
-        message: function(args) {
-          var self = this
-          if (this.obj._offsetNode) {
-            var v2 = args[0]
-              , t1 = (pdGlob.futureTime || pdGlob.audio.time)
-              , duration = args[1] || 0
-
-            // Deal with arguments
-            expect(v2).to.be.a('number', 'line~::target')
-            if (duration)
-              expect(duration).to.be.a('number', 'line~::duration')
-
-            // Refresh the queue to current time and push the new line
-            this._refreshQueue(pdGlob.audio.time)
-            var newLines = this._pushToQueue(t1, v2, duration)
-
-            // Cancel everything that was after the new lines, and schedule them
-            this.obj._offsetNode.offset.cancelScheduledValues(newLines[0].t1 / 1000 + 0.000001)
-            newLines.forEach(function(line) {
-              if (line.t1 !== line.t2)
-                self.obj._offsetNode.offset.linearRampToValueAtTime(line.v2, line.t2 / 1000)
-              else
-                self.obj._offsetNode.offset.setValueAtTime(line.v2, line.t2 / 1000)
-            })          
-          }
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.DspOutlet],
-
-    start: function() {
-      this._offsetNode = new WAAOffset(pdGlob.audio.context)
-      this._offsetNode.offset.setValueAtTime(0, 0)
-      this.o(0).setWaa(this._offsetNode, 0)
-    },
-
-    stop: function() {
-      this._offsetNode = null
-    }
-
-  })
-
-
-  library['sig~'] = PdObject.extend({
-
-    type: 'sig~',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var value = args[0]
-          expect(value).to.be.a('number', 'sig~::value')
-          this.obj.value = value
-          if (this.obj._offsetNode)
-            this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime / 1000 || 0)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.DspOutlet],
-
-    init: function(args) {
-      this.value = args[0] || 0
-    },
-
-    start: function() {
-      this._offsetNode = new WAAOffset(pdGlob.audio.context)
-      this._offsetNode.offset.setValueAtTime(0, 0)
-      this.o(0).setWaa(this._offsetNode, 0)
-      this.i(0).message([this.value])
-    },
-
-    stop: function() {
-      this._offsetNode = null
-    }
-
-  })
-
-
-  var _FilterFrequencyInletMixin = {
-    message: function(args) {
-      var frequency = args[0]
-      expect(frequency).to.be.a('number', this.obj.type + '::frequency')
-      this.obj.frequency = frequency
-      if (this.obj._filterNode)
-        this.obj._filterNode.frequency.setValueAtTime(frequency, pdGlob.futureTime / 1000 || 0)
-    }
-  }
-
-  var _FilterQInletMixin = {
-    message: function(args) {
-      var Q = args[0]
-      expect(Q).to.be.a('number', this.obj.type + '::Q')
-      this.obj.Q = Q
-      if (this.obj._filterNode)
-        this.obj._filterNode.Q.setValueAtTime(Q, pdGlob.futureTime / 1000 || 0)
-    }
-  }
-
-  var _BaseFilter = PdObject.extend({
-
-    inletDefs: [portlets.DspInlet, portlets.Inlet.extend(_FilterFrequencyInletMixin)],
-    outletDefs: [portlets.DspOutlet],
-
-    init: function(args) {
-      this.frequency = args[0] || 0
-    },
-
-    start: function() {
-      this._filterNode = pdGlob.audio.context.createBiquadFilter()
-      this._filterNode.frequency.setValueAtTime(this.frequency, 0)
-      this._filterNode.type = this.waaFilterType
-      this.i(0).setWaa(this._filterNode, 0)
-      this.o(0).setWaa(this._filterNode, 0)
-      this.i(1).message([this.frequency])
-    },
-
-    stop: function() {
-      this._filterNode = null
-    }
-
-  })
-
-  var _BaseBandFilter = _BaseFilter.extend({
-    waaFilterType: 'bandpass',
-
-    init: function(args) {
-      _BaseFilter.prototype.init.call(this, args)
-      this.Q = args[1] || 1
-    },
-
-    start: function(args) {
-      _BaseFilter.prototype.start.call(this, args)
-      this._filterNode.Q.setValueAtTime(this.Q, 0)
-      this.i(2).message([this.Q])
-    }
-
-  })
-
-
-  // TODO: tests for filters
-  library['lop~'] = _BaseFilter.extend({
-    type: 'lop~',
-    waaFilterType: 'lowpass'
-  })
-
-
-  library['hip~'] = _BaseFilter.extend({
-    type: 'hip~',
-    waaFilterType: 'highpass'
-  })
-
-
-  library['bp~'] = _BaseBandFilter.extend({
-    type: 'bp~',
-
-    inletDefs: [
-      portlets.DspInlet,
-      portlets.Inlet.extend(_FilterFrequencyInletMixin),
-      portlets.Inlet.extend(_FilterQInletMixin)
-    ]
-  })
-
-
-  library['vcf~'] = _BaseBandFilter.extend({
-    type: 'vcf~',
-
-    inletDefs: [
-      portlets.DspInlet,
-      portlets.DspInlet.extend(_FilterFrequencyInletMixin),
-      portlets.Inlet.extend(_FilterQInletMixin)
-    ],
-
-    start: function(args) {
-      _BaseBandFilter.prototype.start.call(this, args)
-      this.i(1).setWaa(this._filterNode.frequency, 0)
-    }
-
-  })
-
-
-  var _DspArithmBase = PdObject.extend({
-
-    outletDefs: [portlets.DspOutlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.setVal(val || 0)
-    },
-
-    setVal: function(val) {
-      expect(val).to.be.a('number', this.type + '::val')
-      this.val = val
-    }
-
-  })
-
-  // Mixin for inlet 1 of Dsp arithmetics objects *~, +~, ...
-  var _DspArithmValInletMixin = {
-    
-    message: function(args) {
-      var val = args[0]
-      this.obj.setVal(val)
-      if (!this.hasDspSource()) this._setValNoDsp(val)
-    },
-    
-    disconnection: function(outlet) {
-      portlets.DspInlet.prototype.disconnection.apply(this, arguments) 
-      if (outlet instanceof portlets.DspOutlet && !this.hasDspSource())
-        this._setValNoDsp(this.obj.val)
-    }
-  }
-
-
-  library['*~'] = _DspArithmBase.extend({
-
-    inletDefs: [
-
-      portlets.DspInlet,
-
-      portlets.DspInlet.extend(_DspArithmValInletMixin, {
-        _setValNoDsp: function(val) {
-          console.log(pdGlob.futureTime)
-          if (this.obj._gainNode)
-            this.obj._gainNode.gain.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
-        }
-      })
-
-    ],
-
-    start: function() {
-      this._gainNode = pdGlob.audio.context.createGain()
-      this.i(0).setWaa(this._gainNode, 0)
-      this.i(1).setWaa(this._gainNode.gain, 0)
-      this.o(0).setWaa(this._gainNode, 0)
-      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
-    },
-
-    stop: function() {
-      this._gainNode = null
-    }
-
-  })
-
-
-  library['+~'] = _DspArithmBase.extend({
-
-    inletDefs: [
-
-      portlets.DspInlet,
-
-      portlets.DspInlet.extend(_DspArithmValInletMixin, {
-        _setValNoDsp: function(val) { 
-          if (this.obj._offsetNode)
-            this.obj._offsetNode.offset.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
-        }
-      })
-
-    ],
-
-    start: function() {
-      this._offsetNode = new WAAOffset(pdGlob.audio.context)
-      this._gainNode = pdGlob.audio.context.createGain()
-      this._gainNode.gain.value = 1
-      this._offsetNode.offset.value = 0
-      this._offsetNode.connect(this._gainNode, 0, 0)
-      this.i(0).setWaa(this._gainNode, 0)
-      this.i(1).setWaa(this._offsetNode.offset, 0)
-      this.o(0).setWaa(this._gainNode, 0)
-      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
-    },
-
-    stop: function() {
-      this._offsetNode.disconnect()
-      this._gainNode = null
-      this._offsetNode = null
-    }
-
-  })
-
-
-  library['-~'] = _DspArithmBase.extend({
-
-    inletDefs: [
-
-      portlets.DspInlet,
-
-      portlets.DspInlet.extend(_DspArithmValInletMixin, {
-        _setValNoDsp: function(val) { 
-          if (this.obj._offsetNode)
-            this.obj._offsetNode.offset.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
-        }
-      })
-
-    ],
-
-    start: function() {
-      this._offsetNode = new WAAOffset(pdGlob.audio.context)
-      this._gainNode = pdGlob.audio.context.createGain()
-      this._negateGainNode = pdGlob.audio.context.createGain()
-      this._gainNode.gain.value = 1
-      this._negateGainNode.gain.value = -1
-      this._offsetNode.offset.value = 0
-      this._offsetNode.connect(this._negateGainNode, 0, 0)
-      this._negateGainNode.connect(this._gainNode, 0, 0)
-      this.i(0).setWaa(this._gainNode, 0)
-      this.i(1).setWaa(this._offsetNode.offset, 0)
-      this.o(0).setWaa(this._gainNode, 0)
-      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
-    },
-
-    stop: function() {
-      this._negateGainNode.disconnect()
-      this._offsetNode.disconnect()
-      this._gainNode = null
-      this._negateGainNode = null
-      this._offsetNode = null
-    }
-
-  })
-
-
-  library['dac~'] = PdObject.extend({
-
-    type: 'dac~',
-
-    endPoint: true,
-
-    inletDefs: [portlets.DspInlet, portlets.DspInlet],
-
-    start: function() {
-      this.i(0).setWaa(pdGlob.audio.channels[0], 0)
-      this.i(1).setWaa(pdGlob.audio.channels[1], 0)
-    }
-
-  })
-
-}
-
-},{"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":62,"waaoffset":65,"waawhitenoise":67}],10:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-var _ = require('underscore')
-  , expect = require('chai').expect
-  , utils = require('../core/utils')
-  , PdObject = require('../core/PdObject')
-  , Patch = require('../core/Patch')
-  , pdGlob = require('../global')
-  , portlets = require('./portlets')
-
-exports.declareObjects = function(library) {
-
-  library['receive'] = library['r'] = PdObject.extend(utils.NamedMixin, {
-
-    type: 'receive',
-
-    outletDefs: [portlets.Outlet],
-    abbreviations: ['r'],
-
-    init: function(args) {
-      var name = args[0]
-        , onMsgReceived = this._messageHandler()
-      this.on('change:name', function(oldName, newName) {
-        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, onMsgReceived)
-        pdGlob.emitter.on('msg:' + newName, onMsgReceived)
-      })
-      this.setName(name)
-    },
-
-    _messageHandler: function(args) {
-      var self = this
-      return function(args) {
-        self.outlets[0].message(args)
-      }
-    }
-
-  })
-
-  library['send'] = library['s'] = PdObject.extend(utils.NamedMixin, {
-
-    type: 'send',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          pdGlob.emitter.emit('msg:' + this.obj.name, args)
-        }
-      })
-
-    ],
-
-    abbreviations: ['s'],
-
-    init: function(args) { this.setName(args[0]) }
-
-  })
-
-  library['msg'] = PdObject.extend({
-
-    type: 'msg',
-
-    doResolveArgs: false,
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          // For some reason in Pd $0 in a message is always 0.
-          args = args.slice(0)
-          args.unshift(0)
-          this.obj.outlets[0].message(this.obj.resolver(args))
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      this.resolver = utils.getDollarResolver(args)
-    }
-
-  })
-
-  library['print'] = PdObject.extend({
-
-    type: 'print',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          console.log(this.obj.prefix ? [this.obj.prefix].concat(args) : args)
-        }
-      })
-
-    ],
-
-    init: function(args) {
-      this.prefix = (args[0] || 'print');
-    }
-
-  })
-
-  library['text'] = PdObject.extend({
-
-    init: function(args) {
-      this.text = args[0]
-    }
-
-  })
-
-  library['loadbang'] = PdObject.extend({
-
-    outletDefs: [portlets.Outlet],
-
-    load: function() {
-      this.o(0).message(['bang'])
-    }
-
-  })
-
-  library['float'] = library['f'] = PdObject.extend({
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          if (val !== 'bang') this.obj.setVal(val)
-          this.obj.o(0).message([this.obj.val])
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          this.obj.setVal(val)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.setVal(val || 0)
-    },
-
-    setVal: function(val) {
-      expect(val).to.be.a('number', 'float::value')
-      this.val = val
-    }
-
-  })
-
-  var _ArithmBase = PdObject.extend({
-
-    inletDefs: [
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          if (val !== 'bang') { 
-            expect(val).to.be.a('number', this.obj.type + '::value')  
-            this.obj.lastResult = this.obj.compute(val)
-          }
-          this.obj.o(0).message([this.obj.lastResult])
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          expect(val).to.be.a('number', this.obj.type + '::value')
-          this.obj.val = val
-        }
-      })
-    ],
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.val = val || 0
-      this.lastResult = 0
-    },
-    
-    // Must be overriden
-    compute: function(val) { return }
-  })
-
-  library['+'] = _ArithmBase.extend({
-    compute: function(val) { return val + this.val }
-  })
-
-  library['-'] = _ArithmBase.extend({
-    compute: function(val) { return val - this.val }
-  })
-
-  library['*'] = _ArithmBase.extend({
-    compute: function(val) { return val * this.val }
-  })
-
-  library['/'] = _ArithmBase.extend({
-    compute: function(val) { return val / this.val }
-  })
-
-  library['mod'] = library['%'] = _ArithmBase.extend({
-    compute: function(val) { return val % this.val }
-  })
-
-  library['spigot'] = PdObject.extend({
-
-    inletDefs: [
-      
-      portlets.Inlet.extend({
-        message: function(args) {
-          if (this.obj.passing) this.obj.o(0).message(args)
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          this.obj.setPassing(val)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.setPassing(val || 0)
-    },
-
-    setPassing: function(val) {
-      expect(val).to.be.a('number', 'spigot::passing')
-      this.passing = Boolean(val)
-    }
-
-  })
-
-  library['trigger'] = library['t'] = PdObject.extend({
-
-    inletDefs: [
-      portlets.Inlet.extend({
-
-        message: function(args) {
-          var i, length, filter, msg
-
-          for (i = this.obj.filters.length - 1; i >= 0; i--) {
-            filter = this.obj.filters[i]
-            if (filter === 'bang')
-              this.obj.o(i).message(['bang'])
-            else if (filter === 'list' || filter === 'anything')
-              this.obj.o(i).message(args)
-            else if (filter === 'float') {
-              msg = args[0]
-              if (_.isNumber(msg)) this.obj.o(i).message([msg])
-              else this.obj.o(i).message([0])
-            } else if (filter === 'symbol') {
-              msg = args[0]
-              if (msg === 'bang') this.obj.o(i).message(['symbol'])
-              else if (_.isNumber(msg)) this.obj.o(i).message(['float'])
-              else if (_.isString(msg)) this.obj.o(i).message([msg])
-              else throw new Error('Got unexpected input ' + args)
-            }
-          }
-        }
-
-      })
-    ],
-
-    init: function(args) {
-      var i, length
-      if (args.length === 0)
-        args = ['bang', 'bang']
-      for (i = 0, length = args.length; i < length; i++)
-        this.outlets.push(new portlets.Outlet(this, i))
-      this.filters = args
-    }
-
-  })
-
-  var _PackInlet0 = portlets.Inlet.extend({
-    message: function(args) {
-      var msg = args[0]
-      if (msg !== 'bang') this.obj.memory[0] = msg
-      this.obj.o(0).message(this.obj.memory.slice(0))
-    }
-  })
-
-  var _PackInletN = portlets.Inlet.extend({
-    message: function(args) {
-      var msg = args[0]
-      this.obj.memory[this.id] = msg
-    }
-  })
-
-  library['pack'] = PdObject.extend({
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var i, length = args.length
-
-      if (length === 0) args = ['float', 'float']
-      length = args.length
-      this.filters = args
-      this.memory = new Array(length)
-
-      for (i = 0; i < length; i++) {
-        if (i === 0)
-          this.inlets[i] = new _PackInlet0(this, i)
-        else 
-          this.inlets[i] = new _PackInletN(this, i)
-        if (args[i] === 'float') this.memory[i] = 0
-        else if (args[i] === 'symbol') this.memory[i] = 'symbol'
-        else this.memory[i] = args[i]
-      }
-    }
-
-  })
-
-  library['select'] = library['sel'] = PdObject.extend({
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var ind, msg = args[0]
-          if ((ind = this.obj.filters.indexOf(msg)) !== -1)
-            this.obj.o(ind).message(['bang'])
-          else this.obj.outlets.slice(-1)[0].message([msg])
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          if (this.obj.filters.length <= 1) this.obj.filters = args
-        }
-      })
-
-    ],
-
-    init: function(args) {
-      var i, length
-      if (args.length === 0) args = [0]
-      if (args.length > 1) this.inlets.pop() 
-
-      for (i = 0, length = args.length; i < length; i++)
-        this.outlets[i] = new portlets.Outlet(this, i)
-      this.outlets[i] = new portlets.Outlet(this, i)
-      this.filters = args
-    }
-
-  })
-
-  library['moses'] = PdObject.extend({
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          expect(val).to.be.a('number', 'moses::value')
-          if (val < this.obj.val) this.obj.o(0).message([val])
-          else this.obj.o(1).message([val])
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          this.obj.setVal(val)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet, portlets.Outlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.setVal(val || 0)
-    },
-
-    setVal: function(val) {
-      expect(val).to.be.a('number', 'moses::value')
-      this.val = val
-    }
-
-  })
-
-  library['mtof'] = PdObject.extend({
-
-    inletDefs: [
-      portlets.Inlet.extend({
-        // TODO: round output ?
-        message: function(args) {
-          var out = 0
-            , note = args[0]
-          expect(note).to.be.a('number', 'mtof::value')
-          if (note <= -1500) out = 0
-          else if (note > 1499) out = this.obj.maxMidiNote
-          else out = 8.17579891564 * Math.exp((0.0577622650 * note))
-          this.obj.o(0).message([out])
-        }
-      })
-    ],
-
-    outletDefs: [portlets.Outlet],
-    maxMidiNote: 8.17579891564 * Math.exp((0.0577622650 * 1499))
-  })
-
-  library['random'] = PdObject.extend({
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          if (msg === 'bang')
-            this.obj.o(0).message([Math.floor(Math.random() * this.obj.max)])
-          else if (msg === 'seed') 1 // TODO: seeding, not available with `Math.rand`
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          this.obj.setMax(msg)
-        }
-      })
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var maxInt = args[0]
-      this.setMax(maxInt || 1)
-    },
-
-    setMax: function(maxInt) {
-      expect(maxInt).to.be.a('number', 'random::max')
-      this.max = maxInt
-    }
-
-  })
-
-  library['metro'] = PdObject.extend({
-
-    inletDefs: [
-    
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          if (msg === 'bang') this.obj._restartMetroTick()
-          else if (msg === 'stop') this.obj._stopMetroTick() 
-          else {
-            expect(msg).to.be.a('number', 'metro::command')
-            if (msg === 0) this.obj._stopMetroTick()
-            else this.obj._restartMetroTick()
-          }
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var rate = args[0]
-          this.obj.setRate(rate)
-          this.obj._metroTick = this.obj._metroTickRateChange
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var rate = args[0]
-      this.setRate(rate || 0)
-      this._metroHandle = null
-      this._metroTick = this._metroTickNormal
-    },
-
-    // Metronome rate, in ms per tick
-    setRate: function(rate) {
-      expect(rate).to.be.a('number', 'metro::rate')
-      this.rate = rate
-    },
-
-    _startMetroTick: function() {
-      var self = this
-      if (this._metroHandle === null) {
-        this._metroHandle = pdGlob.clock.schedule(function() {
-          self._metroTick()
-        }, pdGlob.futureTime || pdGlob.clock.time, this.rate)
-      }
-    },
-
-    _stopMetroTick: function() {
-      if (this._metroHandle !== null) {
-        pdGlob.clock.unschedule(this._metroHandle)
-        this._metroHandle = null
-      }
-    },
-
-    _restartMetroTick: function() {
-      this._stopMetroTick()
-      this._startMetroTick()
-    },
-
-    _metroTickNormal: function() { this.outlets[0].message(['bang']) },
-
-    // On next tick, restarts the interval and switches to normal ticking.
-    _metroTickRateChange: function() {
-      this._metroTick = this._metroTickNormal
-      this._restartMetroTick()
-    }
-  })
-
-  library['delay'] = library['del'] = PdObject.extend({
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          if (msg === 'bang') {
-            this.obj._stopDelay()
-            this.obj._startDelay()
-          } else if (msg === 'stop') {
-            this.obj._stopDelay() 
-          } else {
-            this.obj.setDelay(msg)
-            this.obj._stopDelay()
-            this.obj._startDelay()
-          }
-        }
-      }),
-      
-      portlets.Inlet.extend({
-        message: function(args) {
-          var delay = args[0]
-          this.obj.setDelay(delay)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var delay = args[0]
-      this.setDelay(delay || 0)
-      this._delayHandle = null
-    },
-
-    // Delay time, in ms
-    setDelay: function(delay) {
-      expect(delay).to.be.a('number', 'delay::time')
-      this.delay = delay
-    },
-
-    _startDelay: function() {
-      var self = this
-      if (this._delayHandle === null) {
-        this._delayHandle = pdGlob.clock.schedule(function() {
-          self.outlets[0].message(['bang'])
-        }, (pdGlob.futureTime || pdGlob.clock.time) + this.delay)
-      }
-    },
-
-    _stopDelay: function() {
-      if (this._delayHandle !== null) {
-        pdGlob.clock.unschedule(this._delayHandle)
-        this._delayHandle = null
-      }
-    }
-  })
-
-  // TODO: How does it work in pd ?
-  library['timer'] = PdObject.extend({
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          expect(msg).to.be.equal('bang', 'timer::startStop')
-          this.obj.refTime = (pdGlob.futureTime || pdGlob.clock.time)
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          expect(msg).to.be.equal('bang', 'timer::measure')
-          this.obj.outlets[0].message([(pdGlob.futureTime || pdGlob.clock.time) - this.obj.refTime])
-        }
-      })
-
-    ],
-    
-    outletDefs: [portlets.Outlet],
-
-    init: function() {
-      // Reference time, the timer count starts from this  
-      this.refTime = 0
-    }
-
-  })
-
-  library['pd'] = Patch
-
-}
-
-},{"../core/Patch":3,"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":25,"underscore":62}],11:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-var _ = require('underscore')
-
-exports.declareObjects = function(library) {
-  require('./glue').declareObjects(library)
-  require('./dsp').declareObjects(library)
-  require('./portlets').declareObjects(library)
-}
-},{"./dsp":9,"./glue":10,"./portlets":12,"underscore":62}],12:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , expect = require('chai').expect
-  , utils = require('../core/utils')
-  , PdObject = require('../core/PdObject')
-  , BaseInlet = require('../core/portlets').Inlet
-  , BaseOutlet = require('../core/portlets').Outlet
-  , pdGlob = require('../global')
-  , AudioParam = typeof window !== 'undefined' ? window.AudioParam : function() {} // for testing purpose
-
-
-// Mixin for common inlet functionalities
-var InletMixin = {
-
-  // Allows to deal with Web Audio API's way of scheduling things.
-  // This sends a message, but flags it to be executed in the future.
-  // That way DSP objects that can schedule stuff, have a bit of time
-  // before the event must actually happen.
-  future: function(time, args) {
-    pdGlob.futureTime = time
-    this.message(args)
-    delete pdGlob.futureTime
-  }
-
-}
-
-// message inlet.
-var Inlet = exports.Inlet = BaseInlet.extend(InletMixin)
-
-// dsp inlet.
-var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
-
-  hasDspSource: function() {
-    return _.filter(this.connections, function(outlet) {
-      return outlet instanceof DspOutlet
-    }).length > 0
-  },
-
-  setWaa: function(node, input) {
-    var self = this
-    if (pdGlob.isStarted) {
-      _.chain(this.connections)
-        .filter(function(outlet) { return outlet instanceof DspOutlet })
-        .forEach(function(outlet) { outlet._waaDisconnect(self) }).value()
-    }
-    this._waa = { node: node, input: input }
-    if (pdGlob.isStarted) {
-      _.chain(this.connections)
-        .filter(function(outlet) { return outlet instanceof DspOutlet })
-        .forEach(function(outlet) { outlet._waaConnect(self) }).value()
-    }
-  }
-
-})
-
-// message outlet. Dispatches messages to all the sinks
-var Outlet = exports.Outlet = BaseOutlet.extend({
-
-  message: function(args) {
-    this.connections.forEach(function(sink) {
-      sink.message(args)
-    })
-  }
-
-})
-
-// dsp outlet.
-var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
-
-  init: function() {
-    this._waaConnections = []
-  },
-
-  start: function() {
-    // Because ATM we cannot disconnect one node from another node
-    // without disconnecting all, we have to create a gain node for each
-    // new connection.
-    this._waaConnectAll()
-  },
-
-  stop: function() {
-    this._waaDisconnectAll()
-    this._waaConnections = []
-  },
-
-  connection: function(inlet) {
-    if (!(inlet instanceof DspInlet)) 
-      throw new Error('can only connect to DSP inlet')
-    if (pdGlob.isStarted) this._waaConnect(inlet)
-  },
-
-  disconnection: function(inlet) {
-    if (pdGlob.isStarted) this._waaDisconnect(inlet)
-  },
-
-  message: function() {
-    throw new Error ('dsp outlet received a message')
-  },
-
-  setWaa: function(node, output) {
-    var self = this
-    if (pdGlob.isStarted) this._waaDisconnectAll()
-    this._waa = { node: node, output: output }
-    if (pdGlob.isStarted) this._waaConnectAll()
-  },
-
-  _waaConnect: function(inlet) {
-    var gainNode = pdGlob.audio.context.createGain()
-    this._waa.node.connect(gainNode, this._waa.output)
-    this._waaConnections.push({ inlet: inlet, gainNode: gainNode })
-
-    if (inlet._waa.node instanceof AudioParam) {
-      inlet._waa.node.setValueAtTime(0, 0) // remove offset from AudioParam
-      gainNode.connect(inlet._waa.node, this._waa.output)
-    } else
-      gainNode.connect(inlet._waa.node, 0, inlet._waa.input)
-  },
-
-  _waaDisconnect: function(inlet) {
-    // Search for the right waaConnection
-    var waaConnection = this._waaConnections.filter(function(waaConnection) {
-      return waaConnection.inlet === inlet
-    })[0]
-
-    // Disconnect the gain node, and remove the waaConnection from the list
-    waaConnection.gainNode.disconnect()
-    this._waaConnections = this._waaConnections.filter(function(waaConnection) {
-      return waaConnection.inlet !== inlet
-    })
-  },
-
-  _waaConnectAll: function() {
-    // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
-    this.connections.forEach(this._waaConnect.bind(this))
-  },
-
-  _waaDisconnectAll: function() {
-    // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
-    this.connections.forEach(this._waaDisconnect.bind(this))
-  }
-
-})
-
-exports.declareObjects = function(library) {
-
-  var InletInlet = Inlet.extend({
-    message: function(args) {
-      this.obj.outlets[0].message(args)
-    }
-  })
-
-  var InletInletDsp = DspInlet.extend({
-    message: function(args) {
-      this.obj.outlets[0].message(args)
-    }
-  })
-
-  var OutletOutletDsp = DspOutlet.extend({
-    message: function(args) {
-      // Normal dsp outlets cannot receive messages,
-      // but this one just transmits them unchanged.
-      this.sinks.forEach(function(sink) {
-        sink.message(args)
-      })
-    }
-  })
-
-  library['outlet'] = PdObject.extend({
-    type: 'outlet',
-    inletDefs: [ InletInlet ],
-    outletDefs: [ Outlet.extend({ crossPatch: true }) ]
-  })
-
-  library['inlet'] = PdObject.extend({
-    type: 'inlet',
-    inletDefs: [ InletInlet.extend({ crossPatch: true }) ],
-    outletDefs: [ Outlet ]
-  })
-
-  library['outlet~'] = PdObject.extend({
-    type: 'outlet~',
-    inletDefs: [ InletInletDsp ],
-    outletDefs: [ OutletOutletDsp.extend({ crossPatch: true }) ]
-  })
-
-  library['inlet~'] = PdObject.extend({
-    type: 'inlet~',
-    inletDefs: [ InletInletDsp.extend({ crossPatch: true }) ],
-    outletDefs: [ OutletOutletDsp ]
-  })
-
-}
-
-},{"../core/PdObject":4,"../core/portlets":6,"../core/utils":7,"../global":8,"chai":25,"underscore":62}],13:[function(require,module,exports){
-var Audio = module.exports = function(channelCount) {
-  var ch
-  this.context = new AudioContext()
-  this._channelMerger = this.context.createChannelMerger(channelCount)
-  this._channelMerger.connect(this.context.destination)
-  this.channels = []
-  for (ch = 0; ch < channelCount; ch++) {
-    this.channels.push(this.context.createGain())
-    this.channels[ch].connect(this._channelMerger, 0, ch)
-  }
-}
-
-Audio.prototype.start = function() {}
-Audio.prototype.stop = function() {}
-},{}],14:[function(require,module,exports){
-var WAAClock = require('waaclock')
-
-// A little wrapper to WAAClock, to implement the Clock interface.
-var Clock = module.exports = function(config) {
-  var self = this
-  this._audioContext = config.audioContext
-  this._waaClock = new WAAClock(config.audioContext)
-  this._waaClock.start()
-  Object.defineProperty(this, 'time', {
-    get: function() { return self._audioContext.currentTime * 1000 }
-  })
-}
-
-Clock.prototype.schedule = function(func, time, repetition) {
-  var event = this._waaClock.callbackAtTime(func, time / 1000)
-  if (repetition) event.repeat(repetition / 1000)
-  return event
-}
-
-Clock.prototype.unschedule = function(event) {
-  event.clear()
-}
-},{"waaclock":63}],15:[function(require,module,exports){
-exports.Clock = require('./Clock')
-exports.Audio = require('./Audio')
-},{"./Audio":13,"./Clock":14}],16:[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -2281,45 +8,29 @@ exports.Audio = require('./Audio')
 
 var base64 = require('base64-js')
 var ieee754 = require('ieee754')
-var isArray = require('is-array')
 
 exports.Buffer = Buffer
 exports.SlowBuffer = Buffer
 exports.INSPECT_MAX_BYTES = 50
-Buffer.poolSize = 8192 // not used by this implementation
-
-var kMaxLength = 0x3fffffff
+Buffer.poolSize = 8192
 
 /**
- * If `Buffer.TYPED_ARRAY_SUPPORT`:
+ * If `Buffer._useTypedArrays`:
  *   === true    Use Uint8Array implementation (fastest)
- *   === false   Use Object implementation (most compatible, even IE6)
- *
- * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
- * Opera 11.6+, iOS 4.2+.
- *
- * Note:
- *
- * - Implementation must support adding new properties to `Uint8Array` instances.
- *   Firefox 4-29 lacked support, fixed in Firefox 30+.
- *   See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438.
- *
- *  - Chrome 9-10 is missing the `TypedArray.prototype.subarray` function.
- *
- *  - IE10 has a broken `TypedArray.prototype.subarray` function which returns arrays of
- *    incorrect length in some situations.
- *
- * We detect these buggy browsers and set `Buffer.TYPED_ARRAY_SUPPORT` to `false` so they will
- * get the Object implementation, which is slower but will work correctly.
+ *   === false   Use Object implementation (compatible down to IE6)
  */
-Buffer.TYPED_ARRAY_SUPPORT = (function () {
+Buffer._useTypedArrays = (function () {
+  // Detect if browser supports Typed Arrays. Supported browsers are IE 10+, Firefox 4+,
+  // Chrome 7+, Safari 5.1+, Opera 11.6+, iOS 4.2+. If the browser does not support adding
+  // properties to `Uint8Array` instances, then that's the same as no `Uint8Array` support
+  // because we need to be able to add all the node Buffer API methods. This is an issue
+  // in Firefox 4-29. Now fixed: https://bugzilla.mozilla.org/show_bug.cgi?id=695438
   try {
     var buf = new ArrayBuffer(0)
     var arr = new Uint8Array(buf)
     arr.foo = function () { return 42 }
-    return 42 === arr.foo() && // typed array instances can be augmented
-        typeof arr.subarray === 'function' && // chrome 9-10 lack `subarray`
-        new Uint8Array(1).subarray(1, 1).byteLength === 0 // ie10 has broken `subarray`
+    return 42 === arr.foo() &&
+        typeof arr.subarray === 'function' // Chrome 9-10 lack `subarray`
   } catch (e) {
     return false
   }
@@ -2343,27 +54,28 @@ function Buffer (subject, encoding, noZero) {
 
   var type = typeof subject
 
+  // Workaround: node's base64 implementation allows for non-padded strings
+  // while base64-js does not.
+  if (encoding === 'base64' && type === 'string') {
+    subject = stringtrim(subject)
+    while (subject.length % 4 !== 0) {
+      subject = subject + '='
+    }
+  }
+
   // Find the length
   var length
   if (type === 'number')
-    length = subject > 0 ? subject >>> 0 : 0
-  else if (type === 'string') {
-    if (encoding === 'base64')
-      subject = base64clean(subject)
+    length = coerce(subject)
+  else if (type === 'string')
     length = Buffer.byteLength(subject, encoding)
-  } else if (type === 'object' && subject !== null) { // assume object is array-like
-    if (subject.type === 'Buffer' && isArray(subject.data))
-      subject = subject.data
-    length = +subject.length > 0 ? Math.floor(+subject.length) : 0
-  } else
-    throw new TypeError('must start with number, buffer, array or string')
-
-  if (this.length > kMaxLength)
-    throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
-      'size: 0x' + kMaxLength.toString(16) + ' bytes')
+  else if (type === 'object')
+    length = coerce(subject.length) // assume that object is array-like
+  else
+    throw new Error('First argument needs to be a number, array or string.')
 
   var buf
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
+  if (Buffer._useTypedArrays) {
     // Preferred: Return an augmented `Uint8Array` instance for best performance
     buf = Buffer._augment(new Uint8Array(length))
   } else {
@@ -2374,7 +86,7 @@ function Buffer (subject, encoding, noZero) {
   }
 
   var i
-  if (Buffer.TYPED_ARRAY_SUPPORT && typeof subject.byteLength === 'number') {
+  if (Buffer._useTypedArrays && typeof subject.byteLength === 'number') {
     // Speed optimization -- use set if we're copying from a typed array
     buf._set(subject)
   } else if (isArrayish(subject)) {
@@ -2388,7 +100,7 @@ function Buffer (subject, encoding, noZero) {
     }
   } else if (type === 'string') {
     buf.write(subject, 0, encoding)
-  } else if (type === 'number' && !Buffer.TYPED_ARRAY_SUPPORT && !noZero) {
+  } else if (type === 'number' && !Buffer._useTypedArrays && !noZero) {
     for (i = 0; i < length; i++) {
       buf[i] = 0
     }
@@ -2397,25 +109,8 @@ function Buffer (subject, encoding, noZero) {
   return buf
 }
 
-Buffer.isBuffer = function (b) {
-  return !!(b != null && b._isBuffer)
-}
-
-Buffer.compare = function (a, b) {
-  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b))
-    throw new TypeError('Arguments must be Buffers')
-
-  var x = a.length
-  var y = b.length
-  for (var i = 0, len = Math.min(x, y); i < len && a[i] === b[i]; i++) {}
-  if (i !== len) {
-    x = a[i]
-    y = b[i]
-  }
-  if (x < y) return -1
-  if (y < x) return 1
-  return 0
-}
+// STATIC METHODS
+// ==============
 
 Buffer.isEncoding = function (encoding) {
   switch (String(encoding).toLowerCase()) {
@@ -2436,8 +131,43 @@ Buffer.isEncoding = function (encoding) {
   }
 }
 
+Buffer.isBuffer = function (b) {
+  return !!(b !== null && b !== undefined && b._isBuffer)
+}
+
+Buffer.byteLength = function (str, encoding) {
+  var ret
+  str = str.toString()
+  switch (encoding || 'utf8') {
+    case 'hex':
+      ret = str.length / 2
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = utf8ToBytes(str).length
+      break
+    case 'ascii':
+    case 'binary':
+    case 'raw':
+      ret = str.length
+      break
+    case 'base64':
+      ret = base64ToBytes(str).length
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = str.length * 2
+      break
+    default:
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
 Buffer.concat = function (list, totalLength) {
-  if (!isArray(list)) throw new TypeError('Usage: Buffer.concat(list[, length])')
+  assert(isArray(list), 'Usage: Buffer.concat(list[, length])')
 
   if (list.length === 0) {
     return new Buffer(0)
@@ -2463,118 +193,26 @@ Buffer.concat = function (list, totalLength) {
   return buf
 }
 
-Buffer.byteLength = function (str, encoding) {
-  var ret
-  str = str + ''
-  switch (encoding || 'utf8') {
-    case 'ascii':
-    case 'binary':
-    case 'raw':
-      ret = str.length
-      break
-    case 'ucs2':
-    case 'ucs-2':
-    case 'utf16le':
-    case 'utf-16le':
-      ret = str.length * 2
-      break
-    case 'hex':
-      ret = str.length >>> 1
-      break
-    case 'utf8':
-    case 'utf-8':
-      ret = utf8ToBytes(str).length
-      break
-    case 'base64':
-      ret = base64ToBytes(str).length
-      break
-    default:
-      ret = str.length
+Buffer.compare = function (a, b) {
+  assert(Buffer.isBuffer(a) && Buffer.isBuffer(b), 'Arguments must be Buffers')
+  var x = a.length
+  var y = b.length
+  for (var i = 0, len = Math.min(x, y); i < len && a[i] === b[i]; i++) {}
+  if (i !== len) {
+    x = a[i]
+    y = b[i]
   }
-  return ret
-}
-
-// pre-set for values that may exist in the future
-Buffer.prototype.length = undefined
-Buffer.prototype.parent = undefined
-
-// toString(encoding, start=0, end=buffer.length)
-Buffer.prototype.toString = function (encoding, start, end) {
-  var loweredCase = false
-
-  start = start >>> 0
-  end = end === undefined || end === Infinity ? this.length : end >>> 0
-
-  if (!encoding) encoding = 'utf8'
-  if (start < 0) start = 0
-  if (end > this.length) end = this.length
-  if (end <= start) return ''
-
-  while (true) {
-    switch (encoding) {
-      case 'hex':
-        return hexSlice(this, start, end)
-
-      case 'utf8':
-      case 'utf-8':
-        return utf8Slice(this, start, end)
-
-      case 'ascii':
-        return asciiSlice(this, start, end)
-
-      case 'binary':
-        return binarySlice(this, start, end)
-
-      case 'base64':
-        return base64Slice(this, start, end)
-
-      case 'ucs2':
-      case 'ucs-2':
-      case 'utf16le':
-      case 'utf-16le':
-        return utf16leSlice(this, start, end)
-
-      default:
-        if (loweredCase)
-          throw new TypeError('Unknown encoding: ' + encoding)
-        encoding = (encoding + '').toLowerCase()
-        loweredCase = true
-    }
+  if (x < y) {
+    return -1
   }
-}
-
-Buffer.prototype.equals = function (b) {
-  if(!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
-  return Buffer.compare(this, b) === 0
-}
-
-Buffer.prototype.inspect = function () {
-  var str = ''
-  var max = exports.INSPECT_MAX_BYTES
-  if (this.length > 0) {
-    str = this.toString('hex', 0, max).match(/.{2}/g).join(' ')
-    if (this.length > max)
-      str += ' ... '
+  if (y < x) {
+    return 1
   }
-  return '<Buffer ' + str + '>'
+  return 0
 }
 
-Buffer.prototype.compare = function (b) {
-  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
-  return Buffer.compare(this, b)
-}
-
-// `get` will be removed in Node 0.13+
-Buffer.prototype.get = function (offset) {
-  console.log('.get() is deprecated. Access using array indexes instead.')
-  return this.readUInt8(offset)
-}
-
-// `set` will be removed in Node 0.13+
-Buffer.prototype.set = function (v, offset) {
-  console.log('.set() is deprecated. Access using array indexes instead.')
-  return this.writeUInt8(v, offset)
-}
+// BUFFER INSTANCE METHODS
+// =======================
 
 function hexWrite (buf, string, offset, length) {
   offset = Number(offset) || 0
@@ -2590,14 +228,14 @@ function hexWrite (buf, string, offset, length) {
 
   // must be an even number of digits
   var strLen = string.length
-  if (strLen % 2 !== 0) throw new Error('Invalid hex string')
+  assert(strLen % 2 === 0, 'Invalid hex string')
 
   if (length > strLen / 2) {
     length = strLen / 2
   }
   for (var i = 0; i < length; i++) {
     var byte = parseInt(string.substr(i * 2, 2), 16)
-    if (isNaN(byte)) throw new Error('Invalid hex string')
+    assert(!isNaN(byte), 'Invalid hex string')
     buf[offset + i] = byte
   }
   return i
@@ -2623,7 +261,7 @@ function base64Write (buf, string, offset, length) {
 }
 
 function utf16leWrite (buf, string, offset, length) {
-  var charsWritten = blitBuffer(utf16leToBytes(string), buf, offset, length, 2)
+  var charsWritten = blitBuffer(utf16leToBytes(string), buf, offset, length)
   return charsWritten
 }
 
@@ -2679,7 +317,48 @@ Buffer.prototype.write = function (string, offset, length, encoding) {
       ret = utf16leWrite(this, string, offset, length)
       break
     default:
-      throw new TypeError('Unknown encoding: ' + encoding)
+      throw new Error('Unknown encoding')
+  }
+  return ret
+}
+
+Buffer.prototype.toString = function (encoding, start, end) {
+  var self = this
+
+  encoding = String(encoding || 'utf8').toLowerCase()
+  start = Number(start) || 0
+  end = (end === undefined) ? self.length : Number(end)
+
+  // Fastpath empty strings
+  if (end === start)
+    return ''
+
+  var ret
+  switch (encoding) {
+    case 'hex':
+      ret = hexSlice(self, start, end)
+      break
+    case 'utf8':
+    case 'utf-8':
+      ret = utf8Slice(self, start, end)
+      break
+    case 'ascii':
+      ret = asciiSlice(self, start, end)
+      break
+    case 'binary':
+      ret = binarySlice(self, start, end)
+      break
+    case 'base64':
+      ret = base64Slice(self, start, end)
+      break
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      ret = utf16leSlice(self, start, end)
+      break
+    default:
+      throw new Error('Unknown encoding')
   }
   return ret
 }
@@ -2688,6 +367,52 @@ Buffer.prototype.toJSON = function () {
   return {
     type: 'Buffer',
     data: Array.prototype.slice.call(this._arr || this, 0)
+  }
+}
+
+Buffer.prototype.equals = function (b) {
+  assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
+  return Buffer.compare(this, b) === 0
+}
+
+Buffer.prototype.compare = function (b) {
+  assert(Buffer.isBuffer(b), 'Argument must be a Buffer')
+  return Buffer.compare(this, b)
+}
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function (target, target_start, start, end) {
+  var source = this
+
+  if (!start) start = 0
+  if (!end && end !== 0) end = this.length
+  if (!target_start) target_start = 0
+
+  // Copy 0 bytes; we're done
+  if (end === start) return
+  if (target.length === 0 || source.length === 0) return
+
+  // Fatal error conditions
+  assert(end >= start, 'sourceEnd < sourceStart')
+  assert(target_start >= 0 && target_start < target.length,
+      'targetStart out of bounds')
+  assert(start >= 0 && start < source.length, 'sourceStart out of bounds')
+  assert(end >= 0 && end <= source.length, 'sourceEnd out of bounds')
+
+  // Are we oob?
+  if (end > this.length)
+    end = this.length
+  if (target.length - target_start < end - start)
+    end = target.length - target_start + start
+
+  var len = end - start
+
+  if (len < 100 || !Buffer._useTypedArrays) {
+    for (var i = 0; i < len; i++) {
+      target[i + target_start] = this[i + start]
+    }
+  } else {
+    target._set(this.subarray(start, start + len), target_start)
   }
 }
 
@@ -2754,29 +479,10 @@ function utf16leSlice (buf, start, end) {
 
 Buffer.prototype.slice = function (start, end) {
   var len = this.length
-  start = ~~start
-  end = end === undefined ? len : ~~end
+  start = clamp(start, len, 0)
+  end = clamp(end, len, len)
 
-  if (start < 0) {
-    start += len;
-    if (start < 0)
-      start = 0
-  } else if (start > len) {
-    start = len
-  }
-
-  if (end < 0) {
-    end += len
-    if (end < 0)
-      end = 0
-  } else if (end > len) {
-    end = len
-  }
-
-  if (end < start)
-    end = start
-
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
+  if (Buffer._useTypedArrays) {
     return Buffer._augment(this.subarray(start, end))
   } else {
     var sliceLen = end - start
@@ -2788,275 +494,365 @@ Buffer.prototype.slice = function (start, end) {
   }
 }
 
-/*
- * Need to make sure that buffer isn't trying to write out of bounds.
- */
-function checkOffset (offset, ext, length) {
-  if ((offset % 1) !== 0 || offset < 0)
-    throw new RangeError('offset is not uint')
-  if (offset + ext > length)
-    throw new RangeError('Trying to access beyond buffer length')
+// `get` will be removed in Node 0.13+
+Buffer.prototype.get = function (offset) {
+  console.log('.get() is deprecated. Access using array indexes instead.')
+  return this.readUInt8(offset)
+}
+
+// `set` will be removed in Node 0.13+
+Buffer.prototype.set = function (v, offset) {
+  console.log('.set() is deprecated. Access using array indexes instead.')
+  return this.writeUInt8(v, offset)
 }
 
 Buffer.prototype.readUInt8 = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 1, this.length)
+  if (!noAssert) {
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset < this.length, 'Trying to read beyond buffer length')
+  }
+
+  if (offset >= this.length)
+    return
+
   return this[offset]
 }
 
+function readUInt16 (buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val
+  if (littleEndian) {
+    val = buf[offset]
+    if (offset + 1 < len)
+      val |= buf[offset + 1] << 8
+  } else {
+    val = buf[offset] << 8
+    if (offset + 1 < len)
+      val |= buf[offset + 1]
+  }
+  return val
+}
+
 Buffer.prototype.readUInt16LE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 2, this.length)
-  return this[offset] | (this[offset + 1] << 8)
+  return readUInt16(this, offset, true, noAssert)
 }
 
 Buffer.prototype.readUInt16BE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 2, this.length)
-  return (this[offset] << 8) | this[offset + 1]
+  return readUInt16(this, offset, false, noAssert)
+}
+
+function readUInt32 (buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val
+  if (littleEndian) {
+    if (offset + 2 < len)
+      val = buf[offset + 2] << 16
+    if (offset + 1 < len)
+      val |= buf[offset + 1] << 8
+    val |= buf[offset]
+    if (offset + 3 < len)
+      val = val + (buf[offset + 3] << 24 >>> 0)
+  } else {
+    if (offset + 1 < len)
+      val = buf[offset + 1] << 16
+    if (offset + 2 < len)
+      val |= buf[offset + 2] << 8
+    if (offset + 3 < len)
+      val |= buf[offset + 3]
+    val = val + (buf[offset] << 24 >>> 0)
+  }
+  return val
 }
 
 Buffer.prototype.readUInt32LE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 4, this.length)
-
-  return ((this[offset]) |
-      (this[offset + 1] << 8) |
-      (this[offset + 2] << 16)) +
-      (this[offset + 3] * 0x1000000)
+  return readUInt32(this, offset, true, noAssert)
 }
 
 Buffer.prototype.readUInt32BE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 4, this.length)
-
-  return (this[offset] * 0x1000000) +
-      ((this[offset + 1] << 16) |
-      (this[offset + 2] << 8) |
-      this[offset + 3])
+  return readUInt32(this, offset, false, noAssert)
 }
 
 Buffer.prototype.readInt8 = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 1, this.length)
-  if (!(this[offset] & 0x80))
-    return (this[offset])
-  return ((0xff - this[offset] + 1) * -1)
+  if (!noAssert) {
+    assert(offset !== undefined && offset !== null,
+        'missing offset')
+    assert(offset < this.length, 'Trying to read beyond buffer length')
+  }
+
+  if (offset >= this.length)
+    return
+
+  var neg = this[offset] & 0x80
+  if (neg)
+    return (0xff - this[offset] + 1) * -1
+  else
+    return this[offset]
+}
+
+function readInt16 (buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 1 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val = readUInt16(buf, offset, littleEndian, true)
+  var neg = val & 0x8000
+  if (neg)
+    return (0xffff - val + 1) * -1
+  else
+    return val
 }
 
 Buffer.prototype.readInt16LE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 2, this.length)
-  var val = this[offset] | (this[offset + 1] << 8)
-  return (val & 0x8000) ? val | 0xFFFF0000 : val
+  return readInt16(this, offset, true, noAssert)
 }
 
 Buffer.prototype.readInt16BE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 2, this.length)
-  var val = this[offset + 1] | (this[offset] << 8)
-  return (val & 0x8000) ? val | 0xFFFF0000 : val
+  return readInt16(this, offset, false, noAssert)
+}
+
+function readInt32 (buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  var val = readUInt32(buf, offset, littleEndian, true)
+  var neg = val & 0x80000000
+  if (neg)
+    return (0xffffffff - val + 1) * -1
+  else
+    return val
 }
 
 Buffer.prototype.readInt32LE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 4, this.length)
-
-  return (this[offset]) |
-      (this[offset + 1] << 8) |
-      (this[offset + 2] << 16) |
-      (this[offset + 3] << 24)
+  return readInt32(this, offset, true, noAssert)
 }
 
 Buffer.prototype.readInt32BE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 4, this.length)
+  return readInt32(this, offset, false, noAssert)
+}
 
-  return (this[offset] << 24) |
-      (this[offset + 1] << 16) |
-      (this[offset + 2] << 8) |
-      (this[offset + 3])
+function readFloat (buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset + 3 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  return ieee754.read(buf, offset, littleEndian, 23, 4)
 }
 
 Buffer.prototype.readFloatLE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 4, this.length)
-  return ieee754.read(this, offset, true, 23, 4)
+  return readFloat(this, offset, true, noAssert)
 }
 
 Buffer.prototype.readFloatBE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 4, this.length)
-  return ieee754.read(this, offset, false, 23, 4)
+  return readFloat(this, offset, false, noAssert)
+}
+
+function readDouble (buf, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset + 7 < buf.length, 'Trying to read beyond buffer length')
+  }
+
+  return ieee754.read(buf, offset, littleEndian, 52, 8)
 }
 
 Buffer.prototype.readDoubleLE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 8, this.length)
-  return ieee754.read(this, offset, true, 52, 8)
+  return readDouble(this, offset, true, noAssert)
 }
 
 Buffer.prototype.readDoubleBE = function (offset, noAssert) {
-  if (!noAssert)
-    checkOffset(offset, 8, this.length)
-  return ieee754.read(this, offset, false, 52, 8)
-}
-
-function checkInt (buf, value, offset, ext, max, min) {
-  if (!Buffer.isBuffer(buf)) throw new TypeError('buffer must be a Buffer instance')
-  if (value > max || value < min) throw new TypeError('value is out of bounds')
-  if (offset + ext > buf.length) throw new TypeError('index out of range')
+  return readDouble(this, offset, false, noAssert)
 }
 
 Buffer.prototype.writeUInt8 = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 1, 0xff, 0)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset < this.length, 'trying to write beyond buffer length')
+    verifuint(value, 0xff)
+  }
+
+  if (offset >= this.length) return
+
   this[offset] = value
   return offset + 1
 }
 
-function objectWriteUInt16 (buf, value, offset, littleEndian) {
-  if (value < 0) value = 0xffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; i++) {
-    buf[offset + i] = (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
-      (littleEndian ? i : 1 - i) * 8
+function writeUInt16 (buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 1 < buf.length, 'trying to write beyond buffer length')
+    verifuint(value, 0xffff)
   }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  for (var i = 0, j = Math.min(len - offset, 2); i < j; i++) {
+    buf[offset + i] =
+        (value & (0xff << (8 * (littleEndian ? i : 1 - i)))) >>>
+            (littleEndian ? i : 1 - i) * 8
+  }
+  return offset + 2
 }
 
 Buffer.prototype.writeUInt16LE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 2, 0xffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = value
-    this[offset + 1] = (value >>> 8)
-  } else objectWriteUInt16(this, value, offset, true)
-  return offset + 2
+  return writeUInt16(this, value, offset, true, noAssert)
 }
 
 Buffer.prototype.writeUInt16BE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 2, 0xffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 8)
-    this[offset + 1] = value
-  } else objectWriteUInt16(this, value, offset, false)
-  return offset + 2
+  return writeUInt16(this, value, offset, false, noAssert)
 }
 
-function objectWriteUInt32 (buf, value, offset, littleEndian) {
-  if (value < 0) value = 0xffffffff + value + 1
-  for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; i++) {
-    buf[offset + i] = (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
+function writeUInt32 (buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 3 < buf.length, 'trying to write beyond buffer length')
+    verifuint(value, 0xffffffff)
   }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  for (var i = 0, j = Math.min(len - offset, 4); i < j; i++) {
+    buf[offset + i] =
+        (value >>> (littleEndian ? i : 3 - i) * 8) & 0xff
+  }
+  return offset + 4
 }
 
 Buffer.prototype.writeUInt32LE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 4, 0xffffffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset + 3] = (value >>> 24)
-    this[offset + 2] = (value >>> 16)
-    this[offset + 1] = (value >>> 8)
-    this[offset] = value
-  } else objectWriteUInt32(this, value, offset, true)
-  return offset + 4
+  return writeUInt32(this, value, offset, true, noAssert)
 }
 
 Buffer.prototype.writeUInt32BE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 4, 0xffffffff, 0)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 24)
-    this[offset + 1] = (value >>> 16)
-    this[offset + 2] = (value >>> 8)
-    this[offset + 3] = value
-  } else objectWriteUInt32(this, value, offset, false)
-  return offset + 4
+  return writeUInt32(this, value, offset, false, noAssert)
 }
 
 Buffer.prototype.writeInt8 = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 1, 0x7f, -0x80)
-  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value)
-  if (value < 0) value = 0xff + value + 1
-  this[offset] = value
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset < this.length, 'Trying to write beyond buffer length')
+    verifsint(value, 0x7f, -0x80)
+  }
+
+  if (offset >= this.length)
+    return
+
+  if (value >= 0)
+    this.writeUInt8(value, offset, noAssert)
+  else
+    this.writeUInt8(0xff + value + 1, offset, noAssert)
   return offset + 1
 }
 
-Buffer.prototype.writeInt16LE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = value
-    this[offset + 1] = (value >>> 8)
-  } else objectWriteUInt16(this, value, offset, true)
+function writeInt16 (buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 1 < buf.length, 'Trying to write beyond buffer length')
+    verifsint(value, 0x7fff, -0x8000)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  if (value >= 0)
+    writeUInt16(buf, value, offset, littleEndian, noAssert)
+  else
+    writeUInt16(buf, 0xffff + value + 1, offset, littleEndian, noAssert)
   return offset + 2
+}
+
+Buffer.prototype.writeInt16LE = function (value, offset, noAssert) {
+  return writeInt16(this, value, offset, true, noAssert)
 }
 
 Buffer.prototype.writeInt16BE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 2, 0x7fff, -0x8000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 8)
-    this[offset + 1] = value
-  } else objectWriteUInt16(this, value, offset, false)
-  return offset + 2
+  return writeInt16(this, value, offset, false, noAssert)
+}
+
+function writeInt32 (buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
+    verifsint(value, 0x7fffffff, -0x80000000)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
+  if (value >= 0)
+    writeUInt32(buf, value, offset, littleEndian, noAssert)
+  else
+    writeUInt32(buf, 0xffffffff + value + 1, offset, littleEndian, noAssert)
+  return offset + 4
 }
 
 Buffer.prototype.writeInt32LE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = value
-    this[offset + 1] = (value >>> 8)
-    this[offset + 2] = (value >>> 16)
-    this[offset + 3] = (value >>> 24)
-  } else objectWriteUInt32(this, value, offset, true)
-  return offset + 4
+  return writeInt32(this, value, offset, true, noAssert)
 }
 
 Buffer.prototype.writeInt32BE = function (value, offset, noAssert) {
-  value = +value
-  offset = offset >>> 0
-  if (!noAssert)
-    checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
-  if (value < 0) value = 0xffffffff + value + 1
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    this[offset] = (value >>> 24)
-    this[offset + 1] = (value >>> 16)
-    this[offset + 2] = (value >>> 8)
-    this[offset + 3] = value
-  } else objectWriteUInt32(this, value, offset, false)
-  return offset + 4
-}
-
-function checkIEEE754 (buf, value, offset, ext, max, min) {
-  if (value > max || value < min) throw new TypeError('value is out of bounds')
-  if (offset + ext > buf.length) throw new TypeError('index out of range')
+  return writeInt32(this, value, offset, false, noAssert)
 }
 
 function writeFloat (buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert)
-    checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 3 < buf.length, 'Trying to write beyond buffer length')
+    verifIEEE754(value, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
   ieee754.write(buf, value, offset, littleEndian, 23, 4)
   return offset + 4
 }
@@ -3070,8 +866,19 @@ Buffer.prototype.writeFloatBE = function (value, offset, noAssert) {
 }
 
 function writeDouble (buf, value, offset, littleEndian, noAssert) {
-  if (!noAssert)
-    checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  if (!noAssert) {
+    assert(value !== undefined && value !== null, 'missing value')
+    assert(typeof littleEndian === 'boolean', 'missing or invalid endian')
+    assert(offset !== undefined && offset !== null, 'missing offset')
+    assert(offset + 7 < buf.length,
+        'Trying to write beyond buffer length')
+    verifIEEE754(value, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  }
+
+  var len = buf.length
+  if (offset >= len)
+    return
+
   ieee754.write(buf, value, offset, littleEndian, 52, 8)
   return offset + 8
 }
@@ -3084,56 +891,20 @@ Buffer.prototype.writeDoubleBE = function (value, offset, noAssert) {
   return writeDouble(this, value, offset, false, noAssert)
 }
 
-// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
-Buffer.prototype.copy = function (target, target_start, start, end) {
-  var source = this
-
-  if (!start) start = 0
-  if (!end && end !== 0) end = this.length
-  if (!target_start) target_start = 0
-
-  // Copy 0 bytes; we're done
-  if (end === start) return
-  if (target.length === 0 || source.length === 0) return
-
-  // Fatal error conditions
-  if (end < start) throw new TypeError('sourceEnd < sourceStart')
-  if (target_start < 0 || target_start >= target.length)
-    throw new TypeError('targetStart out of bounds')
-  if (start < 0 || start >= source.length) throw new TypeError('sourceStart out of bounds')
-  if (end < 0 || end > source.length) throw new TypeError('sourceEnd out of bounds')
-
-  // Are we oob?
-  if (end > this.length)
-    end = this.length
-  if (target.length - target_start < end - start)
-    end = target.length - target_start + start
-
-  var len = end - start
-
-  if (len < 1000 || !Buffer.TYPED_ARRAY_SUPPORT) {
-    for (var i = 0; i < len; i++) {
-      target[i + target_start] = this[i + start]
-    }
-  } else {
-    target._set(this.subarray(start, start + len), target_start)
-  }
-}
-
 // fill(value, start=0, end=buffer.length)
 Buffer.prototype.fill = function (value, start, end) {
   if (!value) value = 0
   if (!start) start = 0
   if (!end) end = this.length
 
-  if (end < start) throw new TypeError('end < start')
+  assert(end >= start, 'end < start')
 
   // Fill 0 bytes; we're done
   if (end === start) return
   if (this.length === 0) return
 
-  if (start < 0 || start >= this.length) throw new TypeError('start out of bounds')
-  if (end < 0 || end > this.length) throw new TypeError('end out of bounds')
+  assert(start >= 0 && start < this.length, 'start out of bounds')
+  assert(end >= 0 && end <= this.length, 'end out of bounds')
 
   var i
   if (typeof value === 'number') {
@@ -3151,13 +922,26 @@ Buffer.prototype.fill = function (value, start, end) {
   return this
 }
 
+Buffer.prototype.inspect = function () {
+  var out = []
+  var len = this.length
+  for (var i = 0; i < len; i++) {
+    out[i] = toHex(this[i])
+    if (i === exports.INSPECT_MAX_BYTES) {
+      out[i + 1] = '...'
+      break
+    }
+  }
+  return '<Buffer ' + out.join(' ') + '>'
+}
+
 /**
  * Creates a new `ArrayBuffer` with the *copied* memory of the buffer instance.
  * Added in Node 0.12. Only available in browsers that support ArrayBuffer.
  */
 Buffer.prototype.toArrayBuffer = function () {
   if (typeof Uint8Array !== 'undefined') {
-    if (Buffer.TYPED_ARRAY_SUPPORT) {
+    if (Buffer._useTypedArrays) {
       return (new Buffer(this)).buffer
     } else {
       var buf = new Uint8Array(this.length)
@@ -3167,7 +951,7 @@ Buffer.prototype.toArrayBuffer = function () {
       return buf.buffer
     }
   } else {
-    throw new TypeError('Buffer.toArrayBuffer not supported in this browser')
+    throw new Error('Buffer.toArrayBuffer not supported in this browser')
   }
 }
 
@@ -3180,7 +964,6 @@ var BP = Buffer.prototype
  * Augment a Uint8Array *instance* (not the Uint8Array class!) with Buffer methods
  */
 Buffer._augment = function (arr) {
-  arr.constructor = Buffer
   arr._isBuffer = true
 
   // save reference to original Uint8Array get/set methods before overwriting
@@ -3234,21 +1017,34 @@ Buffer._augment = function (arr) {
   return arr
 }
 
-var INVALID_BASE64_RE = /[^+\/0-9A-z]/g
-
-function base64clean (str) {
-  // Node strips out invalid characters like \n and \t from the string, base64-js does not
-  str = stringtrim(str).replace(INVALID_BASE64_RE, '')
-  // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
-  while (str.length % 4 !== 0) {
-    str = str + '='
-  }
-  return str
-}
-
 function stringtrim (str) {
   if (str.trim) return str.trim()
   return str.replace(/^\s+|\s+$/g, '')
+}
+
+// slice(start, end)
+function clamp (index, len, defaultValue) {
+  if (typeof index !== 'number') return defaultValue
+  index = ~~index;  // Coerce to integer.
+  if (index >= len) return len
+  if (index >= 0) return index
+  index += len
+  if (index >= 0) return index
+  return 0
+}
+
+function coerce (length) {
+  // Coerce length to a number (possibly NaN), round up
+  // in case it's fractional (e.g. 123.456) then do a
+  // double negate to coerce a NaN to 0. Easy, right?
+  length = ~~Math.ceil(+length)
+  return length < 0 ? 0 : length
+}
+
+function isArray (subject) {
+  return (Array.isArray || function (subject) {
+    return Object.prototype.toString.call(subject) === '[object Array]'
+  })(subject)
 }
 
 function isArrayish (subject) {
@@ -3307,8 +1103,7 @@ function base64ToBytes (str) {
   return base64.toByteArray(str)
 }
 
-function blitBuffer (src, dst, offset, length, unitSize) {
-  if (unitSize) length -= length % unitSize;
+function blitBuffer (src, dst, offset, length) {
   for (var i = 0; i < length; i++) {
     if ((i + offset >= dst.length) || (i >= src.length))
       break
@@ -3325,7 +1120,36 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":17,"ieee754":18,"is-array":19}],17:[function(require,module,exports){
+/*
+ * We have to make sure that the value is a valid integer. This means that it
+ * is non-negative. It has no fractional component and that it does not
+ * exceed the maximum allowed value.
+ */
+function verifuint (value, max) {
+  assert(typeof value === 'number', 'cannot write a non-number as a number')
+  assert(value >= 0, 'specified a negative value for writing an unsigned value')
+  assert(value <= max, 'value is larger than maximum value for type')
+  assert(Math.floor(value) === value, 'value has a fractional component')
+}
+
+function verifsint (value, max, min) {
+  assert(typeof value === 'number', 'cannot write a non-number as a number')
+  assert(value <= max, 'value larger than maximum allowed value')
+  assert(value >= min, 'value smaller than minimum allowed value')
+  assert(Math.floor(value) === value, 'value has a fractional component')
+}
+
+function verifIEEE754 (value, max, min) {
+  assert(typeof value === 'number', 'cannot write a non-number as a number')
+  assert(value <= max, 'value larger than maximum allowed value')
+  assert(value >= min, 'value smaller than minimum allowed value')
+}
+
+function assert (test, message) {
+  if (!test) throw new Error(message || 'Failed assertion')
+}
+
+},{"base64-js":2,"ieee754":3}],2:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -3447,7 +1271,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],18:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -3533,42 +1357,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],19:[function(require,module,exports){
-
-/**
- * isArray
- */
-
-var isArray = Array.isArray;
-
-/**
- * toString
- */
-
-var str = Object.prototype.toString;
-
-/**
- * Whether or not the given `val`
- * is an array.
- *
- * example:
- *
- *        isArray([]);
- *        // > true
- *        isArray(arguments);
- *        // > false
- *        isArray('');
- *        // > false
- *
- * @param {mixed} val
- * @return {bool}
- */
-
-module.exports = isArray || function (val) {
-  return !! val && '[object Array]' == str.call(val);
-};
-
-},{}],20:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -3628,8 +1417,10 @@ EventEmitter.prototype.emit = function(type) {
       er = arguments[1];
       if (er instanceof Error) {
         throw er; // Unhandled 'error' event
+      } else {
+        throw TypeError('Uncaught, unspecified "error" event.');
       }
-      throw TypeError('Uncaught, unspecified "error" event.');
+      return false;
     }
   }
 
@@ -3871,7 +1662,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],21:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -3896,7 +1687,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],22:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -3904,8 +1695,6 @@ var process = module.exports = {};
 process.nextTick = (function () {
     var canSetImmediate = typeof window !== 'undefined'
     && window.setImmediate;
-    var canMutationObserver = typeof window !== 'undefined'
-    && window.MutationObserver;
     var canPost = typeof window !== 'undefined'
     && window.postMessage && window.addEventListener
     ;
@@ -3914,29 +1703,8 @@ process.nextTick = (function () {
         return function (f) { return window.setImmediate(f) };
     }
 
-    var queue = [];
-
-    if (canMutationObserver) {
-        var hiddenDiv = document.createElement("div");
-        var observer = new MutationObserver(function () {
-            var queueList = queue.slice();
-            queue.length = 0;
-            queueList.forEach(function (fn) {
-                fn();
-            });
-        });
-
-        observer.observe(hiddenDiv, { attributes: true });
-
-        return function nextTick(fn) {
-            if (!queue.length) {
-                hiddenDiv.setAttribute('yes', 'no');
-            }
-            queue.push(fn);
-        };
-    }
-
     if (canPost) {
+        var queue = [];
         window.addEventListener('message', function (ev) {
             var source = ev.source;
             if ((source === window || source === null) && ev.data === 'process-tick') {
@@ -3976,7 +1744,7 @@ process.emit = noop;
 
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
-};
+}
 
 // TODO(shtylman)
 process.cwd = function () { return '/' };
@@ -3984,14 +1752,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],23:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],24:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -4580,11 +2348,2376 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":23,"_process":22,"inherits":21}],25:[function(require,module,exports){
+}).call(this,require("wqJgCk"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./support/isBuffer":7,"inherits":5,"wqJgCk":6}],9:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , pdfu = require('pd-fileutils')
+  , Patch = require('./lib/core/Patch')
+  , utils = require('./lib/core/utils')
+  , waa = require('./lib/waa')
+  , pdGlob = require('./lib/global')
+  , patchIds = _.extend({}, utils.UniqueIdsMixin)
+
+// Various initializations
+require('./lib/objects').declareObjects(pdGlob.library)
+pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
+
+var Pd = module.exports = {
+
+  // Returns the current sample rate
+  getSampleRate: function() { return pdGlob.settings.sampleRate },
+
+  // Start dsp
+  start: function(opts) {
+    opts = opts || {}
+    if (!pdGlob.isStarted) {
+      pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
+
+      if (typeof AudioContext !== 'undefined') {
+        pdGlob.audio = opts.audio || new waa.Audio(pdGlob.settings.channelCount)
+        pdGlob.clock = opts.clock || new waa.Clock({ audioContext: pdGlob.audio.context })
+
+      // TODO : handle other environments better than like this
+      } else {
+        var interfaces = require('./lib/core/interfaces')
+        pdGlob.audio = opts.audio || interfaces.Audio
+        pdGlob.clock = opts.clock || interfaces.Clock
+      }
+
+      pdGlob.audio.start()
+      for (var patchId in pdGlob.patches) {
+        pdGlob.patches[patchId].start()
+        pdGlob.patches[patchId].startPortlets()
+      }
+      pdGlob.isStarted = true
+    }
+  },
+
+  // Stop dsp
+  stop: function() {
+    if (pdGlob.isStarted) {
+      pdGlob.isStarted = false
+      for (var patchId in pdGlob.patches) {
+        pdGlob.patches[patchId].stop()
+        pdGlob.patches[patchId].stopPortlets()
+      }
+      pdGlob.audio.stop()
+    }
+  },
+
+  // Returns true if the dsp is started, false otherwise
+  isStarted: function() { return pdGlob.isStarted },
+
+  // Send a message to a named receiver inside the graph
+  send: function(name, args) {
+    pdGlob.emitter.emit('msg:' + name, args)
+  },
+
+  // Receive a message from a named sender inside the graph
+  receive: function(name, callback) {
+    pdGlob.emitter.on('msg:' + name, callback)
+  },
+
+  // Create a new patch
+  createPatch: function() {
+    var patch = this._createPatch()
+    if (pdGlob.isStarted) patch.start()
+    return patch
+  },
+
+  // Loads a patch from a string (Pd file), or from an object (pd.json)
+  // TODO : problems of scheduling on load, for example executing [loadbang] ???
+  //         should we use the `futureTime` hack? 
+  loadPatch: function(patchData) {
+    var patch = this._createPatch()
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+    this._preparePatch(patch, patchData)
+    patch.objects.forEach(function(obj) { obj.load() })
+    if (pdGlob.isStarted) patch.start()
+    return patch
+  },
+
+  // Registers the abstraction defined in `patchData` as `name`.
+  // `patchData` can be a string (Pd file), or an object (pd.json)
+  registerAbstraction: function(name, patchData) {
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+    var CustomObject = function(args) {
+      var patch = new Patch(args)
+      Pd._preparePatch(patch, patchData)
+      return patch
+    }
+    CustomObject.prototype = Patch.prototype
+    pdGlob.library[name] = CustomObject
+  },
+
+  _createPatch: function() {
+    var patch = new Patch()
+    patch.patchId = patchIds._generateId()
+    pdGlob.patches[patch.patchId] = patch
+    return patch
+  },
+
+  _preparePatch: function(patch, patchData) {
+    var createdObjs = {}
+
+    // Creating nodes
+    patchData.nodes.forEach(function(nodeData) {
+      var proto = nodeData.proto
+        , obj = patch.createObject(proto, nodeData.args || [])
+      if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
+      createdObjs[nodeData.id] = obj
+    })
+
+    // Creating connections
+    patchData.connections.forEach(function(conn) {
+      var sourceObj = createdObjs[conn.source.id]
+        , sinkObj = createdObjs[conn.sink.id]
+      if (!sourceObj || !sinkObj) throw new Error('invalid connection')
+      sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
+    })
+  },
+
+  // Exposing this mostly for testing
+  _glob: pdGlob
+
+}
+
+if (typeof window !== 'undefined') window.Pd = Pd
+
+},{"./lib/core/Patch":11,"./lib/core/interfaces":13,"./lib/core/utils":15,"./lib/global":16,"./lib/objects":19,"./lib/waa":23,"pd-fileutils":56,"underscore":61}],10:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , inherits = require('util').inherits
+  , EventEmitter = require('events').EventEmitter
+  , portlets = require('./portlets')
+  , utils = require('./utils')
+  
+
+// Base class for objects and patches. Example :
+//
+//     var node = new MyNode(arg1, arg2, arg3)
+//
+var BaseNode = module.exports = function(args) {
+  args = args || []
+  var self = this
+  this.id = null                  // A patch-wide unique id for the object
+  this.patch = null               // The patch containing that node
+
+  // create inlets and outlets specified in the object's proto
+  this.inlets = this.inletDefs.map(function(inletType, i) {
+    return new inletType(self, i)
+  })
+  this.outlets = this.outletDefs.map(function(outletType, i) {
+    return new outletType(self, i)
+  })
+
+  // initializes the object, handling the creation arguments
+  this.init(args)
+}
+inherits(BaseNode, EventEmitter)
+
+
+_.extend(BaseNode.prototype, {
+
+/******************** Methods to implement *****************/
+
+  // True if the node is an endpoint of the graph (e.g. [dac~])
+  endPoint: false,
+
+  // The node will process its arguments by automatically replacing
+  // abbreviations such as 'f' or 'b', and replacing dollar-args
+  doResolveArgs: false,
+
+  // Lists of the class of portlets.
+  outletDefs: [], 
+  inletDefs: [],
+
+  // This method is called when the object is created.
+  init: function() {},
+
+  // This method is called when dsp is started,
+  // or when the object is added to a patch that is already started.
+  start: function() {},
+
+  // This method is called when dsp is stopped
+  stop: function() {},
+
+  // Executed only when a patch is loaded
+  load: function() {},
+
+
+/************************* Public API **********************/
+
+  // Returns inlet `id` if it exists.
+  i: function(id) {
+    if (id < this.inlets.length) return this.inlets[id]
+    else throw (new Error('invalid inlet ' + id))
+  },
+
+  // Returns outlet `id` if it exists.
+  o: function(id) {
+    if (id < this.outlets.length) return this.outlets[id]
+    else throw (new Error('invalid outlet ' + id))
+  },
+
+
+/********************** More Private API *********************/
+
+  // Calls `start` on object's portlets
+  startPortlets: function() {
+    this.outlets.forEach(function(outlet) { outlet.start() })
+    this.inlets.forEach(function(inlet) { inlet.start() })
+  },
+
+  // Call `stop` on object's portlets
+  stopPortlets: function() {
+    this.outlets.forEach(function(outlet) { outlet.stop() })
+    this.inlets.forEach(function(inlet) { inlet.stop() })
+  }
+
+})
+
+
+},{"./portlets":14,"./utils":15,"events":4,"underscore":61,"util":8}],11:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , utils = require('./utils')
+  , BaseNode = require('./BaseNode')
+  , pdGlob = require('../global')
+
+
+var Patch = module.exports = function() {
+  BaseNode.apply(this, arguments)
+  this.objects = []
+  this.endPoints = [] 
+  this.patchId = null         // A globally unique id for the patch
+  this.sampleRate = pdGlob.settings.sampleRate
+  this.blockSize = pdGlob.settings.blockSize
+}
+
+_.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
+
+  type: 'patch',
+
+  init: function(args) {
+    this.args = args
+  },
+
+  start: function() {
+    this.objects.forEach(function(obj) { obj.start() })
+  },
+
+  startPortlets: function() {
+    this.objects.forEach(function(obj) { obj.startPortlets() })
+  },
+
+  stop: function() {
+    this.objects.forEach(function(obj) { obj.stop() })
+  },
+
+  stopPortlets: function() {
+    this.objects.forEach(function(obj) { obj.stopPortlets() })
+  },
+
+  // Adds an object to the patch.
+  // Also causes the patch to automatically assign an id to that object.
+  // This id can be used to uniquely identify the object in the patch.
+  // Also, if the patch is playing, the `start` method of the object will be called.
+  createObject: function(type, objArgs) {
+    var obj
+    objArgs = objArgs || []
+
+    // Check that `type` is valid and create the object  
+    if (pdGlob.library.hasOwnProperty(type)) {
+      var constructor = pdGlob.library[type]
+      if (constructor.prototype.doResolveArgs)
+        objArgs = this.resolveArgs(objArgs)
+      obj = new constructor(objArgs)
+    } else throw new Error('unknown object ' + type)
+
+    // Assign object unique id and add it to the patch
+    obj.id = this._generateId()
+    obj.patch = this
+    this.objects[obj.id] = obj
+    if (obj.endPoint) this.endPoints.push(obj)
+
+    // Start the object if Pd is started
+    if (pdGlob.isStarted) {
+      obj.start()
+      obj.startPortlets()
+    }
+
+    // When [inlet], [outlet~], ... is added to a patch, we add their portlets
+    // to the patch's portlets
+    if (isInletObject(obj)) this.inlets.push(obj.inlets[0])
+    if (isOutletObject(obj)) this.outlets.push(obj.outlets[0])
+
+    return obj
+  },
+
+
+  // Takes a list of object arguments which might contain abbreviations
+  // and dollar arguments, and returns a copy of that list, abbreviations
+  // replaced by the corresponding full word.
+  resolveArgs: function(args) {
+    var cleaned = args.slice(0)
+      , patchArgs = [this.patchId].concat(this.args)
+      , matched
+
+    // Resolve abbreviations
+    args.forEach(function(arg, i) {
+      if (arg === 'b') cleaned[i] = 'bang'
+      else if (arg === 'f') cleaned[i] = 'float'
+      else if (arg === 's') cleaned[i] = 'symbol'
+      else if (arg === 'a') cleaned[i] = 'anything'
+      else if (arg === 'l') cleaned[i] = 'list'
+    })
+
+    // Resolve dollar-args
+    return utils.getDollarResolver(cleaned)(patchArgs)
+  }
+
+})
+
+var isInletObject = function(obj) {
+  return [pdGlob.library['inlet'], pdGlob.library['inlet~']].some(function(type) {
+    return obj instanceof type
+  })
+}
+
+var isOutletObject = function(obj) {
+  return [pdGlob.library['outlet'], pdGlob.library['outlet~']].some(function(type) {
+    return obj instanceof type
+  })
+}
+
+},{"../global":16,"./BaseNode":10,"./utils":15,"underscore":61}],12:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , inherits = require('util').inherits
+  , EventEmitter = require('events').EventEmitter
+  , portlets = require('./portlets')
+  , utils = require('./utils')
+  , BaseNode = require('./BaseNode')
+  , Patch = require('./Patch')
+  , pdGlob = require('../global')
+
+var PdObject = module.exports = function() {
+  BaseNode.apply(this, arguments)
+}
+PdObject.extend = utils.chainExtend
+
+_.extend(PdObject.prototype, BaseNode.prototype, {
+  doResolveArgs: true
+})
+
+},{"../global":16,"./BaseNode":10,"./Patch":11,"./portlets":14,"./utils":15,"events":4,"underscore":61,"util":8}],13:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+ 
+// Scheduler to handle timing
+exports.Clock = {
+
+  // Current time of the clock in milliseconds
+  time: 0,
+
+  // Schedule `func` to run in `relativeTime` from now. Returns an `Event`
+  schedule: function(func, relativeTime, isRepeated) {},
+
+  // Unschedule `event`
+  unschedule: function(event) {}
+}
+
+// Audio engine
+exports.Audio = {
+
+  // Start the audio
+  start: function() {},
+
+  // Stop the audio
+  stop: function() {}
+}
+},{}],14:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , inherits = require('util').inherits
+  , utils = require('./utils')
+
+// Base for outlets and inlets. Mostly handles connections and disconnections
+var Portlet = exports.Portlet = function(obj, id) {
+  this.obj = obj
+  this.id = id
+  this.connections = []
+  this.init()
+}
+
+_.extend(Portlet.prototype, {
+
+/******************** Methods to implement *****************/
+
+  // True if the portlet can connect objects belonging to different patches
+  crossPatch: false,
+
+  // This method is called when the portlet is initialized.
+  init: function() {},
+
+  // This method is called when the object is started
+  start: function() {},
+
+  // This method is called after all objects have been stopped
+  stop: function() {},
+
+  // This method is called when the portlet receives a message.
+  message: function(args) {},
+
+  // This method is called when the portlet gets a new connection,
+  // and when the portlet's object is started it is called again.
+  connection: function(otherPortlet) {},
+
+  // This method is called when the portlet gets disconnected.
+  disconnection: function(otherPortlet) {},
+
+
+/************************* Public API **********************/
+
+  // Connects the calling portlet with `otherPortlet` 
+  // Returns true if a connection was indeed established.
+  connect: function(otherPortlet) {
+    if (this.connections.indexOf(otherPortlet) !== -1) return false
+    if (!(this.crossPatch || otherPortlet.crossPatch)
+    && this.obj.patch !== otherPortlet.obj.patch)
+      throw new Error('cannot connect objects that belong to different patches')
+    this.connections.push(otherPortlet)
+    otherPortlet.connect(this)
+    this.connection(otherPortlet)
+    return true
+  },
+
+  // Generic function for disconnecting the calling portlet 
+  // from  `otherPortlet`. Returns true if a disconnection was indeed made
+  disconnect: function(otherPortlet) {
+    var connInd = this.connections.indexOf(otherPortlet)
+    if (connInd === -1) return false
+    this.connections.splice(connInd, 1)
+    otherPortlet.disconnect(this)
+    this.disconnection(otherPortlet)
+    return true
+  }
+
+})
+Portlet.extend = utils.chainExtend
+
+// Base inlet
+var Inlet = exports.Inlet = Portlet.extend({})
+
+// Base outlet
+var Outlet = exports.Outlet = Portlet.extend({})
+
+},{"./utils":15,"underscore":61,"util":8}],15:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , expect = require('chai').expect
+
+// Regular expressions to deal with dollar-args
+var dollarVarRe = /\$(\d+)/,
+    dollarVarReGlob = /\$(\d+)/g
+
+
+// Returns a function `resolver(inArray)`. For example :
+//
+//     resolver = obj.getDollarResolver([56, '$1', 'bla', '$2-$1'])
+//     resolver([89, 'bli']) // [56, 89, 'bla', 'bli-89']
+//
+exports.getDollarResolver = function(rawOutArray) {
+  rawOutArray = rawOutArray.slice(0)
+
+  // Simple helper to throw en error if the index is out of range
+  var getElem = function(array, ind) {
+    if (ind >= array.length || ind < 0) 
+      throw new Error('$' + (ind + 1) + ': argument number out of range')
+    return array[ind]
+  }
+
+  // Creates an array of transfer functions `inVal -> outVal`.
+  var transfer = rawOutArray.map(function(rawOutVal) {
+    var matchOnce = dollarVarRe.exec(rawOutVal)
+
+    // If the transfer is a dollar var :
+    //      ['bla', 789] - ['$1'] -> ['bla']
+    if (matchOnce && matchOnce[0] === rawOutVal) {
+      return (function(rawOutVal) {
+        var inInd = parseInt(matchOnce[1], 10)
+        return function(inArray) { return getElem(inArray, inInd) }
+      })(rawOutVal)
+
+    // If the transfer is a string containing dollar var :
+    //      ['bla', 789] - ['bla$2'] -> ['bla789']
+    } else if (matchOnce) {
+      return (function(rawOutVal) {
+        var allMatches = []
+          , matched
+        while (matched = dollarVarReGlob.exec(rawOutVal)) {
+          allMatches.push([matched[0], parseInt(matched[1], 10)])
+        }
+        return function(inArray) {
+          var outVal = rawOutVal.substr(0)
+          allMatches.forEach(function(matched) {
+            outVal = outVal.replace(matched[0], getElem(inArray, matched[1]))
+          })
+          return outVal
+        }
+      })(rawOutVal)
+
+    // Else the input doesn't matter
+    } else {
+      return (function(outVal) {
+        return function() { return outVal }
+      })(rawOutVal)
+    }
+  })
+
+  return function(inArray) {
+    return transfer.map(function(func, i) { return func(inArray) })
+  } 
+}
+
+
+exports.chainExtend = function() {
+  var sources = Array.prototype.slice.call(arguments, 0)
+    , parent = this
+    , child = function() { parent.apply(this, arguments) }
+
+  // Fix instanceof
+  child.prototype = new parent()
+
+  // extend with new properties
+  _.extend.apply(this, [child.prototype, parent.prototype].concat(sources))
+
+  child.extend = this.extend
+  return child
+}
+
+
+// Simple mixin to add functionalities for generating unique ids.
+// Each object extended with this mixin has a separate id counter.
+// Therefore ids are not unique globally but unique for object.
+exports.UniqueIdsMixin = {
+
+  // Every time it is called, this method returns a new unique id.
+  _generateId: function() {
+    this._idCounter++
+    return this._idCounter
+  },
+
+  // Counter used internally to assign a unique id to objects
+  // this counter should never be decremented to ensure the id unicity
+  _idCounter: -1
+}
+
+
+// Simple mixin for named objects, such as [send] or [table] 
+exports.NamedMixin = {
+
+  nameIsUnique: false,
+
+  setName: function(name) {
+    // This method is a simple hack to register the object
+    // first time the name is set.
+    this._setName(name)
+    require('../global').namedObjects.register(this)
+    this.setName = this._setName
+  },
+
+  _setName: function(name) {
+    var oldName = this.name
+    expect(name).to.be.a('string', 'name')
+    this.name = name
+    this.emit('change:name', oldName, name)
+  }
+
+}
+
+// Store for named objects. Objects are stored by pair (<obj.type>, <obj.name>)
+var NamedObjectStore = exports.NamedObjectStore = function() {
+  this._store = {}
+}
+
+_.extend(NamedObjectStore.prototype, {
+
+  // Registers a named object in the store.
+  register: function(obj) {
+    var self = this
+    var storeNamedObject = function(oldName, newName) {
+      var objType = obj.type
+        , nameMap
+        , objList
+      self._store[objType] = nameMap = self._store[objType] || {}
+      nameMap[newName] = objList = nameMap[newName] || []
+
+      // Adding new mapping
+      if (objList.indexOf(obj) === -1) {
+        if (obj.nameIsUnique && objList.length > 0)
+          throw new Error('there is already a ' + objType + ' with name "' + newName + '"')
+        objList.push(obj)
+      }
+
+      // Removing old mapping
+      if (oldName) {
+        objList = nameMap[oldName]
+        objList.splice(objList.indexOf(obj), 1)
+      }
+    }
+    obj.on('change:name', storeNamedObject)
+    if (obj.name) storeNamedObject(null, obj.name)
+  },
+
+  // Returns an object list given the object `type` and `name`.
+  get: function(type, name) {
+    return ((this._store[type] || {})[name] || [])
+  }
+
+})
+
+},{"../global":16,"chai":24,"underscore":61}],16:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , utils = require('./core/utils')
+  , EventEmitter = require('events').EventEmitter
+
+
+// Global settings
+exports.settings = {
+
+  // Current sample rate
+  sampleRate: 44100,
+  
+  // Current block size
+  blockSize: 16384,
+
+  // Current number of channels
+  channelCount: 2
+}
+
+
+// true if dsp is started, false otherwise 
+exports.isStarted = false
+
+
+// Global event emitter
+var emitter = exports.emitter = new EventEmitter()
+
+
+// The library of objects that can be created
+exports.library = {}
+
+
+// List of all patches currently open
+exports.patches = {}
+
+
+// Audio engine. Must implement the `interfaces.Audio`
+exports.audio = null
+
+
+// The clock used to schedule stuff. Must implement the `interfaces.Clock`
+exports.clock = null
+
+
+// Store containing named objects (e.g. arrays, [delread~], ...).
+exports.namedObjects = null
+
+},{"./core/utils":15,"events":4,"underscore":61}],17:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , expect = require('chai').expect
+  , WAAOffset = require('waaoffset')
+  , WAAWhiteNoise = require('waawhitenoise')
+  , utils = require('../core/utils')
+  , PdObject = require('../core/PdObject')
+  , portlets = require('./portlets')
+  , pdGlob = require('../global')
+
+exports.declareObjects = function(library) {
+
+  // TODO : When phase is set, the current oscillator will be immediately disconnected,
+  // while ideally, it should be disconnected only at `futureTime` 
+  library['osc~'] = PdObject.extend({
+
+    type: 'osc~',
+
+    inletDefs: [
+
+      portlets.DspInlet.extend({
+        message: function(args) {
+          var frequency = args[0]
+          if (!this.hasDspSource()) {
+            expect(frequency).to.be.a('number', 'osc~::frequency')
+            this.obj.frequency = frequency
+            if (this.obj._oscNode)
+              this.obj._oscNode.frequency.setValueAtTime(frequency, pdGlob.futureTime / 1000 || 0)
+          }
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var phase = args[0]
+          expect(phase).to.be.a('number', 'osc~::phase')
+          if (pdGlob.isStarted)
+            this.obj._createOscillator(phase)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.DspOutlet],
+
+    init: function(args) {
+      this.frequency = args[0] || 0
+    },
+
+    start: function() {
+      this._createOscillator(0)
+    },
+
+    stop: function() {
+      this._oscNode.stop(0)
+      this._oscNode = null
+    },
+
+    _createOscillator: function(phase) {
+      phase = phase * 2 * Math.PI 
+      this._oscNode = pdGlob.audio.context.createOscillator()
+      this._oscNode.setPeriodicWave(pdGlob.audio.context.createPeriodicWave(
+        new Float32Array([0, Math.cos(phase)]),
+        new Float32Array([0, Math.sin(-phase)])
+      ))
+      this._oscNode.start(pdGlob.futureTime / 1000 || 0)
+      this.o(0).setWaa(this._oscNode, 0)
+      this.i(0).setWaa(this._oscNode.frequency, 0)
+      this.i(0).message([this.frequency])
+    }
+
+  })
+
+  library['noise~'] = PdObject.extend({
+
+    type: 'noise~',
+
+    outletDefs: [portlets.DspOutlet],
+
+    start: function() {
+      this._noiseNode = new WAAWhiteNoise(pdGlob.audio.context)
+      this._noiseNode.start(0)
+      this.o(0).setWaa(this._noiseNode, 0)
+    },
+
+    stop: function() {
+      this._noiseNode.stop(0)
+      this._noiseNode.disconnect()
+      this._noiseNode = null
+    }
+
+  })
+
+  // TODO : doesn't work when interrupting a line (probably)
+  library['line~'] = PdObject.extend({
+
+    type: 'line~',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+
+        init: function() {
+          this._queue = []
+          this._lastValue = 0
+        },
+
+        _interpolate: function(line, time) {
+          return (time - line.t1) * (line.v2 - line.v1) / (line.t2 - line.t1) + line.v1
+        },
+
+        // Refresh the queue to `time`, removing old lines and setting `_lastValue`
+        // if appropriate.
+        _refreshQueue: function(time) {
+          if (this._queue.length === 0) return
+          var i = 0, line, oldLines
+          while ((line = this._queue[i++]) && time >= line.t2) 1
+          oldLines = this._queue.slice(0, i - 1)
+          this._queue = this._queue.slice(i - 1)
+          if (this._queue.length === 0)
+            this._lastValue = oldLines[oldLines.length - 1].v2
+        },
+
+        // push a line to the queue, overriding the lines that were after it,
+        // and creating new lines if interrupting something in its middle.
+        _pushToQueue: function(t1, v2, duration) {
+          var i = 0, line, newLines = []
+          
+          // Find the insertion point in the queue and remove lines that are overriden 
+          while ((line = this._queue[i++]) && t1 >= line.t2) 1
+          this._queue = this._queue.slice(0, i)
+
+          if (this._queue.length) {
+            var lastLine = this._queue[this._queue.length - 1]
+
+            // If the new line interrupts the last in the queue, we have to interpolate
+            // a new line
+            if (t1 < lastLine.t2) {
+              this._queue = this._queue.slice(0, -1)
+              line = {
+                t1: lastLine.t1, v1: lastLine.v1,
+                t2: t1, v2: this._interpolate(lastLine, t1)
+              }
+              newLines.push(line)
+              this._queue.push(line)
+
+            // Otherwise, we have to fill-in the gap with a straight line
+            } else if (t1 > lastLine.t2) {
+              line = {
+                t1: lastLine.t2, v1: lastLine.v2,
+                t2: t1, v2: lastLine.v2
+              }
+              newLines.push(line)
+              this._queue.push(line)
+            }
+
+          // If there isn't any value in the queue yet, we fill in the gap with
+          // a straight line from `_lastValue` all the way to `t1` 
+          } else {
+            line = {
+              t1: 0, v1: this._lastValue,
+              t2: t1, v2: this._lastValue
+            }
+            newLines.push(line)
+            this._queue.push(line)
+          }
+
+          // Finally create the line and add it to the queue
+          line = {
+            t1: t1, v1: this._queue[this._queue.length - 1].v2,
+            t2: t1 + duration, v2: v2
+          }
+          newLines.push(line)
+          this._queue.push(line)
+          return newLines
+        },
+
+        message: function(args) {
+          var self = this
+          if (this.obj._offsetNode) {
+            var v2 = args[0]
+              , t1 = (pdGlob.futureTime || pdGlob.audio.time)
+              , duration = args[1] || 0
+
+            // Deal with arguments
+            expect(v2).to.be.a('number', 'line~::target')
+            if (duration)
+              expect(duration).to.be.a('number', 'line~::duration')
+
+            // Refresh the queue to current time and push the new line
+            this._refreshQueue(pdGlob.audio.time)
+            var newLines = this._pushToQueue(t1, v2, duration)
+
+            // Cancel everything that was after the new lines, and schedule them
+            this.obj._offsetNode.offset.cancelScheduledValues(newLines[0].t1 / 1000 + 0.000001)
+            newLines.forEach(function(line) {
+              
+              
+              if (line.t1 !== line.t2) {
+                self.obj._offsetNode.offset.linearRampToValueAtTime(line.v2, line.t2 / 1000)
+                console.log('linearRampToValueAtTime', line.v2, line.t2 / 1000)
+              } else {
+                self.obj._offsetNode.offset.setValueAtTime(line.v2, line.t2 / 1000)
+                console.log('setValueAtTime', line.v2, line.t2 / 1000)
+              }
+            })          
+          }
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.DspOutlet],
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._offsetNode.offset.setValueAtTime(0, 0)
+      this.o(0).setWaa(this._offsetNode, 0)
+    },
+
+    stop: function() {
+      this._offsetNode = null
+    }
+
+  })
+
+
+  library['sig~'] = PdObject.extend({
+
+    type: 'sig~',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var value = args[0]
+          expect(value).to.be.a('number', 'sig~::value')
+          this.obj.value = value
+          if (this.obj._offsetNode)
+            this.obj._offsetNode.offset.setValueAtTime(value, pdGlob.futureTime / 1000 || 0)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.DspOutlet],
+
+    init: function(args) {
+      this.value = args[0] || 0
+    },
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._offsetNode.offset.setValueAtTime(0, 0)
+      this.o(0).setWaa(this._offsetNode, 0)
+      this.i(0).message([this.value])
+    },
+
+    stop: function() {
+      this._offsetNode = null
+    }
+
+  })
+
+
+  var _FilterFrequencyInletMixin = {
+    message: function(args) {
+      var frequency = args[0]
+      expect(frequency).to.be.a('number', this.obj.type + '::frequency')
+      this.obj.frequency = frequency
+      if (this.obj._filterNode)
+        this.obj._filterNode.frequency.setValueAtTime(frequency, pdGlob.futureTime / 1000 || 0)
+    }
+  }
+
+  var _FilterQInletMixin = {
+    message: function(args) {
+      var Q = args[0]
+      expect(Q).to.be.a('number', this.obj.type + '::Q')
+      this.obj.Q = Q
+      if (this.obj._filterNode)
+        this.obj._filterNode.Q.setValueAtTime(Q, pdGlob.futureTime / 1000 || 0)
+    }
+  }
+
+  var _BaseFilter = PdObject.extend({
+
+    inletDefs: [portlets.DspInlet, portlets.Inlet.extend(_FilterFrequencyInletMixin)],
+    outletDefs: [portlets.DspOutlet],
+
+    init: function(args) {
+      this.frequency = args[0] || 0
+    },
+
+    start: function() {
+      this._filterNode = pdGlob.audio.context.createBiquadFilter()
+      this._filterNode.frequency.setValueAtTime(this.frequency, 0)
+      this._filterNode.type = this.waaFilterType
+      this.i(0).setWaa(this._filterNode, 0)
+      this.o(0).setWaa(this._filterNode, 0)
+      this.i(1).message([this.frequency])
+    },
+
+    stop: function() {
+      this._filterNode = null
+    }
+
+  })
+
+  var _BaseBandFilter = _BaseFilter.extend({
+    waaFilterType: 'bandpass',
+
+    init: function(args) {
+      _BaseFilter.prototype.init.call(this, args)
+      this.Q = args[1] || 1
+    },
+
+    start: function(args) {
+      _BaseFilter.prototype.start.call(this, args)
+      this._filterNode.Q.setValueAtTime(this.Q, 0)
+      this.i(2).message([this.Q])
+    }
+
+  })
+
+
+  // TODO: tests for filters
+  library['lop~'] = _BaseFilter.extend({
+    type: 'lop~',
+    waaFilterType: 'lowpass'
+  })
+
+
+  library['hip~'] = _BaseFilter.extend({
+    type: 'hip~',
+    waaFilterType: 'highpass'
+  })
+
+
+  library['bp~'] = _BaseBandFilter.extend({
+    type: 'bp~',
+
+    inletDefs: [
+      portlets.DspInlet,
+      portlets.Inlet.extend(_FilterFrequencyInletMixin),
+      portlets.Inlet.extend(_FilterQInletMixin)
+    ]
+  })
+
+
+  library['vcf~'] = _BaseBandFilter.extend({
+    type: 'vcf~',
+
+    inletDefs: [
+      portlets.DspInlet,
+      portlets.DspInlet.extend(_FilterFrequencyInletMixin),
+      portlets.Inlet.extend(_FilterQInletMixin)
+    ],
+
+    start: function(args) {
+      _BaseBandFilter.prototype.start.call(this, args)
+      this.i(1).setWaa(this._filterNode.frequency, 0)
+    }
+
+  })
+
+
+  var _DspArithmBase = PdObject.extend({
+
+    outletDefs: [portlets.DspOutlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', this.type + '::val')
+      this.val = val
+    }
+
+  })
+
+  // Mixin for inlet 1 of Dsp arithmetics objects *~, +~, ...
+  var _DspArithmValInletMixin = {
+    
+    message: function(args) {
+      var val = args[0]
+      this.obj.setVal(val)
+      if (!this.hasDspSource()) this._setValNoDsp(val)
+    },
+    
+    disconnection: function(outlet) {
+      portlets.DspInlet.prototype.disconnection.apply(this, arguments) 
+      if (outlet instanceof portlets.DspOutlet && !this.hasDspSource())
+        this._setValNoDsp(this.obj.val)
+    }
+  }
+
+
+  library['*~'] = _DspArithmBase.extend({
+    type: '*~',
+
+    inletDefs: [
+
+      portlets.DspInlet,
+
+      portlets.DspInlet.extend(_DspArithmValInletMixin, {
+        _setValNoDsp: function(val) {
+          if (this.obj._gainNode)
+            this.obj._gainNode.gain.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
+        }
+      })
+
+    ],
+
+    start: function() {
+      this._gainNode = pdGlob.audio.context.createGain()
+      this.i(0).setWaa(this._gainNode, 0)
+      this.i(1).setWaa(this._gainNode.gain, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
+    },
+
+    stop: function() {
+      this._gainNode = null
+    }
+
+  })
+
+
+  library['+~'] = _DspArithmBase.extend({
+    type: '+~',
+
+    inletDefs: [
+
+      portlets.DspInlet,
+
+      portlets.DspInlet.extend(_DspArithmValInletMixin, {
+        _setValNoDsp: function(val) { 
+          if (this.obj._offsetNode)
+            this.obj._offsetNode.offset.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
+        }
+      })
+
+    ],
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._gainNode = pdGlob.audio.context.createGain()
+      this._gainNode.gain.value = 1
+      this._offsetNode.offset.value = 0
+      this._offsetNode.connect(this._gainNode, 0, 0)
+      this.i(0).setWaa(this._gainNode, 0)
+      this.i(1).setWaa(this._offsetNode.offset, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
+    },
+
+    stop: function() {
+      this._offsetNode.disconnect()
+      this._gainNode = null
+      this._offsetNode = null
+    }
+
+  })
+
+
+  library['-~'] = _DspArithmBase.extend({
+    type: '-~',
+
+    inletDefs: [
+
+      portlets.DspInlet,
+
+      portlets.DspInlet.extend(_DspArithmValInletMixin, {
+        _setValNoDsp: function(val) { 
+          if (this.obj._offsetNode)
+            this.obj._offsetNode.offset.setValueAtTime(val, pdGlob.futureTime / 1000 || 0)
+        }
+      })
+
+    ],
+
+    start: function() {
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._gainNode = pdGlob.audio.context.createGain()
+      this._negateGainNode = pdGlob.audio.context.createGain()
+      this._gainNode.gain.value = 1
+      this._negateGainNode.gain.value = -1
+      this._offsetNode.offset.value = 0
+      this._offsetNode.connect(this._negateGainNode, 0, 0)
+      this._negateGainNode.connect(this._gainNode, 0, 0)
+      this.i(0).setWaa(this._gainNode, 0)
+      this.i(1).setWaa(this._offsetNode.offset, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+      if (!this.i(1).hasDspSource()) this.i(1)._setValNoDsp(this.val)
+    },
+
+    stop: function() {
+      this._negateGainNode.disconnect()
+      this._offsetNode.disconnect()
+      this._gainNode = null
+      this._negateGainNode = null
+      this._offsetNode = null
+    }
+
+  })
+
+
+  library['dac~'] = PdObject.extend({
+    type: 'dac~',
+
+    endPoint: true,
+
+    inletDefs: [portlets.DspInlet, portlets.DspInlet],
+
+    start: function() {
+      this.i(0).setWaa(pdGlob.audio.channels[0], 0)
+      this.i(1).setWaa(pdGlob.audio.channels[1], 0)
+    }
+
+  })
+
+}
+
+},{"../core/PdObject":12,"../core/utils":15,"../global":16,"./portlets":20,"chai":24,"underscore":61,"waaoffset":64,"waawhitenoise":66}],18:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+var _ = require('underscore')
+  , expect = require('chai').expect
+  , utils = require('../core/utils')
+  , PdObject = require('../core/PdObject')
+  , Patch = require('../core/Patch')
+  , pdGlob = require('../global')
+  , portlets = require('./portlets')
+
+exports.declareObjects = function(library) {
+
+  library['receive'] = library['r'] = PdObject.extend(utils.NamedMixin, {
+
+    type: 'receive',
+
+    outletDefs: [portlets.Outlet],
+    abbreviations: ['r'],
+
+    init: function(args) {
+      var name = args[0]
+        , onMsgReceived = this._messageHandler()
+      this.on('change:name', function(oldName, newName) {
+        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, onMsgReceived)
+        pdGlob.emitter.on('msg:' + newName, onMsgReceived)
+      })
+      this.setName(name)
+    },
+
+    _messageHandler: function(args) {
+      var self = this
+      return function(args) {
+        self.outlets[0].message(args)
+      }
+    }
+
+  })
+
+  library['send'] = library['s'] = PdObject.extend(utils.NamedMixin, {
+
+    type: 'send',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          pdGlob.emitter.emit('msg:' + this.obj.name, args)
+        }
+      })
+
+    ],
+
+    abbreviations: ['s'],
+
+    init: function(args) { this.setName(args[0]) }
+
+  })
+
+  library['msg'] = PdObject.extend({
+
+    type: 'msg',
+
+    doResolveArgs: false,
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          // For some reason in Pd $0 in a message is always 0.
+          args = args.slice(0)
+          args.unshift(0)
+          this.obj.outlets[0].message(this.obj.resolver(args))
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      this.resolver = utils.getDollarResolver(args)
+    }
+
+  })
+
+  library['print'] = PdObject.extend({
+
+    type: 'print',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          console.log(this.obj.prefix ? [this.obj.prefix].concat(args) : args)
+        }
+      })
+
+    ],
+
+    init: function(args) {
+      this.prefix = (args[0] || 'print');
+    }
+
+  })
+
+  library['text'] = PdObject.extend({
+    
+    type: 'text',
+
+    init: function(args) {
+      this.text = args[0]
+    }
+
+  })
+
+  library['loadbang'] = PdObject.extend({
+
+    type: 'loadbang',
+
+    outletDefs: [portlets.Outlet],
+
+    load: function() {
+      this.o(0).message(['bang'])
+    }
+
+  })
+
+  library['float'] = library['f'] = PdObject.extend({
+
+    type: 'float',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val !== 'bang') this.obj.setVal(val)
+          this.obj.o(0).message([this.obj.val])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setVal(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', 'float::value')
+      this.val = val
+    }
+
+  })
+
+  var _ArithmBase = PdObject.extend({
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val !== 'bang') { 
+            expect(val).to.be.a('number', this.obj.type + '::value')  
+            this.obj.lastResult = this.obj.compute(val)
+          }
+          this.obj.o(0).message([this.obj.lastResult])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          expect(val).to.be.a('number', this.obj.type + '::value')
+          this.obj.val = val
+        }
+      })
+    ],
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.val = val || 0
+      this.lastResult = 0
+    },
+    
+    // Must be overriden
+    compute: function(val) { return }
+  })
+
+  library['+'] = _ArithmBase.extend({
+    type: '+',
+
+    compute: function(val) { return val + this.val }
+  })
+
+  library['-'] = _ArithmBase.extend({
+    type: '-',
+    compute: function(val) { return val - this.val }
+  })
+
+  library['*'] = _ArithmBase.extend({
+    type: '*',
+    compute: function(val) { return val * this.val }
+  })
+
+  library['/'] = _ArithmBase.extend({
+    type: '/',
+    compute: function(val) { return val / this.val }
+  })
+
+  library['mod'] = library['%'] = _ArithmBase.extend({
+    type: 'mod',
+    compute: function(val) { return val % this.val }
+  })
+
+  library['spigot'] = PdObject.extend({
+    
+    type: 'spigot',
+
+    inletDefs: [
+      
+      portlets.Inlet.extend({
+        message: function(args) {
+          if (this.obj.passing) this.obj.o(0).message(args)
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setPassing(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setPassing(val || 0)
+    },
+
+    setPassing: function(val) {
+      expect(val).to.be.a('number', 'spigot::passing')
+      this.passing = Boolean(val)
+    }
+
+  })
+
+  library['trigger'] = library['t'] = PdObject.extend({
+
+    type: 'trigger',
+
+    inletDefs: [
+      portlets.Inlet.extend({
+
+        message: function(args) {
+          var i, length, filter, msg
+
+          for (i = this.obj.filters.length - 1; i >= 0; i--) {
+            filter = this.obj.filters[i]
+            if (filter === 'bang')
+              this.obj.o(i).message(['bang'])
+            else if (filter === 'list' || filter === 'anything')
+              this.obj.o(i).message(args)
+            else if (filter === 'float') {
+              msg = args[0]
+              if (_.isNumber(msg)) this.obj.o(i).message([msg])
+              else this.obj.o(i).message([0])
+            } else if (filter === 'symbol') {
+              msg = args[0]
+              if (msg === 'bang') this.obj.o(i).message(['symbol'])
+              else if (_.isNumber(msg)) this.obj.o(i).message(['float'])
+              else if (_.isString(msg)) this.obj.o(i).message([msg])
+              else throw new Error('Got unexpected input ' + args)
+            }
+          }
+        }
+
+      })
+    ],
+
+    init: function(args) {
+      var i, length
+      if (args.length === 0)
+        args = ['bang', 'bang']
+      for (i = 0, length = args.length; i < length; i++)
+        this.outlets.push(new portlets.Outlet(this, i))
+      this.filters = args
+    }
+
+  })
+
+  var _PackInlet0 = portlets.Inlet.extend({
+    message: function(args) {
+      var msg = args[0]
+      if (msg !== 'bang') this.obj.memory[0] = msg
+      this.obj.o(0).message(this.obj.memory.slice(0))
+    }
+  })
+
+  var _PackInletN = portlets.Inlet.extend({
+    message: function(args) {
+      var msg = args[0]
+      this.obj.memory[this.id] = msg
+    }
+  })
+
+  library['pack'] = PdObject.extend({
+    
+    type: 'pack',
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var i, length = args.length
+
+      if (length === 0) args = ['float', 'float']
+      length = args.length
+      this.filters = args
+      this.memory = new Array(length)
+
+      for (i = 0; i < length; i++) {
+        if (i === 0)
+          this.inlets[i] = new _PackInlet0(this, i)
+        else 
+          this.inlets[i] = new _PackInletN(this, i)
+        if (args[i] === 'float') this.memory[i] = 0
+        else if (args[i] === 'symbol') this.memory[i] = 'symbol'
+        else this.memory[i] = args[i]
+      }
+    }
+
+  })
+
+  library['select'] = library['sel'] = PdObject.extend({
+
+    type: 'select',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var ind, msg = args[0]
+          if ((ind = this.obj.filters.indexOf(msg)) !== -1)
+            this.obj.o(ind).message(['bang'])
+          else this.obj.outlets.slice(-1)[0].message([msg])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          if (this.obj.filters.length <= 1) this.obj.filters = args
+        }
+      })
+
+    ],
+
+    init: function(args) {
+      var i, length
+      if (args.length === 0) args = [0]
+      if (args.length > 1) this.inlets.pop() 
+
+      for (i = 0, length = args.length; i < length; i++)
+        this.outlets[i] = new portlets.Outlet(this, i)
+      this.outlets[i] = new portlets.Outlet(this, i)
+      this.filters = args
+    }
+
+  })
+
+  library['moses'] = PdObject.extend({
+
+    type: 'moses',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          expect(val).to.be.a('number', 'moses::value')
+          if (val < this.obj.val) this.obj.o(0).message([val])
+          else this.obj.o(1).message([val])
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setVal(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet, portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', 'moses::value')
+      this.val = val
+    }
+
+  })
+
+  library['mtof'] = PdObject.extend({
+
+    type: 'mtof',
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        // TODO: round output ?
+        message: function(args) {
+          var out = 0
+            , note = args[0]
+          expect(note).to.be.a('number', 'mtof::value')
+          if (note <= -1500) out = 0
+          else if (note > 1499) out = this.obj.maxMidiNote
+          else out = 8.17579891564 * Math.exp((0.0577622650 * note))
+          this.obj.o(0).message([out])
+        }
+      })
+    ],
+
+    outletDefs: [portlets.Outlet],
+    maxMidiNote: 8.17579891564 * Math.exp((0.0577622650 * 1499))
+  })
+
+  library['random'] = PdObject.extend({
+
+    type: 'random',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang')
+            this.obj.o(0).message([Math.floor(Math.random() * this.obj.max)])
+          else if (msg === 'seed') 1 // TODO: seeding, not available with `Math.rand`
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          this.obj.setMax(msg)
+        }
+      })
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var maxInt = args[0]
+      this.setMax(maxInt || 1)
+    },
+
+    setMax: function(maxInt) {
+      expect(maxInt).to.be.a('number', 'random::max')
+      this.max = maxInt
+    }
+
+  })
+
+  library['metro'] = PdObject.extend({
+
+    type: 'metro',
+
+    inletDefs: [
+    
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang') this.obj._restartMetroTick()
+          else if (msg === 'stop') this.obj._stopMetroTick() 
+          else {
+            expect(msg).to.be.a('number', 'metro::command')
+            if (msg === 0) this.obj._stopMetroTick()
+            else this.obj._restartMetroTick()
+          }
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var rate = args[0]
+          this.obj.setRate(rate)
+          this.obj._metroTick = this.obj._metroTickRateChange
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var rate = args[0]
+      this.setRate(rate || 0)
+      this._metroHandle = null
+      this._metroTick = this._metroTickNormal
+    },
+
+    // Metronome rate, in ms per tick
+    setRate: function(rate) {
+      expect(rate).to.be.a('number', 'metro::rate')
+      this.rate = rate
+    },
+
+    _startMetroTick: function() {
+      var self = this
+      if (this._metroHandle === null) {
+        this._metroHandle = pdGlob.clock.schedule(function() {
+          self._metroTick()
+        }, pdGlob.futureTime || pdGlob.clock.time, this.rate)
+      }
+    },
+
+    _stopMetroTick: function() {
+      if (this._metroHandle !== null) {
+        pdGlob.clock.unschedule(this._metroHandle)
+        this._metroHandle = null
+      }
+    },
+
+    _restartMetroTick: function() {
+      this._stopMetroTick()
+      this._startMetroTick()
+    },
+
+    _metroTickNormal: function() { this.outlets[0].message(['bang']) },
+
+    // On next tick, restarts the interval and switches to normal ticking.
+    _metroTickRateChange: function() {
+      this._metroTick = this._metroTickNormal
+      this._restartMetroTick()
+    }
+  })
+
+  library['delay'] = library['del'] = PdObject.extend({
+
+    type: 'delay',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang') {
+            this.obj._stopDelay()
+            this.obj._startDelay()
+          } else if (msg === 'stop') {
+            this.obj._stopDelay() 
+          } else {
+            this.obj.setDelay(msg)
+            this.obj._stopDelay()
+            this.obj._startDelay()
+          }
+        }
+      }),
+      
+      portlets.Inlet.extend({
+        message: function(args) {
+          var delay = args[0]
+          this.obj.setDelay(delay)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var delay = args[0]
+      this.setDelay(delay || 0)
+      this._delayHandle = null
+    },
+
+    // Delay time, in ms
+    setDelay: function(delay) {
+      expect(delay).to.be.a('number', 'delay::time')
+      this.delay = delay
+    },
+
+    _startDelay: function() {
+      var self = this
+      if (this._delayHandle === null) {
+        this._delayHandle = pdGlob.clock.schedule(function() {
+          self.outlets[0].message(['bang'])
+        }, (pdGlob.futureTime || pdGlob.clock.time) + this.delay)
+      }
+    },
+
+    _stopDelay: function() {
+      if (this._delayHandle !== null) {
+        pdGlob.clock.unschedule(this._delayHandle)
+        this._delayHandle = null
+      }
+    }
+  })
+
+  // TODO: How does it work in pd ?
+  library['timer'] = PdObject.extend({
+
+    type: 'timer',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          expect(msg).to.be.equal('bang', 'timer::startStop')
+          this.obj.refTime = (pdGlob.futureTime || pdGlob.clock.time)
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          expect(msg).to.be.equal('bang', 'timer::measure')
+          this.obj.outlets[0].message([(pdGlob.futureTime || pdGlob.clock.time) - this.obj.refTime])
+        }
+      })
+
+    ],
+    
+    outletDefs: [portlets.Outlet],
+
+    init: function() {
+      // Reference time, the timer count starts from this  
+      this.refTime = 0
+    }
+
+  })
+
+  library['change'] = PdObject.extend({
+
+    type: 'change',
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val !== this.obj.last) {
+            this.obj.last = val
+            this.obj.o(0).message([val])
+          }
+        }
+      })
+    ],
+    
+    outletDefs: [portlets.Outlet],
+
+    init: function() {
+      this.last = null
+    }
+
+  })
+
+  library['pd'] = Patch
+
+}
+
+},{"../core/Patch":11,"../core/PdObject":12,"../core/utils":15,"../global":16,"./portlets":20,"chai":24,"underscore":61}],19:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+var _ = require('underscore')
+
+exports.declareObjects = function(library) {
+  require('./glue').declareObjects(library)
+  require('./dsp').declareObjects(library)
+  require('./portlets').declareObjects(library)
+}
+},{"./dsp":17,"./glue":18,"./portlets":20,"underscore":61}],20:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , expect = require('chai').expect
+  , utils = require('../core/utils')
+  , PdObject = require('../core/PdObject')
+  , BaseInlet = require('../core/portlets').Inlet
+  , BaseOutlet = require('../core/portlets').Outlet
+  , pdGlob = require('../global')
+  , AudioParam = typeof window !== 'undefined' ? window.AudioParam : function() {} // for testing purpose
+
+
+// Mixin for common inlet functionalities
+var InletMixin = {
+
+  // Allows to deal with Web Audio API's way of scheduling things.
+  // This sends a message, but flags it to be executed in the future.
+  // That way DSP objects that can schedule stuff, have a bit of time
+  // before the event must actually happen.
+  future: function(time, args) {
+    pdGlob.futureTime = time
+    this.message(args)
+    delete pdGlob.futureTime
+  }
+
+}
+
+// message inlet.
+var Inlet = exports.Inlet = BaseInlet.extend(InletMixin)
+
+// dsp inlet.
+var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
+
+  hasDspSource: function() {
+    return _.filter(this.connections, function(outlet) {
+      return outlet instanceof DspOutlet
+    }).length > 0
+  },
+
+  setWaa: function(node, input) {
+    var self = this
+    if (pdGlob.isStarted) {
+      _.chain(this.connections)
+        .filter(function(outlet) { return outlet instanceof DspOutlet })
+        .forEach(function(outlet) { outlet._waaDisconnect(self) }).value()
+    }
+    this._waa = { node: node, input: input }
+    if (pdGlob.isStarted) {
+      _.chain(this.connections)
+        .filter(function(outlet) { return outlet instanceof DspOutlet })
+        .forEach(function(outlet) { outlet._waaConnect(self) }).value()
+    }
+  }
+
+})
+
+// message outlet. Dispatches messages to all the sinks
+var Outlet = exports.Outlet = BaseOutlet.extend({
+
+  message: function(args) {
+    this.connections.forEach(function(sink) {
+      sink.message(args)
+    })
+  }
+
+})
+
+// dsp outlet.
+var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
+
+  init: function() {
+    this._waaConnections = []
+  },
+
+  start: function() {
+    // Because ATM we cannot disconnect one node from another node
+    // without disconnecting all, we have to create a gain node for each
+    // new connection.
+    this._waaConnectAll()
+  },
+
+  stop: function() {
+    this._waaDisconnectAll()
+    this._waaConnections = []
+  },
+
+  connection: function(inlet) {
+    if (!(inlet instanceof DspInlet)) 
+      throw new Error('can only connect to DSP inlet')
+    if (pdGlob.isStarted) this._waaConnect(inlet)
+  },
+
+  disconnection: function(inlet) {
+    if (pdGlob.isStarted) this._waaDisconnect(inlet)
+  },
+
+  message: function() {
+    throw new Error ('dsp outlet received a message')
+  },
+
+  setWaa: function(node, output) {
+    var self = this
+    if (pdGlob.isStarted) this._waaDisconnectAll()
+    this._waa = { node: node, output: output }
+    if (pdGlob.isStarted) this._waaConnectAll()
+  },
+
+  _waaConnect: function(inlet) {
+    var gainNode = pdGlob.audio.context.createGain()
+    this._waa.node.connect(gainNode, this._waa.output)
+    this._waaConnections.push({ inlet: inlet, gainNode: gainNode })
+
+    if (inlet._waa.node instanceof AudioParam) {
+      inlet._waa.node.setValueAtTime(0, 0) // remove offset from AudioParam
+      gainNode.connect(inlet._waa.node, this._waa.output)
+    } else
+      gainNode.connect(inlet._waa.node, 0, inlet._waa.input)
+  },
+
+  _waaDisconnect: function(inlet) {
+    // Search for the right waaConnection
+    var waaConnection = this._waaConnections.filter(function(waaConnection) {
+      return waaConnection.inlet === inlet
+    })[0]
+
+    // Disconnect the gain node, and remove the waaConnection from the list
+    waaConnection.gainNode.disconnect()
+    this._waaConnections = this._waaConnections.filter(function(waaConnection) {
+      return waaConnection.inlet !== inlet
+    })
+  },
+
+  _waaConnectAll: function() {
+    // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
+    this.connections.forEach(this._waaConnect.bind(this))
+  },
+
+  _waaDisconnectAll: function() {
+    // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
+    this.connections.forEach(this._waaDisconnect.bind(this))
+  }
+
+})
+
+exports.declareObjects = function(library) {
+
+  var InletInlet = Inlet.extend({
+    message: function(args) {
+      this.obj.outlets[0].message(args)
+    }
+  })
+
+  var InletInletDsp = DspInlet.extend({
+    message: function(args) {
+      this.obj.outlets[0].message(args)
+    }
+  })
+
+  var OutletOutletDsp = DspOutlet.extend({
+    message: function(args) {
+      // Normal dsp outlets cannot receive messages,
+      // but this one just transmits them unchanged.
+      this.sinks.forEach(function(sink) {
+        sink.message(args)
+      })
+    }
+  })
+
+  library['outlet'] = PdObject.extend({
+    type: 'outlet',
+    inletDefs: [ InletInlet ],
+    outletDefs: [ Outlet.extend({ crossPatch: true }) ]
+  })
+
+  library['inlet'] = PdObject.extend({
+    type: 'inlet',
+    inletDefs: [ InletInlet.extend({ crossPatch: true }) ],
+    outletDefs: [ Outlet ]
+  })
+
+  library['outlet~'] = PdObject.extend({
+    
+    type: 'outlet~',
+    inletDefs: [ InletInletDsp ],
+    outletDefs: [ OutletOutletDsp.extend({ crossPatch: true }) ],
+
+    start: function() {
+      this._gainNode = pdGlob.audio.context.createGain()
+      this._gainNode.gain.value = 1
+      this.i(0).setWaa(this._gainNode, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+    },
+
+    stop: function() {
+      this._gainNode = null
+    }
+  })
+
+  library['inlet~'] = PdObject.extend({
+    type: 'inlet~',
+    inletDefs: [ InletInletDsp.extend({ crossPatch: true }) ],
+    outletDefs: [ OutletOutletDsp ]
+  })
+
+}
+
+},{"../core/PdObject":12,"../core/portlets":14,"../core/utils":15,"../global":16,"chai":24,"underscore":61}],21:[function(require,module,exports){
+var Audio = module.exports = function(channelCount) {
+  var ch
+  this.context = new AudioContext()
+  this._channelMerger = this.context.createChannelMerger(channelCount)
+  this._channelMerger.connect(this.context.destination)
+  this.channels = []
+  for (ch = 0; ch < channelCount; ch++) {
+    this.channels.push(this.context.createGain())
+    this.channels[ch].connect(this._channelMerger, 0, ch)
+  }
+  Object.defineProperty(this, 'time', {
+    get: function() { return this.context.currentTime * 1000 },
+  })
+}
+
+Audio.prototype.start = function() {}
+Audio.prototype.stop = function() {}
+},{}],22:[function(require,module,exports){
+var WAAClock = require('waaclock')
+
+// A little wrapper to WAAClock, to implement the Clock interface.
+var Clock = module.exports = function(config) {
+  var self = this
+  this._audioContext = config.audioContext
+  this._waaClock = new WAAClock(config.audioContext)
+  this._waaClock.start()
+  Object.defineProperty(this, 'time', {
+    get: function() { return self._audioContext.currentTime * 1000 }
+  })
+}
+
+Clock.prototype.schedule = function(func, time, repetition) {
+  var event = this._waaClock.callbackAtTime(func, time / 1000)
+  if (repetition) event.repeat(repetition / 1000)
+  return event
+}
+
+Clock.prototype.unschedule = function(event) {
+  event.clear()
+}
+},{"waaclock":62}],23:[function(require,module,exports){
+exports.Clock = require('./Clock')
+exports.Audio = require('./Audio')
+},{"./Audio":21,"./Clock":22}],24:[function(require,module,exports){
 module.exports = require('./lib/chai');
 
-},{"./lib/chai":26}],26:[function(require,module,exports){
+},{"./lib/chai":25}],25:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -4673,7 +4806,7 @@ exports.use(should);
 var assert = require('./chai/interface/assert');
 exports.use(assert);
 
-},{"./chai/assertion":27,"./chai/config":28,"./chai/core/assertions":29,"./chai/interface/assert":30,"./chai/interface/expect":31,"./chai/interface/should":32,"./chai/utils":43,"assertion-error":52}],27:[function(require,module,exports){
+},{"./chai/assertion":26,"./chai/config":27,"./chai/core/assertions":28,"./chai/interface/assert":29,"./chai/interface/expect":30,"./chai/interface/should":31,"./chai/utils":42,"assertion-error":51}],26:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -4810,7 +4943,7 @@ module.exports = function (_chai, util) {
   });
 };
 
-},{"./config":28}],28:[function(require,module,exports){
+},{"./config":27}],27:[function(require,module,exports){
 module.exports = {
 
   /**
@@ -4862,7 +4995,7 @@ module.exports = {
 
 };
 
-},{}],29:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -6223,7 +6356,7 @@ module.exports = function (chai, _) {
   });
 };
 
-},{}],30:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7281,7 +7414,7 @@ module.exports = function (chai, util) {
   ('Throw', 'throws');
 };
 
-},{}],31:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7295,7 +7428,7 @@ module.exports = function (chai, util) {
 };
 
 
-},{}],32:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7375,7 +7508,7 @@ module.exports = function (chai, util) {
   chai.Should = loadShould;
 };
 
-},{}],33:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /*!
  * Chai - addChainingMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7488,7 +7621,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   });
 };
 
-},{"../config":28,"./flag":36,"./transferFlags":50}],34:[function(require,module,exports){
+},{"../config":27,"./flag":35,"./transferFlags":49}],33:[function(require,module,exports){
 /*!
  * Chai - addMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7533,7 +7666,7 @@ module.exports = function (ctx, name, method) {
   };
 };
 
-},{"../config":28,"./flag":36}],35:[function(require,module,exports){
+},{"../config":27,"./flag":35}],34:[function(require,module,exports){
 /*!
  * Chai - addProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7575,7 +7708,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],36:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7609,7 +7742,7 @@ module.exports = function (obj, key, value) {
   }
 };
 
-},{}],37:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /*!
  * Chai - getActual utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7629,7 +7762,7 @@ module.exports = function (obj, args) {
   return args.length > 4 ? args[4] : obj._obj;
 };
 
-},{}],38:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /*!
  * Chai - getEnumerableProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7656,7 +7789,7 @@ module.exports = function getEnumerableProperties(object) {
   return result;
 };
 
-},{}],39:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /*!
  * Chai - message composition utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7708,7 +7841,7 @@ module.exports = function (obj, args) {
   return flagMsg ? flagMsg + ': ' + msg : msg;
 };
 
-},{"./flag":36,"./getActual":37,"./inspect":44,"./objDisplay":45}],40:[function(require,module,exports){
+},{"./flag":35,"./getActual":36,"./inspect":43,"./objDisplay":44}],39:[function(require,module,exports){
 /*!
  * Chai - getName utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7730,7 +7863,7 @@ module.exports = function (func) {
   return match && match[1] ? match[1] : "";
 };
 
-},{}],41:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /*!
  * Chai - getPathValue utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7834,7 +7967,7 @@ function _getPathValue (parsed, obj) {
   return res;
 };
 
-},{}],42:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * Chai - getProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7871,7 +8004,7 @@ module.exports = function getProperties(object) {
   return result;
 };
 
-},{}],43:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011 Jake Luer <jake@alogicalparadox.com>
@@ -7987,7 +8120,7 @@ exports.addChainableMethod = require('./addChainableMethod');
 exports.overwriteChainableMethod = require('./overwriteChainableMethod');
 
 
-},{"./addChainableMethod":33,"./addMethod":34,"./addProperty":35,"./flag":36,"./getActual":37,"./getMessage":39,"./getName":40,"./getPathValue":41,"./inspect":44,"./objDisplay":45,"./overwriteChainableMethod":46,"./overwriteMethod":47,"./overwriteProperty":48,"./test":49,"./transferFlags":50,"./type":51,"deep-eql":53}],44:[function(require,module,exports){
+},{"./addChainableMethod":32,"./addMethod":33,"./addProperty":34,"./flag":35,"./getActual":36,"./getMessage":38,"./getName":39,"./getPathValue":40,"./inspect":43,"./objDisplay":44,"./overwriteChainableMethod":45,"./overwriteMethod":46,"./overwriteProperty":47,"./test":48,"./transferFlags":49,"./type":50,"deep-eql":52}],43:[function(require,module,exports){
 // This is (almost) directly from Node.js utils
 // https://github.com/joyent/node/blob/f8c335d0caf47f16d31413f89aa28eda3878e3aa/lib/util.js
 
@@ -8322,7 +8455,7 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-},{"./getEnumerableProperties":38,"./getName":40,"./getProperties":42}],45:[function(require,module,exports){
+},{"./getEnumerableProperties":37,"./getName":39,"./getProperties":41}],44:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8373,7 +8506,7 @@ module.exports = function (obj) {
   }
 };
 
-},{"../config":28,"./inspect":44}],46:[function(require,module,exports){
+},{"../config":27,"./inspect":43}],45:[function(require,module,exports){
 /*!
  * Chai - overwriteChainableMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8428,7 +8561,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   };
 };
 
-},{}],47:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /*!
  * Chai - overwriteMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8481,7 +8614,7 @@ module.exports = function (ctx, name, method) {
   }
 };
 
-},{}],48:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 /*!
  * Chai - overwriteProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8537,7 +8670,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],49:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 /*!
  * Chai - test utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8565,7 +8698,7 @@ module.exports = function (obj, args) {
   return negate ? !expr : expr;
 };
 
-},{"./flag":36}],50:[function(require,module,exports){
+},{"./flag":35}],49:[function(require,module,exports){
 /*!
  * Chai - transferFlags utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8611,7 +8744,7 @@ module.exports = function (assertion, object, includeAll) {
   }
 };
 
-},{}],51:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 /*!
  * Chai - type utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8658,7 +8791,7 @@ module.exports = function (obj) {
   return typeof obj;
 };
 
-},{}],52:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /*!
  * assertion-error
  * Copyright(c) 2013 Jake Luer <jake@qualiancy.com>
@@ -8770,10 +8903,10 @@ AssertionError.prototype.toJSON = function (stack) {
   return props;
 };
 
-},{}],53:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 module.exports = require('./lib/eql');
 
-},{"./lib/eql":54}],54:[function(require,module,exports){
+},{"./lib/eql":53}],53:[function(require,module,exports){
 /*!
  * deep-eql
  * Copyright(c) 2013 Jake Luer <jake@alogicalparadox.com>
@@ -9032,10 +9165,10 @@ function objectEqual(a, b, m) {
   return true;
 }
 
-},{"buffer":16,"type-detect":55}],55:[function(require,module,exports){
+},{"buffer":1,"type-detect":54}],54:[function(require,module,exports){
 module.exports = require('./lib/type');
 
-},{"./lib/type":56}],56:[function(require,module,exports){
+},{"./lib/type":55}],55:[function(require,module,exports){
 /*!
  * type-detect
  * Copyright(c) 2013 jake luer <jake@alogicalparadox.com>
@@ -9179,13 +9312,13 @@ Library.prototype.test = function (obj, type) {
   }
 };
 
-},{}],57:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 exports.parse = require('./lib/parsing').parse
 //exports.renderSvg = require('./lib/svg-rendering').render
 exports.renderPd = require('./lib/pd-rendering').render
 exports.Patch = require('./lib/Patch')
 
-},{"./lib/Patch":58,"./lib/parsing":59,"./lib/pd-rendering":60}],58:[function(require,module,exports){
+},{"./lib/Patch":57,"./lib/parsing":58,"./lib/pd-rendering":59}],57:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -9252,7 +9385,7 @@ _.extend(Patch.prototype, {
 
 })
 
-},{"underscore":62}],59:[function(require,module,exports){
+},{"underscore":61}],58:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -9567,7 +9700,7 @@ var parseControls = function(proto, args, layout) {
 
 }
 
-},{"underscore":62}],60:[function(require,module,exports){
+},{"underscore":61}],59:[function(require,module,exports){
 var mustache = require('mustache')
   , _ = require('underscore')
 
@@ -9609,7 +9742,7 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
   , cnvTpl = '#X obj {{{layout.x}}} {{{layout.y}}} cnv {{{layout.size}}} {{{layout.width}}} {{{layout.height}}} {{{args.0}}} {{{args.1}}} {{{layout.label}}} {{{layout.labelX}}} {{{layout.labelY}}} {{{layout.labelFont}}} {{{layout.labelFontSize}}} {{{layout.bgColor}}} {{{layout.labelColor}}} {{{args.2}}}'
   , objTpl = '#X obj {{{layout.x}}} {{{layout.y}}} {{{proto}}}{{#args}} {{.}}{{/args}}'
 
-},{"mustache":61,"underscore":62}],61:[function(require,module,exports){
+},{"mustache":60,"underscore":61}],60:[function(require,module,exports){
 /*!
  * mustache.js - Logic-less {{mustache}} templates with JavaScript
  * http://github.com/janl/mustache.js
@@ -10221,7 +10354,7 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
 
 }())));
 
-},{}],62:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -11449,13 +11582,13 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
 
 }).call(this);
 
-},{}],63:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 var WAAClock = require('./lib/WAAClock')
 
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":64}],64:[function(require,module,exports){
+},{"./lib/WAAClock":63}],63:[function(require,module,exports){
 var _ = require('underscore')
   , EventEmitter = require('events').EventEmitter
   , inherits = require('util').inherits
@@ -11670,11 +11803,11 @@ _.extend(WAAClock.prototype, {
   }
 })
 
-},{"events":20,"underscore":62,"util":24}],65:[function(require,module,exports){
+},{"events":4,"underscore":61,"util":8}],64:[function(require,module,exports){
 var WAAOffset = require('./lib/WAAOffset')
 module.exports = WAAOffset
 if (typeof window !== 'undefined') window.WAAOffset = WAAOffset
-},{"./lib/WAAOffset":66}],66:[function(require,module,exports){
+},{"./lib/WAAOffset":65}],65:[function(require,module,exports){
 var WAAOffset = module.exports = function(context) {
   this.context = context
 
@@ -11699,11 +11832,11 @@ WAAOffset.prototype.connect = function() {
 WAAOffset.prototype.disconnect = function() {
   this._output.disconnect.apply(this._output, arguments)
 }
-},{}],67:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 var WAAWhiteNoise = require('./lib/WAAWhiteNoise')
 module.exports = WAAWhiteNoise
 if (typeof window !== 'undefined') window.WAAWhiteNoise = WAAWhiteNoise
-},{"./lib/WAAWhiteNoise":68}],68:[function(require,module,exports){
+},{"./lib/WAAWhiteNoise":67}],67:[function(require,module,exports){
 var WAAWhiteNoise = module.exports = function(context) {
   this.context = context
 
@@ -11738,4 +11871,4 @@ WAAWhiteNoise.prototype._prepareOutput = function() {
   this._output.buffer = this._buffer
   this._output.loop = true
 }
-},{}]},{},[1]);
+},{}]},{},[9])

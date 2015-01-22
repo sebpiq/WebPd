@@ -50,7 +50,7 @@ describe('core.Patch', function() {
 
   describe('.start', function() {
 
-    it('should call objects\' and portlets start methods', function() {
+    it('should call objects start methods', function() {
       var patch = new Patch
         , obj1 = patch.createObject('myobject', [])
         , obj2 = patch.createObject('myobject', [])
@@ -61,6 +61,33 @@ describe('core.Patch', function() {
       patch.start()
       assert.equal(obj1.startCalled, 1)
       assert.equal(obj2.startCalled, 1)
+
+      assert.equal(obj1.o(0).startCalled, 0)
+      assert.equal(obj1.o(1).startCalled, 0)
+      assert.equal(obj1.i(0).startCalled, 0)
+      assert.equal(obj1.i(1).startCalled, 0)
+
+      assert.equal(obj2.o(0).startCalled, 0)
+      assert.equal(obj2.o(1).startCalled, 0)
+      assert.equal(obj2.i(0).startCalled, 0)
+      assert.equal(obj2.i(1).startCalled, 0)
+    })
+
+  })
+
+  describe('.startPortlets', function() {
+
+    it('should call objects start methods', function() {
+      var patch = new Patch
+        , obj1 = patch.createObject('myobject', [])
+        , obj2 = patch.createObject('myobject', [])
+
+      assert.equal(obj1.startCalled, 0)
+      assert.equal(obj1.o(0).startCalled, 0)
+
+      patch.startPortlets()
+      assert.equal(obj1.startCalled, 0)
+      assert.equal(obj2.startCalled, 0)
 
       assert.equal(obj1.o(0).startCalled, 1)
       assert.equal(obj1.o(1).startCalled, 1)
@@ -90,6 +117,35 @@ describe('core.Patch', function() {
       assert.equal(obj1.stopCalled, 1)
       assert.equal(obj2.stopCalled, 1)
       assert.equal(obj3.stopCalled, 1)
+
+      assert.equal(obj1.o(0).stopCalled, 0)
+      assert.equal(obj1.o(1).stopCalled, 0)
+      assert.equal(obj1.i(0).stopCalled, 0)
+      assert.equal(obj1.i(1).stopCalled, 0)
+
+      assert.equal(obj2.o(0).stopCalled, 0)
+      assert.equal(obj2.o(1).stopCalled, 0)
+      assert.equal(obj2.i(0).stopCalled, 0)
+      assert.equal(obj2.i(1).stopCalled, 0)
+    })
+
+  })
+
+  describe('.stopPortlets', function() {
+
+    it('should call all the objects and portlets stop methods', function() {
+      var patch = new Patch
+        , obj1 = patch.createObject('myobject', [])
+        , obj2 = patch.createObject('myobject', [])
+        , obj3 = patch.createObject('myobject', [])
+
+      assert.equal(obj1.stopCalled, 0)
+      assert.equal(obj1.o(0).stopCalled, 0)
+      patch.stopPortlets()
+
+      assert.equal(obj1.stopCalled, 0)
+      assert.equal(obj2.stopCalled, 0)
+      assert.equal(obj3.stopCalled, 0)
 
       assert.equal(obj1.o(0).stopCalled, 1)
       assert.equal(obj1.o(1).stopCalled, 1)

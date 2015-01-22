@@ -771,4 +771,23 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[change]', function() {
+
+    it('should output number only if it changed', function() {
+      var change = patch.createObject('change')
+        , mailbox = patch.createObject('testingmailbox')
+      change.o(0).connect(mailbox.i(0))
+
+      change.i(0).message([123, 'qq'])
+      assert.deepEqual(mailbox.received, [[123]])
+
+      change.i(0).message([123, 444])
+      assert.deepEqual(mailbox.received, [[123]])
+
+      change.i(0).message([567])
+      assert.deepEqual(mailbox.received, [[123], [567]])
+    })
+
+  })
+
 })

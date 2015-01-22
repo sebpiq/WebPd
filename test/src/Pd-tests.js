@@ -4,6 +4,8 @@ var _ = require('underscore')
   , assert = require('assert')
   , helpers = require('../helpers')
   , Patch = require('../../lib/core/Patch')
+  , PdObject = require('../../lib/core/PdObject')
+  , portlets = require('../../lib/core/portlets')
   , pdGlob = require('../../lib/global')
   , Pd = require('../../index')
   , helpers = require('../helpers')
@@ -33,6 +35,32 @@ describe('Pd', function() {
       assert.equal(patch1.startCalled, 1)
       assert.equal(patch2.startCalled, 1)
       assert.equal(patch3.startCalled, 1)
+    })
+
+    it('should start objects before portlets, inside subpatches and abstractions', function() {
+      var called = []
+      pdGlob.library['spy'] = PdObject.extend({
+        outletDefs: [
+          portlets.Outlet.extend({
+            start: function() { called.push(this.obj.spyId + ':o(0).start') }
+          })
+        ],
+        init: function(args) {
+          this.spyId = args[0]
+        },
+        start: function() {
+          called.push(this.spyId + ':start')
+        }
+      })
+
+      var patch = Pd.createPatch()
+        , subpatch = patch.createObject('pd')
+        , spy1 = subpatch.createObject('spy', [1])
+        , spy2 = patch.createObject('spy', [2])
+
+      Pd.start()
+      assert.equal(called.length, 4)
+      assert.deepEqual(called, ['1:start', '2:start', '1:o(0).start', '2:o(0).start'])
     })
 
   })
