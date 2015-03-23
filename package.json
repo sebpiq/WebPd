@@ -24,9 +24,12 @@
     "pd-fileutils": ">= 0.3.0",
     "waaclock": "0.4.x",
     "waaoffset": "0.1.x",
-    "waawhitenoise": "0.1.x"
+    "waawhitenoise": "0.1.x",
+    "waawire": "0.1.x",
+    "web-audio-mock": "^0.1.9"
   },
   "devDependencies": {
+    "web-audio-mock": "0.1.x",
     "mocha": "1.11.x",
     "istanbul": "0.1.x",
     "gulp": "3.8.x",

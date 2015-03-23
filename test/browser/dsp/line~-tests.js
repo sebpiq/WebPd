@@ -185,6 +185,25 @@ describe('dsp.line~', function() {
       ], done)
     })
 
+    it('should only execute last change scheduled', function(done) {
+      var patch = Pd.createPatch()
+        , line = patch.createObject('line~')
+        , dac = patch.createObject('dac~')
+
+      line.o(0).connect(dac.i(0))
+
+      helpers.expectSamples(function() {
+        line.i(0).message([100])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [10])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [442, 10])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [1])
+      }, [
+        [100, 100, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ], done)
+    })
+
+
     it('should only execute last line scheduled', function(done) {
       var patch = Pd.createPatch()
         , line = patch.createObject('line~')
@@ -194,17 +213,17 @@ describe('dsp.line~', function() {
 
       helpers.expectSamples(function() {
         line.i(0).message([100])
-        line.i(0).future(2 * (1 / Pd.getSampleRate()), [1])
-        line.i(0).future(2 * (1 / Pd.getSampleRate()), [442, 10])
-        line.i(0).future(5 * (1 / Pd.getSampleRate()), [441* 2 + 1, 10])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [10])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [442, 10])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [1])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [441 * 2 + 1, 10])
       }, [
-        [100, 100, 100, 100, 100, 1, 3, 5, 7, 9],
+        [100, 100, 1, 3, 5, 7, 9, 11, 13, 15],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       ], done)
     })
 
-
-    it.skip('should interrupt a line properly', function(done) {
+    it('should interrupt a line properly', function(done) {
       // This cannot be tested without the ability to execute code
       // at a certain time while rendering the OfflineAudioContext
       var patch = Pd.createPatch()
@@ -215,12 +234,12 @@ describe('dsp.line~', function() {
 
       helpers.expectSamples(function() {
         line.i(0).message([100])
-        line.i(0).future(2 * (1 / Pd.getSampleRate()), [1])
-        line.i(0).future(2 * (1 / Pd.getSampleRate()), [442, 10])
-        line.i(0).future(5 * (1 / Pd.getSampleRate()), [441* 2 + 1, 10])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [1])
+        line.i(0).future(2 * (1 / Pd.getSampleRate() * 1000), [442, 10])
+        line.i(0).future(4 * (1 / Pd.getSampleRate() * 1000), [2 + 441 * 2 + 1, 10])
       }, [
-        [100, 100, 1, 2, 3, 5, 7, 9, 11, 13],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        [100, 100, 1, 2, 3, 5, 7, 9, 11],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0]
       ], done)
     })
 

@@ -8,26 +8,9 @@ var assert = require('assert')
   , pdGlob = require('../../../lib/global')
   , helpers = require('../../helpers')
   , TestingMailBox = require('./utils').TestingMailBox
-
+require('web-audio-mock')
 
 describe('objects.portlets', function() {
-
-  var DummyAudioNode = function() { this.calls = [] }
-  _.extend(DummyAudioNode.prototype, { 
-    connect: function(node, output, input) {
-      this.calls.push(['connect', node, output, input])
-    },
-    disconnect: function(output) {
-      this.calls.push(['disconnect', output])
-    }
-  })
-
-  var DummyAudioContext = function() {}
-  _.extend(DummyAudioContext.prototype, {
-    createGain: function() {
-      return new DummyAudioNode
-    }
-  })
 
   var DummyObject = PdObject.extend({
     type: 'dummy',
@@ -37,26 +20,28 @@ describe('objects.portlets', function() {
     }
   })
 
+  var getDummyNode = function() { return dummyAudio.context.createGain() }
+
   var DummySink = DummyObject.extend({
     inletDefs: [portlets.DspInlet, portlets.DspInlet],
     start: function() {
-      this.i(0).setWaa(new DummyAudioNode())
-      this.i(1).setWaa(new DummyAudioNode())
+      this.i(0).setWaa(getDummyNode())
+      this.i(1).setWaa(getDummyNode())
     }
   })
 
   var DummySource = DummyObject.extend({
     outletDefs: [portlets.DspOutlet, portlets.DspOutlet],
     start: function() {
-      this.o(0).setWaa(new DummyAudioNode())
-      this.o(1).setWaa(new DummyAudioNode())
+      this.o(0).setWaa(getDummyNode())
+      this.o(1).setWaa(getDummyNode())
     }
   })
 
   var dummyAudio = {
     start: function() {},
     stop: function() {},
-    context: new DummyAudioContext()
+    context: new AudioContext()
   }
 
   beforeEach(function() {
@@ -107,6 +92,11 @@ describe('objects.portlets', function() {
 
   describe('.DspOutlet', function() {
 
+    var getWaaConnections = function(portlet) {
+      return _.chain(portlet._waaConnections)
+        .pairs().sortBy(function(p) { return p[0] }).pluck(1).value()
+    }
+
     afterEach(function() {
       pdGlob.isStarted = false
     })
@@ -119,119 +109,64 @@ describe('objects.portlets', function() {
         var patch = Pd.createPatch()
           , dummySink = patch.createObject('dummysink')
           , dummySource = patch.createObject('dummysource')
-          , sourceNode1 = new DummyAudioNode()
-          , sourceNode2 = new DummyAudioNode()
-          , sourceNode1bis = new DummyAudioNode()
-          , sinkNode1 = new DummyAudioNode()
-          , sinkNode2 = new DummyAudioNode()
-          , sinkNode1bis = new DummyAudioNode()
-          , gainNode11, gainNode12, gainNode21
-          , gainNode1bis1, gainNode1bis2, gainNode2bis1, gainNode1bis1bis
+          , sourceNode1 = getDummyNode()
+          , sourceNode2 = getDummyNode()
+          , sourceNode1bis = getDummyNode()
+          , sinkNode1 = getDummyNode()
+          , sinkNode2 = getDummyNode()
+          , sinkNode1bis = getDummyNode()
+          , waaConnections
 
         // -------- 1
         // Set initial audio node for each portlet + connections
-        dummySource.o(0).setWaa(sourceNode1, 11)
-        dummySource.o(1).setWaa(sourceNode2, 22)
-        dummySink.i(0).setWaa(sinkNode1, 33)
-        dummySink.i(1).setWaa(sinkNode2, 44)
+        dummySource.o(0).setWaa(sourceNode1, 0)
+        dummySource.o(1).setWaa(sourceNode2, 0)
+        dummySink.i(0).setWaa(sinkNode1, 0)
+        dummySink.i(1).setWaa(sinkNode2, 0)
 
+        // Connections
         dummySource.o(0).connect(dummySink.i(0))
         dummySource.o(0).connect(dummySink.i(1))
         dummySource.o(1).connect(dummySink.i(0))
 
-        assert.equal(dummySource.o(0)._waaConnections.length, 2)
-        assert.equal(dummySource.o(1)._waaConnections.length, 1)
-        gainNode11 = dummySource.o(0)._waaConnections[0].gainNode
-        gainNode12 = dummySource.o(0)._waaConnections[1].gainNode
-        gainNode21 = dummySource.o(1)._waaConnections[0].gainNode
+        waaConnections = getWaaConnections(dummySource.o(0))
+        assert.equal(waaConnections.length, 2)
+        assert.equal(waaConnections[0]._source, sourceNode1)
+        assert.equal(waaConnections[0]._destination, sinkNode1)
+        assert.equal(waaConnections[1]._source, sourceNode1)
+        assert.equal(waaConnections[1]._destination, sinkNode2)
 
-        // Check that each connection has been established as expected (i.e. through a gain node)
-        assert.deepEqual(sourceNode1.calls, [
-          [ 'connect', gainNode11, 11, undefined ],
-          [ 'connect', gainNode12, 11, undefined ]
-        ])
-        assert.deepEqual(gainNode11.calls, [
-          [ 'connect', sinkNode1, 0, 33 ]
-        ])
-        assert.deepEqual(gainNode12.calls, [
-          [ 'connect', sinkNode2, 0, 44 ]
-        ])
-        assert.deepEqual(sourceNode2.calls, [
-          [ 'connect', gainNode21, 22, undefined ]
-        ])
-        assert.deepEqual(gainNode21.calls, [
-          [ 'connect', sinkNode1, 0, 33 ]
-        ])
+        waaConnections = getWaaConnections(dummySource.o(1))
+        assert.equal(waaConnections.length, 1)
+        assert.equal(waaConnections[0]._source, sourceNode2)
+        assert.equal(waaConnections[0]._destination, sinkNode1)
 
         // -------- 2
         // Now try to set a new audio node to one outlet
-        dummySource.o(0).setWaa(sourceNode1bis, 55)
-        assert.equal(dummySource.o(0)._waaConnections.length, 2)
-        assert.equal(dummySource.o(1)._waaConnections.length, 1)
-        gainNode1bis1 = dummySource.o(0)._waaConnections[0].gainNode
-        gainNode1bis2 = dummySource.o(0)._waaConnections[1].gainNode
-        assert.ok(gainNode1bis1 !== gainNode11)
-        assert.ok(gainNode1bis2 !== gainNode12)
+        dummySource.o(0).setWaa(sourceNode1bis, 0)
 
-        // Check that old nodes were disconnected
-        assert.deepEqual(gainNode11.calls, [
-          [ 'connect', sinkNode1, 0, 33 ],
-          [ 'disconnect', undefined ]
-        ])
-        assert.deepEqual(gainNode12.calls, [
-          [ 'connect', sinkNode2, 0, 44 ],
-          [ 'disconnect', undefined ]
-        ])
-
-        // Check that new node was connected
-        assert.deepEqual(sourceNode1bis.calls, [
-          [ 'connect', gainNode1bis1, 55, undefined ],
-          [ 'connect', gainNode1bis2, 55, undefined ]
-        ])
-        assert.deepEqual(gainNode1bis1.calls, [
-          [ 'connect', sinkNode1, 0, 33 ]
-        ])
-        assert.deepEqual(gainNode1bis2.calls, [
-          [ 'connect', sinkNode2, 0, 44 ]
-        ])
+        waaConnections = getWaaConnections(dummySource.o(0))
+        assert.equal(waaConnections.length, 2)
+        assert.equal(waaConnections[0]._source, sourceNode1bis)
+        assert.equal(waaConnections[0]._destination, sinkNode1)
+        assert.equal(waaConnections[1]._source, sourceNode1bis)
+        assert.equal(waaConnections[1]._destination, sinkNode2)
 
         // -------- 3
         // Now try to set a new audio node to one inlet
-        dummySink.i(0).setWaa(sinkNode1bis, 66)
-        assert.equal(dummySource.o(0)._waaConnections.length, 2)
-        assert.equal(dummySource.o(1)._waaConnections.length, 1)
-        gainNode1bis1bis = dummySource.o(0)._waaConnections[1].gainNode
-        gainNode2bis1 = dummySource.o(1)._waaConnections[0].gainNode
-        assert.ok(gainNode1bis1bis !== gainNode1bis1)
-        assert.ok(gainNode2bis1 !== gainNode21)
+        dummySink.i(0).setWaa(sinkNode1bis, 0)
 
-        // Check that old nodes were disconnected
-        assert.deepEqual(gainNode1bis1.calls, [
-          [ 'connect', sinkNode1, 0, 33 ],
-          [ 'disconnect', undefined ]
-        ])
-        assert.deepEqual(gainNode21.calls, [
-          [ 'connect', sinkNode1, 0, 33 ],
-          [ 'disconnect', undefined ]
-        ])
+        waaConnections = getWaaConnections(dummySource.o(0))
+        assert.equal(waaConnections.length, 2)
+        assert.equal(waaConnections[0]._source, sourceNode1bis)
+        assert.equal(waaConnections[0]._destination, sinkNode1bis)
+        assert.equal(waaConnections[1]._source, sourceNode1bis)
+        assert.equal(waaConnections[1]._destination, sinkNode2)
 
-        // Check that new connections were established
-        assert.deepEqual(sourceNode1bis.calls, [
-          [ 'connect', gainNode1bis1, 55, undefined ],
-          [ 'connect', gainNode1bis2, 55, undefined ],
-          [ 'connect', gainNode1bis1bis, 55, undefined ]
-        ])
-        assert.deepEqual(gainNode1bis1bis.calls, [
-          [ 'connect', sinkNode1bis, 0, 66 ]
-        ])
-        assert.deepEqual(gainNode2bis1.calls, [
-          [ 'connect', sinkNode1bis, 0, 66 ]
-        ])
-
-        // Check that no method was ever called on the sink nodes
-        assert.deepEqual(sinkNode1.calls, [])
-        assert.deepEqual(sinkNode2.calls, [])
-        assert.deepEqual(sinkNode1bis.calls, [])
+        waaConnections = getWaaConnections(dummySource.o(1))
+        assert.equal(waaConnections.length, 1)
+        assert.equal(waaConnections[0]._source, sourceNode2)
+        assert.equal(waaConnections[0]._destination, sinkNode1bis)
       })
 
       it('shouldnt crash if connecting before Pd is started', function() {
@@ -256,25 +191,23 @@ describe('objects.portlets', function() {
       it('should establish the waa connection', function() {
         var dspOutlet = new portlets.DspOutlet({}, 0)
           , dspInlet = new portlets.DspInlet({}, 0)
-          , sourceNode = new DummyAudioNode()
-          , sinkNode = new DummyAudioNode()
-          , gainNode
+          , sourceNode = getDummyNode()
+          , sinkNode = getDummyNode()
+          , waaConnections
 
-        dspOutlet.setWaa(sourceNode, 11)
-        dspInlet.setWaa(sinkNode, 22)
+        dspOutlet.setWaa(sourceNode, 0)
+        dspInlet.setWaa(sinkNode, 0)
 
         pdGlob.isStarted = true
         dspOutlet.start()
         dspInlet.start()
 
+        assert.equal(getWaaConnections(dspOutlet).length, 0)
         dspOutlet.connect(dspInlet)
-
-        assert.equal(dspOutlet._waaConnections.length, 1)
-        gainNode = dspOutlet._waaConnections[0].gainNode
-
-        assert.deepEqual(sourceNode.calls, [[ 'connect', gainNode, 11, undefined ]])
-        assert.deepEqual(gainNode.calls, [[ 'connect', sinkNode, 0, 22 ]])
-        assert.deepEqual(sinkNode.calls, [])
+        waaConnections = getWaaConnections(dspOutlet)
+        assert.equal(waaConnections.length, 1)
+        assert.equal(waaConnections[0]._source, sourceNode)
+        assert.equal(waaConnections[0]._destination, sinkNode)
       })
 
     })
@@ -284,12 +217,12 @@ describe('objects.portlets', function() {
       it('should disconnect waa nodes', function() {
         var dspOutlet = new portlets.DspOutlet({}, 0)
           , dspInlet = new portlets.DspInlet({}, 0)
-          , sourceNode = new DummyAudioNode()
-          , sinkNode = new DummyAudioNode()
-          , gainNode
+          , sourceNode = getDummyNode()
+          , sinkNode = getDummyNode()
+          , waaConnections
 
-        dspOutlet.setWaa(sourceNode, 11)
-        dspInlet.setWaa(sinkNode, 22)
+        dspOutlet.setWaa(sourceNode, 0)
+        dspInlet.setWaa(sinkNode, 0)
 
         pdGlob.isStarted = true
         dspOutlet.start()
@@ -297,16 +230,10 @@ describe('objects.portlets', function() {
 
         // Preparing the test
         dspOutlet.connect(dspInlet)
-        gainNode = dspOutlet._waaConnections[0].gainNode
-        sourceNode.calls = []
-        gainNode.calls = []
-        sinkNode.calls = []
+        assert.equal(getWaaConnections(dspOutlet).length, 1)
 
         dspInlet.disconnect(dspOutlet)
-
-        assert.deepEqual(sourceNode.calls, [])
-        assert.deepEqual(gainNode.calls, [[ 'disconnect', undefined ]])
-        assert.deepEqual(sinkNode.calls, [])
+        assert.equal(getWaaConnections(dspOutlet).length, 0)
       })
 
     })
