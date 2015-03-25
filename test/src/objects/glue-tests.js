@@ -1,21 +1,35 @@
 var assert = require('assert')
   , _ = require('underscore')
+  , waatest = require('waatest')
   , Pd = require('../../../index')
   , Patch = require('../../../lib/core/Patch')
   , portlets = require('../../../lib/objects/portlets')
   , pdGlob = require('../../../lib/global')
   , helpers = require('../../helpers')
-  , TestingMailBox = require('./utils').TestingMailBox
 
 
 describe('objects.glue', function() {  
 
   var patch
 
+  var dummyAudio = {
+    start: function() {},
+    stop: function() {},
+    decode: function(audioData, done) { done(null, audioData) }
+  }
+
+  var dummyStorage = {
+    get: function(uri, done) {
+      if (this.data !== null) done(null, this.data)
+      else done(new Error('bla'), null)
+    },
+    data: [new Float32Array([1, 2, 3, 4])]
+  }
+
   beforeEach(function() {
     patch = Pd.createPatch()
-    pdGlob.library['testingmailbox'] = TestingMailBox
-    Pd.start()
+    Pd.start({ audio: dummyAudio, storage: dummyStorage })
+    helpers.beforeEach()
   })
 
   afterEach(function() { helpers.afterEach() })
@@ -786,6 +800,152 @@ describe('objects.glue', function() {
 
       change.i(0).message([567])
       assert.deepEqual(mailbox.received, [[123], [567]])
+    })
+
+  })
+
+  describe('[array]', function() {
+
+    it('should create a array with the given name and length', function() {
+      var array = patch.createObject('array', ['$0-array', 44100])
+      assert.equal(array.data.length, 44100)
+      assert.deepEqual(pdGlob.namedObjects.get('array', patch.patchId + '-array'), [array])
+    })
+
+    it('should create a array with default values', function() {
+      var array = patch.createObject('array', [])
+      assert.equal(array.data.length, 100)
+      assert.equal(array.name, null)
+    })
+
+    it('should set the data without resizing when using setData', function() {
+      var array = patch.createObject('array', ['SAMPLE', 5])
+      assert.equal(array.data.length, 5)
+      array.setData(new Float32Array([1, 2, 3, 4, 5, 6, 7]))
+      assert.deepEqual(_.toArray(array.data), [1, 2, 3, 4, 5])
+      array.setData(new Float32Array([8, 9, 10]))
+      assert.deepEqual(_.toArray(array.data), [8, 9, 10, 4, 5])
+    })
+
+    it('should resize the array when using setData with resize = true', function() {
+      var array = patch.createObject('array', ['SAMPLE', 5])
+      assert.equal(array.data.length, 5)
+      assert.equal(array.size, 5)
+      array.setData(new Float32Array([1, 2, 3, 4, 5, 6, 7]), true)
+      assert.deepEqual(_.toArray(array.data), [1, 2, 3, 4, 5, 6, 7])
+      assert.equal(array.size, 7)
+    })
+
+  })
+
+  describe('[soundfiler]', function() {
+
+    it('should read mono data and write to the given array', function() {
+      var array1 = patch.createObject('array', ['ARR1', 5])
+        , array2 = patch.createObject('array', ['ARR2', 5])
+        , mailbox = patch.createObject('testingmailbox')
+        , soundfiler = patch.createObject('soundfiler')
+      
+      soundfiler.o(0).connect(mailbox.i(0))
+      dummyStorage.data = [ new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]) ]
+      soundfiler.i(0).message(['read', '/bla', 'ARR1', 'ARR2'])
+      waatest.utils.assertBlocksEqual([array1.data], [[0.1, 0.2, 0.3, 0.4, 0.5]])
+      waatest.utils.assertBlocksEqual([array2.data], [[0, 0, 0, 0, 0]])
+      assert.deepEqual(mailbox.received, [[5]])
+
+      dummyStorage.data = [ new Float32Array([1.1, 1.2, 1.3]) ]
+      soundfiler.i(0).message(['read', '/bla', 'ARR2'])
+      waatest.utils.assertBlocksEqual([array1.data], [[0.1, 0.2, 0.3, 0.4, 0.5]])
+      waatest.utils.assertBlocksEqual([array2.data], [[1.1, 1.2, 1.3, 0, 0]])
+      assert.deepEqual(mailbox.received, [[5], [3]])
+    })
+
+    it('should read stereo data and write the channels to given arrays', function() {
+      var array1 = patch.createObject('array', ['ARR1', 5])
+        , array2 = patch.createObject('array', ['ARR2', 5])
+        , mailbox = patch.createObject('testingmailbox')
+        , soundfiler = patch.createObject('soundfiler')
+      
+      soundfiler.o(0).connect(mailbox.i(0))
+      dummyStorage.data = [
+        new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]),
+        new Float32Array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06])
+      ]
+      soundfiler.i(0).message(['read', '/bla', 'ARR1', 'ARR2'])
+      waatest.utils.assertBlocksEqual([array1.data], [[0.1, 0.2, 0.3, 0.4, 0.5]])
+      waatest.utils.assertBlocksEqual([array2.data], [[0.01, 0.02, 0.03, 0.04, 0.05, 0.06]])
+      assert.deepEqual(mailbox.received, [[5]])
+
+      dummyStorage.data = [
+        new Float32Array([1.1, 1.2, 1.3]),
+        new Float32Array([1.01, 1.02, 1.03])
+      ]
+      soundfiler.i(0).message(['read', '/bla', 'ARR2'])
+      waatest.utils.assertBlocksEqual([array1.data], [[0.1, 0.2, 0.3, 0.4, 0.5]])
+      waatest.utils.assertBlocksEqual([array2.data], [[1.1, 1.2, 1.3, 0.04, 0.05]])
+      assert.deepEqual(mailbox.received, [[5], [3]])
+    })
+
+    it('should resize arrays to data length if arrays are of different sizes', function() {
+      var array1 = patch.createObject('array', ['ARR1', 2])
+        , array2 = patch.createObject('array', ['ARR2', 10])
+        , mailbox = patch.createObject('testingmailbox')
+        , soundfiler = patch.createObject('soundfiler')
+      
+      soundfiler.o(0).connect(mailbox.i(0))
+      dummyStorage.data = [
+        new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]),
+        new Float32Array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06])
+      ]
+      soundfiler.i(0).message(['read', '/bla', 'ARR1', 'ARR2'])
+      waatest.utils.assertBlocksEqual([array1.data], [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6]])
+      waatest.utils.assertBlocksEqual([array2.data], [[0.01, 0.02, 0.03, 0.04, 0.05, 0.06]])
+      assert.deepEqual(mailbox.received, [[6]])
+    })
+
+    it('should resize arrays when reading if -resize', function() {
+      var array = patch.createObject('array', ['ARR', 10])
+        , soundfiler = patch.createObject('soundfiler')
+      
+      dummyStorage.data = [new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])]
+      soundfiler.i(0).message(['read', '-resize', '/bla', 'ARR'])
+      waatest.utils.assertBlocksEqual([array.data], [[0.1, 0.2, 0.3, 0.4, 0.5, 0.6]])
+    })
+
+    it('should do nothing if unsupported option', function() {
+      var array = patch.createObject('array', ['ARR', 2])
+        , soundfiler = patch.createObject('soundfiler')
+      
+      dummyStorage.data = [new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])]
+      soundfiler.i(0).message(['read', '-aiff', '/bla', 'ARR'])
+      waatest.utils.assertBlocksEqual([array.data], [[0, 0]])
+    })
+
+    it('should do nothing if unknown array', function() {
+      var array2 = patch.createObject('array', ['ARR2', 3])
+        , mailbox = patch.createObject('testingmailbox')
+        , soundfiler = patch.createObject('soundfiler')
+      
+      soundfiler.o(0).connect(mailbox.i(0))
+      dummyStorage.data = data = [
+        new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]),
+        new Float32Array([0.01, 0.02, 0.03, 0.04, 0.05, 0.06])
+      ]
+      soundfiler.i(0).message(['read', '/bla', 'ARR3', 'ARR2'])
+      waatest.utils.assertBlocksEqual([array2.data], [[0, 0, 0]])
+      assert.deepEqual(mailbox.received, [])
+    })
+
+    it('should do nothing if file cant be read', function() {
+      var array = patch.createObject('array', ['ARR', 2])
+        , mailbox = patch.createObject('testingmailbox')
+        , soundfiler = patch.createObject('soundfiler')
+      
+      soundfiler.o(0).connect(mailbox.i(0))
+      dummyStorage.data = null
+      soundfiler.i(0).message(['read', '/bla', 'ARR'])
+      waatest.utils.assertBlocksEqual([array.data], [[0, 0]])
+      assert.deepEqual(mailbox.received, [])
     })
 
   })

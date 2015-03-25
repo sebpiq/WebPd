@@ -8,7 +8,8 @@ var assert = require('assert')
   , pdGlob = require('../../../lib/global')
   , helpers = require('../../helpers')
   , TestingMailBox = require('./utils').TestingMailBox
-require('web-audio-mock')
+require('web-audio-test-api')
+WebAudioTestAPI.unuse()
 
 describe('objects.portlets', function() {
 
@@ -38,20 +39,25 @@ describe('objects.portlets', function() {
     }
   })
 
-  var dummyAudio = {
-    start: function() {},
-    stop: function() {},
-    context: new AudioContext()
-  }
+  var dummyAudio
 
   beforeEach(function() {
+    WebAudioTestAPI.use()
+    dummyAudio = {
+      start: function() {},
+      stop: function() {},
+      context: new AudioContext()
+    }
     pdGlob.library['testingmailbox'] = TestingMailBox
     pdGlob.library['dummyobject'] = DummyObject
     pdGlob.library['dummysink'] = DummySink
     pdGlob.library['dummysource'] = DummySource
   })
 
-  afterEach(function() { helpers.afterEach() })
+  afterEach(function() {
+    WebAudioTestAPI.unuse()
+    helpers.afterEach() 
+  })
 
   describe('.DspInlet', function() {
 
@@ -198,9 +204,7 @@ describe('objects.portlets', function() {
         dspOutlet.setWaa(sourceNode, 0)
         dspInlet.setWaa(sinkNode, 0)
 
-        pdGlob.isStarted = true
-        dspOutlet.start()
-        dspInlet.start()
+        Pd.start({ audio: dummyAudio })
 
         assert.equal(getWaaConnections(dspOutlet).length, 0)
         dspOutlet.connect(dspInlet)
@@ -224,9 +228,7 @@ describe('objects.portlets', function() {
         dspOutlet.setWaa(sourceNode, 0)
         dspInlet.setWaa(sinkNode, 0)
 
-        pdGlob.isStarted = true
-        dspOutlet.start()
-        dspInlet.start()
+        Pd.start({ audio: dummyAudio })
 
         // Preparing the test
         dspOutlet.connect(dspInlet)

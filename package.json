@@ -23,13 +23,13 @@
     "chai": "1.10.x",
     "pd-fileutils": ">= 0.3.0",
     "waaclock": "0.4.x",
-    "waaoffset": "0.1.x",
-    "waawhitenoise": "0.1.x",
+    "waaoffsetnode": "0.1.x",
+    "waawhitenoisenode": "0.1.x",
     "waawire": "0.1.x",
-    "web-audio-mock": "^0.1.9"
+    "waatablenode": "0.1.x"
   },
   "devDependencies": {
-    "web-audio-mock": "0.1.x",
+    "web-audio-test-api": "0.2.x",
     "mocha": "1.11.x",
     "istanbul": "0.1.x",
     "gulp": "3.8.x",

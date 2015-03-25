@@ -24,6 +24,7 @@ var _ = require('underscore')
   , utils = require('./lib/core/utils')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
+  , interfaces = require('./lib/core/interfaces')
   , patchIds = _.extend({}, utils.UniqueIdsMixin)
 
 // Various initializations
@@ -47,10 +48,15 @@ var Pd = module.exports = {
 
       // TODO : handle other environments better than like this
       } else {
-        var interfaces = require('./lib/core/interfaces')
         pdGlob.audio = opts.audio || interfaces.Audio
         pdGlob.clock = opts.clock || interfaces.Clock
       }
+
+      if (opts.storage) pdGlob.storage = opts.storage
+      else if (typeof window !== 'undefined') 
+        pdGlob.storage = new waa.Storage()
+      else pdGlob.storage = interfaces.Storage
+
 
       pdGlob.audio.start()
       for (var patchId in pdGlob.patches) {
