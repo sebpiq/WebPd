@@ -29,7 +29,6 @@ var _ = require('underscore')
 
 // Various initializations
 require('./lib/objects').declareObjects(pdGlob.library)
-pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
 var Pd = module.exports = {
 
@@ -40,7 +39,6 @@ var Pd = module.exports = {
   start: function(opts) {
     opts = opts || {}
     if (!pdGlob.isStarted) {
-      pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
       if (typeof AudioContext !== 'undefined') {
         pdGlob.audio = opts.audio || new waa.Audio(pdGlob.settings.channelCount)

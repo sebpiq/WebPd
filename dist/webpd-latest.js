@@ -30,7 +30,6 @@ var _ = require('underscore')
 
 // Various initializations
 require('./lib/objects').declareObjects(pdGlob.library)
-pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
 var Pd = module.exports = {
 
@@ -41,7 +40,6 @@ var Pd = module.exports = {
   start: function(opts) {
     opts = opts || {}
     if (!pdGlob.isStarted) {
-      pdGlob.namedObjects = pdGlob.namedObjects || new utils.NamedObjectStore()
 
       if (typeof AudioContext !== 'undefined') {
         pdGlob.audio = opts.audio || new waa.Audio(pdGlob.settings.channelCount)
@@ -159,7 +157,7 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Patch":3,"./lib/core/interfaces":5,"./lib/core/utils":7,"./lib/global":8,"./lib/objects":11,"./lib/waa":16,"pd-fileutils":58,"underscore":66}],2:[function(require,module,exports){
+},{"./lib/core/Patch":3,"./lib/core/interfaces":5,"./lib/core/utils":8,"./lib/global":9,"./lib/objects":12,"./lib/waa":17,"pd-fileutils":59,"underscore":67}],2:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -182,7 +180,6 @@ if (typeof window !== 'undefined') window.Pd = Pd
 
 var _ = require('underscore')
   , inherits = require('util').inherits
-  , EventEmitter = require('events').EventEmitter
   , portlets = require('./portlets')
   , utils = require('./utils')
   
@@ -208,7 +205,6 @@ var BaseNode = module.exports = function(args) {
   // initializes the object, handling the creation arguments
   this.init(args)
 }
-inherits(BaseNode, EventEmitter)
 
 
 _.extend(BaseNode.prototype, {
@@ -272,7 +268,7 @@ _.extend(BaseNode.prototype, {
 })
 
 
-},{"./portlets":6,"./utils":7,"events":21,"underscore":66,"util":25}],3:[function(require,module,exports){
+},{"./portlets":7,"./utils":8,"underscore":67,"util":26}],3:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -404,7 +400,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":8,"./BaseNode":2,"./utils":7,"underscore":66}],4:[function(require,module,exports){
+},{"../global":9,"./BaseNode":2,"./utils":8,"underscore":67}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -427,7 +423,6 @@ var isOutletObject = function(obj) {
 
 var _ = require('underscore')
   , inherits = require('util').inherits
-  , EventEmitter = require('events').EventEmitter
   , portlets = require('./portlets')
   , utils = require('./utils')
   , BaseNode = require('./BaseNode')
@@ -443,7 +438,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
   doResolveArgs: true
 })
 
-},{"../global":8,"./BaseNode":2,"./Patch":3,"./portlets":6,"./utils":7,"events":21,"underscore":66,"util":25}],5:[function(require,module,exports){
+},{"../global":9,"./BaseNode":2,"./Patch":3,"./portlets":7,"./utils":8,"underscore":67,"util":26}],5:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -497,6 +492,26 @@ exports.Storage = {
   get: function(uri, done) { }
 }
 },{}],6:[function(require,module,exports){
+var expect = require('chai').expect
+  , pdGlob = require('../global')
+
+
+// Simple mixin for named objects, such as [send] or [table]
+// This also requires the object to be an EventEmitter.
+exports.NamedMixin = {
+
+  nameIsUnique: false,
+
+  setName: function(name) {
+    expect(name).to.be.a('string', 'name')
+    var oldName = this.name
+    this.name = name
+    pdGlob.namedObjects.register(this, this.type, name, this.nameIsUnique, oldName)
+    this.emit('changed:name', oldName, name)
+  }
+
+}
+},{"../global":9,"chai":27}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -518,7 +533,6 @@ exports.Storage = {
  */
 
 var _ = require('underscore')
-  , inherits = require('util').inherits
   , utils = require('./utils')
 
 // Base for outlets and inlets. Mostly handles connections and disconnections
@@ -591,7 +605,7 @@ var Inlet = exports.Inlet = Portlet.extend({})
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
 
-},{"./utils":7,"underscore":66,"util":25}],7:[function(require,module,exports){
+},{"./utils":8,"underscore":67}],8:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -710,71 +724,7 @@ exports.UniqueIdsMixin = {
   // this counter should never be decremented to ensure the id unicity
   _idCounter: -1
 }
-
-
-// Simple mixin for named objects, such as [send] or [table] 
-exports.NamedMixin = {
-
-  nameIsUnique: false,
-
-  setName: function(name) {
-    // This method is a simple hack to register the object
-    // first time the name is set.
-    this._setName(name)
-    require('../global').namedObjects.register(this)
-    this.setName = this._setName
-  },
-
-  _setName: function(name) {
-    var oldName = this.name
-    expect(name).to.be.a('string', 'name')
-    this.name = name
-    this.emit('change:name', oldName, name)
-  }
-
-}
-
-// Store for named objects. Objects are stored by pair (<obj.type>, <obj.name>)
-var NamedObjectStore = exports.NamedObjectStore = function() {
-  this._store = {}
-}
-
-_.extend(NamedObjectStore.prototype, {
-
-  // Registers a named object in the store.
-  register: function(obj) {
-    var self = this
-    var storeNamedObject = function(oldName, newName) {
-      var objType = obj.type
-        , nameMap
-        , objList
-      self._store[objType] = nameMap = self._store[objType] || {}
-      nameMap[newName] = objList = nameMap[newName] || []
-
-      // Adding new mapping
-      if (objList.indexOf(obj) === -1) {
-        if (obj.nameIsUnique && objList.length > 0)
-          throw new Error('there is already a ' + objType + ' with name "' + newName + '"')
-        objList.push(obj)
-      }
-
-      // Removing old mapping
-      if (oldName) {
-        objList = nameMap[oldName]
-        objList.splice(objList.indexOf(obj), 1)
-      }
-    }
-    obj.on('change:name', storeNamedObject)
-    if (obj.name) storeNamedObject(null, obj.name)
-  },
-
-  // Returns an object list given the object `type` and `name`.
-  get: function(type, name) {
-    return ((this._store[type] || {})[name] || [])
-  }
-
-})
-},{"../global":8,"chai":26,"underscore":66}],8:[function(require,module,exports){
+},{"chai":27,"underscore":67}],9:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -796,7 +746,6 @@ _.extend(NamedObjectStore.prototype, {
  */
 
 var _ = require('underscore')
-  , utils = require('./core/utils')
   , EventEmitter = require('events').EventEmitter
 
 
@@ -818,9 +767,18 @@ exports.settings = {
 exports.isStarted = false
 
 
-// Global event emitter
+// Global event emitter.
+// We whitelist all known events, just as a way to keep a list of them 
 var emitter = exports.emitter = new EventEmitter()
-
+emitter.emit = function(eventName) {
+  var valid = false
+  if (
+    _.contains([], eventName)
+    || eventName.indexOf('msg:') === 0
+    || eventName.indexOf('namedObjects:registered') === 0
+  ) EventEmitter.prototype.emit.apply(this, arguments)
+  else throw new Error('unknown event : ' + eventName)
+}
 
 // The library of objects that can be created
 exports.library = {}
@@ -842,10 +800,47 @@ exports.clock = null
 exports.storage = null
 
 
-// Store containing named objects (e.g. arrays, [delread~], ...).
-exports.namedObjects = null
+// Store containing named objects (e.g. arrays, [send] / [receive], ...).
+// Objects are stored by pair (<type>, <obj.name>)
+exports.namedObjects = {
 
-},{"./core/utils":7,"events":21,"underscore":66}],9:[function(require,module,exports){
+  // Registers a named object in the store.
+  register: function(obj, type, name, nameIsUnique, oldName) {
+    var nameMap, objList
+
+    this._store[type] = nameMap = this._store[type] || {}
+    nameMap[name] = objList = nameMap[name] || []
+
+    // Adding new mapping
+    if (objList.indexOf(obj) === -1) {
+      if (nameIsUnique && objList.length > 0)
+        throw new Error('there is already a ' + type + ' with name "' + name + '"')
+      objList.push(obj)
+    }
+
+    // Removing old mapping
+    if (oldName) {
+      objList = nameMap[oldName]
+      objList.splice(objList.indexOf(obj), 1)
+    }
+
+    exports.emitter.emit('namedObjects:registered:' + type, obj)
+  },
+
+  // Returns an object list given the object `type` and `name`.
+  get: function(type, name) {
+    return ((this._store[type] || {})[name] || [])
+  },
+
+  // Removes all the objects.
+  reset: function() {
+    this._store = {}
+  },
+
+  _store: {}
+}
+
+},{"events":22,"underscore":67}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -870,6 +865,7 @@ var _ = require('underscore')
   , expect = require('chai').expect
   , WAAOffset = require('waaoffsetnode')
   , WAAWhiteNoise = require('waawhitenoisenode')
+  , WAATableNode = require('waatablenode')
   , utils = require('../core/utils')
   , PdObject = require('../core/PdObject')
   , portlets = require('./portlets')
@@ -1370,6 +1366,124 @@ exports.declareObjects = function(library) {
 
   })
 
+  // Baseclass for tabwrite~, tabread~ and others ...
+  var _TabBase = PdObject.extend({
+
+    init: function(args) {
+      this.arrayName = args[0]
+      this.array = null
+      this._onNewArrayHandler = null
+      this._onDataChangedHandler = null
+    },
+
+    setArrayName: function(name) {
+      // If we were previously waiting for an array to be registered, we stop listening 
+      if (this._onNewArrayHandler)
+        pdGlob.emitter.removeListener('namedObjects:registered:array', self._onNewArrayHandler) 
+      
+      // Save the new array name, and try to fetch that array from `namedObjects`
+      this.arrayName = name
+      var array = pdGlob.namedObjects.get('array', name)[0]
+        , self = this
+
+      if (array) this.array = array 
+      
+      // If the array was not found, we listen to subsequent new arrays being registered
+      // in case the array we're waiting for comes up.
+      else {
+        console.warn('array with name ' + name + ' doesn\'t exist')
+        this._onNewArrayHandler = function(array) {
+          if (array.name === name) {
+            self.array = array
+            pdGlob.emitter.removeListener('namedObjects:registered:array', self._onNewArrayHandler)
+          }
+        }
+        pdGlob.emitter.on('namedObjects:registered:array', this._onNewArrayHandler)
+      }
+      
+    },
+
+    dataChanged: function() {},
+
+    _setArray: function(array) {
+      var self = this
+      if (this.array) this.array.removeListener('changed:data', this._onDataChangedHandler)
+      this.array = array
+      this._onDataChangedHandler = function() {
+        self.dataChanged()
+      }
+      this.array.on('changed:data', this._onDataChangedHandler)
+    }
+
+  })
+
+  // TODO: tabread4~
+  // TODO: when array's data changes, this should update the node
+  library['tabread~'] = library['tabread4~'] = _TabBase.extend({
+
+    inletDefs: [
+      portlets.DspInlet.extend({
+        
+        message: function(args) {
+          var method = args[0]
+          if (method === 'set')
+            this.obj.setArrayName(args[1])
+          else
+            console.error('unknown method ' + method)
+        },
+
+        connection: function() {
+          portlets.DspInlet.prototype.connection.apply(this, arguments)
+          this.obj._updateDsp()
+        },
+
+        disconnection: function() {
+          portlets.DspInlet.prototype.disconnection.apply(this, arguments)
+          this.obj._updateDsp()
+        }
+
+      })
+    ],
+
+    outletDefs: [portlets.DspOutlet],
+
+    init: function() {
+      _TabBase.prototype.init.apply(this, arguments)
+      if (this.arrayName) this.setArrayName(this.arrayName)
+    },
+
+    start: function() {
+      this._tableNode = new WAATableNode(pdGlob.audio.context)
+      this._gainNode = pdGlob.audio.context.createGain()
+      this.i(0).setWaa(this._tableNode.position, 0)
+      this.o(0).setWaa(this._gainNode, 0)
+      this._updateDsp()
+    },
+
+    stop: function() {
+      this._tableNode = null
+      this._gainNode = null
+    },
+
+    setArrayName: function(name) {
+      _TabBase.prototype.setArrayName.apply(this, arguments)
+      this._updateDsp()
+    },
+
+    dataChanged: function() {
+      if (this._tableNode) this._tableNode.table = this.array.data
+    },
+
+    _updateDsp: function() {
+      if (pdGlob.isStarted && this.array && this.i(0).hasDspSource()) {
+        this._tableNode.table = this.array.data
+        this._tableNode.connect(this._gainNode)
+      } else if (this._tableNode) {
+        this._tableNode.disconnect()
+      }
+    }
+
+  })
 
   library['dac~'] = PdObject.extend({
     type: 'dac~',
@@ -1387,7 +1501,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":26,"underscore":66,"waaoffsetnode":69,"waawhitenoisenode":71}],10:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"underscore":67,"waaoffsetnode":70,"waatablenode":72,"waawhitenoisenode":76}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1407,9 +1521,11 @@ exports.declareObjects = function(library) {
  *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-var _ = require('underscore')
+var EventEmitter = require('events').EventEmitter
+  , _ = require('underscore')
   , expect = require('chai').expect
   , utils = require('../core/utils')
+  , mixins = require('../core/mixins')
   , PdObject = require('../core/PdObject')
   , Patch = require('../core/Patch')
   , pdGlob = require('../global')
@@ -1417,7 +1533,7 @@ var _ = require('underscore')
 
 exports.declareObjects = function(library) {
 
-  library['receive'] = library['r'] = PdObject.extend(utils.NamedMixin, {
+  library['receive'] = library['r'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
 
     type: 'receive',
 
@@ -1426,24 +1542,21 @@ exports.declareObjects = function(library) {
 
     init: function(args) {
       var name = args[0]
-        , onMsgReceived = this._messageHandler()
-      this.on('change:name', function(oldName, newName) {
-        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, onMsgReceived)
-        pdGlob.emitter.on('msg:' + newName, onMsgReceived)
+        , _onMessageReceived = this._onMessageReceived.bind(this)
+      this.on('changed:name', function(oldName, newName) {
+        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, _onMessageReceived)
+        pdGlob.emitter.on('msg:' + newName, _onMessageReceived)
       })
       this.setName(name)
     },
 
-    _messageHandler: function(args) {
-      var self = this
-      return function(args) {
-        self.outlets[0].message(args)
-      }
+    _onMessageReceived: function(args) {
+      this.o(0).message(args)
     }
 
   })
 
-  library['send'] = library['s'] = PdObject.extend(utils.NamedMixin, {
+  library['send'] = library['s'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
 
     type: 'send',
 
@@ -2078,9 +2191,11 @@ exports.declareObjects = function(library) {
 
   })
 
-  library['array'] = library['table'] = PdObject.extend(utils.NamedMixin, {
+  library['array'] = library['table'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
 
     type: 'array',
+
+    nameIsUnique: true,
 
     init: function(args) {
       var name = args[0]
@@ -2094,11 +2209,12 @@ exports.declareObjects = function(library) {
       if (resize) this.data = new Float32Array(audioData.length)
       this.data.set(audioData.subarray(0, Math.min(this.data.length, audioData.length)))
       this.size = this.data.length
+      this.emit('changed:data')
     }
 
   })
 
-  library['soundfiler'] = PdObject.extend(utils.NamedMixin, {
+  library['soundfiler'] = PdObject.extend({
 
     type: 'soundfiler',
 
@@ -2176,7 +2292,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/Patch":3,"../core/PdObject":4,"../core/utils":7,"../global":8,"./portlets":12,"chai":26,"underscore":66}],11:[function(require,module,exports){
+},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"events":22,"underscore":67}],12:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2203,7 +2319,7 @@ exports.declareObjects = function(library) {
   require('./dsp').declareObjects(library)
   require('./portlets').declareObjects(library)
 }
-},{"./dsp":9,"./glue":10,"./portlets":12,"underscore":66}],12:[function(require,module,exports){
+},{"./dsp":10,"./glue":11,"./portlets":13,"underscore":67}],13:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2419,7 +2535,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/portlets":6,"../core/utils":7,"../global":8,"chai":26,"underscore":66,"waawire":73}],13:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/portlets":7,"../core/utils":8,"../global":9,"chai":27,"underscore":67,"waawire":78}],14:[function(require,module,exports){
 var Audio = module.exports = function(channelCount) {
   var ch
   this.context = new AudioContext()
@@ -2452,7 +2568,7 @@ Audio.prototype.decode = function(arrayBuffer, done) {
     }
   )
 }
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 var WAAClock = require('waaclock')
 
 // A little wrapper to WAAClock, to implement the Clock interface.
@@ -2475,7 +2591,7 @@ Clock.prototype.schedule = function(func, time, repetition) {
 Clock.prototype.unschedule = function(event) {
   event.clear()
 }
-},{"waaclock":67}],15:[function(require,module,exports){
+},{"waaclock":68}],16:[function(require,module,exports){
 var WebStorage = module.exports = function() {}
 
 // Gets an array buffer through an ajax request, then calls `done(err, arrayBuffer)`
@@ -2496,11 +2612,11 @@ WebStorage.prototype.get = function(url, done) {
   req.responseType = 'arraybuffer'
   req.send()
 }
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 exports.Clock = require('./Clock')
 exports.Audio = require('./Audio')
 exports.Storage = require('./Storage')
-},{"./Audio":13,"./Clock":14,"./Storage":15}],17:[function(require,module,exports){
+},{"./Audio":14,"./Clock":15,"./Storage":16}],18:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -3554,7 +3670,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":18,"ieee754":19,"is-array":20}],18:[function(require,module,exports){
+},{"base64-js":19,"ieee754":20,"is-array":21}],19:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -3676,7 +3792,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -3762,7 +3878,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 
 /**
  * isArray
@@ -3797,7 +3913,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4100,7 +4216,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -4125,7 +4241,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -4213,14 +4329,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -4810,10 +4926,10 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":24,"_process":23,"inherits":22}],26:[function(require,module,exports){
+},{"./support/isBuffer":25,"_process":24,"inherits":23}],27:[function(require,module,exports){
 module.exports = require('./lib/chai');
 
-},{"./lib/chai":27}],27:[function(require,module,exports){
+},{"./lib/chai":28}],28:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -4902,7 +5018,7 @@ exports.use(should);
 var assert = require('./chai/interface/assert');
 exports.use(assert);
 
-},{"./chai/assertion":28,"./chai/config":29,"./chai/core/assertions":30,"./chai/interface/assert":31,"./chai/interface/expect":32,"./chai/interface/should":33,"./chai/utils":44,"assertion-error":53}],28:[function(require,module,exports){
+},{"./chai/assertion":29,"./chai/config":30,"./chai/core/assertions":31,"./chai/interface/assert":32,"./chai/interface/expect":33,"./chai/interface/should":34,"./chai/utils":45,"assertion-error":54}],29:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -5039,7 +5155,7 @@ module.exports = function (_chai, util) {
   });
 };
 
-},{"./config":29}],29:[function(require,module,exports){
+},{"./config":30}],30:[function(require,module,exports){
 module.exports = {
 
   /**
@@ -5091,7 +5207,7 @@ module.exports = {
 
 };
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -6452,7 +6568,7 @@ module.exports = function (chai, _) {
   });
 };
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7510,7 +7626,7 @@ module.exports = function (chai, util) {
   ('Throw', 'throws');
 };
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7524,7 +7640,7 @@ module.exports = function (chai, util) {
 };
 
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7604,7 +7720,7 @@ module.exports = function (chai, util) {
   chai.Should = loadShould;
 };
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*!
  * Chai - addChainingMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7717,7 +7833,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   });
 };
 
-},{"../config":29,"./flag":37,"./transferFlags":51}],35:[function(require,module,exports){
+},{"../config":30,"./flag":38,"./transferFlags":52}],36:[function(require,module,exports){
 /*!
  * Chai - addMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7762,7 +7878,7 @@ module.exports = function (ctx, name, method) {
   };
 };
 
-},{"../config":29,"./flag":37}],36:[function(require,module,exports){
+},{"../config":30,"./flag":38}],37:[function(require,module,exports){
 /*!
  * Chai - addProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7804,7 +7920,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7838,7 +7954,7 @@ module.exports = function (obj, key, value) {
   }
 };
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 /*!
  * Chai - getActual utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7858,7 +7974,7 @@ module.exports = function (obj, args) {
   return args.length > 4 ? args[4] : obj._obj;
 };
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /*!
  * Chai - getEnumerableProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7885,7 +8001,7 @@ module.exports = function getEnumerableProperties(object) {
   return result;
 };
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * Chai - message composition utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7937,7 +8053,7 @@ module.exports = function (obj, args) {
   return flagMsg ? flagMsg + ': ' + msg : msg;
 };
 
-},{"./flag":37,"./getActual":38,"./inspect":45,"./objDisplay":46}],41:[function(require,module,exports){
+},{"./flag":38,"./getActual":39,"./inspect":46,"./objDisplay":47}],42:[function(require,module,exports){
 /*!
  * Chai - getName utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -7959,7 +8075,7 @@ module.exports = function (func) {
   return match && match[1] ? match[1] : "";
 };
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 /*!
  * Chai - getPathValue utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8063,7 +8179,7 @@ function _getPathValue (parsed, obj) {
   return res;
 };
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*!
  * Chai - getProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8100,7 +8216,7 @@ module.exports = function getProperties(object) {
   return result;
 };
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011 Jake Luer <jake@alogicalparadox.com>
@@ -8216,7 +8332,7 @@ exports.addChainableMethod = require('./addChainableMethod');
 exports.overwriteChainableMethod = require('./overwriteChainableMethod');
 
 
-},{"./addChainableMethod":34,"./addMethod":35,"./addProperty":36,"./flag":37,"./getActual":38,"./getMessage":40,"./getName":41,"./getPathValue":42,"./inspect":45,"./objDisplay":46,"./overwriteChainableMethod":47,"./overwriteMethod":48,"./overwriteProperty":49,"./test":50,"./transferFlags":51,"./type":52,"deep-eql":54}],45:[function(require,module,exports){
+},{"./addChainableMethod":35,"./addMethod":36,"./addProperty":37,"./flag":38,"./getActual":39,"./getMessage":41,"./getName":42,"./getPathValue":43,"./inspect":46,"./objDisplay":47,"./overwriteChainableMethod":48,"./overwriteMethod":49,"./overwriteProperty":50,"./test":51,"./transferFlags":52,"./type":53,"deep-eql":55}],46:[function(require,module,exports){
 // This is (almost) directly from Node.js utils
 // https://github.com/joyent/node/blob/f8c335d0caf47f16d31413f89aa28eda3878e3aa/lib/util.js
 
@@ -8551,7 +8667,7 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-},{"./getEnumerableProperties":39,"./getName":41,"./getProperties":43}],46:[function(require,module,exports){
+},{"./getEnumerableProperties":40,"./getName":42,"./getProperties":44}],47:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8602,7 +8718,7 @@ module.exports = function (obj) {
   }
 };
 
-},{"../config":29,"./inspect":45}],47:[function(require,module,exports){
+},{"../config":30,"./inspect":46}],48:[function(require,module,exports){
 /*!
  * Chai - overwriteChainableMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8657,7 +8773,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   };
 };
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 /*!
  * Chai - overwriteMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8710,7 +8826,7 @@ module.exports = function (ctx, name, method) {
   }
 };
 
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 /*!
  * Chai - overwriteProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8766,7 +8882,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /*!
  * Chai - test utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8794,7 +8910,7 @@ module.exports = function (obj, args) {
   return negate ? !expr : expr;
 };
 
-},{"./flag":37}],51:[function(require,module,exports){
+},{"./flag":38}],52:[function(require,module,exports){
 /*!
  * Chai - transferFlags utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8840,7 +8956,7 @@ module.exports = function (assertion, object, includeAll) {
   }
 };
 
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /*!
  * Chai - type utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8887,7 +9003,7 @@ module.exports = function (obj) {
   return typeof obj;
 };
 
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*!
  * assertion-error
  * Copyright(c) 2013 Jake Luer <jake@qualiancy.com>
@@ -8999,10 +9115,10 @@ AssertionError.prototype.toJSON = function (stack) {
   return props;
 };
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 module.exports = require('./lib/eql');
 
-},{"./lib/eql":55}],55:[function(require,module,exports){
+},{"./lib/eql":56}],56:[function(require,module,exports){
 /*!
  * deep-eql
  * Copyright(c) 2013 Jake Luer <jake@alogicalparadox.com>
@@ -9261,10 +9377,10 @@ function objectEqual(a, b, m) {
   return true;
 }
 
-},{"buffer":17,"type-detect":56}],56:[function(require,module,exports){
+},{"buffer":18,"type-detect":57}],57:[function(require,module,exports){
 module.exports = require('./lib/type');
 
-},{"./lib/type":57}],57:[function(require,module,exports){
+},{"./lib/type":58}],58:[function(require,module,exports){
 /*!
  * type-detect
  * Copyright(c) 2013 jake luer <jake@alogicalparadox.com>
@@ -9408,7 +9524,7 @@ Library.prototype.test = function (obj, type) {
   }
 };
 
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 exports.parse = require('./lib/parsing').parse
 exports.renderSvg = require('./lib/svg-rendering').render
 exports.renderPd = require('./lib/pd-rendering').render
@@ -9416,7 +9532,7 @@ exports.Patch = require('./lib/Patch')
 
 if (typeof window !== 'undefined') window.pdfu = exports
 
-},{"./lib/Patch":59,"./lib/parsing":60,"./lib/pd-rendering":61,"./lib/svg-rendering":62}],59:[function(require,module,exports){
+},{"./lib/Patch":60,"./lib/parsing":61,"./lib/pd-rendering":62,"./lib/svg-rendering":63}],60:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -9483,7 +9599,7 @@ _.extend(Patch.prototype, {
 
 })
 
-},{"underscore":66}],60:[function(require,module,exports){
+},{"underscore":67}],61:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -9804,7 +9920,7 @@ var parseControls = function(proto, args, layout) {
 
 }
 
-},{"underscore":66}],61:[function(require,module,exports){
+},{"underscore":67}],62:[function(require,module,exports){
 var mustache = require('mustache')
   , _ = require('underscore')
 
@@ -9846,7 +9962,7 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
   , cnvTpl = '#X obj {{{layout.x}}} {{{layout.y}}} cnv {{{layout.size}}} {{{layout.width}}} {{{layout.height}}} {{{args.0}}} {{{args.1}}} {{{layout.label}}} {{{layout.labelX}}} {{{layout.labelY}}} {{{layout.labelFont}}} {{{layout.labelFontSize}}} {{{layout.bgColor}}} {{{layout.labelColor}}} {{{args.2}}}'
   , objTpl = '#X obj {{{layout.x}}} {{{layout.y}}} {{{proto}}}{{#args}} {{.}}{{/args}}'
 
-},{"mustache":65,"underscore":66}],62:[function(require,module,exports){
+},{"mustache":66,"underscore":67}],63:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -10468,7 +10584,7 @@ _.extend(TextRenderer.prototype, NodeRenderer.prototype, {
 
 })
 
-},{"./Patch":59,"d3":64,"underscore":66}],63:[function(require,module,exports){
+},{"./Patch":60,"d3":65,"underscore":67}],64:[function(require,module,exports){
 d3 = function() {
   var π = Math.PI, ε = 1e-6, d3 = {
     version: "3.0.8"
@@ -18270,10 +18386,10 @@ d3 = function() {
   };
   return d3;
 }();
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 require("./d3");
 module.exports = d3;
-},{"./d3":63}],65:[function(require,module,exports){
+},{"./d3":64}],66:[function(require,module,exports){
 /*!
  * mustache.js - Logic-less {{mustache}} templates with JavaScript
  * http://github.com/janl/mustache.js
@@ -18826,7 +18942,7 @@ module.exports = d3;
 
 }));
 
-},{}],66:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -20054,13 +20170,13 @@ module.exports = d3;
 
 }).call(this);
 
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 var WAAClock = require('./lib/WAAClock')
 
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":68}],68:[function(require,module,exports){
+},{"./lib/WAAClock":69}],69:[function(require,module,exports){
 var _ = require('underscore')
   , EventEmitter = require('events').EventEmitter
   , inherits = require('util').inherits
@@ -20275,11 +20391,11 @@ _.extend(WAAClock.prototype, {
   }
 })
 
-},{"events":21,"underscore":66,"util":25}],69:[function(require,module,exports){
+},{"events":22,"underscore":67,"util":26}],70:[function(require,module,exports){
 var WAAOffsetNode = require('./lib/WAAOffsetNode')
 module.exports = WAAOffsetNode
 if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
-},{"./lib/WAAOffsetNode":70}],70:[function(require,module,exports){
+},{"./lib/WAAOffsetNode":71}],71:[function(require,module,exports){
 var WAAOffsetNode = module.exports = function(context) {
   this.context = context
 
@@ -20304,11 +20420,80 @@ WAAOffsetNode.prototype.connect = function() {
 WAAOffsetNode.prototype.disconnect = function() {
   this._output.disconnect.apply(this._output, arguments)
 }
-},{}],71:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
+var WAATableNode = require('./lib/WAATableNode')
+module.exports = WAATableNode
+if (typeof window !== 'undefined') window.WAATableNode = WAATableNode
+},{"./lib/WAATableNode":73}],73:[function(require,module,exports){
+var WAAOffset = require('waaoffset')
+
+var WAATableNode = module.exports = function(context) {
+  this.context = context
+  this._output = context.createWaveShaper()
+  this._positionNode = new WAAOffset(context)
+  this._positionNode.connect(this._output)
+  this._positionNode.offset.value = -1
+  this.position = context.createGain()
+  this.position.connect(this._positionNode.offset)
+  this.position.gain.value = 0
+  
+  this._table = null
+  Object.defineProperty(this, 'table', {
+    get: function() { return this._table },
+    set: function(table) { this._setTable(table) },
+  })
+}
+
+WAATableNode.prototype.connect = function() {
+  this._output.connect.apply(this._output, arguments)
+}
+
+WAATableNode.prototype.disconnect = function() {
+  this._output.disconnect.apply(this._output, arguments)
+}
+
+WAATableNode.prototype._setTable = function(table) {
+  if (table instanceof AudioBuffer)
+    table = table.getChannelData(0)
+  this._table = table
+  if (table === null) return
+  this._output.curve = table
+  this.position.gain.setValueAtTime(2 / (table.length - 1), 0)
+}
+},{"waaoffset":74}],74:[function(require,module,exports){
+var WAAOffset = require('./lib/WAAOffset')
+module.exports = WAAOffset
+if (typeof window !== 'undefined') window.WAAOffset = WAAOffset
+},{"./lib/WAAOffset":75}],75:[function(require,module,exports){
+var WAAOffset = module.exports = function(context) {
+  this.context = context
+
+  // Ones generator
+  this._ones = context.createOscillator()
+  this._ones.frequency.value = 0
+  this._ones.setPeriodicWave(context.createPeriodicWave(
+    new Float32Array([0, 1]), new Float32Array([0, 0])))
+  this._ones.start(0)
+
+  // Multiplier
+  this._output = context.createGain()
+  this._ones.connect(this._output)
+  this.offset = this._output.gain
+  this.offset.value = 0
+}
+
+WAAOffset.prototype.connect = function() {
+  this._output.connect.apply(this._output, arguments)
+}
+
+WAAOffset.prototype.disconnect = function() {
+  this._output.disconnect.apply(this._output, arguments)
+}
+},{}],76:[function(require,module,exports){
 var WAAWhiteNoiseNode = require('./lib/WAAWhiteNoiseNode')
 module.exports = WAAWhiteNoiseNode
 if (typeof window !== 'undefined') window.WAAWhiteNoiseNode = WAAWhiteNoiseNode
-},{"./lib/WAAWhiteNoiseNode":72}],72:[function(require,module,exports){
+},{"./lib/WAAWhiteNoiseNode":77}],77:[function(require,module,exports){
 var WAAWhiteNoiseNode = module.exports = function(context) {
   this.context = context
 
@@ -20343,11 +20528,11 @@ WAAWhiteNoiseNode.prototype._prepareOutput = function() {
   this._output.buffer = this._buffer
   this._output.loop = true
 }
-},{}],73:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
 var WAAWire = require('./lib/WAAWire')
 module.exports = WAAWire
 if (typeof window !== 'undefined') window.WAAWire = WAAWire
-},{"./lib/WAAWire":74}],74:[function(require,module,exports){
+},{"./lib/WAAWire":79}],79:[function(require,module,exports){
 var WAAWire = module.exports = function(context) {
   this.context = context
   

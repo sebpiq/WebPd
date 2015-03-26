@@ -6,9 +6,10 @@ var _ = require('underscore')
   , PdObject = require('../lib/core/PdObject')
   , Pd = require('../index')
   , pdGlob = require('../lib/global')
+  , utils = require('../lib/core/utils')
 
 exports.afterEach = function() {
-  pdGlob.namedObjects = null
+  pdGlob.namedObjects.reset()
   pdGlob.patches = {}
   pdGlob.library = {}
   require('../lib/objects').declareObjects(pdGlob.library)

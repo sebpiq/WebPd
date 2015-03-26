@@ -84,6 +84,7 @@ describe('objects.glue', function() {
       send1.i(0).message([1, 11, 111])
       assert.deepEqual(mailbox1.received, [[1, 11, 111]])
     })
+
   })
 
   describe('[msg]', function() {
@@ -834,6 +835,12 @@ describe('objects.glue', function() {
       array.setData(new Float32Array([1, 2, 3, 4, 5, 6, 7]), true)
       assert.deepEqual(_.toArray(array.data), [1, 2, 3, 4, 5, 6, 7])
       assert.equal(array.size, 7)
+    })
+
+    it('should emit changed:data when calling setData', function(done) {
+      var array = patch.createObject('array', ['SAMPLE', 5])
+      array.on('changed:data', done)
+      array.setData(new Float32Array([1, 2, 3, 4, 5, 6, 7]))
     })
 
   })
