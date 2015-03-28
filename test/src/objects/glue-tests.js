@@ -137,11 +137,11 @@ describe('objects.glue', function() {
 
   describe('[loadbang]', function() {
 
-    it('should send bang on load', function() {
+    it('should send bang on start', function() {
       var loadbang = patch.createObject('loadbang')
         , mailbox = patch.createObject('testingmailbox')
       loadbang.o(0).connect(mailbox.i(0))
-      loadbang.load()
+      loadbang.start()
       assert.deepEqual(mailbox.received, [['bang']])
     })
 
@@ -182,6 +182,23 @@ describe('objects.glue', function() {
       add.i(0).message([23.5])
 
       assert.deepEqual(mailbox.received, [[142.28]])
+    })
+
+    it('should calculate with the last float value when sending bang on inlet 0', function() {
+      var add = patch.createObject('+', [9])
+        , mailbox = patch.createObject('testingmailbox')
+      add.o(0).connect(mailbox.i(0))
+
+      add.i(1).message([11])
+      add.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[11]])
+
+      add.i(0).message([22])
+      assert.deepEqual(mailbox.received, [[11], [33]])
+
+      add.i(1).message([10])
+      add.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[11], [33], [32]])
     })
 
   })
@@ -355,6 +372,29 @@ describe('objects.glue', function() {
 
       trigger.i(0).message(['bang'])
       assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['symbol'], ['bang'], [0]])
+    })
+
+    it('should consider numbers arguments the same as f arguments', function() {
+      var trigger = patch.createObject('trigger', [11, 22])
+        , mailbox = patch.createObject('testingmailbox')
+
+      assert.deepEqual(trigger.outlets.length, 2)
+      trigger.o(0).connect(mailbox.i(0))
+      trigger.o(1).connect(mailbox.i(0))
+
+      trigger.i(0).message([33])
+      assert.deepEqual(mailbox.received, [[33], [33]])
+    })
+
+    it('should output bang if string', function() {
+      var trigger = patch.createObject('trigger', ['bla'])
+        , mailbox = patch.createObject('testingmailbox')
+
+      assert.deepEqual(trigger.outlets.length, 1)
+      trigger.o(0).connect(mailbox.i(0))
+
+      trigger.i(0).message([1])
+      assert.deepEqual(mailbox.received, [['bang']])
     })
 
   })
@@ -661,6 +701,21 @@ describe('objects.glue', function() {
       clock.time = 12200
       clock.tick()
       assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang']])
+    })
+
+    // Test for a bug fix
+    it('shouldnt schedule two events if sending to the two inlets simultaneously', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var metro = patch.createObject('metro', [1000])
+        , mailbox = patch.createObject('testingmailbox')
+      metro.o(0).connect(mailbox.i(0))
+
+      clock.time = 10000
+      metro.i(1).message([1000])
+      metro.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['bang']])
+      assert.equal(clock.events.length, 1)
     })
 
   })

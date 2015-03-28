@@ -1394,7 +1394,7 @@ exports.declareObjects = function(library) {
         console.warn('array with name ' + name + ' doesn\'t exist')
         this._onNewArrayHandler = function(array) {
           if (array.name === name) {
-            self.array = array
+            self._setArray(array)
             pdGlob.emitter.removeListener('namedObjects:registered:array', self._onNewArrayHandler)
           }
         }
@@ -1420,6 +1420,7 @@ exports.declareObjects = function(library) {
   // TODO: tabread4~
   // TODO: when array's data changes, this should update the node
   library['tabread~'] = library['tabread4~'] = _TabBase.extend({
+    type: 'tabread~',
 
     inletDefs: [
       portlets.DspInlet.extend({
@@ -1457,7 +1458,7 @@ exports.declareObjects = function(library) {
       this._gainNode = pdGlob.audio.context.createGain()
       this.i(0).setWaa(this._tableNode.position, 0)
       this.o(0).setWaa(this._gainNode, 0)
-      this._updateDsp()
+      this._updateDsp(true)
     },
 
     stop: function() {
@@ -1467,15 +1468,15 @@ exports.declareObjects = function(library) {
 
     setArrayName: function(name) {
       _TabBase.prototype.setArrayName.apply(this, arguments)
-      this._updateDsp()
+      this._updateDsp(true)
     },
 
     dataChanged: function() {
       if (this._tableNode) this._tableNode.table = this.array.data
     },
 
-    _updateDsp: function() {
-      if (pdGlob.isStarted && this.array && this.i(0).hasDspSource()) {
+    _updateDsp: function(starting) {
+      if ((pdGlob.isStarted || starting) && this.array && this.i(0).hasDspSource()) {
         this._tableNode.table = this.array.data
         this._tableNode.connect(this._gainNode)
       } else if (this._tableNode) {
@@ -1639,7 +1640,7 @@ exports.declareObjects = function(library) {
 
     outletDefs: [portlets.Outlet],
 
-    load: function() {
+    start: function() {
       this.o(0).message(['bang'])
     }
 
@@ -1688,11 +1689,11 @@ exports.declareObjects = function(library) {
       portlets.Inlet.extend({
         message: function(args) {
           var val = args[0]
-          if (val !== 'bang') { 
-            expect(val).to.be.a('number', this.obj.type + '::value')  
-            this.obj.lastResult = this.obj.compute(val)
-          }
-          this.obj.o(0).message([this.obj.lastResult])
+          if (_.isNumber(val))
+            this.obj.valLeft = val
+          else if (val !== 'bang')
+            console.error('invalid message : ' + args)
+          this.obj.o(0).message([this.obj.compute()])
         }
       }),
 
@@ -1700,46 +1701,45 @@ exports.declareObjects = function(library) {
         message: function(args) {
           var val = args[0]
           expect(val).to.be.a('number', this.obj.type + '::value')
-          this.obj.val = val
+          this.obj.valRight = val
         }
       })
     ],
     outletDefs: [portlets.Outlet],
 
     init: function(args) {
-      var val = args[0]
-      this.val = val || 0
-      this.lastResult = 0
+      this.valRight = args[0] || 0
+      this.valLeft = 0
     },
     
     // Must be overriden
-    compute: function(val) { return }
+    compute: function() { return }
   })
 
   library['+'] = _ArithmBase.extend({
     type: '+',
 
-    compute: function(val) { return val + this.val }
+    compute: function() { return this.valLeft + this.valRight }
   })
 
   library['-'] = _ArithmBase.extend({
     type: '-',
-    compute: function(val) { return val - this.val }
+    compute: function() { return this.valLeft - this.valRight }
   })
 
   library['*'] = _ArithmBase.extend({
     type: '*',
-    compute: function(val) { return val * this.val }
+    compute: function() { return this.valLeft * this.valRight }
   })
 
   library['/'] = _ArithmBase.extend({
     type: '/',
-    compute: function(val) { return val / this.val }
+    compute: function() { return this.valLeft / this.valRight }
   })
 
   library['mod'] = library['%'] = _ArithmBase.extend({
     type: 'mod',
-    compute: function(val) { return val % this.val }
+    compute: function() { return this.valLeft % this.valRight }
   })
 
   library['spigot'] = PdObject.extend({
@@ -1793,7 +1793,7 @@ exports.declareObjects = function(library) {
               this.obj.o(i).message(['bang'])
             else if (filter === 'list' || filter === 'anything')
               this.obj.o(i).message(args)
-            else if (filter === 'float') {
+            else if (filter === 'float' || _.isNumber(filter)) {
               msg = args[0]
               if (_.isNumber(msg)) this.obj.o(i).message([msg])
               else this.obj.o(i).message([0])
@@ -1803,7 +1803,7 @@ exports.declareObjects = function(library) {
               else if (_.isNumber(msg)) this.obj.o(i).message(['float'])
               else if (_.isString(msg)) this.obj.o(i).message([msg])
               else throw new Error('Got unexpected input ' + args)
-            }
+            } else this.obj.o(i).message(['bang'])
           }
         }
 
@@ -2038,13 +2038,13 @@ exports.declareObjects = function(library) {
     // Metronome rate, in ms per tick
     setRate: function(rate) {
       expect(rate).to.be.a('number', 'metro::rate')
-      this.rate = rate
+      this.rate = Math.max(rate, 1)
     },
 
     _startMetroTick: function() {
       var self = this
       if (this._metroHandle === null) {
-        this._metroHandle = pdGlob.clock.schedule(function() {
+        this._metroHandle = pdGlob.clock.schedule(function(event) {
           self._metroTick()
         }, pdGlob.futureTime || pdGlob.clock.time, this.rate)
       }
@@ -2058,6 +2058,11 @@ exports.declareObjects = function(library) {
     },
 
     _restartMetroTick: function() {
+      // If a rate change was made and `_restartMetroTick` is called before the next tick,
+      // we should do this to avoid `_restartMetroTick` to be called twice recursively,
+      // which would cause _metroHandle to not be unscheduled properly... 
+      if (this._metroTick === this._metroTickRateChange)
+        this._metroTick = this._metroTickNormal
       this._stopMetroTick()
       this._startMetroTick()
     },
@@ -2569,7 +2574,8 @@ Audio.prototype.decode = function(arrayBuffer, done) {
   )
 }
 },{}],15:[function(require,module,exports){
-var WAAClock = require('waaclock')
+var _ = require('underscore')
+  , WAAClock = require('waaclock')
 
 // A little wrapper to WAAClock, to implement the Clock interface.
 var Clock = module.exports = function(config) {
@@ -2584,14 +2590,14 @@ var Clock = module.exports = function(config) {
 
 Clock.prototype.schedule = function(func, time, repetition) {
   var event = this._waaClock.callbackAtTime(func, time / 1000)
-  if (repetition) event.repeat(repetition / 1000)
+  if (_.isNumber(repetition)) event.repeat(repetition / 1000)
   return event
 }
 
 Clock.prototype.unschedule = function(event) {
   event.clear()
 }
-},{"waaclock":68}],16:[function(require,module,exports){
+},{"underscore":67,"waaclock":68}],16:[function(require,module,exports){
 var WebStorage = module.exports = function() {}
 
 // Gets an array buffer through an ajax request, then calls `done(err, arrayBuffer)`
@@ -20177,221 +20183,240 @@ module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
 },{"./lib/WAAClock":69}],69:[function(require,module,exports){
-var _ = require('underscore')
-  , EventEmitter = require('events').EventEmitter
-  , inherits = require('util').inherits
-  , isBrowser = (typeof window !== 'undefined')
+(function (process){
+var isBrowser = (typeof window !== 'undefined')
 
-if (isBrowser && !AudioContext) {
-  if (window.webkitAudioContext)
-    console.error('This browser uses a prefixed version of web audio API')
-  else 
-    console.error('This browser doesn\'t seem to support web audio API')
-}
+if (isBrowser && !AudioContext)
+  throw new Error('This browser doesn\'t seem to support web audio API')
 
-// ==================== Event ==================== //
-var Event = function(clock, time, func) {
-  this.clock = clock
-  this.func = func
-  this.repeatTime = null
-  this.toleranceLate = 0.010
-  this.toleranceEarly = 0.010
-  this._expireTime = null
-  this._earliestTime = null
-  this.time = time
-  this._update()
-}
-inherits(Event, EventEmitter)
-
-_.extend(Event.prototype, {
-  
-  // Unschedules the event
-  clear: function() {
-    this.clock._removeEvent(this)
-    return this
-  },
-
-  // Sets the event to repeat every `time` seconds.
-  repeat: function(time) {
-    if (time === 0)
-      throw new Error('delay cannot be 0')
-    this.repeatTime = time
-    return this
-  },
-
-  // Sets the time tolerance of the event.
-  // The event will be executed in the interval `[time - early, time + late]`
-  // where `time` is the event's due date. If the clock fails to execute the event in time,
-  // the event will be dropped.
-  tolerance: function(late, early) {
-    if (_.isNumber(late))
-      this.toleranceLate = late
-    if (_.isNumber(early))
-      this.toleranceEarly = early
-    this._update()
-    return this
-  },
-
-  // Returns true if the event is repeated, false otherwise
-  isRepeated: function() { return this.repeatTime !== null },
-
-  // Schedules the event to run at `time`.
-  // If the time is within the event tolerance, we handle the event immediately
-  schedule: function(time) {
-    this.time = time
-    this._update()
-    if (this.clock.context.currentTime >= this._earliestTime) {
-      this.clock._removeEvent(this)
-      this.clock._handleEvent(this)
-    }
-  },
-
-  // This recalculates some cached values and re-insert the event in the clock's list
-  // to maintain order.
-  _update: function() {
-    this._expireTime = this.time + this.toleranceLate
-    this._earliestTime = this.time - this.toleranceEarly
-    this.clock._removeEvent(this)
-    this.clock._insertEvent(this)
-  }
-
-})
-
-// ==================== WAAClock ==================== //
 var CLOCK_DEFAULTS = {
   toleranceLate: 0.10,
   toleranceEarly: 0.001
 }
 
+// ==================== Event ==================== //
+var Event = function(clock, deadline, func) {
+  this.clock = clock
+  this.func = func
+  this._cleared = false // Flag used to clear an event inside callback
+
+  this.toleranceLate = clock.toleranceLate
+  this.toleranceEarly = clock.toleranceEarly
+  this._latestTime = null
+  this._earliestTime = null
+  this.deadline = null
+  this.repeatTime = null
+
+  this.schedule(deadline)
+}
+
+// Unschedules the event
+Event.prototype.clear = function() {
+  this.clock._removeEvent(this)
+  this._cleared = true
+  return this
+}
+
+// Sets the event to repeat every `time` seconds.
+Event.prototype.repeat = function(time) {
+  if (time === 0)
+    throw new Error('delay cannot be 0')
+  this.repeatTime = time
+  if (!this.clock._hasEvent(this))
+    this.schedule(this.deadline + this.repeatTime)
+  return this
+}
+
+// Sets the time tolerance of the event.
+// The event will be executed in the interval `[deadline - early, deadline + late]`
+// If the clock fails to execute the event in time, the event will be dropped.
+Event.prototype.tolerance = function(values) {
+  if (typeof values.late === 'number')
+    this.toleranceLate = values.late
+  if (typeof values.early === 'number')
+    this.toleranceEarly = values.early
+  this._refreshEarlyLateDates()
+  if (this.clock._hasEvent(this)) {
+    this.clock._removeEvent(this)
+    this.clock._insertEvent(this)
+  }
+  return this
+}
+
+// Returns true if the event is repeated, false otherwise
+Event.prototype.isRepeated = function() { return this.repeatTime !== null }
+
+// Schedules the event to be ran before `deadline`.
+// If the time is within the event tolerance, we handle the event immediately.
+// If the event was already scheduled at a different time, it is rescheduled.
+Event.prototype.schedule = function(deadline) {
+  this._cleared = false
+  this.deadline = deadline
+  this._refreshEarlyLateDates()
+
+  if (this.clock.context.currentTime >= this._earliestTime) {
+    this._execute()
+  
+  } else if (this.clock._hasEvent(this)) {
+    this.clock._removeEvent(this)
+    this.clock._insertEvent(this)
+  
+  } else this.clock._insertEvent(this)
+}
+
+Event.prototype.timeStretch = function(tRef, ratio) {
+  if (this.isRepeated())
+    this.repeatTime = this.repeatTime * ratio
+
+  var deadline = tRef + ratio * (this.deadline - tRef)
+  // If the deadline is too close or past, and the event has a repeat,
+  // we calculate the next repeat possible in the stretched space.
+  if (this.isRepeated()) {
+    while (this.clock.context.currentTime >= deadline - this.toleranceEarly)
+      deadline += this.repeatTime
+  }
+  this.schedule(deadline)
+}
+
+// Executes the event
+Event.prototype._execute = function() {
+  this.clock._removeEvent(this)
+
+  if (this.clock.context.currentTime < this._latestTime)
+    this.func(this)
+  else {
+    if (this.onexpired) this.onexpired(this)
+    console.warn('event expired')
+  }
+  // In the case `schedule` is called inside `func`, we need to avoid
+  // overrwriting with yet another `schedule`.
+  if (!this.clock._hasEvent(this) && this.isRepeated() && !this._cleared)
+    this.schedule(this.deadline + this.repeatTime) 
+}
+
+// Updates cached times
+Event.prototype._refreshEarlyLateDates = function() {
+  this._latestTime = this.deadline + this.toleranceLate
+  this._earliestTime = this.deadline - this.toleranceEarly
+}
+
+// ==================== WAAClock ==================== //
 var WAAClock = module.exports = function(context, opts) {
   var self = this
-  opts = _.defaults(opts || {}, CLOCK_DEFAULTS)
-  _.extend(this, _.pick(opts, Object.keys(CLOCK_DEFAULTS)))
+  opts = opts || {}
+  this.toleranceEarly = opts.toleranceEarly || CLOCK_DEFAULTS.toleranceEarly
+  this.toleranceLate = opts.toleranceLate || CLOCK_DEFAULTS.toleranceLate
   this.context = context
   this._events = []
   this._started = false
 }
 
-_.extend(WAAClock.prototype, {
+// ---------- Public API ---------- //
+// Schedules `func` to run after `delay` seconds.
+WAAClock.prototype.setTimeout = function(func, delay) {
+  return this._createEvent(func, this._absTime(delay))
+}
 
-  // ---------- Public API ---------- //
-  // Schedule `func` to run after `delay` seconds.
-  // This method tries to schedule the event as accurately as possible,
-  // but it will never be exact as `AudioNode.start` or `AudioParam.scheduleSetValue`.
-  setTimeout: function(func, delay) {
-    return this._createEvent(func, this._absTime(delay)).tolerance(null, 0)
-  },
+// Schedules `func` to run before `deadline`.
+WAAClock.prototype.callbackAtTime = function(func, deadline) {
+  return this._createEvent(func, deadline)
+}
 
-  // Schedule `func` to run at `time`.
-  // This method tries to schedule the event as accurately as possible,
-  // but it will never be exact as `AudioNode.start` or `AudioParam.scheduleSetValue`.
-  callbackAtTime: function(func, time) {
-    return this._createEvent(func, time).tolerance(null, 0)
-  },
+// Stretches `deadline` and `repeat` of all scheduled `events` by `ratio`, keeping
+// their relative distance to `tRef`. In fact this is equivalent to changing the tempo.
+WAAClock.prototype.timeStretch = function(tRef, events, ratio) {
+  events.forEach(function(event) { event.timeStretch(tRef, ratio) })
+  return events
+}
 
-  // Stretch time and repeat time of all scheduled `events` by `ratio`, keeping
-  // their relative distance. In fact this is equivalent to changing the tempo.
-  timeStretch: function(events, ratio) {
+// ---------- Private ---------- //
+
+// Removes all scheduled events and starts the clock 
+WAAClock.prototype.start = function() {
+  if (this._started === false) {
     var self = this
-      , eventRef = _.min(events, function(e) { return e.time })
-      , tRef1 = eventRef.time
-      , tRef2 = this._absTime(ratio * this._relTime(tRef1))
-    events.forEach(function(event) {
-      if(event.isRepeated()) event.repeat(event.repeatTime * ratio)
-      event.schedule(tRef2 + ratio * (event.time - tRef1))
-    })
-    return events
-  },
+    this._started = true
+    this._events = []
 
-  // ---------- Private ---------- //
-
-  // Removes all scheduled events and starts the clock 
-  start: function() {
-    if (this._started === false) {
-      var self = this
-      this._started = true
-      this._events = []
-
-      var bufferSize = 256
-      // We have to keep a reference to the node to avoid garbage collection
-      this._clockNode = this.context.createScriptProcessor(bufferSize, 1, 1)
-      this._clockNode.connect(this.context.destination)
-      this._clockNode.onaudioprocess = function () {
-        setTimeout(function() { self._tick() }, 0)
-      }
+    var bufferSize = 256
+    // We have to keep a reference to the node to avoid garbage collection
+    this._clockNode = this.context.createScriptProcessor(bufferSize, 1, 1)
+    this._clockNode.connect(this.context.destination)
+    this._clockNode.onaudioprocess = function () {
+      process.nextTick(function() { self._tick() })
     }
-  },
-
-  // Stops the clock
-  stop: function() {
-    if (this._started === true) {
-      this._started = false
-      this._clockNode.disconnect()
-    }  
-  },
-
-  // This function is ran periodically, and at each tick it executes
-  // events for which `currentTime` is included in their tolerance interval.
-  _tick: function() {
-    var event = this._events.shift()
-
-    while(event && event._earliestTime <= this.context.currentTime) {
-      this._handleEvent(event)
-      event = this._events.shift()
-    }
-
-    // Put back the last event
-    if(event) this._events.unshift(event)
-  },
-
-  // Handles an event
-  _handleEvent: function(event) {
-    if (this.context.currentTime < event._expireTime) {
-      event.func()
-      event.emit('executed')
-    } else {
-      event.emit('expired')
-      console.warn('event expired')
-    }
-    if (event.isRepeated())
-      event.schedule(event.time + event.repeatTime)
-  },
-
-  // Creates an event and insert it to the list
-  _createEvent: function(func, time) {
-    var event = new Event(this, time, func)
-    event.tolerance(this.toleranceLate, this.toleranceEarly)
-    return event
-  },
-
-  // Inserts an event to the list
-  _insertEvent: function(event) {
-    this._events.splice(this._indexByTime(event._earliestTime), 0, event)
-  },
-
-  // Removes an event from the list
-  _removeEvent: function(event) {
-    var ind = this._events.indexOf(event)
-    if (ind !== -1) this._events.splice(ind, 1)
-  },
-
-  // Returns the index of the first event whose time is >= to `time`
-  _indexByTime: function(time) {
-    return _.sortedIndex(this._events, {_earliestTime: time}, function(e) { return e._earliestTime })
-  },
-
-  // Converts from relative time to absolute time
-  _absTime: function(relTime) {
-    return relTime + this.context.currentTime
-  },
-
-  // Converts from absolute time to relative time 
-  _relTime: function(absTime) {
-    return absTime - this.context.currentTime
   }
-})
+}
 
-},{"events":22,"underscore":67,"util":26}],70:[function(require,module,exports){
+// Stops the clock
+WAAClock.prototype.stop = function() {
+  if (this._started === true) {
+    this._started = false
+    this._clockNode.disconnect()
+  }  
+}
+
+// This function is ran periodically, and at each tick it executes
+// events for which `currentTime` is included in their tolerance interval.
+WAAClock.prototype._tick = function() {
+  var event = this._events.shift()
+
+  while(event && event._earliestTime <= this.context.currentTime) {
+    event._execute()
+    event = this._events.shift()
+  }
+
+  // Put back the last event
+  if(event) this._events.unshift(event)
+}
+
+// Creates an event and insert it to the list
+WAAClock.prototype._createEvent = function(func, deadline) {
+  return new Event(this, deadline, func)
+}
+
+// Inserts an event to the list
+WAAClock.prototype._insertEvent = function(event) {
+  this._events.splice(this._indexByTime(event._earliestTime), 0, event)
+}
+
+// Removes an event from the list
+WAAClock.prototype._removeEvent = function(event) {
+  var ind = this._events.indexOf(event)
+  if (ind !== -1) this._events.splice(ind, 1)
+}
+
+// Returns true if `event` is in queue, false otherwise
+WAAClock.prototype._hasEvent = function(event) {
+ return this._events.indexOf(event) !== -1
+}
+
+// Returns the index of the first event whose deadline is >= to `deadline`
+WAAClock.prototype._indexByTime = function(deadline) {
+  // performs a binary search
+  var low = 0
+    , high = this._events.length
+    , mid
+  while (low < high) {
+    mid = Math.floor((low + high) / 2)
+    if (this._events[mid]._earliestTime < deadline)
+      low = mid + 1
+    else high = mid
+  }
+  return low
+}
+
+// Converts from relative time to absolute time
+WAAClock.prototype._absTime = function(relTime) {
+  return relTime + this.context.currentTime
+}
+
+// Converts from absolute time to relative time 
+WAAClock.prototype._relTime = function(absTime) {
+  return absTime - this.context.currentTime
+}
+}).call(this,require('_process'))
+},{"_process":24}],70:[function(require,module,exports){
 var WAAOffsetNode = require('./lib/WAAOffsetNode')
 module.exports = WAAOffsetNode
 if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
