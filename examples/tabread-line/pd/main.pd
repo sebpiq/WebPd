@@ -1,4 +1,4 @@
-#N canvas 304 159 789 535 10;
+#N canvas 301 164 789 535 10;
 #X obj 118 77 soundfiler;
 #X msg 118 49 read -resize samples/\$1 \$2-SAMPLE;
 #X obj 145 158 / 44100;

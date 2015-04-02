@@ -492,7 +492,9 @@ exports.Storage = {
   get: function(uri, done) { }
 }
 },{}],6:[function(require,module,exports){
-var expect = require('chai').expect
+var EventEmitter = require('events').EventEmitter
+  , _ = require('underscore')
+  , expect = require('chai').expect
   , pdGlob = require('../global')
 
 
@@ -505,13 +507,75 @@ exports.NamedMixin = {
   setName: function(name) {
     expect(name).to.be.a('string', 'name')
     var oldName = this.name
+    this.emit('changing:name', oldName, name)
     this.name = name
     pdGlob.namedObjects.register(this, this.type, name, this.nameIsUnique, oldName)
     this.emit('changed:name', oldName, name)
   }
 
 }
-},{"../global":9,"chai":27}],7:[function(require,module,exports){
+
+
+// A mixin for objects that reference another named object, such as [tabread~] or [delread~]
+// Everytime for any reason the `resolved` of the reference changes, "changed" is emitted,
+// with arguments (newResolved, oldResolved)
+var Reference = exports.Reference = function(referencedType) {
+  this.referencedType = referencedType
+  this._onNewObject = null
+  this._onChangedName = null
+  this.resolved = null
+  this._eventName = 'namedObjects:registered:' + this.referencedType
+}
+
+_.extend(Reference.prototype, EventEmitter.prototype, {
+
+  set: function(name) {
+    // Try to fetch the referenced object from `namedObjects`
+    var self = this
+      , resolved = pdGlob.namedObjects.get(this.referencedType, name)[0]
+
+    this.name = name
+    this._stopListening()
+    if (resolved) 
+      this._setResolved(resolved)
+    
+    // If the object was not found, we listen to subsequent new objects of `referencedType`
+    // being registered in case the object we're waiting for comes up.
+    else {
+      this._setResolved(null)
+      this._onNewObject = function(obj) {
+        if (obj.name === name) {
+          self._stopListening()
+          self._setResolved(obj)
+        }
+      }
+      pdGlob.emitter.on(this._eventName, this._onNewObject)
+    }
+  },
+
+  _setResolved: function(newObj) {
+    var self = this
+      , oldObj = this.resolved
+    this.resolved = newObj
+
+    if (oldObj) oldObj.removeListener('changing:name', self._onChangedName)
+
+    if (newObj) {
+      this._onChangedName = function() { self._setResolved(null) }
+      newObj.on('changing:name', this._onChangedName)
+    }
+    this.emit('changed', newObj, oldObj)
+  },
+
+  _stopListening: function() {
+    if (this._onNewObject) {
+      pdGlob.emitter.removeListener(this._eventName, this._onNewObject)
+      this._onNewObject = null
+    }
+  }
+
+})
+},{"../global":9,"chai":27,"events":22,"underscore":67}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -861,21 +925,21 @@ exports.namedObjects = {
  *
  */
 
-var _ = require('underscore')
+var EventEmitter = require('events').EventEmitter
+  , _ = require('underscore')
   , expect = require('chai').expect
   , WAAOffset = require('waaoffsetnode')
   , WAAWhiteNoise = require('waawhitenoisenode')
   , WAATableNode = require('waatablenode')
   , utils = require('../core/utils')
+  , mixins = require('../core/mixins')
   , PdObject = require('../core/PdObject')
   , portlets = require('./portlets')
   , pdGlob = require('../global')
 
 exports.declareObjects = function(library) {
 
-  // TODO : When phase is set, the current oscillator will be immediately disconnected,
-  // while ideally, it should be disconnected only at `futureTime` 
-  library['osc~'] = PdObject.extend({
+  var _OscBase = PdObject.extend({
 
     type: 'osc~',
 
@@ -885,10 +949,10 @@ exports.declareObjects = function(library) {
         message: function(args) {
           var frequency = args[0]
           if (!this.hasDspSource()) {
-            expect(frequency).to.be.a('number', 'osc~::frequency')
+            expect(frequency).to.be.a('number', this.obj.type + '::frequency')
+            if (frequency === Infinity) frequency = 0
             this.obj.frequency = frequency
-            if (this.obj._oscNode)
-              this.obj._oscNode.frequency.setValueAtTime(frequency, pdGlob.futureTime / 1000 || 0)
+            this.obj._updateFrequency()
           }
         }
       }),
@@ -897,8 +961,7 @@ exports.declareObjects = function(library) {
         message: function(args) {
           var phase = args[0]
           expect(phase).to.be.a('number', 'osc~::phase')
-          if (pdGlob.isStarted)
-            this.obj._createOscillator(phase)
+          this.obj._updatePhase(phase)
         }
       })
 
@@ -908,7 +971,16 @@ exports.declareObjects = function(library) {
 
     init: function(args) {
       this.frequency = args[0] || 0
-    },
+    }
+
+  })
+
+
+  // TODO : When phase is set, the current oscillator will be immediately disconnected,
+  // while ideally, it should be disconnected only at `futureTime` 
+  library['osc~'] = _OscBase.extend({
+
+    type: 'osc~',
 
     start: function() {
       this._createOscillator(0)
@@ -930,9 +1002,124 @@ exports.declareObjects = function(library) {
       this.o(0).setWaa(this._oscNode, 0)
       this.i(0).setWaa(this._oscNode.frequency, 0)
       this.i(0).message([this.frequency])
+    },
+
+    _updateFrequency: function() {
+      if (this._oscNode)
+        this._oscNode.frequency.setValueAtTime(this.frequency, pdGlob.futureTime / 1000 || 0)
+    },
+
+    _updatePhase: function(phase) {
+      if (pdGlob.isStarted)
+        this._createOscillator(phase)
     }
 
   })
+
+
+  library['phasor~'] = _OscBase.extend({
+
+    type: 'phasor~',
+
+    start: function() {
+      this._createOscillator(0)
+    },
+
+    stop: function() {
+      this._oscNode.stop(0)
+      this._oscNode = null
+      this._gainNode = null
+      this._offsetNode = null
+    },
+
+    _createOscillator: function(phase) {
+      this._gainNode = pdGlob.audio.context.createGain()
+      this._gainNode.gain.value = 0.5
+
+      this._oscNode = pdGlob.audio.context.createOscillator()
+      this._oscNode.type = 'sawtooth'
+      this._oscNode.start(pdGlob.futureTime / 1000 || 0)
+      this._oscNode.connect(this._gainNode)
+      
+      this._offsetNode = new WAAOffset(pdGlob.audio.context)
+      this._offsetNode.offset.value = 1
+      this._offsetNode.connect(this._gainNode)
+
+      this.o(0).setWaa(this._gainNode, 0)
+      this.i(0).setWaa(this._oscNode.frequency, 0)
+      this.i(0).message([this.frequency])
+    },
+
+    _updateFrequency: function() {
+      if (this._oscNode)
+        this._oscNode.frequency.setValueAtTime(this.frequency, pdGlob.futureTime / 1000 || 0)
+    },
+
+    _updatePhase: function(phase) {
+      if (pdGlob.isStarted)
+        this._createOscillator(phase)
+    }
+
+  })
+
+  // NB : This should work, but for now it doesn't seem to.
+  // issues filed for chrome here : https://code.google.com/p/chromium/issues/detail?id=471675
+  // and firefox here : https://bugzilla.mozilla.org/show_bug.cgi?id=1149053
+
+  // Another possible technique would be to use 2 WaveShaperNodes one with the sign function, 
+  // The other with acos.
+
+  // TODO : When phase is set, the current oscillator will be immediately disconnected,
+  // while ideally, it should be disconnected only at `futureTime`
+  // TODO: phase
+  /*library['phasor~'] = _OscBase.extend({
+
+    type: 'phasor~',
+
+    start: function() {
+      this._createOscillator(0)
+    },
+
+    stop: function() {
+      this._bufferSource.stop(0)
+      this._bufferSource = null
+    },
+
+    _createOscillator: function(phase) {
+      var sampleRate = pdGlob.audio.context.sampleRate
+        , buffer = pdGlob.audio.context.createBuffer(1, sampleRate, sampleRate)
+        , array = buffer.getChannelData(0)
+        , acc = phase, step = 1 / sampleRate, i
+
+      for (i = 0; i < sampleRate; i++) {
+        array[i] = (acc % 1)
+        acc += step
+      }
+
+      this._bufferSource = pdGlob.audio.context.createBufferSource()
+      this._bufferSource.buffer = buffer
+      this._bufferSource.loop = true
+      this._bufferSource.start(pdGlob.futureTime / 1000 || 0)
+      
+      this.o(0).setWaa(this._bufferSource, 0)
+      this.i(0).setWaa(this._bufferSource.playbackRate, 0)
+      this.i(0).message([this.frequency])
+    },
+
+    _updateFrequency: function() {
+      if (this._bufferSource)
+        this._bufferSource.playbackRate.setValueAtTime(this.frequency, pdGlob.futureTime / 1000 || 0)
+    },
+
+    _updatePhase: function(phase) {
+      if (pdGlob.isStarted)
+        this._createOscillator(phase)
+    }
+
+  })*/
+
+
+
 
   library['noise~'] = PdObject.extend({
 
@@ -1370,50 +1557,21 @@ exports.declareObjects = function(library) {
   var _TabBase = PdObject.extend({
 
     init: function(args) {
-      this.arrayName = args[0]
-      this.array = null
-      this._onNewArrayHandler = null
-      this._onDataChangedHandler = null
-    },
-
-    setArrayName: function(name) {
-      // If we were previously waiting for an array to be registered, we stop listening 
-      if (this._onNewArrayHandler)
-        pdGlob.emitter.removeListener('namedObjects:registered:array', self._onNewArrayHandler) 
-      
-      // Save the new array name, and try to fetch that array from `namedObjects`
-      this.arrayName = name
-      var array = pdGlob.namedObjects.get('array', name)[0]
-        , self = this
-
-      if (array) this.array = array 
-      
-      // If the array was not found, we listen to subsequent new arrays being registered
-      // in case the array we're waiting for comes up.
-      else {
-        console.warn('array with name ' + name + ' doesn\'t exist')
-        this._onNewArrayHandler = function(array) {
-          if (array.name === name) {
-            self._setArray(array)
-            pdGlob.emitter.removeListener('namedObjects:registered:array', self._onNewArrayHandler)
-          }
-        }
-        pdGlob.emitter.on('namedObjects:registered:array', this._onNewArrayHandler)
-      }
-      
-    },
-
-    dataChanged: function() {},
-
-    _setArray: function(array) {
       var self = this
-      if (this.array) this.array.removeListener('changed:data', this._onDataChangedHandler)
-      this.array = array
-      this._onDataChangedHandler = function() {
-        self.dataChanged()
-      }
-      this.array.on('changed:data', this._onDataChangedHandler)
-    }
+      this.array = new mixins.Reference('array')
+      this._onDataChangedHandler = null
+
+      // When name of the referenced array is changing, we need to detach handlers
+      this.array.on('changed', function(newArray, oldArray) {
+        if (oldArray) oldArray.removeListener('changed:data', self._onDataChangedHandler)
+        if (newArray) {
+          self._onDataChangedHandler = function() { self.dataChanged() }
+          newArray.on('changed:data', self._onDataChangedHandler)
+        }
+      })
+    },
+
+    dataChanged: function() {}
 
   })
 
@@ -1428,7 +1586,7 @@ exports.declareObjects = function(library) {
         message: function(args) {
           var method = args[0]
           if (method === 'set')
-            this.obj.setArrayName(args[1])
+            this.obj.array.set(args[1])
           else
             console.error('unknown method ' + method)
         },
@@ -1448,9 +1606,12 @@ exports.declareObjects = function(library) {
 
     outletDefs: [portlets.DspOutlet],
 
-    init: function() {
+    init: function(args) {
+      var self = this
+        , arrayName = args[0]
       _TabBase.prototype.init.apply(this, arguments)
-      if (this.arrayName) this.setArrayName(this.arrayName)
+      this.array.on('changed', function() { self._updateDsp() })
+      if (arrayName) this.array.set(arrayName)
     },
 
     start: function() {
@@ -1466,22 +1627,110 @@ exports.declareObjects = function(library) {
       this._gainNode = null
     },
 
-    setArrayName: function(name) {
-      _TabBase.prototype.setArrayName.apply(this, arguments)
-      this._updateDsp(true)
-    },
-
     dataChanged: function() {
-      if (this._tableNode) this._tableNode.table = this.array.data
+      if (this._tableNode) this._tableNode.table = this.array.resolved.data
     },
 
     _updateDsp: function(starting) {
-      if ((pdGlob.isStarted || starting) && this.array && this.i(0).hasDspSource()) {
-        this._tableNode.table = this.array.data
+      if ((pdGlob.isStarted || starting) && this.array.resolved && this.i(0).hasDspSource()) {
+        this._tableNode.table = this.array.resolved.data
         this._tableNode.connect(this._gainNode)
       } else if (this._tableNode) {
         this._tableNode.disconnect()
       }
+    }
+
+  })
+
+  library['delwrite~'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
+
+    type: 'delwrite~',
+
+    inletDefs: [portlets.DspInlet],
+
+    init: function(args) {
+      var name = args[0]
+        , maxDelayTime = args[1]
+      this.maxDelayTime = maxDelayTime || 1000
+      if (name) this.setName(name)
+    },
+
+    start: function() {
+      this._pipeNode = pdGlob.audio.context.createGain()
+      this.i(0).setWaa(this._pipeNode, 0)
+      this.emit('started')
+
+    },
+
+    stop: function() {
+      this._pipeNode.disconnect()
+      this._pipeNode = null
+    }
+
+  })
+
+  library['delread~'] = library['vd~'] = PdObject.extend({
+
+    type: 'delread~',
+
+    inletDefs: [
+      portlets.DspInlet.extend({
+        message: function(args) {
+          var delayTime = args[0]
+          this.obj.setDelayTime(delayTime)
+        }
+      })
+    ],
+    outletDefs: [portlets.DspOutlet],
+
+    init: function(args) {
+      var self = this
+        , delayName = args[0]
+        , initialDelayTime = args[1]
+      this._delayTime = initialDelayTime || 0
+      this._delWrite = new mixins.Reference('delwrite~')
+      this._delWrite.on('changed', function(newObj, oldObj) {
+        if (pdGlob.isStarted && newObj) self._createDelay()
+      })
+      if (delayName) this._delWrite.set(delayName)
+    },
+
+    start: function() {
+      this._toSecondsGain = pdGlob.audio.context.createGain()
+      this._toSecondsGain.gain.value = 0.001
+      this.i(0).setWaa(this._toSecondsGain, 0)
+      this._createDelay()
+    },
+
+    stop: function() {
+      this._toSecondsGain = null
+      this._delayNode.disconnect()
+      this._delayNode = null
+    },
+
+    setDelayTime: function(delayTime) {
+      expect(delayTime).to.be.a('number')
+      this._delayTime = delayTime
+      if (this._delayNode && !this.i(0).hasDspSource())
+        this._delayNode.delayTime.setValueAtTime(this._delayTime / 1000, pdGlob.futureTime / 1000 || 0)
+    },
+
+    _createDelay: function() {
+      if (this._delayNode) this._delayNode.disconnect()
+      var maxDelayTime = this._delWrite.resolved ? this._delWrite.resolved.maxDelayTime / 1000 : 1
+        , self = this
+      this._delayNode = pdGlob.audio.context.createDelay(maxDelayTime)
+      this._toSecondsGain.connect(this._delayNode.delayTime)
+      this.o(0).setWaa(this._delayNode, 0)
+      this.setDelayTime(this._delayTime)
+      if (this._delWrite.resolved) {
+        var doConnection = function() { self._delWrite.resolved._pipeNode.connect(self._delayNode) }
+        if (this._delWrite.resolved._pipeNode)
+          doConnection()
+        else
+          this._delWrite.resolved.once('started', doConnection)
+      }
+        
     }
 
   })
@@ -1502,7 +1751,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"underscore":67,"waaoffsetnode":70,"waatablenode":72,"waawhitenoisenode":76}],11:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"events":22,"underscore":67,"waaoffsetnode":70,"waatablenode":72,"waawhitenoisenode":76}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1997,6 +2246,7 @@ exports.declareObjects = function(library) {
 
   })
 
+  // Should tick happen at future time ?
   library['metro'] = PdObject.extend({
 
     type: 'metro',
@@ -20424,12 +20674,20 @@ if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
 var WAAOffsetNode = module.exports = function(context) {
   this.context = context
 
-  // Ones generator
-  this._ones = context.createOscillator()
-  this._ones.frequency.value = 0
-  this._ones.setPeriodicWave(context.createPeriodicWave(
-    new Float32Array([0, 1]), new Float32Array([0, 0])))
-  this._ones.start(0)
+  // Ones generator. We use only a single generator 
+  // for all WAAOfsetNodes in the same AudioContext
+  this._ones = WAAOffsetNode._ones.filter(function(ones) {
+    return ones.context === context
+  })[0]
+  if (this._ones) this._ones = this._ones.ones 
+  else {
+    this._ones = context.createOscillator()
+    this._ones.frequency.value = 0
+    this._ones.setPeriodicWave(context.createPeriodicWave(
+      new Float32Array([0, 1]), new Float32Array([0, 0])))
+    this._ones.start(0)
+    WAAOffsetNode._ones.push({ context: context, ones: this._ones })
+  }
 
   // Multiplier
   this._output = context.createGain()
@@ -20445,6 +20703,8 @@ WAAOffsetNode.prototype.connect = function() {
 WAAOffsetNode.prototype.disconnect = function() {
   this._output.disconnect.apply(this._output, arguments)
 }
+
+WAAOffsetNode._ones = []
 },{}],72:[function(require,module,exports){
 var WAATableNode = require('./lib/WAATableNode')
 module.exports = WAATableNode

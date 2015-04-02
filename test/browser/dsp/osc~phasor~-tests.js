@@ -69,7 +69,7 @@ describe('dsp.osc~', function() {
       ], done)
     })
 
-    it('take a input signal to modulate the frequency', function(done) {
+    it('should take an input signal to modulate the frequency', function(done) {
       var patch = Pd.createPatch()
         , osc = patch.createObject('osc~')
         , dac = patch.createObject('dac~')
@@ -159,6 +159,171 @@ describe('dsp.osc~', function() {
 
         helpers.expectSamples.bind(helpers, function() {
           osc.i(1).message([1.25])
+        }, [
+          [  
+            cos(Math.PI / 2), cos(k*1 + Math.PI / 2), cos(k*2  + Math.PI / 2),
+            cos(k*3  + Math.PI / 2), cos(k*4  + Math.PI / 2), cos(k*5  + Math.PI / 2),
+            cos(k*6  + Math.PI / 2), cos(k*7  + Math.PI / 2), cos(k*8  + Math.PI / 2)
+          ],
+          [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ])
+
+      ], done)
+    })
+
+    it.skip('should schedule phase change in the future', function(done) {
+      // To work properly we need to be able to schedule a connect and a disconnect
+      // in the future. That way we can setWaa the new oscillator at the right time.
+    })
+
+  })
+
+})
+
+describe.skip('dsp.phasor~', function() {
+
+  afterEach(function() { helpers.afterEach() })
+
+  describe('contructor', function() {
+
+    it.skip('should have frequency 0 by default', function(done) {
+      var patch = Pd.createPatch()
+        , phasor = patch.createObject('phasor~')
+        , dac = patch.createObject('dac~')
+      phasor.o(0).connect(dac.i(0))
+
+      helpers.expectSamples(function() {}, [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ], done)
+    })
+
+    it('should take a frequency as first argument', function(done) {
+      var patch = Pd.createPatch()
+        , phasor = patch.createObject('phasor~', [440])
+        , dac = patch.createObject('dac~')
+        , k = 1 / (Pd.getSampleRate() / 440)
+      phasor.o(0).connect(dac.i(0))
+
+      helpers.expectSamples(function() {}, [
+        [0, k, 2*k, 3*k, 4*k, 5*k, 6*k, 7*k, 8*k, 9*k],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ], done)
+    })
+
+  })
+
+  describe('i(0)', function() {
+
+    it('should update frequency when sending a message', function(done) {
+      var patch = Pd.createPatch()
+        , phasor = patch.createObject('phasor~', [440])
+        , dac = patch.createObject('dac~')
+        , k = 1 / (Pd.getSampleRate() / 660)
+      phasor.o(0).connect(dac.i(0))
+
+      helpers.expectSamples(function() {
+        phasor.i(0).message([660])
+      }, [
+        [0, k, 2*k, 3*k, 4*k, 5*k, 6*k, 7*k, 8*k, 9*k],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ], done)
+    })
+
+    it('should take an input signal to modulate the frequency', function(done) {
+      var patch = Pd.createPatch()
+        , phasor = patch.createObject('phasor~')
+        , dac = patch.createObject('dac~')
+        , line = patch.createObject('line~')
+        , k = 1 / Pd.getSampleRate()
+        , phases = [0], acc = 0
+
+      _.range(4410).forEach(function(i) {
+        if (i % 128 === 0)
+          k = 1 / (Pd.getSampleRate() / (i + 1))
+        acc += k
+        phases.push(acc % 1)
+      })
+
+      phasor.o(0).connect(dac.i(0))
+      line.o(0).connect(phasor.i(0))
+
+      helpers.expectSamples(function() {
+        line.i(0).message([10])
+        line.i(0).message([10 + 44100, 10]) // [0, 1, 2, 3, ...]
+      },
+      [
+        phases,
+        _.range(4410).map(function() { return 0 })
+      ], done)
+    })
+
+    it.skip('should schedule frequency change in the future', function(done) {
+      var patch = Pd.createPatch()
+        , phasor = patch.createObject('phasor~', [440])
+        , dac = patch.createObject('dac~')
+        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k2 = 2*Math.PI*660 / Pd.getSampleRate()
+        , phases = [0], acc = 0
+      _.range(8).forEach(function(i) {
+        acc += (i < 5) ? k : k2
+        phases.push(acc)
+      })
+
+      phasor.o(0).connect(dac.i(0))
+
+      helpers.expectSamples(function() {
+        phasor.i(0).future((1 / Pd.getSampleRate()) * 5 * 1000, [660])
+      }, [
+        phases.map(cos),
+        [0, 0, 0, 0, 0, 0, 0, 0, 0]
+      ], done)
+    })
+
+  })
+
+  describe.skip('i(1)', function() {
+
+    it('should reset the phase when receiving a message', function(done) {
+      var patch = Pd.createPatch()
+        , phasor = patch.createObject('phasor~', [440])
+        , dac = patch.createObject('dac~')
+        , k = 2*Math.PI*440 / Pd.getSampleRate()
+      phasor.o(0).connect(dac.i(0))
+
+      async.series([
+        
+        helpers.expectSamples.bind(helpers, function() {
+          phasor.i(1).message([0.25])
+        }, [
+          [  
+            cos(Math.PI / 2), cos(k*1 + Math.PI / 2), cos(k*2  + Math.PI / 2),
+            cos(k*3  + Math.PI / 2), cos(k*4  + Math.PI / 2), cos(k*5  + Math.PI / 2),
+            cos(k*6  + Math.PI / 2), cos(k*7  + Math.PI / 2), cos(k*8  + Math.PI / 2)
+          ],
+          [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ]),
+
+        helpers.expectSamples.bind(helpers, function() {
+          phasor.i(1).message([0.5])
+        }, [
+          [  
+            -1, cos(k*1 + Math.PI), cos(k*2  + Math.PI),
+            cos(k*3  + Math.PI), cos(k*4  + Math.PI), cos(k*5  + Math.PI),
+            cos(k*6  + Math.PI), cos(k*7  + Math.PI), cos(k*8  + Math.PI)
+          ],
+          [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ]),
+
+        helpers.expectSamples.bind(helpers, function() {
+          phasor.i(1).message([0.75])
+        }, [
+          [0, sin(k*1), sin(k*2), sin(k*3), sin(k*4), sin(k*5), sin(k*6), sin(k*7), sin(k*8)],
+          [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ]),
+
+        helpers.expectSamples.bind(helpers, function() {
+          phasor.i(1).message([1.25])
         }, [
           [  
             cos(Math.PI / 2), cos(k*1 + Math.PI / 2), cos(k*2  + Math.PI / 2),

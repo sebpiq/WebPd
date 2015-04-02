@@ -32,7 +32,7 @@ describe('dsp.tabread~', function() {
 
       array = patch.createObject('array', ['BLO', 4])
       array.setData(new Float32Array([1, 2, 3, 4]))
-      assert.equal(tabread.array, array)
+      assert.equal(tabread.array.resolved, array)
     })
 
   })

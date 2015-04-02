@@ -1,0 +1,15 @@
+#N canvas 51 96 762 387 10;
+#X obj 127 161 dac~;
+#X obj 128 101 line~;
+#X obj 128 40 loadbang;
+#X msg 128 71 220;
+#X msg 199 70 \$1 1000;
+#X obj 199 40 r freq;
+#X obj 128 130 phasor~;
+#X connect 1 0 6 0;
+#X connect 2 0 3 0;
+#X connect 3 0 1 0;
+#X connect 4 0 1 0;
+#X connect 5 0 4 0;
+#X connect 6 0 0 0;
+#X connect 6 0 0 1;
