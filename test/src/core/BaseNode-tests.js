@@ -44,11 +44,12 @@ describe('core.BaseNode', function() {
     })
 
     it('should call init with arguments', function() {
-      var node = new MyNode()
-      assert.equal(node.patch, null)
+      var node = new MyNode('patch', 11)
+      assert.equal(node.patch, 'patch')
+      assert.equal(node.id, 11)
       assert.deepEqual(node.initArgs, [])
       
-      node = new MyNode([1, 2])
+      node = new MyNode(null, null, [1, 2])
       assert.deepEqual(node.initArgs, [1, 2])
     })
   })

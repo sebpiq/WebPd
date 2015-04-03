@@ -57,10 +57,8 @@ var Pd = module.exports = {
 
 
       pdGlob.audio.start()
-      for (var patchId in pdGlob.patches) {
+      for (var patchId in pdGlob.patches)
         pdGlob.patches[patchId].start()
-        pdGlob.patches[patchId].startPortlets()
-      }
       pdGlob.isStarted = true
     }
   },
@@ -69,10 +67,8 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.isStarted = false
-      for (var patchId in pdGlob.patches) {
+      for (var patchId in pdGlob.patches)
         pdGlob.patches[patchId].stop()
-        pdGlob.patches[patchId].stopPortlets()
-      }
       pdGlob.audio.stop()
     }
   },
@@ -90,6 +86,19 @@ var Pd = module.exports = {
     pdGlob.emitter.on('msg:' + name, callback)
   },
 
+  // Registers the abstraction defined in `patchData` as `name`.
+  // `patchData` can be a string (Pd file), or an object (pd.json)
+  registerAbstraction: function(name, patchData) {
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+    var CustomObject = function(patch, id, args) {
+      var patch = new Patch(patch, id, args)
+      Pd._preparePatch(patch, patchData)
+      return patch
+    }
+    CustomObject.prototype = Patch.prototype
+    pdGlob.library[name] = CustomObject
+  },
+
   // Create a new patch
   createPatch: function() {
     var patch = this._createPatch()
@@ -104,22 +113,8 @@ var Pd = module.exports = {
     var patch = this._createPatch()
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     this._preparePatch(patch, patchData)
-    patch.objects.forEach(function(obj) { obj.load() })
     if (pdGlob.isStarted) patch.start()
     return patch
-  },
-
-  // Registers the abstraction defined in `patchData` as `name`.
-  // `patchData` can be a string (Pd file), or an object (pd.json)
-  registerAbstraction: function(name, patchData) {
-    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
-    var CustomObject = function(args) {
-      var patch = new Patch(args)
-      Pd._preparePatch(patch, patchData)
-      return patch
-    }
-    CustomObject.prototype = Patch.prototype
-    pdGlob.library[name] = CustomObject
   },
 
   _createPatch: function() {
@@ -135,7 +130,7 @@ var Pd = module.exports = {
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
-        , obj = patch.createObject(proto, nodeData.args || [])
+        , obj = patch._createObject(proto, nodeData.args || [])
       if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })

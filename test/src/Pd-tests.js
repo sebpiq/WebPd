@@ -37,32 +37,6 @@ describe('Pd', function() {
       assert.equal(patch3.startCalled, 1)
     })
 
-    it('should start objects before portlets, inside subpatches and abstractions', function() {
-      var called = []
-      pdGlob.library['spy'] = PdObject.extend({
-        outletDefs: [
-          portlets.Outlet.extend({
-            start: function() { called.push(this.obj.spyId + ':o(0).start') }
-          })
-        ],
-        init: function(args) {
-          this.spyId = args[0]
-        },
-        start: function() {
-          called.push(this.spyId + ':start')
-        }
-      })
-
-      var patch = Pd.createPatch()
-        , subpatch = patch.createObject('pd')
-        , spy1 = subpatch.createObject('spy', [1])
-        , spy2 = patch.createObject('spy', [2])
-
-      Pd.start()
-      assert.equal(called.length, 4)
-      assert.deepEqual(called, ['1:start', '2:start', '1:o(0).start', '2:o(0).start'])
-    })
-
   })
 
   describe('.stop', function() {
@@ -216,6 +190,20 @@ describe('Pd', function() {
       assert.equal(subpatch.o(0).connections.length, 2)
       assert.ok(subpatch.o(0).connections[0] === dac.i(0))
       assert.ok(subpatch.o(0).connections[1] === dac.i(1))
+    })
+    
+    it('should not call object.start twice if Pd already started', function() {
+      var patchStr = fs.readFileSync(__dirname + '/patches/logStartPatch.pd').toString()
+        , startCalled = 0
+        , logStart = PdObject.extend({
+          start: function() { startCalled++ }
+        })
+        , patch
+      pdGlob.library.logStart = logStart
+      Pd.start()
+      patch = Pd.loadPatch(patchStr)
+      assert.equal(patch.objects.length, 1)
+      assert.equal(startCalled, 1)
     })
 
   })

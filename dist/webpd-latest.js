@@ -58,10 +58,8 @@ var Pd = module.exports = {
 
 
       pdGlob.audio.start()
-      for (var patchId in pdGlob.patches) {
+      for (var patchId in pdGlob.patches)
         pdGlob.patches[patchId].start()
-        pdGlob.patches[patchId].startPortlets()
-      }
       pdGlob.isStarted = true
     }
   },
@@ -70,10 +68,8 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.isStarted = false
-      for (var patchId in pdGlob.patches) {
+      for (var patchId in pdGlob.patches)
         pdGlob.patches[patchId].stop()
-        pdGlob.patches[patchId].stopPortlets()
-      }
       pdGlob.audio.stop()
     }
   },
@@ -91,6 +87,19 @@ var Pd = module.exports = {
     pdGlob.emitter.on('msg:' + name, callback)
   },
 
+  // Registers the abstraction defined in `patchData` as `name`.
+  // `patchData` can be a string (Pd file), or an object (pd.json)
+  registerAbstraction: function(name, patchData) {
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+    var CustomObject = function(patch, id, args) {
+      var patch = new Patch(patch, id, args)
+      Pd._preparePatch(patch, patchData)
+      return patch
+    }
+    CustomObject.prototype = Patch.prototype
+    pdGlob.library[name] = CustomObject
+  },
+
   // Create a new patch
   createPatch: function() {
     var patch = this._createPatch()
@@ -105,22 +114,8 @@ var Pd = module.exports = {
     var patch = this._createPatch()
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     this._preparePatch(patch, patchData)
-    patch.objects.forEach(function(obj) { obj.load() })
     if (pdGlob.isStarted) patch.start()
     return patch
-  },
-
-  // Registers the abstraction defined in `patchData` as `name`.
-  // `patchData` can be a string (Pd file), or an object (pd.json)
-  registerAbstraction: function(name, patchData) {
-    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
-    var CustomObject = function(args) {
-      var patch = new Patch(args)
-      Pd._preparePatch(patch, patchData)
-      return patch
-    }
-    CustomObject.prototype = Patch.prototype
-    pdGlob.library[name] = CustomObject
   },
 
   _createPatch: function() {
@@ -136,7 +131,7 @@ var Pd = module.exports = {
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
-        , obj = patch.createObject(proto, nodeData.args || [])
+        , obj = patch._createObject(proto, nodeData.args || [])
       if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
@@ -186,13 +181,13 @@ var _ = require('underscore')
 
 // Base class for objects and patches. Example :
 //
-//     var node = new MyNode(arg1, arg2, arg3)
+//     var node = new MyNode([arg1, arg2, arg3])
 //
-var BaseNode = module.exports = function(args) {
+var BaseNode = module.exports = function(patch, id, args) {
   args = args || []
   var self = this
-  this.id = null                  // A patch-wide unique id for the object
-  this.patch = null               // The patch containing that node
+  this.id = id                      // A patch-wide unique id for the object
+  this.patch = patch                // The patch containing that node
 
   // create inlets and outlets specified in the object's proto
   this.inlets = this.inletDefs.map(function(inletType, i) {
@@ -231,10 +226,7 @@ _.extend(BaseNode.prototype, {
 
   // This method is called when dsp is stopped
   stop: function() {},
-
-  // Executed only when a patch is loaded
-  load: function() {},
-
+  
 
 /************************* Public API **********************/
 
@@ -290,6 +282,7 @@ _.extend(BaseNode.prototype, {
  */
 
 var _ = require('underscore')
+  , EventEmitter = require('events').EventEmitter
   , utils = require('./utils')
   , BaseNode = require('./BaseNode')
   , pdGlob = require('../global')
@@ -298,13 +291,13 @@ var _ = require('underscore')
 var Patch = module.exports = function() {
   BaseNode.apply(this, arguments)
   this.objects = []
-  this.endPoints = [] 
+  this.endPoints = []
   this.patchId = null         // A globally unique id for the patch
   this.sampleRate = pdGlob.settings.sampleRate
   this.blockSize = pdGlob.settings.blockSize
 }
 
-_.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
+_.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, EventEmitter.prototype, {
 
   type: 'patch',
 
@@ -313,19 +306,32 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
   },
 
   start: function() {
-    this.objects.forEach(function(obj) { obj.start() })
-  },
-
-  startPortlets: function() {
-    this.objects.forEach(function(obj) { obj.startPortlets() })
+    this._startStopGeneric('start', 'startPortlets')
+    this.emit('started')
   },
 
   stop: function() {
-    this.objects.forEach(function(obj) { obj.stop() })
+    this._startStopGeneric('stop', 'stopPortlets')
+    this.emit('stopped')
   },
 
-  stopPortlets: function() {
-    this.objects.forEach(function(obj) { obj.stopPortlets() })
+  _startStopGeneric: function(methObj, methPortlets) {
+    // When starting a patch, we need to take into account its nested structure,
+    // making sure that all objects even in subpatches are started first.
+    var _recursiveStartObjects = function(obj) {
+      if (obj instanceof Patch) {
+        patches.push(obj)
+        obj.objects.forEach(_recursiveStartObjects)
+      } else obj[methObj]()
+    }, patches = [this]
+    this.objects.forEach(_recursiveStartObjects)
+
+    // Only when all objects are started, we start all portlets including in subpatches.
+    patches.forEach(function(patch) {
+      patch.objects.forEach(function(obj) {
+        if (!(obj instanceof Patch)) obj[methPortlets]()
+      })
+    })
   },
 
   // Adds an object to the patch.
@@ -333,6 +339,15 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
   // This id can be used to uniquely identify the object in the patch.
   // Also, if the patch is playing, the `start` method of the object will be called.
   createObject: function(type, objArgs) {
+    var obj = this._createObject(type, objArgs)
+    if (pdGlob.isStarted) {
+      obj.start()
+      obj.startPortlets()
+    }
+    return obj
+  },
+
+  _createObject: function(type, objArgs) {
     var obj
     objArgs = objArgs || []
 
@@ -341,20 +356,12 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
       var constructor = pdGlob.library[type]
       if (constructor.prototype.doResolveArgs)
         objArgs = this.resolveArgs(objArgs)
-      obj = new constructor(objArgs)
+      obj = new constructor(this, this._generateId(), objArgs)
     } else throw new Error('unknown object ' + type)
 
     // Assign object unique id and add it to the patch
-    obj.id = this._generateId()
-    obj.patch = this
     this.objects[obj.id] = obj
     if (obj.endPoint) this.endPoints.push(obj)
-
-    // Start the object if Pd is started
-    if (pdGlob.isStarted) {
-      obj.start()
-      obj.startPortlets()
-    }
 
     // When [inlet], [outlet~], ... is added to a patch, we add their portlets
     // to the patch's portlets
@@ -363,7 +370,6 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, {
 
     return obj
   },
-
 
   // Takes a list of object arguments which might contain abbreviations
   // and dollar arguments, and returns a copy of that list, abbreviations
@@ -400,7 +406,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":9,"./BaseNode":2,"./utils":8,"underscore":67}],4:[function(require,module,exports){
+},{"../global":9,"./BaseNode":2,"./utils":8,"events":22,"underscore":67}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1659,7 +1665,6 @@ exports.declareObjects = function(library) {
       this._pipeNode = pdGlob.audio.context.createGain()
       this.i(0).setWaa(this._pipeNode, 0)
       this.emit('started')
-
     },
 
     stop: function() {
@@ -1689,23 +1694,23 @@ exports.declareObjects = function(library) {
         , initialDelayTime = args[1]
       this._delayTime = initialDelayTime || 0
       this._delWrite = new mixins.Reference('delwrite~')
-      this._delWrite.on('changed', function(newObj, oldObj) {
-        if (pdGlob.isStarted && newObj) self._createDelay()
-      })
       if (delayName) this._delWrite.set(delayName)
     },
 
     start: function() {
-      this._toSecondsGain = pdGlob.audio.context.createGain()
-      this._toSecondsGain.gain.value = 0.001
-      this.i(0).setWaa(this._toSecondsGain, 0)
       this._createDelay()
+      this._onDelWriteChanged = function(newObj, oldObj) {
+        if (pdGlob.isStarted && newObj) self._createDelay()
+      }
+      this._delWrite.on('changed', this._onDelWriteChanged)
     },
 
     stop: function() {
       this._toSecondsGain = null
       this._delayNode.disconnect()
       this._delayNode = null
+      this._delWrite.removeListener('changed', this._onDelWriteChanged)
+      this._onDelWriteChanged = null
     },
 
     setDelayTime: function(delayTime) {
@@ -1720,6 +1725,13 @@ exports.declareObjects = function(library) {
       var maxDelayTime = this._delWrite.resolved ? this._delWrite.resolved.maxDelayTime / 1000 : 1
         , self = this
       this._delayNode = pdGlob.audio.context.createDelay(maxDelayTime)
+
+      if (!this._toSecondsGain) {
+        this._toSecondsGain = pdGlob.audio.context.createGain()
+        this._toSecondsGain.gain.value = 0.001
+        this.i(0).setWaa(this._toSecondsGain, 0)
+      }
+
       this._toSecondsGain.connect(this._delayNode.delayTime)
       this.o(0).setWaa(this._delayNode, 0)
       this.setDelayTime(this._delayTime)
@@ -1727,8 +1739,9 @@ exports.declareObjects = function(library) {
         var doConnection = function() { self._delWrite.resolved._pipeNode.connect(self._delayNode) }
         if (this._delWrite.resolved._pipeNode)
           doConnection()
-        else
+        else {
           this._delWrite.resolved.once('started', doConnection)
+        }
       }
         
     }
@@ -1889,8 +1902,11 @@ exports.declareObjects = function(library) {
 
     outletDefs: [portlets.Outlet],
 
-    start: function() {
-      this.o(0).message(['bang'])
+    init: function() {
+      var self = this
+      this.patch.on('started', function() {
+        self.o(0).message(['bang'])
+      })
     }
 
   })
@@ -2644,6 +2660,19 @@ var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
     }).length > 0
   },
 
+  init: function() {
+    this._started = false
+  },
+
+  start: function() {
+    this._started = true
+  },
+
+  stop: function() {
+    this._waa = null
+    this._started = false
+  },
+
   setWaa: function(node, input) {
     var self = this
     this._waa = { node: node, input: input }
@@ -2651,7 +2680,7 @@ var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
     // remove offset for AudioParam
     if (node instanceof AudioParam) node.setValueAtTime(0, 0)
 
-    if (pdGlob.isStarted) {
+    if (this._started) {
       _.chain(this.connections)
         .filter(function(outlet) { return outlet instanceof DspOutlet })
         .forEach(function(outlet) { outlet._waaUpdate(self) }).value()
@@ -2664,28 +2693,31 @@ var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
 var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
 
   init: function() {
-    this._waaConnections = []
+    this._waaConnections = {}
+    this._started = false
   },
 
   start: function() {
+    this._started = true
     // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
     this.connections.forEach(this._waaConnect.bind(this))
   },
 
   stop: function() {
+    this._started = false
     // No need to filter dsp inlets as this should refuse connections to non-dsp inlets
     this.connections.forEach(this._waaDisconnect.bind(this))
-    this._waaConnections = []
+    this._waaConnections = {}
   },
 
   connection: function(inlet) {
     if (!(inlet instanceof DspInlet)) 
       throw new Error('can only connect to DSP inlet')
-    if (pdGlob.isStarted) this._waaConnect(inlet)
+    if (this._started) this._waaConnect(inlet)
   },
 
   disconnection: function(inlet) {
-    if (pdGlob.isStarted) this._waaDisconnect(inlet)
+    if (this._started) this._waaDisconnect(inlet)
   },
 
   message: function() {
@@ -2699,7 +2731,7 @@ var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
     // remove offset for AudioParam
     if (node instanceof AudioParam) node.setValueAtTime(0, 0)
 
-    if (pdGlob.isStarted) {
+    if (this._started) {
       _.values(this._waaConnections).forEach(function(connector) {
         connector.swapSource(node, output)
       })

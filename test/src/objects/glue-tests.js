@@ -141,7 +141,7 @@ describe('objects.glue', function() {
       var loadbang = patch.createObject('loadbang')
         , mailbox = patch.createObject('testingmailbox')
       loadbang.o(0).connect(mailbox.i(0))
-      loadbang.start()
+      patch.start()
       assert.deepEqual(mailbox.received, [['bang']])
     })
 

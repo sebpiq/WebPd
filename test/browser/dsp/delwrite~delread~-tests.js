@@ -38,6 +38,29 @@ describe('dsp.delwrite~/delread~', function() {
     ], done)
   })
 
+  it('should work if delwrite~ was started after', function(done) {
+    var patch = Pd.createPatch()
+      , delwrite = patch.createObject('delwrite~', ['bla', 200])
+      , delread
+      , line = patch.createObject('line~')
+      , dac = patch.createObject('dac~')
+
+    helpers.expectSamples(function() {
+      delwrite.stop()
+      delread = patch.createObject('delread~', ['bla', 0])
+      delwrite.start()
+      line.o(0).connect(delwrite.i(0))
+      line.i(0).message([0])
+      line.i(0).message([10, 10/Pd.getSampleRate() * 1000])
+      delread.i(0).message([4/Pd.getSampleRate() * 1000])
+      delread.o(0).connect(dac.i(0))
+      line.o(0).connect(dac.i(1))
+    }, [
+      [0, 0, 0, 0, 0, 1, 2, 3, 4, 5],
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    ], done)
+  })
+
   it('should be possible to have several delread~ for one delwrite~', function(done) {
     var patch = Pd.createPatch()
       , delread1 = patch.createObject('delread~', ['bla', 0])

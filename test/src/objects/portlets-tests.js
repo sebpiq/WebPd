@@ -109,7 +109,7 @@ describe('objects.portlets', function() {
 
     describe('setWaa', function() {
 
-      it('should maintain web audio connections', function() {
+      it('should maintain web audio connections if started', function() {
         Pd.start({audio: dummyAudio})
 
         var patch = Pd.createPatch()
@@ -194,7 +194,7 @@ describe('objects.portlets', function() {
         assert.throws(function() { dspOutlet.connect(inlet) })
       })
 
-      it('should establish the waa connection', function() {
+      it('should establish the waa connection if connecting AFTER portlets started', function() {
         var dspOutlet = new portlets.DspOutlet({}, 0)
           , dspInlet = new portlets.DspInlet({}, 0)
           , sourceNode = getDummyNode()
@@ -205,9 +205,33 @@ describe('objects.portlets', function() {
         dspInlet.setWaa(sinkNode, 0)
 
         Pd.start({ audio: dummyAudio })
+        dspOutlet.start()
+        dspInlet.start()
 
         assert.equal(getWaaConnections(dspOutlet).length, 0)
         dspOutlet.connect(dspInlet)
+        waaConnections = getWaaConnections(dspOutlet)
+        assert.equal(waaConnections.length, 1)
+        assert.equal(waaConnections[0]._source, sourceNode)
+        assert.equal(waaConnections[0]._destination, sinkNode)
+      })
+
+      it('should establish the waa connection if connecting BEFORE portlets started', function() {
+        var dspOutlet = new portlets.DspOutlet({}, 0)
+          , dspInlet = new portlets.DspInlet({}, 0)
+          , sourceNode = getDummyNode()
+          , sinkNode = getDummyNode()
+          , waaConnections
+
+        dspOutlet.setWaa(sourceNode, 0)
+        dspInlet.setWaa(sinkNode, 0)
+        dspOutlet.connect(dspInlet)
+        assert.equal(getWaaConnections(dspOutlet).length, 0)
+
+        Pd.start({ audio: dummyAudio })
+        dspOutlet.start()
+        dspInlet.start()
+
         waaConnections = getWaaConnections(dspOutlet)
         assert.equal(waaConnections.length, 1)
         assert.equal(waaConnections[0]._source, sourceNode)
@@ -229,6 +253,8 @@ describe('objects.portlets', function() {
         dspInlet.setWaa(sinkNode, 0)
 
         Pd.start({ audio: dummyAudio })
+        dspOutlet.start()
+        dspInlet.start()
 
         // Preparing the test
         dspOutlet.connect(dspInlet)
