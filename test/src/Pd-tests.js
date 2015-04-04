@@ -76,6 +76,20 @@ describe('Pd', function() {
 
   })
 
+  describe('.destroyPatch', function() {
+
+    it('should stop the patch and forget it', function() {
+      var patch = Pd.createPatch()
+        , stopCalled = false
+      Pd.start()
+      patch.stop = function() { stopCalled = true }
+      Pd.destroyPatch(patch)
+      assert.ok(!_.contains(_.values(pdGlob.patches), patch))
+      assert.equal(stopCalled, true)
+    })
+
+  })
+
   describe('.registerAbstraction', function() {
 
     it('should register abstractions rightly', function() {

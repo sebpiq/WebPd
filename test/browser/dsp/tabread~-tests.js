@@ -37,6 +37,19 @@ describe('dsp.tabread~', function() {
 
   })
 
+  it('should be possible to loadPatch when Pd is started', function() {
+    Pd.start()
+    var patch = Pd.loadPatch({
+      nodes: [
+        { id: 0, proto: 'table', args: ['BLA'] }, 
+        { id: 1, proto: '*~' }, 
+        { id: 2, proto: 'tabread~', args: ['BLA'] }
+      ],
+      connections: [{ source: { id: 1, port: 0 }, sink: { id: 2, port: 0 } }]
+    })
+    Pd.stop()
+  })
+
   describe('i(0)', function() {
 
     it('should read at the position given by the first inlet', function(done) {

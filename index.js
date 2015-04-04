@@ -21,7 +21,9 @@
 var _ = require('underscore')
   , pdfu = require('pd-fileutils')
   , Patch = require('./lib/core/Patch')
+  , PdObject = require('./lib/core/PdObject')
   , utils = require('./lib/core/utils')
+  , portlets = require('./lib/objects/portlets')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
   , interfaces = require('./lib/core/interfaces')
@@ -41,8 +43,14 @@ var Pd = module.exports = {
     if (!pdGlob.isStarted) {
 
       if (typeof AudioContext !== 'undefined') {
-        pdGlob.audio = opts.audio || new waa.Audio(pdGlob.settings.channelCount)
-        pdGlob.clock = opts.clock || new waa.Clock({ audioContext: pdGlob.audio.context })
+        pdGlob.audio = opts.audio || new waa.Audio({
+          channelCount : pdGlob.settings.channelCount,
+          audioContext: opts.audioContext
+        })
+        pdGlob.clock = opts.clock || new waa.Clock({
+          audioContext: pdGlob.audio.context,
+          waaClock: opts.waaClock
+        })
 
       // TODO : handle other environments better than like this
       } else {
@@ -106,6 +114,12 @@ var Pd = module.exports = {
     return patch
   },
 
+  // Stops and forgets a patch
+  destroyPatch: function(patch) {
+    patch.stop()
+    delete pdGlob.patches[patch.patchId]
+  },
+
   // Loads a patch from a string (Pd file), or from an object (pd.json)
   // TODO : problems of scheduling on load, for example executing [loadbang] ???
   //         should we use the `futureTime` hack? 
@@ -142,6 +156,11 @@ var Pd = module.exports = {
       if (!sourceObj || !sinkObj) throw new Error('invalid connection')
       sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
     })
+  },
+
+  core: {
+    PdObject: PdObject,
+    portlets: portlets
   },
 
   // Exposing this mostly for testing
