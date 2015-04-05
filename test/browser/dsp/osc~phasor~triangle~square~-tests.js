@@ -1,4 +1,6 @@
-var _ = require('underscore')
+var assert = require('assert')
+  , waatest = require('waatest')
+  , _ = require('underscore')
   , async = require('async')
   , helpers = require('../../helpers')
 
@@ -179,6 +181,71 @@ describe('dsp.osc~', function() {
   })
 
 })
+
+
+describe('dsp.triangle~', function() {
+
+  afterEach(function() { helpers.afterEach() })
+
+  it('should generate a triangle', function(done) {
+    var patch = Pd.createPatch()
+      , triangle = patch.createObject('triangle~', [1])
+      , dac = patch.createObject('dac~')
+      , k = 4 / Pd.getSampleRate()
+      , acc = 0
+      , expected = []
+    for (var i = 0; i < 10; i++) {
+      expected.push(acc)
+      acc += k
+    }
+
+    triangle.o(0).connect(dac.i(0))
+    helpers.renderSamples(2, 10, function() {}, function(err, block) {
+      assert.deepEqual(
+        block[0].map(function(v) { return waatest.utils.round(v, 4) }),
+        expected.map(function(v) { return waatest.utils.round(v, 4) })
+      )
+      assert.deepEqual(block[1], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+      done()
+    })
+  })
+
+})
+
+
+describe('dsp.square~', function() {
+  
+  afterEach(function() { helpers.afterEach() })
+
+  it('should generate a square', function(done) {
+    var patch = Pd.createPatch()
+      , sampleCount = 20
+      , square = patch.createObject('square~', [44100 / sampleCount])
+      , dac = patch.createObject('dac~')
+      , k = 4 / Pd.getSampleRate()
+      , acc = 0
+      , expected = []
+    for (var i = 0; i < sampleCount; i++) {
+      expected.push(acc)
+      acc += k
+    }
+    square.o(0).connect(dac.i(0))
+    helpers.renderSamples(2, sampleCount, function() {}, function(err, block) {
+      assert.equal(waatest.utils.round(block[0][0], 2), 0)
+      block[0].slice(1, sampleCount / 2).forEach(function(v) {
+        assert.ok(waatest.utils.round(v, 2) > 0.7)
+      })
+      assert.equal(waatest.utils.round(block[0][sampleCount / 2], 2), 0)
+      block[0].slice(sampleCount / 2 + 2).forEach(function(v) {
+        assert.ok(waatest.utils.round(v, 2) < -0.7)
+      })
+      assert.deepEqual(block[1], _.range(sampleCount).map(function() { return 0 }))
+      done()
+    })
+  })
+
+})
+
 
 describe.skip('dsp.phasor~', function() {
 

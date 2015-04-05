@@ -259,6 +259,20 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[pow]', function() {
+    // This uses the same code as [+] so no need for full tests
+
+    it('should just work', function() {
+      var mult = patch.createObject('pow', [2])
+        , mailbox = patch.createObject('testingmailbox')
+      mult.o(0).connect(mailbox.i(0))
+      
+      mult.i(0).message([3])
+      assert.deepEqual(mailbox.received, [[9]])
+    })
+
+  })
+
   describe('[float]', function() {
 
     it('should have 0 as default value', function() {

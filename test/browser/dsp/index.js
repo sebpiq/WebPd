@@ -1,4 +1,4 @@
-require('./osc~phasor~-tests.js')
+require('./osc~phasor~triangle~square~-tests')
 require('./noise~-tests.js')
 require('./line~-tests.js')
 require('./sig~-tests.js')

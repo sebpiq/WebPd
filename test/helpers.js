@@ -35,7 +35,7 @@ exports.expectSamples = function(onStarted, expected, done) {
 exports.renderSamples = function(channelCount, frameCount, onStarted, done) {
   waatest.utils.renderSamples(channelCount, frameCount, function(context) {
     var audio = new TestAudio(channelCount, context)
-    Pd.start(audio)
+    Pd.start({audio: audio})
     onStarted()
   }, function(err, block) {
     Pd.stop()
