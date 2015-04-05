@@ -1,5 +1,6 @@
 require('./osc~phasor~triangle~square~-tests')
 require('./noise~-tests.js')
+require('./clip~-tests.js')
 require('./line~-tests.js')
 require('./sig~-tests.js')
 require('./tabread~-tests.js')

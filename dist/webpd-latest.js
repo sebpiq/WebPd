@@ -1796,6 +1796,86 @@ exports.declareObjects = function(library) {
 
   })
 
+
+  // TODO : should change curve in the future
+  library['clip~'] = PdObject.extend({
+
+    type: 'clip~',
+
+    inletDefs: [
+
+      portlets.DspInlet,
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var minValue = args[0]
+          expect(minValue).to.be.a('number', 'clip~::min')
+          this.obj.minValue = minValue
+          this.obj._updateGains()
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var maxValue = args[0]
+          expect(maxValue).to.be.a('number', 'clip~::max')
+          this.obj.maxValue = maxValue
+          this.obj._updateGains()
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.DspOutlet],
+
+    init: function(args) {
+      this.minValue = args[0] || 0
+      this.maxValue = args[1] || 0
+    },
+
+    start: function() {
+      this._gainInNode = pdGlob.audio.context.createGain()
+      this._gainOutNode = pdGlob.audio.context.createGain()
+      this._waveShaperNode = pdGlob.audio.context.createWaveShaper()
+
+      this._gainInNode.connect(this._waveShaperNode)
+      //this._waveShaperNode.connect(this._gainOutNode)
+      
+      this.i(0).setWaa(this._gainInNode, 0)
+      //this.o(0).setWaa(this._gainOutNode, 0)
+      this.o(0).setWaa(this._waveShaperNode, 0)
+
+      this._updateGains()
+    },
+
+    stop: function() {
+      this._gainInNode = null
+      this._waveShaperNode = null
+      this._gainOutNode.disconnect()
+      this._gainOutNode = null
+    },
+
+    _updateGains: function() {
+      if (this._waveShaperNode) {
+        var bound = Math.max(Math.abs(this.minValue), Math.abs(this.maxValue))
+          , sampleRate = Pd.getSampleRate()
+          , curve = new Float32Array(sampleRate)
+          , i, acc = -bound, k = bound * 2 / sampleRate
+        for (i = 0; i < sampleRate; i++) {
+          if (acc >= this.minValue && acc <= this.maxValue) curve[i] = acc
+          else if (acc > this.maxValue) curve[i] = this.maxValue
+          else curve[i] = this.minValue
+          acc += k
+        }
+        this._waveShaperNode.curve = curve
+        this._gainInNode.gain.setValueAtTime(bound !== 0 ? 1 / bound : 0, 0)
+        //this._gainOutNode.gain.setValueAtTime(bound, 0)
+      }
+    }
+
+  })
+
+
   library['dac~'] = PdObject.extend({
     type: 'dac~',
 
