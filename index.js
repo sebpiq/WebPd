@@ -138,13 +138,22 @@ var Pd = module.exports = {
     return patch
   },
 
+  // TODO: handling graph better? But ... what is graph :?
   _preparePatch: function(patch, patchData) {
     var createdObjs = {}
 
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
-        , obj = patch._createObject(proto, nodeData.args || [])
+        , obj
+      if (proto === 'graph') {
+        var arrayNodeData = nodeData.subpatch.nodes[0]
+        obj = patch._createObject('array', arrayNodeData.args || [])
+        obj.setData(new Float32Array(arrayNodeData.data), true)
+        proto = 'array'
+      } else {
+        obj = patch._createObject(proto, nodeData.args || [])
+      }
       if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })

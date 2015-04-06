@@ -1,7 +1,10 @@
 var assert = require('assert')
+  , path = require('path')
+  , fs = require('fs')
   , _ = require('underscore')
   , waatest = require('waatest')
   , Pd = require('../../../index')
+  , PdObject = require('../../../lib/core/PdObject')
   , Patch = require('../../../lib/core/Patch')
   , portlets = require('../../../lib/objects/portlets')
   , pdGlob = require('../../../lib/global')
@@ -613,6 +616,18 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[samplerate~]', function() {
+
+    it('should translate midi to frequency', function() {
+      var samplerate = patch.createObject('samplerate~')
+        , mailbox = patch.createObject('testingmailbox')
+      samplerate.o(0).connect(mailbox.i(0))
+      samplerate.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[44100]])
+    })
+
+  })
+
   describe('[random]', function() {
 
     it('should output random integer below the max', function() {
@@ -910,6 +925,18 @@ describe('objects.glue', function() {
       var array = patch.createObject('array', ['SAMPLE', 5])
       array.on('changed:data', done)
       array.setData(new Float32Array([1, 2, 3, 4, 5, 6, 7]))
+    })
+
+    it('should load saved data', function() {
+      pdGlob.library['tabwrite'] = PdObject.extend({
+        inletDefs: [portlets.Inlet, portlets.Inlet],
+        outletDefs: [portlets.Outlet],
+      }) // Just because not available ATM
+      var patchStr = fs.readFileSync(path.resolve(__dirname, '..', 'patches', 'array-saved-data.pd'))
+        , patch = Pd.loadPatch(patchStr.toString())
+        , array = _.find(patch.objects, function(obj) { return obj.type === 'array' })
+      assert.deepEqual(array.data, new Float32Array([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8]))
+      assert.equal(array.name, 'BLA')
     })
 
   })
