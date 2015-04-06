@@ -118,6 +118,7 @@ var Pd = module.exports = {
   // Stops and forgets a patch
   destroyPatch: function(patch) {
     patch.stop()
+    patch.clean()
     delete pdGlob.patches[patch.patchId]
   },
 
@@ -139,13 +140,22 @@ var Pd = module.exports = {
     return patch
   },
 
+  // TODO: handling graph better? But ... what is graph :?
   _preparePatch: function(patch, patchData) {
     var createdObjs = {}
 
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
-        , obj = patch._createObject(proto, nodeData.args || [])
+        , obj
+      if (proto === 'graph') {
+        var arrayNodeData = nodeData.subpatch.nodes[0]
+        obj = patch._createObject('array', arrayNodeData.args || [])
+        obj.setData(new Float32Array(arrayNodeData.data), true)
+        proto = 'array'
+      } else {
+        obj = patch._createObject(proto, nodeData.args || [])
+      }
       if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
@@ -245,7 +255,10 @@ _.extend(BaseNode.prototype, {
 
   // This method is called when dsp is stopped
   stop: function() {},
-  
+
+  // This method is called to clean the object, remove event handlers, etc ...
+  // For example this is called when a patch is destroyed.
+  clean: function() {},
 
 /************************* Public API **********************/
 
@@ -332,6 +345,10 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, EventEmitter
   stop: function() {
     this._startStopGeneric('stop', 'stopPortlets')
     this.emit('stopped')
+  },
+
+  clean: function() {
+    this.objects.forEach(function(obj) { obj.clean() })
   },
 
   _startStopGeneric: function(methObj, methPortlets) {
@@ -2359,6 +2376,18 @@ exports.declareObjects = function(library) {
     maxMidiNote: 8.17579891564 * Math.exp((0.0577622650 * 1499))
   })
 
+  library['samplerate~'] = PdObject.extend({
+    type: 'samplerate~',
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          this.obj.o(0).message([ pdGlob.settings.sampleRate ])
+        }
+      })
+    ],
+    outletDefs: [portlets.Outlet],
+  })
+
   library['random'] = PdObject.extend({
 
     type: 'random',
@@ -2441,6 +2470,10 @@ exports.declareObjects = function(library) {
       this.rate = Math.max(rate, 1)
     },
 
+    clean: function() {
+      this._stopMetroTick()
+    },
+
     _startMetroTick: function() {
       var self = this
       if (this._metroHandle === null) {
@@ -2521,6 +2554,10 @@ exports.declareObjects = function(library) {
     setDelay: function(delay) {
       expect(delay).to.be.a('number', 'delay::time')
       this.delay = delay
+    },
+
+    clean: function() {
+      this._stopDelay()
     },
 
     _startDelay: function() {
@@ -2959,9 +2996,12 @@ exports.declareObjects = function(library) {
 }
 
 },{"../core/PdObject":4,"../core/portlets":7,"../core/utils":8,"../global":9,"chai":27,"underscore":67,"waawire":78}],14:[function(require,module,exports){
+var pdGlob = require('../global')
+
 var Audio = module.exports = function(opts) {
   this.channelCount = opts.channelCount
   this.setContext(opts.audioContext || new AudioContext)
+  pdGlob.settings.sampleRate = this.context.sampleRate
   Object.defineProperty(this, 'time', {
     get: function() { return this.context.currentTime * 1000 },
   })
@@ -2998,7 +3038,7 @@ Audio.prototype.setContext = function(context) {
     this.channels[ch].connect(this._channelMerger, 0, ch)
   }
 }
-},{}],15:[function(require,module,exports){
+},{"../global":9}],15:[function(require,module,exports){
 var _ = require('underscore')
   , WAAClock = require('waaclock')
 

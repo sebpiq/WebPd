@@ -747,6 +747,23 @@ describe('objects.glue', function() {
       assert.equal(clock.events.length, 1)
     })
 
+    it('should stop ticking when cleaned', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var metro = patch.createObject('metro', [1000])
+        , mailbox = patch.createObject('testingmailbox')
+      metro.o(0).connect(mailbox.i(0))
+
+      clock.time = 10000
+      metro.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['bang']])
+
+      metro.clean()
+      clock.time = 11000
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang']])
+    })
+
   })
 
   describe('[delay]', function() {
@@ -831,6 +848,20 @@ describe('objects.glue', function() {
       clock.time = 1402
       clock.tick()
       assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+    })
+
+    it('should cancel delay when cleaned', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var delay = patch.createObject('delay', [3000])
+        , mailbox = patch.createObject('testingmailbox')
+      delay.o(0).connect(mailbox.i(0))
+
+      delay.i(0).message([1111])
+      delay.clean()
+      clock.time = 1111
+      clock.tick()
+      assert.deepEqual(mailbox.received, [])
     })
 
   })

@@ -30,9 +30,11 @@ describe('core.Patch', function() {
     init: function() {
       this.startCalled = 0
       this.stopCalled = 0
+      this.cleanCalled = 0
     },
     start: function() { this.startCalled++ },
     stop: function() { this.stopCalled++ },
+    clean: function() { this.cleanCalled++ },
     inletDefs: [ MyInlet, MyInlet ],
     outletDefs: [ MyOutlet, MyOutlet ]
   })
@@ -167,6 +169,22 @@ describe('core.Patch', function() {
       patch.on('stopped', function() { stopped = true })
       patch.stop()
       assert.equal(stopped, true)
+    })
+
+  })
+
+  describe('.clean', function() {
+
+    it('should call all the objects clean methods', function() {
+      var patch = new Patch
+        , obj1 = patch.createObject('myobject', [])
+        , obj2 = patch.createObject('myobject', [])
+        , obj3 = patch.createObject('myobject', [])
+      assert.equal(obj1.cleanCalled, 0)
+      patch.clean()
+      assert.equal(obj1.cleanCalled, 1)
+      assert.equal(obj2.cleanCalled, 1)
+      assert.equal(obj3.cleanCalled, 1)
     })
 
   })
