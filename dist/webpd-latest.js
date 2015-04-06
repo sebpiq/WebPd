@@ -553,6 +553,10 @@ exports.NamedMixin = {
     this.name = name
     pdGlob.namedObjects.register(this, this.type, name, this.nameIsUnique, oldName)
     this.emit('changed:name', oldName, name)
+  },
+
+  clean: function() {
+    pdGlob.namedObjects.unregister(this, this.type, this.name)
   }
 
 }
@@ -882,6 +886,7 @@ emitter.emit = function(eventName) {
     _.contains([], eventName)
     || eventName.indexOf('msg:') === 0
     || eventName.indexOf('namedObjects:registered') === 0
+    || eventName.indexOf('namedObjects:unregistered') === 0
   ) EventEmitter.prototype.emit.apply(this, arguments)
   else throw new Error('unknown event : ' + eventName)
 }
@@ -931,6 +936,18 @@ exports.namedObjects = {
     }
 
     exports.emitter.emit('namedObjects:registered:' + type, obj)
+  },
+
+  // Unregisters a named object from the store
+  unregister: function(obj, type, name) {
+    var nameMap = this._store[type]
+      , objList = nameMap ? nameMap[name] : null
+      , ind
+    if (!objList) return
+    ind = objList.indexOf(obj)
+    if (ind === -1) return 
+    objList.splice(ind, 1)
+    exports.emitter.emit('namedObjects:unregistered:' + type, obj)
   },
 
   // Returns an object list given the object `type` and `name`.
@@ -1735,6 +1752,10 @@ exports.declareObjects = function(library) {
     stop: function() {
       this._pipeNode.disconnect()
       this._pipeNode = null
+    },
+
+    clean: function() {
+      mixins.NamedMixin.clean.apply(this, arguments)
     }
 
   })
@@ -1939,6 +1960,7 @@ var EventEmitter = require('events').EventEmitter
   , pdGlob = require('../global')
   , portlets = require('./portlets')
 
+
 exports.declareObjects = function(library) {
 
   library['receive'] = library['r'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
@@ -1956,6 +1978,10 @@ exports.declareObjects = function(library) {
         pdGlob.emitter.on('msg:' + newName, _onMessageReceived)
       })
       this.setName(name)
+    },
+
+    clean: function() {
+      mixins.NamedMixin.clean.apply(this, arguments)
     },
 
     _onMessageReceived: function(args) {
@@ -1980,7 +2006,11 @@ exports.declareObjects = function(library) {
 
     abbreviations: ['s'],
 
-    init: function(args) { this.setName(args[0]) }
+    init: function(args) { this.setName(args[0]) },
+
+    clean: function() {
+      mixins.NamedMixin.clean.apply(this, arguments)
+    }
 
   })
 
@@ -2647,6 +2677,10 @@ exports.declareObjects = function(library) {
       if (name) this.setName(name)
       this.size = size
       this.data = new Float32Array(size)
+    },
+
+    clean: function() {
+      mixins.NamedMixin.clean.apply(this, arguments)
     },
 
     setData: function(audioData, resize) {

@@ -130,6 +130,32 @@ describe('global', function() {
       assert.equal(query[0], obj)
     })
 
+    it('should unregister an object if it exists', function(done) {
+      var obj = new MyNamedObject('bla')
+        , query = pdGlob.namedObjects.get('namedObj', 'bla')
+        , unregistered = null
+      assert.deepEqual(query, [obj])
+
+      pdGlob.emitter.once('namedObjects:unregistered:namedObj', function(anObj) {
+        assert.equal(obj, anObj)
+        assert.deepEqual(pdGlob.namedObjects.get('namedObj', 'bla'), [])
+        done()
+      })
+      pdGlob.namedObjects.unregister(obj, 'namedObj', 'bla')
+    })
+
+    it('should do nothing if the object is already unregistered', function() {
+      var obj1 = new MyNamedObject('blo')
+        , obj2 = new MyNamedObject('blo')
+        , query = pdGlob.namedObjects.get('namedObj', 'blo')
+        , unregistered = null
+      assert.equal(query.length, 2)
+      pdGlob.namedObjects.unregister(obj1, 'namedObj', 'blo')
+      assert.equal(pdGlob.namedObjects.get('namedObj', 'blo').length, 1)
+      pdGlob.namedObjects.unregister(obj1, 'namedObj', 'blo')
+      assert.equal(pdGlob.namedObjects.get('namedObj', 'blo').length, 1)
+    })
+
   })
 
 })

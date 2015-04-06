@@ -17,7 +17,7 @@ describe('core.mixins', function() {
       type: 'myobject'
     })
 
-    it('should set resolved immediately of reference exists', function() {
+    it('should set resolved immediately if reference exists', function() {
       var obj = new MyObject()
         , reference = new mixins.Reference('myobject')
         , changed = []
