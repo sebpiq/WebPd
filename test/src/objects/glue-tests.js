@@ -88,6 +88,36 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox1.received, [[1, 11, 111]])
     })
 
+    it('should clean [receive] properly when calling clean', function() {
+      var unregistered = false
+      Pd.send('no1', ['popo', 111])
+      assert.deepEqual(mailbox1.received, [['popo', 111]])
+      
+      // Once cleaned, the object should be unregistered
+      pdGlob.emitter.on('namedObjects:unregistered:receive', function(obj) {
+        assert.equal(obj, receive1)
+        unregistered = true
+      })
+      receive1.clean()
+      assert.equal(unregistered, true)
+
+      // Once cleaned, the [received] shouldn't receive events anymore
+      Pd.send('no1', ['pupu'])
+      assert.deepEqual(mailbox1.received, [['popo', 111]])
+    })
+
+    it('should clean [send] properly when calling clean', function() {
+      var unregistered = false
+
+      // Once cleaned, the object should be unregistered
+      pdGlob.emitter.on('namedObjects:unregistered:send', function(obj) {
+        assert.equal(obj, send1)
+        unregistered = true
+      })
+      send1.clean()
+      assert.equal(unregistered, true)
+    })
+
   })
 
   describe('[msg]', function() {
@@ -968,6 +998,19 @@ describe('objects.glue', function() {
         , array = _.find(patch.objects, function(obj) { return obj.type === 'array' })
       assert.deepEqual(array.data, new Float32Array([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8]))
       assert.equal(array.name, 'BLA')
+    })
+
+    it('should clean properly when calling clean', function() {
+      var unregistered = false
+        , array = patch.createObject('array', ['SAMPLE', 5])
+
+      // Once cleaned, the object should be unregistered
+      pdGlob.emitter.on('namedObjects:unregistered:array', function(obj) {
+        assert.equal(obj, array)
+        unregistered = true
+      })
+      array.clean()
+      assert.equal(unregistered, true)
     })
 
   })
