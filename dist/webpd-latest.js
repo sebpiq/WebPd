@@ -258,7 +258,7 @@ _.extend(BaseNode.prototype, {
 
   // This method is called to clean the object, remove event handlers, etc ...
   // For example this is called when a patch is destroyed.
-  clean: function() {},
+  destroy: function() {},
 
 /************************* Public API **********************/
 
@@ -555,7 +555,7 @@ exports.NamedMixin = {
     this.emit('changed:name', oldName, name)
   },
 
-  clean: function() {
+  destroy: function() {
     pdGlob.namedObjects.unregister(this, this.type, this.name)
   }
 
@@ -597,6 +597,13 @@ _.extend(Reference.prototype, EventEmitter.prototype, {
       }
       pdGlob.emitter.on(this._eventName, this._onNewObject)
     }
+  },
+
+  destroy: function() {
+    this._stopListening()
+    if (this.resolved)
+      this.resolved.removeListener('changing:name', this._onChangedName)
+    this.removeAllListeners()
   },
 
   _setResolved: function(newObj) {
@@ -1659,7 +1666,13 @@ exports.declareObjects = function(library) {
       })
     },
 
-    dataChanged: function() {}
+    dataChanged: function() {},
+
+    destroy: function() {
+      if (this.array.resolved)
+        this.array.resolved.removeListener('changed:data', this._onDataChangedHandler)
+      this.array.destroy()
+    }
 
   })
 
@@ -1715,6 +1728,10 @@ exports.declareObjects = function(library) {
       this._gainNode = null
     },
 
+    destroy: function() {
+      _TabBase.prototype.destroy.apply(this, arguments)
+    },
+
     dataChanged: function() {
       if (this._tableNode) this._tableNode.table = this.array.resolved.data
     },
@@ -1754,8 +1771,9 @@ exports.declareObjects = function(library) {
       this._pipeNode = null
     },
 
-    clean: function() {
-      mixins.NamedMixin.clean.apply(this, arguments)
+    destroy: function() {
+      mixins.NamedMixin.destroy.apply(this, arguments)
+      this.removeAllListeners()
     }
 
   })
@@ -1780,6 +1798,7 @@ exports.declareObjects = function(library) {
         , initialDelayTime = args[1]
       this._delayTime = initialDelayTime || 0
       this._delWrite = new mixins.Reference('delwrite~')
+      this._onDelWriteStarted = null
       if (delayName) this._delWrite.set(delayName)
     },
 
@@ -1797,6 +1816,12 @@ exports.declareObjects = function(library) {
       this._delayNode = null
       this._delWrite.removeListener('changed', this._onDelWriteChanged)
       this._onDelWriteChanged = null
+    },
+
+    destroy: function() {
+      this._delWrite.destroy()
+      if (this._delWrite.resolved && this._onDelWriteStarted)
+        this._delWrite.resolved.removeListener('started', this._onDelWriteStarted)
     },
 
     setDelayTime: function(delayTime) {
@@ -1826,7 +1851,8 @@ exports.declareObjects = function(library) {
         if (this._delWrite.resolved._pipeNode)
           doConnection()
         else {
-          this._delWrite.resolved.once('started', doConnection)
+          this._onDelWriteStarted = doConnection
+          this._delWrite.resolved.once('started', this._onDelWriteStarted)
         }
       }
         
@@ -1972,16 +1998,19 @@ exports.declareObjects = function(library) {
 
     init: function(args) {
       var name = args[0]
-        , _onMessageReceived = this._onMessageReceived.bind(this)
+        , self = this
+      this._onMessageReceived = this._onMessageReceived.bind(this)
       this.on('changed:name', function(oldName, newName) {
-        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, _onMessageReceived)
-        pdGlob.emitter.on('msg:' + newName, _onMessageReceived)
+        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, self._onMessageReceived)
+        pdGlob.emitter.on('msg:' + newName, self._onMessageReceived)
       })
       this.setName(name)
     },
 
-    clean: function() {
-      mixins.NamedMixin.clean.apply(this, arguments)
+    destroy: function() {
+      mixins.NamedMixin.destroy.apply(this, arguments)
+      pdGlob.emitter.removeListener('msg:' + this.name, this._onMessageReceived)
+      this.removeAllListeners()
     },
 
     _onMessageReceived: function(args) {
@@ -2008,8 +2037,9 @@ exports.declareObjects = function(library) {
 
     init: function(args) { this.setName(args[0]) },
 
-    clean: function() {
-      mixins.NamedMixin.clean.apply(this, arguments)
+    destroy: function() {
+      mixins.NamedMixin.destroy.apply(this, arguments)
+      this.removeAllListeners()
     }
 
   })
@@ -2079,9 +2109,14 @@ exports.declareObjects = function(library) {
 
     init: function() {
       var self = this
-      this.patch.on('started', function() {
+      this._onPatchStarted = function() {
         self.o(0).message(['bang'])
-      })
+      }
+      this.patch.on('started', this._onPatchStarted)
+    },
+
+    destroy: function() {
+      this.patch.removeListener('started', this._onPatchStarted)
     }
 
   })
@@ -2500,7 +2535,7 @@ exports.declareObjects = function(library) {
       this.rate = Math.max(rate, 1)
     },
 
-    clean: function() {
+    destroy: function() {
       this._stopMetroTick()
     },
 
@@ -2586,7 +2621,7 @@ exports.declareObjects = function(library) {
       this.delay = delay
     },
 
-    clean: function() {
+    destroy: function() {
       this._stopDelay()
     },
 
@@ -2679,8 +2714,9 @@ exports.declareObjects = function(library) {
       this.data = new Float32Array(size)
     },
 
-    clean: function() {
-      mixins.NamedMixin.clean.apply(this, arguments)
+    destroy: function() {
+      mixins.NamedMixin.destroy.apply(this, arguments)
+      this.removeAllListeners()
     },
 
     setData: function(audioData, resize) {

@@ -1,6 +1,7 @@
 var assert = require('assert')
   , _ = require('underscore')
   , helpers = require('../../helpers')
+  , pdGlob = require('../../../lib/global')
 
 describe('dsp.tabread~', function() {
 
@@ -48,6 +49,34 @@ describe('dsp.tabread~', function() {
       connections: [{ source: { id: 1, port: 0 }, sink: { id: 2, port: 0 } }]
     })
     Pd.stop()
+  })
+
+  describe('destroy', function() {
+
+    it('should clean properly', function() {
+      var blaCalled = 0
+        , changedCalled = 0
+        , patch = Pd.createPatch()
+        , array = patch.createObject('array', ['BLA', 4])
+        , tabread = patch.createObject('tabread~', ['BLA'])
+      tabread.array.on('bla', function() { blaCalled++ })
+      tabread.array.emit('bla')
+      assert.equal(blaCalled, 1)
+
+      tabread.dataChanged = function() { changedCalled++ }
+      tabread.array.resolved.emit('changed:data')
+      assert.equal(changedCalled, 1)
+
+      // It stop listening events on the reference
+      tabread.destroy()
+      tabread.array.emit('bla')
+      assert.equal(blaCalled, 1)
+
+      // It should unbind event handlers on the array
+      tabread.array.resolved.emit('changed:data')
+      assert.equal(changedCalled, 1)
+    })
+
   })
 
   describe('i(0)', function() {

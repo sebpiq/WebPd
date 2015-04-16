@@ -1,5 +1,7 @@
-var _ = require('underscore')
+var assert = require('assert')
+  , _ = require('underscore')
   , helpers = require('../../helpers')
+  , pdGlob = require('../../../lib/global')
 
 describe('dsp.delwrite~/delread~', function() {
 
@@ -109,5 +111,51 @@ describe('dsp.delwrite~/delread~', function() {
       0, 0, 0, 0]
     ], done)
   })
+
+  describe('delwrite~.destroy', function() {
+
+    it('should clean properly event handlers', function() {
+      var blaCalled = 0
+        , unregistered = false
+        , patch = Pd.createPatch()
+        , delwrite = patch.createObject('delwrite~', ['BLA'])
+      delwrite.on('bla', function() { blaCalled++ })
+      delwrite.emit('bla')
+      assert.equal(blaCalled, 1)
+
+      // Once cleaned, the object should be unregistered
+      pdGlob.emitter.on('namedObjects:unregistered:delwrite~', function(obj) {
+        assert.equal(obj, delwrite)
+        unregistered = true
+      })
+      delwrite.destroy()
+      assert.equal(unregistered, true)
+
+      // Destroy should unbind events 
+      delwrite.emit('bla')
+      assert.equal(blaCalled, 1)
+    })
+
+  })
+
+  describe('delread~.destroy', function() {
+
+    it('should clean properly event handlers', function() {
+      var blaCalled = 0
+        , patch = Pd.createPatch()
+        , delread = patch.createObject('delread~', ['BLA'])
+      delread._delWrite.on('bla', function() { blaCalled++ })
+      delread._delWrite.emit('bla')
+      assert.equal(blaCalled, 1)
+
+      delread.destroy()
+
+      // Destroy should unbind events 
+      delread._delWrite.emit('bla')
+      assert.equal(blaCalled, 1)
+    })
+
+  })
+
 
 })

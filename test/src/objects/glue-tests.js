@@ -88,8 +88,13 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox1.received, [[1, 11, 111]])
     })
 
-    it('should clean [receive] properly when calling clean', function() {
+    it('should clean [receive] properly when calling destroy', function() {
       var unregistered = false
+        , receivedBla = 0
+      receive1.on('bla', function() { receivedBla++ })
+      receive1.emit('bla')
+      assert.equal(receivedBla, 1)
+
       Pd.send('no1', ['popo', 111])
       assert.deepEqual(mailbox1.received, [['popo', 111]])
       
@@ -98,24 +103,36 @@ describe('objects.glue', function() {
         assert.equal(obj, receive1)
         unregistered = true
       })
-      receive1.clean()
+      receive1.destroy()
       assert.equal(unregistered, true)
 
       // Once cleaned, the [received] shouldn't receive events anymore
       Pd.send('no1', ['pupu'])
       assert.deepEqual(mailbox1.received, [['popo', 111]])
+
+      // And event handlers unbound
+      receive1.emit('bla')
+      assert.equal(receivedBla, 1)
     })
 
-    it('should clean [send] properly when calling clean', function() {
+    it('should clean [send] properly when calling destroy', function() {
       var unregistered = false
+        , receivedBla = 0
+      send1.on('bla', function() { receivedBla++ })
+      send1.emit('bla')
+      assert.equal(receivedBla, 1)
 
       // Once cleaned, the object should be unregistered
       pdGlob.emitter.on('namedObjects:unregistered:send', function(obj) {
         assert.equal(obj, send1)
         unregistered = true
       })
-      send1.clean()
+      send1.destroy()
       assert.equal(unregistered, true)
+
+      // And event handlers unbound
+      send1.emit('bla')
+      assert.equal(receivedBla, 1)
     })
 
   })
@@ -176,6 +193,15 @@ describe('objects.glue', function() {
       loadbang.o(0).connect(mailbox.i(0))
       patch.start()
       assert.deepEqual(mailbox.received, [['bang']])
+    })
+
+    it('should unbind when calling destroy', function() {
+      var loadbang = patch.createObject('loadbang')
+        , mailbox = patch.createObject('testingmailbox')
+      loadbang.o(0).connect(mailbox.i(0))
+      loadbang.destroy()
+      patch.start()
+      assert.deepEqual(mailbox.received, [])
     })
 
   })
@@ -777,7 +803,7 @@ describe('objects.glue', function() {
       assert.equal(clock.events.length, 1)
     })
 
-    it('should stop ticking when cleaned', function() {
+    it('should stop ticking when destroyed', function() {
       Pd.stop()
       Pd.start({clock: clock})
       var metro = patch.createObject('metro', [1000])
@@ -788,7 +814,7 @@ describe('objects.glue', function() {
       metro.i(0).message(['bang'])
       assert.deepEqual(mailbox.received, [['bang']])
 
-      metro.clean()
+      metro.destroy()
       clock.time = 11000
       clock.tick()
       assert.deepEqual(mailbox.received, [['bang']])
@@ -888,7 +914,7 @@ describe('objects.glue', function() {
       delay.o(0).connect(mailbox.i(0))
 
       delay.i(0).message([1111])
-      delay.clean()
+      delay.destroy()
       clock.time = 1111
       clock.tick()
       assert.deepEqual(mailbox.received, [])
@@ -1000,17 +1026,25 @@ describe('objects.glue', function() {
       assert.equal(array.name, 'BLA')
     })
 
-    it('should clean properly when calling clean', function() {
+    it('should clean properly when calling destroy', function() {
       var unregistered = false
         , array = patch.createObject('array', ['SAMPLE', 5])
+        , receivedBla = 0
+      array.on('bla', function() { receivedBla++ })
+      array.emit('bla')
+      assert.equal(receivedBla, 1)
 
       // Once cleaned, the object should be unregistered
       pdGlob.emitter.on('namedObjects:unregistered:array', function(obj) {
         assert.equal(obj, array)
         unregistered = true
       })
-      array.clean()
+      array.destroy()
       assert.equal(unregistered, true)
+
+      // Destroy should unbind events 
+      array.emit('bla')
+      assert.equal(receivedBla, 1)
     })
 
   })
