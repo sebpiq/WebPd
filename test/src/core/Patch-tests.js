@@ -34,7 +34,7 @@ describe('core.Patch', function() {
     },
     start: function() { this.startCalled++ },
     stop: function() { this.stopCalled++ },
-    clean: function() { this.cleanCalled++ },
+    destroy: function() { this.cleanCalled++ },
     inletDefs: [ MyInlet, MyInlet ],
     outletDefs: [ MyOutlet, MyOutlet ]
   })
@@ -173,15 +173,15 @@ describe('core.Patch', function() {
 
   })
 
-  describe('.clean', function() {
+  describe('.destroy', function() {
 
-    it('should call all the objects clean methods', function() {
+    it('should call all the objects destroy methods', function() {
       var patch = new Patch
         , obj1 = patch.createObject('myobject', [])
         , obj2 = patch.createObject('myobject', [])
         , obj3 = patch.createObject('myobject', [])
       assert.equal(obj1.cleanCalled, 0)
-      patch.clean()
+      patch.destroy()
       assert.equal(obj1.cleanCalled, 1)
       assert.equal(obj2.cleanCalled, 1)
       assert.equal(obj3.cleanCalled, 1)

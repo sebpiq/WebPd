@@ -1,6 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -118,7 +118,7 @@ var Pd = module.exports = {
   // Stops and forgets a patch
   destroyPatch: function(patch) {
     patch.stop()
-    patch.clean()
+    patch.destroy()
     delete pdGlob.patches[patch.patchId]
   },
 
@@ -183,7 +183,7 @@ if (typeof window !== 'undefined') window.Pd = Pd
 
 },{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/utils":8,"./lib/global":9,"./lib/objects":12,"./lib/objects/portlets":13,"./lib/waa":17,"pd-fileutils":59,"underscore":67}],2:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -294,7 +294,7 @@ _.extend(BaseNode.prototype, {
 
 },{"./portlets":7,"./utils":8,"underscore":67,"util":26}],3:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -347,8 +347,8 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, EventEmitter
     this.emit('stopped')
   },
 
-  clean: function() {
-    this.objects.forEach(function(obj) { obj.clean() })
+  destroy: function() {
+    this.objects.forEach(function(obj) { obj.destroy() })
   },
 
   _startStopGeneric: function(methObj, methPortlets) {
@@ -444,7 +444,7 @@ var isOutletObject = function(obj) {
 
 },{"../global":9,"./BaseNode":2,"./utils":8,"events":22,"underscore":67}],4:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -482,7 +482,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
 
 },{"../global":9,"./BaseNode":2,"./Patch":3,"./portlets":7,"./utils":8,"underscore":67,"util":26}],5:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -534,6 +534,26 @@ exports.Storage = {
   get: function(uri, done) { }
 }
 },{}],6:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+ 
 var EventEmitter = require('events').EventEmitter
   , _ = require('underscore')
   , expect = require('chai').expect
@@ -630,7 +650,7 @@ _.extend(Reference.prototype, EventEmitter.prototype, {
 })
 },{"../global":9,"chai":27,"events":22,"underscore":67}],7:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -724,7 +744,7 @@ var Outlet = exports.Outlet = Portlet.extend({})
 
 },{"./utils":8,"underscore":67}],8:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -843,7 +863,7 @@ exports.UniqueIdsMixin = {
 }
 },{"chai":27,"underscore":67}],9:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -972,7 +992,7 @@ exports.namedObjects = {
 
 },{"events":22,"underscore":67}],10:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1958,7 +1978,7 @@ exports.declareObjects = function(library) {
 
 },{"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"events":22,"underscore":67,"waaoffsetnode":70,"waatablenode":72,"waawhitenoisenode":76}],11:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -2808,7 +2828,7 @@ exports.declareObjects = function(library) {
 
 },{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"events":22,"underscore":67}],12:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -2835,7 +2855,7 @@ exports.declareObjects = function(library) {
 }
 },{"./dsp":10,"./glue":11,"./portlets":13,"underscore":67}],13:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2014 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -3066,6 +3086,26 @@ exports.declareObjects = function(library) {
 }
 
 },{"../core/PdObject":4,"../core/portlets":7,"../core/utils":8,"../global":9,"chai":27,"underscore":67,"waawire":78}],14:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 var pdGlob = require('../global')
 
 var Audio = module.exports = function(opts) {
@@ -3109,6 +3149,26 @@ Audio.prototype.setContext = function(context) {
   }
 }
 },{"../global":9}],15:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 var _ = require('underscore')
   , WAAClock = require('waaclock')
 
@@ -3133,6 +3193,26 @@ Clock.prototype.unschedule = function(event) {
   event.clear()
 }
 },{"underscore":67,"waaclock":68}],16:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 var WebStorage = module.exports = function() {}
 
 // Gets an array buffer through an ajax request, then calls `done(err, arrayBuffer)`
@@ -3154,6 +3234,26 @@ WebStorage.prototype.get = function(url, done) {
   req.send()
 }
 },{}],17:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 exports.Clock = require('./Clock')
 exports.Audio = require('./Audio')
 exports.Storage = require('./Storage')

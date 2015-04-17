@@ -84,7 +84,7 @@ describe('Pd', function() {
         , cleanCalled = false
       Pd.start()
       patch.stop = function() { stopCalled = true }
-      patch.clean = function() { cleanCalled = true }
+      patch.destroy = function() { cleanCalled = true }
       Pd.destroyPatch(patch)
       assert.ok(!_.contains(_.values(pdGlob.patches), patch))
       assert.equal(stopCalled, true)

@@ -117,7 +117,7 @@ var Pd = module.exports = {
   // Stops and forgets a patch
   destroyPatch: function(patch) {
     patch.stop()
-    patch.clean()
+    patch.destroy()
     delete pdGlob.patches[patch.patchId]
   },
 
