@@ -3,8 +3,15 @@ var path = require('path')
   , rename = require('gulp-rename')
   , gutil = require('gulp-util')
   , browserify = require('browserify')
+  , uglify = require('gulp-uglify')
   , runSequence = require('run-sequence')
   , source = require('vinyl-source-stream')
+
+gulp.task('compress', function() {
+  return gulp.src('lib/*.js')
+    .pipe(uglify())
+    .pipe(gulp.dest('dist'));
+})
 
 var libWatcher = gulp.watch(['*.js', './lib/**/*.js'], ['lib:browserify'])
 libWatcher.on('change', function(event) {
