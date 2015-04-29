@@ -2,8 +2,10 @@ var path = require('path')
   , gulp = require('gulp')
   , rename = require('gulp-rename')
   , gutil = require('gulp-util')
+  , file = require('gulp-file')
   , browserify = require('browserify')
   , uglify = require('gulp-uglify')
+  , mustache = require('mustache')
   , runSequence = require('run-sequence')
   , source = require('vinyl-source-stream')
 
@@ -33,6 +35,19 @@ gulp.task('test.browser.browserify', function() {
     .on('error', gutil.log)
     .pipe(source('test-build.js'))
     .pipe(gulp.dest('./waatest'))
+})
+
+gulp.task('lib.objectList', function() {
+  var library = {}
+    , rendered
+  require('./lib/objects').declareObjects(library)
+  rendered = mustache.render(
+    '{{#objects}}- {{{.}}}\n{{/objects}}', 
+    { objects: Object.keys(library).sort() }
+  )
+
+  return file('OBJECTLIST.md', rendered, { src: true })
+    .pipe(gulp.dest('.'))
 })
 
 gulp.task('test.browser.build', function(done) {

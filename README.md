@@ -115,7 +115,7 @@ On IOS, things are even trickier. For security reasons, you should start WebPd o
 List of implemented objects and other limitations
 ---------------------------------------------------
 
-Not all of Pure Data's objects are available in WebPd. Please check-out the [list of available objects]().
+Not all of Pure Data's objects are available in WebPd. Please check-out the [list of available objects](https://github.com/sebpiq/WebPd/tree/master/OBJECTLIST.md).
 
 Abstractions are implemented, but at the moment they require a bit of extra JavaScript in order to work. You can check-out the [abstractions example](https://github.com/sebpiq/WebPd/tree/master/examples/abstractions), to see how this works.
 
