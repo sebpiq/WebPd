@@ -1,27 +1,49 @@
 {
-    "name": "WebPd",
-    "preferGlobal": "false",
-    "version": "0.2.3",
-    "author": "Sébastien Piquemal <sebpiq@gmail.com>",
-    "description": "Pure Data in JavaScript",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/sebpiq/WebPd"
-    },
-    "keywords": [
-        "sound",
-        "pure data",
-        "dsp"
-    ],
-    "dependencies" : {},
-    "devDependencies": {
-        "jQuery": "~1.7.3",
-        "grunt-contrib-concat": "0.5.x",
-        "grunt-contrib-uglify": "0.6.x",
-        "grunt-contrib-qunit": "0.5.x"
-    },
-    "license": "Standard Improved BSD License",
-    "scripts": {
-        "test": "grunt travis --verbose"
-    }
+  "name": "WebPd",
+  "preferGlobal": "false",
+  "version": "0.3.0",
+  "author": "Sébastien Piquemal <sebpiq@gmail.com>",
+  "description": "Pure Data in JavaScript",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sebpiq/WebPd"
+  },
+  "keywords": [
+    "sound",
+    "pure data",
+    "dsp"
+  ],
+  "scripts": {
+    "build": "gulp lib.browserify; gulp lib.uglify",
+    "test": "mocha --reporter list --recursive test/src",
+    "test.browser.build": "gulp test.browser.build",
+    "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive"
+  },
+  "dependencies": {
+    "underscore": "1.4.x",
+    "chai": "1.10.x",
+    "pd-fileutils": "git://github.com/sebpiq/pd-fileutils.git#master",
+    "waaclock": "0.5.x",
+    "waaoffsetnode": "0.1.x",
+    "waawhitenoisenode": "0.1.x",
+    "waawire": "0.1.x",
+    "waatablenode": "0.1.x"
+  },
+  "devDependencies": {
+    "web-audio-test-api": "0.2.x",
+    "mocha": "1.11.x",
+    "istanbul": "0.1.x",
+    "gulp": "3.8.x",
+    "gulp-util": "3.0.x",
+    "gulp-rename": "1.2.x",
+    "gulp-uglify": "1.2.x",
+    "gulp-file": "0.2.x",
+    "browserify": "7.0.x",
+    "mustache": "2.0.x",
+    "run-sequence": "1.0.x",
+    "vinyl-source-stream": "1.0.x",
+    "async": "0.9.x",
+    "waatest": "git://github.com/sebpiq/WAATest.git#master"
+  },
+  "license": "Standard Improved BSD License"
 }

@@ -1,0 +1,2 @@
+#N canvas 531 285 450 300 10;
+#X obj 178 95 logStart;

@@ -1,2 +1,0 @@
-- problem if the object has 2 outlets cause right now object's `_tick` will be called twice
-- dsp processed in different thread

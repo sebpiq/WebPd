@@ -1,171 +1,188 @@
-**NEWS** : A big refactoring is underway. Main goal is to port all WebPd to Web Audio API. You can follow progress here : https://github.com/sebpiq/WebPd/tree/waa
-
-
 [![Build Status](https://travis-ci.org/sebpiq/WebPd.png)](https://travis-ci.org/sebpiq/WebPd)
 
 WebPd
 =====
 
-- **WebPd** is a **100% JavaScript Pure Data runtime**. It aims at allowing a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) audio patches to run in the browser without plugins.
+**WebPd** is a **100% JavaScript Pure Data runtime** using **Web Audio API** to play audio in the browser. It aims at allowing a subset of [Pure Data](http://crca.ucsd.edu/~msp/software.html) patches to run in the browser without plugins and with best possible performance.
 
-- **WebPd** is also a **standalone DSP library**. Every object as you know it in Pure Data exposes a complete API, allowing developers to control **everything** with JavaScript.
+Patches still have to be created using Pure Data, but with a few lines of JavaScript you can use **WebPd** to embed a patch into a web page.
 
-- checkout the [gallery](https://github.com/sebpiq/WebPd/wiki/Gallery).
+**WebPd** should be supported by all [browsers supporting Web Audio API](http://caniuse.com/#search=web%20audio%20api).
 
-
-Browser support
----------------
-
-**Firefox 4.0+** | **Chrome 10.0+** | **Safari 6.0+**
+**Note** : for documentation about Pd objects or tutorials about how to make Pd patches, please refer to the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm).
 
 
-What doesn't work yet
-----------------------
+Quick start
+--------------
 
-Very little of the full Pure Data functionality has been implemented yet. To check-out which objects are implemented, you can use the [WebPd gui](http://sebpiq.github.io/WebPd/demos/simple-gui/simple-gui.html). 
-Internal messages, abstractions, subpatches and externals haven't been implemented yet.
-Also, before testing your patch remove all controls (bangs, atoms, sliders, ...), because those are not supported yet.
+The following instructions provide a quick start for people with JavaScript knowledge. If you have no experience with JS, you might want to read the [step-by-step](#step-by-step-guide) guide instead.
 
-**But everything is not lost !!!** There is way enough objects to have fun. Always test your patches with the [WebPd gui](http://sebpiq.github.io/WebPd/demos/simple-gui/simple-gui.html). Also, the library is currently under (rather) heavy development, so stay tuned, more features will come soon. Also, check-out [the roadmap](https://github.com/sebpiq/WebPd/wiki/Roadmap).
+1. Grab the latest version of **WebPd** [here](https://raw.githubusercontent.com/sebpiq/WebPd/master/dist/webpd-latest.min.js).
 
-
-Getting started
-----------------
-
-**Note** : _for documentation about Pd objects or tutorials about how to make Pd patches, please refer to the official [Pure Data documentation](http://crca.ucsd.edu/~msp/Pd_documentation/index.htm)._
-
-**Note** : _there is a complete (but simple) example in `demos/sound-check`. Also online [here](http://sebpiq.github.com/WebPd/demos/sound-check/sound-check.html)._
-
-[Go to "dist/"](https://github.com/sebpiq/WebPd/tree/develop/dist), download the last stable version of `webpd-min.js` (click on the file, click on "raw", save the file) and include it in your webpage.
-
-```html
-<!DOCTYPE html>
-<html>
-    <head>
-        <script src="webpd-min.js"></script>
-    </head>
-    <body></body>
-</html>
-```
-
-Then, get a Pd file, load it to a WebPd patch and start it. The way you get the Pd file in JavaScript is up to you, ... but the prefered way is by using an Ajax request. For this I suggest to use JQuery :
-
-```html
-<!DOCTYPE html>
-<html>
-    <head>
-        <script src="webpd-min.js"></script>
-        <script src="jquery.js"></script>
-    </head>
-    <body>
-        <script>
-            $.get('myPatch.pd', function(patchFile) {       // Getting the Pd patch file
-                var patch = Pd.compat.parse(patchFile);     // Loading the WebPd patch
-                patch.play();                               // Starting it
-            });
-        </script>
-    </body>
-</html>
-```
-
-**Note** : _when developing on your computer Ajax requests might fail. See [troubleshooting section](#troubleshooting)._
-
-
-If the patch file is not too big, you can also include it directly in your page, and read it with JavaScript :
-
-```html
-<html>
-    <head>
-        <script src="webpd-min.js"></script>
-    </head>
-    <body>
-        <script id="patchFile" type="text/pd">
-            #N canvas 199 234 519 300 10;
-            #X obj -114 170 osc~ 440;
-            #X obj -108 246 dac~;
-            #X connect 0 0 1 0;
-        </script>
-        <script>
-            var patchFile = document.getElementById('patchFile').text;      // Getting the Pd patch file
-            var patch = Pd.compat.parse(patchFile);                         // Loading the WebPd patch
-            patch.play();                                                   // Starting it
-        </script>
-    </body>
-</html>
-```
-
-Sending / receiving messages
-------------------------------
-
-To receive messages from named senders within the patch (aka. send boxes : `[send someName]`), call the `receive` method of the patch object :
+2. Build a web page which includes **WebPd**, loads and starts a Pd patch. `Pd.loadPatch` takes a full Pd file as a string and creates a `Patch` object from it.
 
 ```javascript
-patch.receive('someName', function(msg) {
-    console.log('received a message from "someName" : ', msg);
-    // your code ...
-});
+<!doctype HTML>
+<html>
+  <head>
+    <script src="js/jquery.js"></script>
+    <script src="js/webpd-latest.js"></script>
+    <script>
+        var patch
+        $.get('patches/myPatch.pd', function(patchStr) {
+          patch = Pd.loadPatch(patchStr)
+          Pd.start()
+        })
+    </script>
+  </head>
+
+  <body></body>
+</html>
 ```
 
-In return, you can send messages from JavaScript to a named sender within the patch (aka. receive boxes : `[receive someName]`) by calling the `send` method of the patch object :
+If you are tesing locally, be careful with your ajax request, as it might be blocked by your browser because of [same-origin policy](https://en.wikipedia.org/wiki/Same-origin_policy). For a workaround, see the [troubleshooting section](#troubleshooting).
 
-```javascript
-patch.send('someName', 'hello!');
+
+Step-by-step guide
+-------------------
+
+The following instructions provide a detailed guide to start working with **WebPd**. If you have experience with web development, you might want to read the [quick start](#quick-start) instead.
+
+1. First create a folder `myProject` in which you will create your first **WebPd** project. In this folder, create the following structure :
+
+```
+myProject/
+    patches/
+    js/
 ```
 
-**Note** : _there is a an example of this in `demos/send-and-receive`. Also online [here](http://sebpiq.github.com/WebPd/demos/send-and-receive/send-and-receive.html)._
+2. Download the [latest version of WebPd](https://raw.githubusercontent.com/sebpiq/WebPd/master/dist/webpd-latest.min.js), save it as `webpd-latest.js` onto your computer, in the folder `myProject/js`.
 
-Demos
-----------
+3. Download the [latest version of jquery](http://jquery.com/download/), save it as `jquery.js` onto your computer, in the folder `myProject/js`.
 
-There's a bunch of demos in `demos` (surprisingly :) :
+4. In the folder `myProject`, create a file called `index.html` and copy/paste the following code in it
 
-- [sound-check](http://sebpiq.github.com/WebPd/demos/sound-check/sound-check.html) _a complete example to help you getting started._
-- [send-and-receive](http://sebpiq.github.com/WebPd/demos/send-and-receive/send-and-receive.html) _a complete example for sending/receiving messages._
-- [processing-storm](http://sebpiq.github.com/WebPd/demos/processing-storm/processing-storm.html) _an example of using WebPd with processing._
-- [random-drones](http://sebpiq.github.io/pd-fileutils/randomDrone.html) _a simple experiment, generating very simple random drone patches._
-- [simple-gui](http://sebpiq.github.com/WebPd/demos/simple-gui/simple-gui.html) _a very simple GUI for WebPd. Also documents the dynamic patching API._
+```
+<!doctype HTML>
+<html>
+  <head>
+    <script src="js/jquery.js"></script>
+    <script src="js/webpd-latest.js"></script>
+    <script>
+        var patch
+        $.get('patches/myPatch.pd', function(patchStr) {
+          patch = Pd.loadPatch(patchStr)
+          Pd.start()
+        })
+    </script>
+  </head>
 
-**Note** : _To run those demos on your own computer, you will need to build `webpd-latest.js` first. For this, follow the build instructions bellow, or simply copy the latest stable build to `dist/webpd-latest.js`. For example, if latest build is `webpd-0.2.0.js`_ :
+  <body></body>
+</html>
+```
 
-    cp dist/webpd-0.2.0.js dist/webpd-latest.js
+Save that file. Be careful to use a text editor that is programming-friendly. Microsoft Word and other text processors will add a lot of extra informations, making your code impossible to understand by a web browser. I recommend using something like *notepad*, *gedit*, ...
+
+5. Create a patch using your usual Pure Data. Make sure that you use only [supported objects and features](supported-objects-and-features). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
+
+6. Launch a local web server on your computer. For this I recommend to first [install Python](https://www.python.org/). Then open a terminal (or command prompt on windows), and using the command `cd` navigate to your folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you are using *Python 2* or `python -m http.server` if you have *Python 3*. 
+
+7. You can finally open your web page, and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
 
 
 Troubleshooting
 ------------------
 
-_> I can't run the demos on my computer / PD files won't load_
+[ts-cross-origin] : _> I can't run any WebPd demo on my computer_
 
-For security reasons, browsers control access to your file system from web pages. Because of this, getting Pd files with Ajax might fail on your local machine.
+For security reasons, browsers control access to your file system from web pages. Because of this, getting Pd files with Ajax might fail on your local machine. A workaround is to start a local server and access all the example web pages through it. 
 
-A workaround for Chrome is to launch it from a terminal with the option `--allow-file-access-from-files`.
+Python comes bundled with such a web server. Open a terminal, navigate to the folder containing the web page you want to open, then run `python -m SimpleHTTPServer` if you are using *Python 2* or `python -m http.server` if you have *Python 3*. Then open your web browser to [http://localhost:8000](http://localhost:8000) and things should start working.
 
-For any browser, you can also start a local HTTP server. For example, if you have [Python](http://www.python.org/) installed, go to the root directory of your project, run : 
 
-    python -m SimpleHTTPServer
+[ts-no-sound] : _> A patch that used to work fine with WebPd has stopped working_
 
-then point your browser to [localhost:8000/my_page.html](localhost:8000/your_page.html).
+**WebPd** has a few [limitations](list-of-implemented-objects-and-other-limitations). For example, some of the Pd objects are not available. Open your browser's developer console (`ctrl+shift+i` on firefox and chrome for linux or windows), and you should get a clear error message telling you if that is the case. If the error is unclear, or there is no error, it might be a bug with **WebPd**. In that case, it would be great if you could [submit a bug report](submitting-a-bug-report).
 
-For example, to run the `processing-storm.html` demo, open a terminal, go to `WebPd/`, start the python server, 
-and point your browser to [localhost:8000/demos/processing-storm/processing-storm.html](http://localhost:8000/demos/processing-storm/processing-storm.html).
+
+[ts-no-sound-on-mobile] : _> A patch that works fine on the desktop doesn't seem to work on mobile_
+
+There is a tricks to have any Web Audio API web page working on mobile. First, make sure that you use a browser that does support Web Audio API. For example the default Android browser doesn't, so on Android you will have to use Chrome or Firefox. 
+
+On IOS, things are even trickier. For security reasons, you should start WebPd only in direct answer to a user action. For example you can ask the user to click a button, and start WebPd in this button's `onclick` handler `onclick="Pd.start()"`.
+
+
+List of implemented objects and other limitations
+---------------------------------------------------
+
+Not all of Pure Data's objects are available in WebPd. Please check-out the [list of available objects](https://github.com/sebpiq/WebPd/tree/master/OBJECTLIST.md).
+
+Abstractions are implemented, but at the moment they require a bit of extra JavaScript in order to work. You can check-out the [abstractions example](https://github.com/sebpiq/WebPd/tree/master/examples/abstractions), to see how this works.
+
+Web Audio API works slightly differently to Pure Data, and translating Pure Data patches to Web Audio API (through WebPd), is not always an easy task indeed. You will find that some patches might perform poorly if there is too much running at the same time, or on mobile phones. For example, modulating some parameters with audio signal (frequencies, delay times, ...), as is very frequent to do in Pd might cause a performance penalty in the browser and even cause audio glitches if there is too much of them, so use with caution...
+
+
+Submitting a bug report
+------------------------
+
+If you find a bug, you can submit a bug report on github's [issue tracker](https://github.com/sebpiq/WebPd/issues).
+
+Please try to include as much information as possible. Also try to include code, and **a patch** that you cannot get to work.
+
+
+API
+-----
+
+### Pd
+
+#### Pd.receive(name, callback)
+
+Receives messages from named senders within a patch (e.g. `[send someName]`). Example :
+
+```javascript
+Pd.receive('someName', function(args) {
+    console.log('received a message from "someName" : ', args)
+})
+```
+
+#### Pd.send(name, args)
+
+Sends messages from JavaScript to a named receiver within a patch (e.g. `[receive someName]`). Example :
+
+```javascript
+Pd.send('someName', ['hello!'])
+```
 
 
 Instructions for building webpd.js
 ------------------------------------
 
-To build `webpd.js` and `webpd-min.js` yourself, you will need [node.js](http://nodejs.org/) and [Grunt](https://github.com/gruntjs/grunt).
-Follow the instructions to install those, then in WebPd's root folder run :
+To build **WebPd** yourself, you will need [node.js](http://nodejs.org/) and [gulp.js](http://gulpjs.com/).
 
-    grunt build
+When these are installed, run `npm install` in WebPd root folder.
+
+Finally, run `npm run build` to build a new version of WebPd in `dist/webpd-latest.js`.
 
 
 Instructions for running the tests
 ------------------------------------
 
-You can run the tests either with grunt, by running the command :
+**WebPd** comes with two test suites. 
 
-    grunt test
+### Automated tests
 
-Or by opening `test/index.html` in your browser.
+The tests in `test/src` run on **node.js** using [mocha](http://mochajs.org/). To run them, simply execute the command `npm test`.
+
+
+### Browser tests
+
+The tests in `test/browser` run in a web browser. 
+
+To build them, first, scaffold the tests by running `node node_modules/waatest/bin/scaffold.js ./waatest`. This will create a folder `waatest` containing a test web page.
+
+Build the tests by running `npm run test.browser.build`.
+
+Then start a local web server (see [troubleshooting](#troubleshooting)), and open `waatest/index.html` in your web browser.
 
 
 Contributing

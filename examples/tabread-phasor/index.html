@@ -1,0 +1,38 @@
+<!doctype HTML>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script type="text/javascript" src="../../dist/webpd-latest.min.js"></script>
+    <script type="text/javascript">
+    var patch
+    $.get('./pd/main.pd', function(mainStr) {
+      patch = Pd.loadPatch(mainStr)
+      Pd.start()
+    })
+
+    </script>
+  </head>
+
+  <body>
+    <button id="sample1Button">Load sample 1</button>
+    <button id="sample2Button">Load sample 2</button>
+    <form>
+      <input type="text" id="playRateInput" />
+      <input type="submit" value="Set play rate" />
+    </form>
+    <script>
+      $('button#sample1Button').click(function() {
+        Pd.send('loadfile', ['monster.wav'])
+      })
+      $('button#sample2Button').click(function() {
+        Pd.send('loadfile', ['breathing.wav'])
+      })
+      $('form').submit(function(event) {
+        event.preventDefault()
+        Pd.send('playrate', [parseFloat($('#playRateInput').val())])
+      })
+    </script>
+  </body>
+</html>
