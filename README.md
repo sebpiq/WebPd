@@ -169,7 +169,7 @@ Instructions for running the tests
 
 ### Automated tests
 
-The tests in `test/src` run on **node.js** using [mocha](). To run them, simply execute the command `npm test`.
+The tests in `test/src` run on **node.js** using [mocha](http://mochajs.org/). To run them, simply execute the command `npm test`.
 
 
 ### Browser tests
@@ -178,7 +178,7 @@ The tests in `test/browser` run in a web browser.
 
 To build them, first, scaffold the tests by running `node node_modules/waatest/bin/scaffold.js ./waatest`. This will create a folder `waatest` containing a test web page.
 
-Build the tests by running `npm run test:browser:build`.
+Build the tests by running `npm run test.browser.build`.
 
 Then start a local web server (see [troubleshooting](#troubleshooting)), and open `waatest/index.html` in your web browser.
 

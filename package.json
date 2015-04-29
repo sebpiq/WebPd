@@ -14,9 +14,9 @@
     "dsp"
   ],
   "scripts": {
-    "build": "gulp lib:browserify",
+    "build": "gulp lib.browserify; gulp lib.uglify",
     "test": "mocha --reporter list --recursive test/src",
-    "test:browser:build": "gulp test.browser:build",
+    "test.browser.build": "gulp test.browser.build",
     "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive"
   },
   "dependencies": {
@@ -36,12 +36,12 @@
     "gulp": "3.8.x",
     "gulp-util": "3.0.x",
     "gulp-rename": "1.2.x",
+    "gulp-uglify": "1.2.x",
     "browserify": "7.0.x",
     "run-sequence": "1.0.x",
     "vinyl-source-stream": "1.0.x",
     "async": "0.9.x",
-    "waatest": "git://github.com/sebpiq/WAATest.git#master",
-    "gulp-uglify": "^1.2.0"
+    "waatest": "git://github.com/sebpiq/WAATest.git#master"
   },
   "license": "Standard Improved BSD License"
 }
