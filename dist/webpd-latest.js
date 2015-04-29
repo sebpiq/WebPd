@@ -181,7 +181,7 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/utils":8,"./lib/global":9,"./lib/objects":12,"./lib/objects/portlets":13,"./lib/waa":17,"pd-fileutils":59,"underscore":67}],2:[function(require,module,exports){
+},{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/utils":8,"./lib/global":9,"./lib/objects":13,"./lib/objects/portlets":14,"./lib/waa":18,"pd-fileutils":62,"underscore":70}],2:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -292,7 +292,7 @@ _.extend(BaseNode.prototype, {
 })
 
 
-},{"./portlets":7,"./utils":8,"underscore":67,"util":26}],3:[function(require,module,exports){
+},{"./portlets":7,"./utils":8,"underscore":70,"util":29}],3:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -442,7 +442,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":9,"./BaseNode":2,"./utils":8,"events":22,"underscore":67}],4:[function(require,module,exports){
+},{"../global":9,"./BaseNode":2,"./utils":8,"events":24,"underscore":70}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -480,7 +480,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
   doResolveArgs: true
 })
 
-},{"../global":9,"./BaseNode":2,"./Patch":3,"./portlets":7,"./utils":8,"underscore":67,"util":26}],5:[function(require,module,exports){
+},{"../global":9,"./BaseNode":2,"./Patch":3,"./portlets":7,"./utils":8,"underscore":70,"util":29}],5:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -648,7 +648,7 @@ _.extend(Reference.prototype, EventEmitter.prototype, {
   }
 
 })
-},{"../global":9,"chai":27,"events":22,"underscore":67}],7:[function(require,module,exports){
+},{"../global":9,"chai":30,"events":24,"underscore":70}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -742,7 +742,7 @@ var Inlet = exports.Inlet = Portlet.extend({})
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
 
-},{"./utils":8,"underscore":67}],8:[function(require,module,exports){
+},{"./utils":8,"underscore":70}],8:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -861,7 +861,7 @@ exports.UniqueIdsMixin = {
   // this counter should never be decremented to ensure the id unicity
   _idCounter: -1
 }
-},{"chai":27,"underscore":67}],9:[function(require,module,exports){
+},{"chai":30,"underscore":70}],9:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -990,7 +990,299 @@ exports.namedObjects = {
   _store: {}
 }
 
-},{"events":22,"underscore":67}],10:[function(require,module,exports){
+},{"events":24,"underscore":70}],10:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+var EventEmitter = require('events').EventEmitter
+  , _ = require('underscore')
+  , expect = require('chai').expect
+  , utils = require('../core/utils')
+  , mixins = require('../core/mixins')
+  , PdObject = require('../core/PdObject')
+  , Patch = require('../core/Patch')
+  , pdGlob = require('../global')
+  , portlets = require('./portlets')
+
+
+exports.declareObjects = function(library) {
+
+  var _BaseControl = PdObject.extend({
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          this.obj._onMessageReceived(args)
+        }
+      })
+    ],
+    outletDefs: [portlets.Outlet],
+
+    init: function(receiveName, sendName, pdInit) {
+      if (receiveName && receiveName !== '-' && receiveName !== 'empty') {
+        this.inlets.pop()
+        this.receiveName = receiveName
+        // ! because the extend method instantiates the object for inheritance, 
+        // we need this "if"
+        if (this._onMessageReceived) {
+          this._onMessageReceived = this._onMessageReceived.bind(this)
+          pdGlob.emitter.on('msg:' + this.receiveName, this._onMessageReceived)
+        }
+      }
+
+      if (sendName && sendName !== '-' && sendName !== 'empty') {
+        this.outlets.pop()
+        this.sendName = sendName
+      }
+
+      if (pdInit && this.patch) { // ! here we must test for patch because of extend which instantiates an object
+        var self = this
+        this._onPatchStarted = function() { self._sendMessage([self.value]) }
+        this.patch.on('started', this._onPatchStarted)
+      }
+    },
+
+    destroy: function() {
+      pdGlob.emitter.removeListener('msg:' + this.receiveName, this._onMessageReceived)
+      if (this._onPatchStarted)
+        this.patch.removeListener('started', this._onPatchStarted)
+    },
+
+    _sendMessage: function(args) {
+      if (this.outlets.length) this.o(0).message(args)
+      else pdGlob.emitter.emit('msg:' + this.sendName, args)
+    }
+
+  })
+
+  
+  library['symbolatom'] = _BaseControl.extend({
+    
+    type: 'symbolatom',
+
+    init: function(args) {
+      var minValue = args[0] || undefined
+        , maxValue = args[1] || undefined
+        , receiveName = args[2]
+        , sendName = args[3]
+      this.value = 'symbol'
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, 0])
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang' || _.isNumber(value) || value === 'symbol') {
+        if (_.isNumber(value)) this.value = 'float'
+        else if (value === 'symbol') this.value = args[1]
+        args = ['symbol', this.value]
+      } else return console.error('invalid ' + value)
+
+      this._sendMessage(args)
+    }
+
+  })
+
+
+  var _BaseNumber = _BaseControl.extend({
+
+    init: function(pdInit, receiveName, sendName, minValue, maxValue, initialValue) {
+      this.value = initialValue
+      this._limitInput = function(value) {
+        if (_.isNumber(maxValue)) value = Math.min(value, maxValue)
+        if (_.isNumber(minValue)) value = Math.max(value, minValue)
+        return value
+      }
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang' || _.isNumber(value)) {
+        if (_.isNumber(value)) this.value = value
+        args = [this._limitInput(this.value)]
+      } else return console.error('invalid ' + value)
+
+      this._sendMessage(args)
+    }
+
+  })
+
+
+  library['floatatom'] = _BaseNumber.extend({
+    
+    type: 'floatatom',
+
+    init: function(args) {
+      var minValue = args[0] || undefined
+        , maxValue = args[1] || undefined
+        , receiveName = args[2]
+        , sendName = args[3]
+      _BaseNumber.prototype.init.apply(this, [0, receiveName, sendName, minValue, maxValue, 0])
+    }
+
+  })
+
+
+  library['nbx'] = _BaseNumber.extend({
+
+    type: 'nbx',
+
+    init: function(args) {
+      var minValue = args[0] || undefined
+        , maxValue = args[1] || undefined
+        , pdInit = args[2] || 0
+        , receiveName = args[3]
+        , sendName = args[4]
+        , initialValue = args[5] || 0
+      _BaseNumber.prototype.init.apply(this, 
+        [pdInit, receiveName, sendName, minValue, maxValue, initialValue])
+    }
+
+  })
+
+
+  library['bng'] = _BaseControl.extend({
+
+    type: 'bng',
+
+    init: function(args) {
+      var pdInit = args[0] || 0
+        , receiveName = args[1]
+        , sendName = args[2]
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+      this.value = 'bang'
+    },
+
+    _onMessageReceived: function() {
+      this._sendMessage(['bang'])
+    }
+
+  })
+
+
+  library['tgl'] = _BaseControl.extend({
+
+    type: 'tgl',
+
+    init: function(args) {
+      var pdInit = args[0] || 0
+        , receiveName = args[1]
+        , sendName = args[2]
+        , initialValue = args[3] || 0
+        , nonZeroValue = _.isNumber(args[4]) ? args[4] : 1
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+
+      this.nonZeroValue = nonZeroValue
+      this.value = initialValue
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang') {
+        if (this.value === 0) this.value = this.nonZeroValue
+        else this.value = 0
+        this._sendMessage([this.value])
+      } else if (_.isNumber(value)) {
+        if (value === 0) this.value = 0
+        else this.value = this.nonZeroValue
+        this._sendMessage([value])
+      } else return console.error('invalid message received ' + args)
+      
+    }
+
+  })
+
+
+  var _BaseSlider = _BaseNumber.extend({
+
+    init: function(args) {
+      var minValue = args[0] || 0
+        , maxValue = _.isNumber(args[1]) ? args[1] : 127
+        , pdInit = args[2] || 0
+        , receiveName = args[3]
+        , sendName = args[4]
+        , initialValue = args[5] || 0
+      _BaseNumber.prototype.init.apply(this, 
+        [pdInit, receiveName, sendName, minValue, maxValue, initialValue])
+    }
+
+  })
+
+  library['hsl'] = _BaseSlider.extend({
+    type: 'hsl'
+  })
+
+
+  library['vsl'] = _BaseSlider.extend({
+    type: 'vsl'
+  })
+
+
+  var _BaseRadio = _BaseControl.extend({
+
+    init: function(args) {
+      var oldNew = args[0]
+        , pdInit = args[1]
+        , number = _.isNumber(args[2]) ? args[2] : 8
+        , receiveName = args[3]
+        , sendName = args[4]
+        , initialValue = args[5] || 0
+      this.value = initialValue
+      this._limitInput = function(value) { return Math.floor(Math.min(Math.max(value, 0), number - 1)) }
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang' || _.isNumber(value)) {
+        if (_.isNumber(value)) this.value = value
+        args = [this._limitInput(this.value)]
+      } else return console.error('invalid ' + value)
+
+      this._sendMessage(args)
+    }
+
+  })
+
+  library['hradio'] = _BaseRadio.extend({
+    type: 'hradio'
+  })
+
+  library['vradio'] = _BaseRadio.extend({
+    type: 'vradio'
+  })
+
+
+  library['vu'] = _BaseControl.extend({
+
+    init: function(args) {
+      var receiveName = args[0]
+      _BaseControl.prototype.init.apply(this, [receiveName, undefined, 0])
+    },
+
+    _onMessageReceived: function(args) {
+      this._sendMessage(args)
+    }
+
+  })
+}
+},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"events":24,"underscore":70}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1976,7 +2268,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"events":22,"underscore":67,"waaoffsetnode":70,"waatablenode":72,"waawhitenoisenode":76}],11:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"events":24,"underscore":70,"waaoffsetnode":73,"waatablenode":75,"waawhitenoisenode":79}],12:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2826,7 +3118,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":13,"chai":27,"events":22,"underscore":67}],12:[function(require,module,exports){
+},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"events":24,"underscore":70}],13:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2850,10 +3142,11 @@ var _ = require('underscore')
 
 exports.declareObjects = function(library) {
   require('./glue').declareObjects(library)
+  require('./controls').declareObjects(library)
   require('./dsp').declareObjects(library)
   require('./portlets').declareObjects(library)
 }
-},{"./dsp":10,"./glue":11,"./portlets":13,"underscore":67}],13:[function(require,module,exports){
+},{"./controls":10,"./dsp":11,"./glue":12,"./portlets":14,"underscore":70}],14:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3085,7 +3378,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/portlets":7,"../core/utils":8,"../global":9,"chai":27,"underscore":67,"waawire":78}],14:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/portlets":7,"../core/utils":8,"../global":9,"chai":30,"underscore":70,"waawire":81}],15:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3148,7 +3441,7 @@ Audio.prototype.setContext = function(context) {
     this.channels[ch].connect(this._channelMerger, 0, ch)
   }
 }
-},{"../global":9}],15:[function(require,module,exports){
+},{"../global":9}],16:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3192,7 +3485,7 @@ Clock.prototype.schedule = function(func, time, repetition) {
 Clock.prototype.unschedule = function(event) {
   event.clear()
 }
-},{"underscore":67,"waaclock":68}],16:[function(require,module,exports){
+},{"underscore":70,"waaclock":71}],17:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3233,7 +3526,7 @@ WebStorage.prototype.get = function(url, done) {
   req.responseType = 'arraybuffer'
   req.send()
 }
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3257,7 +3550,9 @@ WebStorage.prototype.get = function(url, done) {
 exports.Clock = require('./Clock')
 exports.Audio = require('./Audio')
 exports.Storage = require('./Storage')
-},{"./Audio":14,"./Clock":15,"./Storage":16}],18:[function(require,module,exports){
+},{"./Audio":15,"./Clock":16,"./Storage":17}],19:[function(require,module,exports){
+
+},{}],20:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -4311,7 +4606,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":19,"ieee754":20,"is-array":21}],19:[function(require,module,exports){
+},{"base64-js":21,"ieee754":22,"is-array":23}],21:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -4433,7 +4728,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -4519,7 +4814,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 
 /**
  * isArray
@@ -4554,7 +4849,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4857,7 +5152,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -4882,7 +5177,235 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],24:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
+(function (process){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// resolves . and .. elements in a path array with directory names there
+// must be no slashes, empty elements, or device names (c:\) in the array
+// (so also no leading and trailing slashes - it does not distinguish
+// relative and absolute paths)
+function normalizeArray(parts, allowAboveRoot) {
+  // if the path tries to go above the root, `up` ends up > 0
+  var up = 0;
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var last = parts[i];
+    if (last === '.') {
+      parts.splice(i, 1);
+    } else if (last === '..') {
+      parts.splice(i, 1);
+      up++;
+    } else if (up) {
+      parts.splice(i, 1);
+      up--;
+    }
+  }
+
+  // if the path is allowed to go above the root, restore leading ..s
+  if (allowAboveRoot) {
+    for (; up--; up) {
+      parts.unshift('..');
+    }
+  }
+
+  return parts;
+}
+
+// Split a filename into [root, dir, basename, ext], unix version
+// 'root' is just a slash, or nothing.
+var splitPathRe =
+    /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
+var splitPath = function(filename) {
+  return splitPathRe.exec(filename).slice(1);
+};
+
+// path.resolve([from ...], to)
+// posix version
+exports.resolve = function() {
+  var resolvedPath = '',
+      resolvedAbsolute = false;
+
+  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+    var path = (i >= 0) ? arguments[i] : process.cwd();
+
+    // Skip empty and invalid entries
+    if (typeof path !== 'string') {
+      throw new TypeError('Arguments to path.resolve must be strings');
+    } else if (!path) {
+      continue;
+    }
+
+    resolvedPath = path + '/' + resolvedPath;
+    resolvedAbsolute = path.charAt(0) === '/';
+  }
+
+  // At this point the path should be resolved to a full absolute path, but
+  // handle relative paths to be safe (might happen when process.cwd() fails)
+
+  // Normalize the path
+  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
+    return !!p;
+  }), !resolvedAbsolute).join('/');
+
+  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
+};
+
+// path.normalize(path)
+// posix version
+exports.normalize = function(path) {
+  var isAbsolute = exports.isAbsolute(path),
+      trailingSlash = substr(path, -1) === '/';
+
+  // Normalize the path
+  path = normalizeArray(filter(path.split('/'), function(p) {
+    return !!p;
+  }), !isAbsolute).join('/');
+
+  if (!path && !isAbsolute) {
+    path = '.';
+  }
+  if (path && trailingSlash) {
+    path += '/';
+  }
+
+  return (isAbsolute ? '/' : '') + path;
+};
+
+// posix version
+exports.isAbsolute = function(path) {
+  return path.charAt(0) === '/';
+};
+
+// posix version
+exports.join = function() {
+  var paths = Array.prototype.slice.call(arguments, 0);
+  return exports.normalize(filter(paths, function(p, index) {
+    if (typeof p !== 'string') {
+      throw new TypeError('Arguments to path.join must be strings');
+    }
+    return p;
+  }).join('/'));
+};
+
+
+// path.relative(from, to)
+// posix version
+exports.relative = function(from, to) {
+  from = exports.resolve(from).substr(1);
+  to = exports.resolve(to).substr(1);
+
+  function trim(arr) {
+    var start = 0;
+    for (; start < arr.length; start++) {
+      if (arr[start] !== '') break;
+    }
+
+    var end = arr.length - 1;
+    for (; end >= 0; end--) {
+      if (arr[end] !== '') break;
+    }
+
+    if (start > end) return [];
+    return arr.slice(start, end - start + 1);
+  }
+
+  var fromParts = trim(from.split('/'));
+  var toParts = trim(to.split('/'));
+
+  var length = Math.min(fromParts.length, toParts.length);
+  var samePartsLength = length;
+  for (var i = 0; i < length; i++) {
+    if (fromParts[i] !== toParts[i]) {
+      samePartsLength = i;
+      break;
+    }
+  }
+
+  var outputParts = [];
+  for (var i = samePartsLength; i < fromParts.length; i++) {
+    outputParts.push('..');
+  }
+
+  outputParts = outputParts.concat(toParts.slice(samePartsLength));
+
+  return outputParts.join('/');
+};
+
+exports.sep = '/';
+exports.delimiter = ':';
+
+exports.dirname = function(path) {
+  var result = splitPath(path),
+      root = result[0],
+      dir = result[1];
+
+  if (!root && !dir) {
+    // No dirname whatsoever
+    return '.';
+  }
+
+  if (dir) {
+    // It has a dirname, strip trailing slash
+    dir = dir.substr(0, dir.length - 1);
+  }
+
+  return root + dir;
+};
+
+
+exports.basename = function(path, ext) {
+  var f = splitPath(path)[2];
+  // TODO: make this comparison case-insensitive on windows?
+  if (ext && f.substr(-1 * ext.length) === ext) {
+    f = f.substr(0, f.length - ext.length);
+  }
+  return f;
+};
+
+
+exports.extname = function(path) {
+  return splitPath(path)[3];
+};
+
+function filter (xs, f) {
+    if (xs.filter) return xs.filter(f);
+    var res = [];
+    for (var i = 0; i < xs.length; i++) {
+        if (f(xs[i], i, xs)) res.push(xs[i]);
+    }
+    return res;
+}
+
+// String.prototype.substr - negative index don't work in IE8
+var substr = 'ab'.substr(-1) === 'b'
+    ? function (str, start, len) { return str.substr(start, len) }
+    : function (str, start, len) {
+        if (start < 0) start = str.length + start;
+        return str.substr(start, len);
+    }
+;
+
+}).call(this,require('_process'))
+},{"_process":27}],27:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -4970,14 +5493,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],25:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],26:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -5567,10 +6090,10 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":25,"_process":24,"inherits":23}],27:[function(require,module,exports){
+},{"./support/isBuffer":28,"_process":27,"inherits":25}],30:[function(require,module,exports){
 module.exports = require('./lib/chai');
 
-},{"./lib/chai":28}],28:[function(require,module,exports){
+},{"./lib/chai":31}],31:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -5659,7 +6182,7 @@ exports.use(should);
 var assert = require('./chai/interface/assert');
 exports.use(assert);
 
-},{"./chai/assertion":29,"./chai/config":30,"./chai/core/assertions":31,"./chai/interface/assert":32,"./chai/interface/expect":33,"./chai/interface/should":34,"./chai/utils":45,"assertion-error":54}],29:[function(require,module,exports){
+},{"./chai/assertion":32,"./chai/config":33,"./chai/core/assertions":34,"./chai/interface/assert":35,"./chai/interface/expect":36,"./chai/interface/should":37,"./chai/utils":48,"assertion-error":57}],32:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -5796,7 +6319,7 @@ module.exports = function (_chai, util) {
   });
 };
 
-},{"./config":30}],30:[function(require,module,exports){
+},{"./config":33}],33:[function(require,module,exports){
 module.exports = {
 
   /**
@@ -5848,7 +6371,7 @@ module.exports = {
 
 };
 
-},{}],31:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -7209,7 +7732,7 @@ module.exports = function (chai, _) {
   });
 };
 
-},{}],32:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8267,7 +8790,7 @@ module.exports = function (chai, util) {
   ('Throw', 'throws');
 };
 
-},{}],33:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8281,7 +8804,7 @@ module.exports = function (chai, util) {
 };
 
 
-},{}],34:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8361,7 +8884,7 @@ module.exports = function (chai, util) {
   chai.Should = loadShould;
 };
 
-},{}],35:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /*!
  * Chai - addChainingMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8474,7 +8997,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   });
 };
 
-},{"../config":30,"./flag":38,"./transferFlags":52}],36:[function(require,module,exports){
+},{"../config":33,"./flag":41,"./transferFlags":55}],39:[function(require,module,exports){
 /*!
  * Chai - addMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8519,7 +9042,7 @@ module.exports = function (ctx, name, method) {
   };
 };
 
-},{"../config":30,"./flag":38}],37:[function(require,module,exports){
+},{"../config":33,"./flag":41}],40:[function(require,module,exports){
 /*!
  * Chai - addProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8561,7 +9084,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],38:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8595,7 +9118,7 @@ module.exports = function (obj, key, value) {
   }
 };
 
-},{}],39:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 /*!
  * Chai - getActual utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8615,7 +9138,7 @@ module.exports = function (obj, args) {
   return args.length > 4 ? args[4] : obj._obj;
 };
 
-},{}],40:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 /*!
  * Chai - getEnumerableProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8642,7 +9165,7 @@ module.exports = function getEnumerableProperties(object) {
   return result;
 };
 
-},{}],41:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*!
  * Chai - message composition utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8694,7 +9217,7 @@ module.exports = function (obj, args) {
   return flagMsg ? flagMsg + ': ' + msg : msg;
 };
 
-},{"./flag":38,"./getActual":39,"./inspect":46,"./objDisplay":47}],42:[function(require,module,exports){
+},{"./flag":41,"./getActual":42,"./inspect":49,"./objDisplay":50}],45:[function(require,module,exports){
 /*!
  * Chai - getName utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8716,7 +9239,7 @@ module.exports = function (func) {
   return match && match[1] ? match[1] : "";
 };
 
-},{}],43:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 /*!
  * Chai - getPathValue utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8820,7 +9343,7 @@ function _getPathValue (parsed, obj) {
   return res;
 };
 
-},{}],44:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 /*!
  * Chai - getProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8857,7 +9380,7 @@ module.exports = function getProperties(object) {
   return result;
 };
 
-},{}],45:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011 Jake Luer <jake@alogicalparadox.com>
@@ -8973,7 +9496,7 @@ exports.addChainableMethod = require('./addChainableMethod');
 exports.overwriteChainableMethod = require('./overwriteChainableMethod');
 
 
-},{"./addChainableMethod":35,"./addMethod":36,"./addProperty":37,"./flag":38,"./getActual":39,"./getMessage":41,"./getName":42,"./getPathValue":43,"./inspect":46,"./objDisplay":47,"./overwriteChainableMethod":48,"./overwriteMethod":49,"./overwriteProperty":50,"./test":51,"./transferFlags":52,"./type":53,"deep-eql":55}],46:[function(require,module,exports){
+},{"./addChainableMethod":38,"./addMethod":39,"./addProperty":40,"./flag":41,"./getActual":42,"./getMessage":44,"./getName":45,"./getPathValue":46,"./inspect":49,"./objDisplay":50,"./overwriteChainableMethod":51,"./overwriteMethod":52,"./overwriteProperty":53,"./test":54,"./transferFlags":55,"./type":56,"deep-eql":58}],49:[function(require,module,exports){
 // This is (almost) directly from Node.js utils
 // https://github.com/joyent/node/blob/f8c335d0caf47f16d31413f89aa28eda3878e3aa/lib/util.js
 
@@ -9308,7 +9831,7 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-},{"./getEnumerableProperties":40,"./getName":42,"./getProperties":44}],47:[function(require,module,exports){
+},{"./getEnumerableProperties":43,"./getName":45,"./getProperties":47}],50:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9359,7 +9882,7 @@ module.exports = function (obj) {
   }
 };
 
-},{"../config":30,"./inspect":46}],48:[function(require,module,exports){
+},{"../config":33,"./inspect":49}],51:[function(require,module,exports){
 /*!
  * Chai - overwriteChainableMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9414,7 +9937,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   };
 };
 
-},{}],49:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 /*!
  * Chai - overwriteMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9467,7 +9990,7 @@ module.exports = function (ctx, name, method) {
   }
 };
 
-},{}],50:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /*!
  * Chai - overwriteProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9523,7 +10046,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],51:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*!
  * Chai - test utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9551,7 +10074,7 @@ module.exports = function (obj, args) {
   return negate ? !expr : expr;
 };
 
-},{"./flag":38}],52:[function(require,module,exports){
+},{"./flag":41}],55:[function(require,module,exports){
 /*!
  * Chai - transferFlags utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9597,7 +10120,7 @@ module.exports = function (assertion, object, includeAll) {
   }
 };
 
-},{}],53:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 /*!
  * Chai - type utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9644,7 +10167,7 @@ module.exports = function (obj) {
   return typeof obj;
 };
 
-},{}],54:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 /*!
  * assertion-error
  * Copyright(c) 2013 Jake Luer <jake@qualiancy.com>
@@ -9756,10 +10279,10 @@ AssertionError.prototype.toJSON = function (stack) {
   return props;
 };
 
-},{}],55:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 module.exports = require('./lib/eql');
 
-},{"./lib/eql":56}],56:[function(require,module,exports){
+},{"./lib/eql":59}],59:[function(require,module,exports){
 /*!
  * deep-eql
  * Copyright(c) 2013 Jake Luer <jake@alogicalparadox.com>
@@ -10018,10 +10541,10 @@ function objectEqual(a, b, m) {
   return true;
 }
 
-},{"buffer":18,"type-detect":57}],57:[function(require,module,exports){
+},{"buffer":20,"type-detect":60}],60:[function(require,module,exports){
 module.exports = require('./lib/type');
 
-},{"./lib/type":58}],58:[function(require,module,exports){
+},{"./lib/type":61}],61:[function(require,module,exports){
 /*!
  * type-detect
  * Copyright(c) 2013 jake luer <jake@alogicalparadox.com>
@@ -10165,7 +10688,7 @@ Library.prototype.test = function (obj, type) {
   }
 };
 
-},{}],59:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 exports.parse = require('./lib/parsing').parse
 exports.renderSvg = require('./lib/svg-rendering').render
 exports.renderPd = require('./lib/pd-rendering').render
@@ -10173,7 +10696,7 @@ exports.Patch = require('./lib/Patch')
 
 if (typeof window !== 'undefined') window.pdfu = exports
 
-},{"./lib/Patch":60,"./lib/parsing":61,"./lib/pd-rendering":62,"./lib/svg-rendering":63}],60:[function(require,module,exports){
+},{"./lib/Patch":63,"./lib/parsing":64,"./lib/pd-rendering":65,"./lib/svg-rendering":66}],63:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -10240,7 +10763,7 @@ _.extend(Patch.prototype, {
 
 })
 
-},{"underscore":67}],61:[function(require,module,exports){
+},{"underscore":70}],64:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -10501,13 +11024,14 @@ var parseControls = function(proto, args, layout) {
     // <init> <send> <receive> <init_value> <default_value>
     args = [args[1], args[2], args[3], args[12], args[13]]
   } else if (proto === 'nbx') {
+    // !!! doc is inexact here, logHeight is not at the specified position, and initial value of the nbx was missing.
     // <size> <height> <min> <max> <log> <init> <send> <receive> <label> <x_off> <y_off> <font> <fontsize> <bg_color> <fg_color> <label_color> <log_height>
     layout.size = args[0] ; layout.height = args[1] ; layout.log = args[4]
     layout.label = args[8] ; layout.labelX = args[9] ; layout.labelY = args[10]
     layout.labelFont = args[11] ; layout.labelFontSize = args[12] ; layout.bgColor = args[13]
-    layout.fgColor = args[14] ; layout.labelColor = args[15] ; layout.logHeight = args[16]
+    layout.fgColor = args[14] ; layout.labelColor = args[15] ; layout.logHeight = args[17]
     // <min> <max> <init> <send> <receive>
-    args = [args[2], args[3], args[5], args[6], args[7]]
+    args = [args[2], args[3], args[5], args[6], args[7], args[16]]
   } else if (proto === 'vsl') {
     // <width> <height> <bottom> <top> <log> <init> <send> <receive> <label> <x_off> <y_off> <font> <fontsize> <bg_color> <fg_color> <label_color> <default_value> <steady_on_click>
     layout.width = args[0] ; layout.height = args[1] ; layout.log = args[4]
@@ -10515,7 +11039,7 @@ var parseControls = function(proto, args, layout) {
     layout.labelFont = args[11] ; layout.labelFontSize = args[12] ; layout.bgColor = args[13]
     layout.fgColor = args[14] ; layout.labelColor = args[15] ; layout.steadyOnClick = args[17]
     // <bottom> <top> <init> <send> <receive> <default_value>
-    args = [args[2], args[3], args[5], args[6], args[7], args[16]]
+    args = [args[2], args[3], args[5], args[6], args[7], args[2] + (args[3] - args[2]) * args[16] / 12700]
   } else if (proto === 'hsl') {
     // <width> <height> <bottom> <top> <log> <init> <send> <receive> <label> <x_off> <y_off> <font> <fontsize> <bg_color> <fg_color> <label_color> <default_value> <steady_on_click>
     layout.width = args[0] ; layout.height = args[1] ; layout.log = args[4]
@@ -10523,7 +11047,7 @@ var parseControls = function(proto, args, layout) {
     layout.labelFont = args[11] ; layout.labelFontSize = args[12] ; layout.bgColor = args[13]
     layout.fgColor = args[14] ; layout.labelColor = args[15] ; layout.steadyOnClick = args[17]
     // <bottom> <top> <init> <send> <receive> <default_value>
-    args = [args[2], args[3], args[5], args[6], args[7], args[16]]
+    args = [args[2], args[3], args[5], args[6], args[7], args[2] + (args[3] - args[2]) * args[16] / 12700]
   } else if (proto === 'vradio') {
     // <size> <new_old> <init> <number> <send> <receive> <label> <x_off> <y_off> <font> <fontsize> <bg_color> <fg_color> <label_color> <default_value>
     layout.size = args[0] ; layout.label = args[6] ; layout.labelX = args[7]
@@ -10561,7 +11085,7 @@ var parseControls = function(proto, args, layout) {
 
 }
 
-},{"underscore":67}],62:[function(require,module,exports){
+},{"underscore":70}],65:[function(require,module,exports){
 var mustache = require('mustache')
   , _ = require('underscore')
 
@@ -10603,7 +11127,8 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
   , cnvTpl = '#X obj {{{layout.x}}} {{{layout.y}}} cnv {{{layout.size}}} {{{layout.width}}} {{{layout.height}}} {{{args.0}}} {{{args.1}}} {{{layout.label}}} {{{layout.labelX}}} {{{layout.labelY}}} {{{layout.labelFont}}} {{{layout.labelFontSize}}} {{{layout.bgColor}}} {{{layout.labelColor}}} {{{args.2}}}'
   , objTpl = '#X obj {{{layout.x}}} {{{layout.y}}} {{{proto}}}{{#args}} {{.}}{{/args}}'
 
-},{"mustache":66,"underscore":67}],63:[function(require,module,exports){
+},{"mustache":69,"underscore":70}],66:[function(require,module,exports){
+(function (__dirname){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -10618,15 +11143,26 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
 var _ = require('underscore')
   , d3 = require('d3')
   , Patch = require('./Patch')
+  , isBrowser = (typeof window !== 'undefined')
+
+if (!isBrowser) {
+  var fs = require('fs')
+    , path = require('path')
+    , defaultStyle = fs.readFileSync(path.join(__dirname, 'svg-default-style.css')).toString()
+}
 
 var defaults = {
   portletWidth: 5,
   portletHeight: 3.5,
   objMinWidth: 25,
-  objMinHeight: 15,
+  objMinHeight: 20,
   ratio: 1.2,
   padding: 10,
-  svgFile: true
+  glyphWidth: 8,
+  glyphHeight: 9,
+  textPadding: 6,
+  svgFile: true,
+  style: isBrowser ? null : defaultStyle
 }
 
 exports.render = function(patch, opts) {
@@ -10636,11 +11172,14 @@ exports.render = function(patch, opts) {
   d3.select('svg').remove()
   var svgContainer = d3.select('body').append('div')
     , svg = svgContainer.append('svg')
-      .attr('style', 'font-family:monospace')
       .attr('xmlns', 'http://www.w3.org/2000/svg')
       .attr('version', '1.1')
     , root = svg.append('g')
     , connections, nodes
+
+  if (opts.style) {
+    svg.append('style').text(opts.style)
+  }
 
   // Creating all renderers
   patch = new Patch(patch)
@@ -10671,6 +11210,7 @@ exports.render = function(patch, opts) {
       return 'translate(' + renderer.getX() + ' ' + renderer.getY() + ')'
     })
     .attr('class', 'node')
+    .attr('id', function(node) { return node.id })
     .each(function(renderer, i) { renderer.render(d3.select(this)) })
 
   // Render the connections
@@ -10837,8 +11377,7 @@ _.extend(ObjectRenderer.prototype, NodeRenderer.prototype, {
       .attr('class', 'proto')
       .text(this.getText())
       .attr('dy', this.getTextY())
-      .attr('dx', this.opts.portletWidth)
-      .attr('style', 'font-size:10px;')
+      .attr('dx', this.opts.textPadding)
   },
 
   renderInlets: function(g) { this._genericRenderPortlets('inlet', g) },
@@ -10864,7 +11403,7 @@ _.extend(ObjectRenderer.prototype, NodeRenderer.prototype, {
   // Returns object width
   getW: function() {
     var maxPortlet = Math.max(this.node.inlets, this.node.outlets)
-      , textLength = this.getText().length * 6 + 10 // 6 = char width, 10 = padding
+      , textLength = this.getText().length * this.opts.glyphWidth + this.opts.textPadding * 2
     return Math.max((maxPortlet-1) * this.opts.objMinWidth, this.opts.objMinWidth, textLength)
   },
 
@@ -10872,7 +11411,7 @@ _.extend(ObjectRenderer.prototype, NodeRenderer.prototype, {
   getText: function() { return this.node.proto + ' ' + this.node.args.join(' ') },
 
   // Returns text Y relatively to the object 
-  getTextY: function() { return this.getH()/2 + 11/2.5 }, // 11 is font height
+  getTextY: function() { return this.getH()/2 + this.opts.glyphHeight/2 }, 
 
   // ---- Implement virtual methods ---- //
   getOutletRelX: function(outlet) {
@@ -11216,16 +11755,16 @@ _.extend(TextRenderer.prototype, NodeRenderer.prototype, {
   render: function(g) {
     g.append('text')
       .attr('class', 'comment')
-      .attr('style', 'font-size:10px;')
       .text(this.node.args[0])
+      .attr('dy', this.getH()/2 + this.opts.glyphHeight/2)
   },
-  // TODO : implement more properly
-  getW: function() { return this.node.args[0].length * 10 },
-  getH: function() { return 20 }
+  getW: function() { return this.node.args[0].length * this.opts.glyphWidth + this.opts.textPadding * 2 },
+  getH: function() { return this.opts.objMinHeight }
 
 })
 
-},{"./Patch":60,"d3":65,"underscore":67}],64:[function(require,module,exports){
+}).call(this,"/node_modules/pd-fileutils/lib")
+},{"./Patch":63,"d3":68,"fs":19,"path":26,"underscore":70}],67:[function(require,module,exports){
 d3 = function() {
   var π = Math.PI, ε = 1e-6, d3 = {
     version: "3.0.8"
@@ -19027,10 +19566,10 @@ d3 = function() {
   };
   return d3;
 }();
-},{}],65:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 require("./d3");
 module.exports = d3;
-},{"./d3":64}],66:[function(require,module,exports){
+},{"./d3":67}],69:[function(require,module,exports){
 /*!
  * mustache.js - Logic-less {{mustache}} templates with JavaScript
  * http://github.com/janl/mustache.js
@@ -19583,7 +20122,7 @@ module.exports = d3;
 
 }));
 
-},{}],67:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -20811,13 +21350,13 @@ module.exports = d3;
 
 }).call(this);
 
-},{}],68:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 var WAAClock = require('./lib/WAAClock')
 
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":69}],69:[function(require,module,exports){
+},{"./lib/WAAClock":72}],72:[function(require,module,exports){
 (function (process){
 var isBrowser = (typeof window !== 'undefined')
 
@@ -21051,11 +21590,11 @@ WAAClock.prototype._relTime = function(absTime) {
   return absTime - this.context.currentTime
 }
 }).call(this,require('_process'))
-},{"_process":24}],70:[function(require,module,exports){
+},{"_process":27}],73:[function(require,module,exports){
 var WAAOffsetNode = require('./lib/WAAOffsetNode')
 module.exports = WAAOffsetNode
 if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
-},{"./lib/WAAOffsetNode":71}],71:[function(require,module,exports){
+},{"./lib/WAAOffsetNode":74}],74:[function(require,module,exports){
 var WAAOffsetNode = module.exports = function(context) {
   this.context = context
 
@@ -21090,11 +21629,11 @@ WAAOffsetNode.prototype.disconnect = function() {
 }
 
 WAAOffsetNode._ones = []
-},{}],72:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 var WAATableNode = require('./lib/WAATableNode')
 module.exports = WAATableNode
 if (typeof window !== 'undefined') window.WAATableNode = WAATableNode
-},{"./lib/WAATableNode":73}],73:[function(require,module,exports){
+},{"./lib/WAATableNode":76}],76:[function(require,module,exports){
 var WAAOffset = require('waaoffset')
 
 var WAATableNode = module.exports = function(context) {
@@ -21130,11 +21669,11 @@ WAATableNode.prototype._setTable = function(table) {
   this._output.curve = table
   this.position.gain.setValueAtTime(2 / (table.length - 1), 0)
 }
-},{"waaoffset":74}],74:[function(require,module,exports){
+},{"waaoffset":77}],77:[function(require,module,exports){
 var WAAOffset = require('./lib/WAAOffset')
 module.exports = WAAOffset
 if (typeof window !== 'undefined') window.WAAOffset = WAAOffset
-},{"./lib/WAAOffset":75}],75:[function(require,module,exports){
+},{"./lib/WAAOffset":78}],78:[function(require,module,exports){
 var WAAOffset = module.exports = function(context) {
   this.context = context
 
@@ -21159,11 +21698,11 @@ WAAOffset.prototype.connect = function() {
 WAAOffset.prototype.disconnect = function() {
   this._output.disconnect.apply(this._output, arguments)
 }
-},{}],76:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 var WAAWhiteNoiseNode = require('./lib/WAAWhiteNoiseNode')
 module.exports = WAAWhiteNoiseNode
 if (typeof window !== 'undefined') window.WAAWhiteNoiseNode = WAAWhiteNoiseNode
-},{"./lib/WAAWhiteNoiseNode":77}],77:[function(require,module,exports){
+},{"./lib/WAAWhiteNoiseNode":80}],80:[function(require,module,exports){
 var WAAWhiteNoiseNode = module.exports = function(context) {
   this.context = context
 
@@ -21198,11 +21737,11 @@ WAAWhiteNoiseNode.prototype._prepareOutput = function() {
   this._output.buffer = this._buffer
   this._output.loop = true
 }
-},{}],78:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 var WAAWire = require('./lib/WAAWire')
 module.exports = WAAWire
 if (typeof window !== 'undefined') window.WAAWire = WAAWire
-},{"./lib/WAAWire":79}],79:[function(require,module,exports){
+},{"./lib/WAAWire":82}],82:[function(require,module,exports){
 var WAAWire = module.exports = function(context) {
   this.context = context
   

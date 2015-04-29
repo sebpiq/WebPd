@@ -22,7 +22,7 @@
   "dependencies": {
     "underscore": "1.4.x",
     "chai": "1.10.x",
-    "pd-fileutils": ">= 0.3.0",
+    "pd-fileutils": "git://github.com/sebpiq/pd-fileutils.git#master",
     "waaclock": "0.5.x",
     "waaoffsetnode": "0.1.x",
     "waawhitenoisenode": "0.1.x",
