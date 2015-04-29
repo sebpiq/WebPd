@@ -117,6 +117,8 @@ List of implemented objects and other limitations
 
 Not all of Pure Data's objects are available in WebPd. Please check-out the [list of available objects]().
 
+Abstractions are implemented, but at the moment they require a bit of extra JavaScript in order to work. You can check-out the [abstractions example](https://github.com/sebpiq/WebPd/tree/master/examples/abstractions), to see how this works.
+
 Web Audio API works slightly differently to Pure Data, and translating Pure Data patches to Web Audio API (through WebPd), is not always an easy task indeed. You will find that some patches might perform poorly if there is too much running at the same time, or on mobile phones. For example, modulating some parameters with audio signal (frequencies, delay times, ...), as is very frequent to do in Pd might cause a performance penalty in the browser and even cause audio glitches if there is too much of them, so use with caution...
 
 
