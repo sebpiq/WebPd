@@ -47,12 +47,12 @@ Step-by-step guide
 The following instructions provide a detailed guide to start working with WebPd. If you have experience with web development, you might want to read the [quick start](#quick-start) instead.
 
 1. First create a folder `myProject` in which you will create your first WebPd project. In this folder, create the following structure :
-
-```
-myProject/
-    patches/
-    js/
-```
+  
+  ```
+  myProject/
+      patches/
+      js/
+  ```
 
 2. Download the [latest version of WebPd](https://raw.githubusercontent.com/sebpiq/WebPd/master/dist/webpd-latest.min.js), save it as `webpd-latest.js` onto your computer, in the folder `myProject/js`.
 
@@ -60,34 +60,34 @@ myProject/
 
 4. In the folder `myProject`, create a file called `index.html` and copy/paste the following code in it
 
-```
-<!doctype HTML>
-<html>
-  <head>
-    <script src="js/jquery.js"></script>
-    <script src="js/webpd-latest.js"></script>
-    <script>
-        var patch
-        $.get('patches/myPatch.pd', function(patchStr) {
-          patch = Pd.loadPatch(patchStr)
-          Pd.start()
-        })
-    </script>
-  </head>
+  ```
+  <!doctype HTML>
+  <html>
+    <head>
+      <script src="js/jquery.js"></script>
+      <script src="js/webpd-latest.js"></script>
+      <script>
+          var patch
+          $.get('patches/myPatch.pd', function(patchStr) {
+            patch = Pd.loadPatch(patchStr)
+            Pd.start()
+          })
+      </script>
+    </head>
+  
+    <body></body>
+  </html>
+  ```
 
-  <body></body>
-</html>
-```
-
-Save that file. Be sure to use a text editor that is programmer-friendly. Microsoft Word and other text processors will add a lot of extra informations, making your code impossible to understand by a web browser. I recommend using something like *notepad*, *gedit*, ...
+  Save that file. Be sure to use a text editor that is programmer-friendly. Microsoft Word and other text processors will add a lot of extra informations, making your code impossible to understand by a web browser. I recommend using something like *notepad*, *gedit*, ...
 
 5. Create a patch using Pure Data. Make sure that you use only [features and objects supported by WebPd](#list-of-implemented-objects-and-other-limitations). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
 
 6. Because we are working locally on our computer, we now need to run a web server to be able to open the web page `index.html` properly. For this, we will use the web server that comes with [Python](https://www.python.org/). 
 
-Chances are, you already have Python installed on your computer. To check this, open a terminal (or command prompt), and run `python --version`, this should print the version of Python installed. If instead you get something like `command not found`, then you need to install Python. 
+  Chances are, you already have Python installed on your computer. To check this, open a terminal (or command prompt), and run `python --version`, this should print the version of Python installed. If instead you get something like `command not found`, then you need to install Python. 
 
-In the terminal use the command `cd` to navigate to the folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you have **Python 2** or `python -m http.server` if you have **Python 3**. 
+  In the terminal use the command `cd` to navigate to the folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you have **Python 2** or `python -m http.server` if you have **Python 3**. 
 
 7. You can finally open your web page and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
 
