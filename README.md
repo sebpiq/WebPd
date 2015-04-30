@@ -17,7 +17,7 @@ The following instructions provide a quick start for people with JavaScript know
 
 1. Grab the latest version of WebPd from [here](https://raw.githubusercontent.com/sebpiq/WebPd/master/dist/webpd-latest.min.js).
 
-2. Build a web page which includes WebPd, loads and starts a Pd patch. `Pd.loadPatch` takes a full Pd file as a string and creates a `Patch` object from it.
+2. Add WebPd to your Web page, and load a patch by calling [Pd.loadPatch](#pdloadpatchpatchstring).
 
 ```javascript
 <!doctype HTML>
@@ -81,11 +81,15 @@ myProject/
 
 Save that file. Be sure to use a text editor that is programmer-friendly. Microsoft Word and other text processors will add a lot of extra informations, making your code impossible to understand by a web browser. I recommend using something like *notepad*, *gedit*, ...
 
-5. Create a patch using your usual Pure Data. Make sure that you use only [supported objects and features](supported-objects-and-features). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
+5. Create a patch using Pure Data. Make sure that you use only [features and objects supported by WebPd](supported-objects-and-features). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
 
-6. Launch a local web server on your computer. For this I recommend to first [install Python](https://www.python.org/). Then open a terminal (or command prompt on windows), and using the command `cd` navigate to your folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you are using **Python 2** or `python -m http.server` if you have **Python 3**. 
+6. Because we are working locally on our computer, we now need to run a web server to be able to open the web page `index.html` properly. For this, we will use the web server that comes with [Python](https://www.python.org/). 
 
-7. You can finally open your web page, and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
+    6.1. Chances are, you already have Python installed on your computer. To check this, open a terminal (or command prompt), and run `python --version`, this should print the version of Python installed. If instead you get something like `command not found`, then you need to install Python. 
+
+    6.2. In the terminal use the command `cd` to navigate to the folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you have **Python 2** or `python -m http.server` if you have **Python 3**. 
+
+7. You can finally open your web page and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
 
 
 Troubleshooting
@@ -100,7 +104,7 @@ Python comes bundled with such a web server. Open a terminal, navigate to the fo
 
 ### A patch that used to work fine with WebPd has stopped working after I modified it
 
-WebPd has a few [limitations](#list-of-implemented-objects-and-other-limitations). For example, some of the Pd objects are not available. Open your browser's developer console (`ctrl+shift+i` on firefox and chrome for linux or windows), and you should get a clear error message telling you if that is the case. If the error is unclear, or there is no error, it might be a bug with WebPd. In that case, it would be great if you could [submit a bug report](#submitting-a-bug-report).
+WebPd has a few [limitations](#list-of-implemented-objects-and-other-limitations). For example, some of the Pd objects are not available. Open your browser's developer console (`ctrl+shift+i` on firefox and chrome for linux or windows), and you should get a clear error message telling you what is wrong. If the error is unclear, or if there is no error, it might be a bug with WebPd. In that case, it would be great if you could [submit a bug report](#submitting-a-bug-report).
 
 
 ### A patch that works fine on the desktop doesn't seem to work on mobile
@@ -132,6 +136,10 @@ API
 -----
 
 ### Pd
+
+#### Pd.loadPatch(patchStr)
+
+Loads a Pd patch, and returns a `Patch` object. `patchStr` is the whole contents of a Pd file (and not only a file name).
 
 #### Pd.receive(name, callback)
 
