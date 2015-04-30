@@ -17,7 +17,7 @@ The following instructions provide a quick start for people with JavaScript know
 
 1. Grab the latest version of WebPd from [here](https://raw.githubusercontent.com/sebpiq/WebPd/master/dist/webpd-latest.min.js).
 
-2. Add WebPd to your Web page, and load a patch by calling [Pd.loadPatch](#pdloadpatchpatchstring).
+2. Add WebPd to your Web page, and load a patch by calling [Pd.loadPatch](#pdloadpatchpatchstr).
 
 ```javascript
 <!doctype HTML>
@@ -81,13 +81,13 @@ myProject/
 
 Save that file. Be sure to use a text editor that is programmer-friendly. Microsoft Word and other text processors will add a lot of extra informations, making your code impossible to understand by a web browser. I recommend using something like *notepad*, *gedit*, ...
 
-5. Create a patch using Pure Data. Make sure that you use only [features and objects supported by WebPd](supported-objects-and-features). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
+5. Create a patch using Pure Data. Make sure that you use only [features and objects supported by WebPd](#list-of-implemented-objects-and-other-limitations). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
 
 6. Because we are working locally on our computer, we now need to run a web server to be able to open the web page `index.html` properly. For this, we will use the web server that comes with [Python](https://www.python.org/). 
 
-    6.1. Chances are, you already have Python installed on your computer. To check this, open a terminal (or command prompt), and run `python --version`, this should print the version of Python installed. If instead you get something like `command not found`, then you need to install Python. 
+Chances are, you already have Python installed on your computer. To check this, open a terminal (or command prompt), and run `python --version`, this should print the version of Python installed. If instead you get something like `command not found`, then you need to install Python. 
 
-    6.2. In the terminal use the command `cd` to navigate to the folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you have **Python 2** or `python -m http.server` if you have **Python 3**. 
+In the terminal use the command `cd` to navigate to the folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you have **Python 2** or `python -m http.server` if you have **Python 3**. 
 
 7. You can finally open your web page and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
 
@@ -121,7 +121,7 @@ Not all of Pure Data's objects are available in WebPd. Please check-out the [lis
 
 Abstractions are implemented, but at the moment they require a bit of extra JavaScript in order to work. You can check-out the [abstractions example](https://github.com/sebpiq/WebPd/tree/master/examples/abstractions), to see how this works.
 
-While WebPd uses only Web Audio API and should therefore be quite performant, you will find that some patches perform poorly on mobile devices, or if there is too many objects running at the same time. This is because Web Audio API is not optimized to work in the same way as Pure Data. For example, modulating parameters with an audio signal (frequencies, delay times, ...), though it is very frequent in Pd, can cause audio glitches in the browser if there is too much of them. So use with caution...
+While WebPd uses only Web Audio API and should therefore be quite efficient, you might find that some patches perform poorly on mobile devices, or if there is too many objects running at the same time. This is because Web Audio API is not optimized to work in the same way as Pure Data. For example, modulating parameters with an audio signal (frequencies, delay times, ...), though it is very frequent in Pd, can cause audio glitches in the browser if you use it too much or in a big patch.
 
 
 Submitting a bug report
