@@ -128,6 +128,11 @@ WebPd uses Web Audio API, and as it happens, running Web Audio API on mobile is 
 On iPhone and iPad, things are even trickier. For security reasons, audio is blocked by iOS, unless you start it in direct answer to a user action (click, touch, ...). So to get sound with WebPd, you will need to do exactly that and for example call `Pd.start` in a button's `onclick` handler : `onclick="Pd.start()"`.
 
 
+### My patch doesn't work on some browser which should support Web Audio API
+
+Web Audio API is a work in progress, so there is discrepencies between different browser implementations. WebPd builds on the latest version of Web Audio API. To make sure that your web page also works with browsers implementing older versions of Web Audio API, include [that javascript](https://github.com/cwilso/AudioContext-MonkeyPatch) in your web page, before you include WebPd.
+
+
 List of implemented objects and other limitations
 ---------------------------------------------------
 
