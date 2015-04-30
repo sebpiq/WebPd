@@ -6,16 +6,31 @@
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
     <script type="text/javascript" src="../../dist/webpd-latest.min.js"></script>
     <script type="text/javascript">
-    var patch
-    $.get('pd/main.pd', function(mainStr) {
-    $.get('pd/pink~.pd', function(pinkStr) {
-      Pd.registerAbstraction('pink~', pinkStr)
-      patch = Pd.loadPatch(mainStr)
-      Pd.start()
-      Pd.send(patch.patchId + '-diameter', [20])
-    })
-    })
+      var patch
+      $.get('pd/main.pd', function(mainStr) {
+        $.get('pd/pink~.pd', function(pinkStr) {
+          
+          // Loading the patch and abstraction
+          Pd.registerAbstraction('pink~', pinkStr)
+          patch = Pd.loadPatch(mainStr)
+          Pd.start()
+          Pd.send(patch.patchId + '-diameter', [20])
+
+          // Rendering the patch as SVG
+          $('#svg').html(pdfu.renderSvg(pdfu.parse(mainStr), {svgFile: false, ratio: 1.5}))
+        })
+      })
     </script>
+
+    <style>
+      svg text {
+        font-size: 80%;
+      }
+      #pdfuNote {
+        text-align: right;
+      }
+    </style>
+
   </head>
 
   <body>
@@ -31,5 +46,9 @@
         Pd.send(patch.patchId + '-frequency', [freq])
       })
     </script>
+
+    <div id="pdfuNote">Patch rendered to SVG using <a href="https://github.com/sebpiq/pd-fileutils">pd-fileutils</a></div>
+    <div id="svg"></div>
+
   </body>
 </html>

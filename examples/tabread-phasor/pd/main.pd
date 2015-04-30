@@ -1,4 +1,4 @@
-#N canvas 555 121 789 535 10;
+#N canvas 552 126 789 535 10;
 #X obj 118 77 soundfiler;
 #X msg 118 49 read -resize samples/\$1 \$2-SAMPLE;
 #X obj 118 -48 pack s \$0;
@@ -8,7 +8,7 @@
 #X obj 89 126 s \$0-SAMPCOUNT;
 #X obj 504 -26 / 44100;
 #X obj 118 -86 r loadfile;
-#X obj 80 369 table \$0-SAMPLE 100;
+#X obj 83 206 table \$0-SAMPLE 100;
 #X obj 185 126 print LOADED;
 #X obj 228 -87 r playrate;
 #X obj 234 2 /;

@@ -92,6 +92,20 @@ The following instructions provide a detailed guide to start working with WebPd.
 7. You can finally open your web page and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
 
 
+Examples
+----------
+
+There is a few examples in the [examples/](https://github.com/sebpiq/WebPd/tree/master/examples) folder. You can also open them online :
+
+- [abstractions](http://sebpiq.github.io/WebPd/examples/abstractions/)
+- [delays](http://sebpiq.github.io/WebPd/examples/delays/)
+- [gui-controls](http://sebpiq.github.io/WebPd/examples/gui-controls/)
+- [phasor](http://sebpiq.github.io/WebPd/examples/phasor/)
+- [subpatches](http://sebpiq.github.io/WebPd/examples/subpatches/)
+- [tabread-line](http://sebpiq.github.io/WebPd/examples/tabread-line/)
+- [tabread-phasor](http://sebpiq.github.io/WebPd/examples/tabread-phasor/)
+
+
 Troubleshooting
 ------------------
 

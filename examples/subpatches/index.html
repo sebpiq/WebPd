@@ -6,16 +6,30 @@
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
     <script type="text/javascript" src="../../dist/webpd-latest.min.js"></script>
     <script type="text/javascript">
-    var patch
-    $.get('./pd/main.pd', function(mainStr) {
-      patch = Pd.loadPatch(mainStr)
-      Pd.start()
-    })
+      var patch
+      $.get('./pd/main.pd', function(mainStr) {
+        // Loading and starting the patch
+        patch = Pd.loadPatch(mainStr)
+        Pd.start()
 
+        // Rendering the patch as SVG
+        $('#svg').html(pdfu.renderSvg(pdfu.parse(mainStr), {svgFile: false, ratio: 1.5}))
+      })
     </script>
+
+    <style>
+      svg text {
+        font-size: 80%;
+      }
+      #pdfuNote {
+        text-align: right;
+      }
+    </style>
+
   </head>
 
   <body>
+
     <form>
       <input type="text" id="freqInput" />
       <input type="submit" value="Set frequency" />
@@ -26,6 +40,10 @@
         Pd.send('freq', [parseFloat($('#freqInput').val())])
       })
     </script>
+
+    <div id="pdfuNote">Patch rendered to SVG using <a href="https://github.com/sebpiq/pd-fileutils">pd-fileutils</a></div>
+    <div id="svg"></div>
+
   </body>
   
 </html>
