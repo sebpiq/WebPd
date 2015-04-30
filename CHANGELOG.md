@@ -1,3 +1,12 @@
+0.3
+=====
+
+0.3.0
+------
+
+- Complete refactor to Web Audio API
+
+
 0.2
 =======
 
