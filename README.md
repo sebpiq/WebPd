@@ -15,9 +15,9 @@ Quick start
 
 The following instructions provide a quick start for people with JavaScript knowledge. If you have no experience with JS, you might want to read the [step-by-step](#step-by-step-guide) guide instead.
 
-1. Grab the latest version of **WebPd** from [here](https://raw.githubusercontent.com/sebpiq/WebPd/master/dist/webpd-latest.min.js).
+1. Grab the latest version of WebPd from [here](https://raw.githubusercontent.com/sebpiq/WebPd/master/dist/webpd-latest.min.js).
 
-2. Build a web page which includes **WebPd**, loads and starts a Pd patch. `Pd.loadPatch` takes a full Pd file as a string and creates a `Patch` object from it.
+2. Build a web page which includes WebPd, loads and starts a Pd patch. `Pd.loadPatch` takes a full Pd file as a string and creates a `Patch` object from it.
 
 ```javascript
 <!doctype HTML>
@@ -44,9 +44,9 @@ If you are tesing locally, the ajax request might be blocked by your browser bec
 Step-by-step guide
 -------------------
 
-The following instructions provide a detailed guide to start working with **WebPd**. If you have experience with web development, you might want to read the [quick start](#quick-start) instead.
+The following instructions provide a detailed guide to start working with WebPd. If you have experience with web development, you might want to read the [quick start](#quick-start) instead.
 
-1. First create a folder `myProject` in which you will create your first **WebPd** project. In this folder, create the following structure :
+1. First create a folder `myProject` in which you will create your first WebPd project. In this folder, create the following structure :
 
 ```
 myProject/
@@ -100,7 +100,7 @@ Python comes bundled with such a web server. Open a terminal, navigate to the fo
 
 ### A patch that used to work fine with WebPd has stopped working after I modified it
 
-**WebPd** has a few [limitations](list-of-implemented-objects-and-other-limitations). For example, some of the Pd objects are not available. Open your browser's developer console (`ctrl+shift+i` on firefox and chrome for linux or windows), and you should get a clear error message telling you if that is the case. If the error is unclear, or there is no error, it might be a bug with **WebPd**. In that case, it would be great if you could [submit a bug report](submitting-a-bug-report).
+WebPd has a few [limitations](#list-of-implemented-objects-and-other-limitations). For example, some of the Pd objects are not available. Open your browser's developer console (`ctrl+shift+i` on firefox and chrome for linux or windows), and you should get a clear error message telling you if that is the case. If the error is unclear, or there is no error, it might be a bug with WebPd. In that case, it would be great if you could [submit a bug report](#submitting-a-bug-report).
 
 
 ### A patch that works fine on the desktop doesn't seem to work on mobile
@@ -155,7 +155,7 @@ Pd.send('someName', ['hello!'])
 Instructions for building webpd.js
 ------------------------------------
 
-To build **WebPd** yourself, you will need [node.js](http://nodejs.org/) and [gulp.js](http://gulpjs.com/).
+To build WebPd yourself, you will need [node.js](http://nodejs.org/) and [gulp.js](http://gulpjs.com/).
 
 When these are installed, run `npm install` in WebPd root folder.
 
