@@ -153,7 +153,7 @@ var Pd = module.exports = {
         obj.setData(new Float32Array(arrayNodeData.data), true)
         proto = 'array'
       } else {
-        obj = patch._createObject(proto, nodeData.args || [])
+        obj = patch._createObject(proto, nodeData.args || [], nodeData.layout)
       }
       if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
