@@ -116,7 +116,7 @@ For security reasons, browsers control access to your file system from web pages
 Python comes bundled with such a web server. Open a terminal, navigate to the folder containing the web page you want to open, then run `python -m SimpleHTTPServer` if you are using **Python 2** or `python -m http.server` if you are using **Python 3**. Then open your web browser to [http://localhost:8000](http://localhost:8000) and things should start working.
 
 
-### A patch that used to work fine with WebPd has stopped working after I modified it
+### Other patches have worked before but this one doesn't
 
 WebPd has a few [limitations](#list-of-implemented-objects-and-other-limitations). For example, some of the Pd objects are not available. Open your browser's developer console (`ctrl+shift+i` on firefox and chrome for linux or windows), and you should get a clear error message telling you what is wrong. If the error is unclear, or if there is no error, it might be a bug with WebPd. In that case, it would be great if you could [submit a bug report](#submitting-a-bug-report).
 
@@ -126,11 +126,6 @@ WebPd has a few [limitations](#list-of-implemented-objects-and-other-limitations
 WebPd uses Web Audio API, and as it happens, running Web Audio API on mobile is not always easy. First, make sure that you use a browser **that does support Web Audio API**. For example the default Android browser does not, and so on Android you have to use Chrome or Firefox. 
 
 On iPhone and iPad, things are even trickier. For security reasons, audio is blocked by iOS, unless you start it in direct answer to a user action (click, touch, ...). So to get sound with WebPd, you will need to do exactly that and for example call `Pd.start` in a button's `onclick` handler : `onclick="Pd.start()"`.
-
-
-### My patch doesn't work on some browser which should support Web Audio API
-
-Web Audio API is a work in progress, so there is discrepencies between different browser implementations. WebPd builds on the latest version of Web Audio API. To make sure that your web page also works with browsers implementing older versions of Web Audio API, include [that javascript](https://github.com/cwilso/AudioContext-MonkeyPatch) in your web page, before you include WebPd.
 
 
 List of implemented objects and other limitations

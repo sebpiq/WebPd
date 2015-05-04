@@ -14,7 +14,7 @@
     "dsp"
   ],
   "scripts": {
-    "build": "gulp lib.browserify; gulp lib.uglify",
+    "build": "gulp lib.build; gulp lib.uglify",
     "test": "mocha --reporter list --recursive test/src",
     "test.browser.build": "gulp test.browser.build",
     "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive"
@@ -38,6 +38,7 @@
     "gulp-rename": "1.2.x",
     "gulp-uglify": "1.2.x",
     "gulp-file": "0.2.x",
+    "gulp-concat": "2.5.x",
     "browserify": "7.0.x",
     "mustache": "2.0.x",
     "run-sequence": "1.0.x",

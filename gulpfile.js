@@ -6,6 +6,7 @@ var path = require('path')
   , browserify = require('browserify')
   , uglify = require('gulp-uglify')
   , mustache = require('mustache')
+  , concat = require('gulp-concat')
   , runSequence = require('run-sequence')
   , source = require('vinyl-source-stream')
 
@@ -16,9 +17,17 @@ gulp.task('lib.browserify', function() {
     .bundle()
     .on('error', gutil.log)
     .pipe(source('webpd-latest.js'))
+    .pipe(gulp.dest('./build'))
+})
+
+gulp.task('lib.concat', function() {
+  return gulp.src(['./deps/AudioContextMonkeyPatch.js', './build/webpd-latest.js'])
+    .pipe(concat('webpd-latest.js'))
     .pipe(gulp.dest('./dist'))
-    .pipe(rename('lib-build.js'))
-    .pipe(gulp.dest('./waatest'))
+})
+
+gulp.task('lib.build', function() {
+  return runSequence('lib.browserify', 'lib.concat')
 })
 
 gulp.task('lib.uglify', function() {
@@ -27,14 +36,6 @@ gulp.task('lib.uglify', function() {
     .on('error', gutil.log)
     .pipe(rename('webpd-latest.min.js'))
     .pipe(gulp.dest('./dist'))
-})
-
-gulp.task('test.browser.browserify', function() {
-  return browserify({ entries: './test/browser/index.js', debug: true })
-    .bundle()
-    .on('error', gutil.log)
-    .pipe(source('test-build.js'))
-    .pipe(gulp.dest('./waatest'))
 })
 
 gulp.task('lib.objectList', function() {
@@ -50,8 +51,22 @@ gulp.task('lib.objectList', function() {
     .pipe(gulp.dest('.'))
 })
 
+gulp.task('test.browser.copy', function(){
+  return gulp.src('./dist/webpd-latest.js')
+    .pipe(rename('lib-build.js'))
+    .pipe(gulp.dest('./waatest'))
+})
+
+gulp.task('test.browser.browserify', function() {
+  return browserify({ entries: './test/browser/index.js', debug: true })
+    .bundle()
+    .on('error', gutil.log)
+    .pipe(source('test-build.js'))
+    .pipe(gulp.dest('./waatest'))
+})
+
 gulp.task('test.browser.build', function(done) {
-  libWatcher = gulp.watch(['*.js', './lib/**/*.js'], ['lib.browserify'])
+  libWatcher = gulp.watch(['*.js', './lib/**/*.js'], ['lib.build'])
   libWatcher.on('change', function(event) {
     console.log('File '+event.path+' was '+event.type+', running tasks...')
   })
@@ -61,5 +76,5 @@ gulp.task('test.browser.build', function(done) {
     console.log('File '+event.path+' was '+event.type+', running tasks...')
   })
 
-  runSequence('lib.browserify', 'test.browser.browserify', done)
+  return runSequence('lib.build', 'test.browser.browserify', done)
 })
