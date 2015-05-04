@@ -1,0 +1,32 @@
+body {
+  font-family: 'Source Sans Pro';
+}
+
+button, input {
+  font-family: 'Source Sans Pro';
+}
+
+button, input[type="submit"] {
+  cursor: pointer;
+  border: none;
+}
+
+svg text {
+  font-size: 80%;
+}
+
+#pdfuNote {
+  position: fixed;
+  top: 0.5em;
+  right: 0.5em;
+}
+
+#startButton {
+  font-size: 150%;
+  display: none;
+  padding: 0.5em 2em;
+}
+
+form {
+  display: none;
+}

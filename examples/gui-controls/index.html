@@ -5,32 +5,37 @@
     <meta charset="utf-8">
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
     <script type="text/javascript" src="../../dist/webpd-latest.min.js"></script>
-    <script type="text/javascript">
-      var patch
-      $.get('./pd/main.pd', function(mainStr) {
-        // Loading and starting the patch
-        patch = Pd.loadPatch(mainStr)
-        Pd.start()
 
-        // Rendering the patch as SVG
-        $('#svg').html(pdfu.renderSvg(pdfu.parse(mainStr), {svgFile: false, ratio: 1.5}))
-      })
-
-    </script>
-
-    <style>
-      svg text {
-        font-size: 80%;
-      }
-      #pdfuNote {
-        text-align: right;
-      }
-    </style>
-
+    <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
+    <link href='../examples.css' rel='stylesheet' type='text/css'>
   </head>
 
   <body>
+    <div id="loading">Loading ...</div>
+    <button id="startButton">Start</button>
+    
     <div id="pdfuNote">Patch rendered to SVG using <a href="https://github.com/sebpiq/pd-fileutils">pd-fileutils</a></div>
     <div id="svg"></div>
+
+    <script type="text/javascript">
+      $('#startButton').click(function() {
+        $(this).fadeOut(200)
+        Pd.start()
+      })
+      
+      var patch
+      $.get('./pd/main.pd', function(mainStr) {
+        // Loading the patch
+        patch = Pd.loadPatch(mainStr)
+
+        // Rendering the patch as SVG
+        $('#svg').html(pdfu.renderSvg(pdfu.parse(mainStr), {svgFile: false, ratio: 1.5}))
+
+        // Show start button
+        $('#loading').fadeOut(200, function() { $('#startButton').fadeIn() })
+      })
+
+    </script>
+    
   </body>
 </html>
