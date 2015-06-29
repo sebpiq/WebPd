@@ -380,6 +380,22 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[int]', function() {
+
+    it('should get the floor of the input', function() {
+      var int = patch.createObject('int')
+        , mailbox = patch.createObject('testingmailbox')
+      int.o(0).connect(mailbox.i(0))
+
+      int.i(0).message([2.7])
+      assert.deepEqual(mailbox.received, [[2]])
+      
+      int.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[2], [2]])
+    })
+
+  })
+
   describe('[spigot]', function() {
 
     it('should block or let through messages from inlet 0', function() {

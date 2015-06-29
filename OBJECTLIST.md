@@ -22,8 +22,10 @@
 - hip~
 - hradio
 - hsl
+- i
 - inlet
 - inlet~
+- int
 - line~
 - loadbang
 - lop~

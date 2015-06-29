@@ -7,6 +7,13 @@
 - Complete refactor to Web Audio API
 
 
+0.3.1
+-------
+
+- bug fixes
+- object `[int]`
+
+
 0.2
 =======
 

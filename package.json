@@ -17,7 +17,8 @@
     "build": "gulp lib.build; gulp lib.uglify",
     "test": "mocha --reporter list --recursive test/src",
     "test.browser.build": "gulp test.browser.build",
-    "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive"
+    "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive",
+    "objectList": "gulp lib.objectList"
   },
   "dependencies": {
     "underscore": "1.4.x",
