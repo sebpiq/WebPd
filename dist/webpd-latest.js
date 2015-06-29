@@ -1219,7 +1219,6 @@ exports.declareObjects = function(library) {
 
     init: function(receiveName, sendName, pdInit) {
       if (receiveName && receiveName !== '-' && receiveName !== 'empty') {
-        this.inlets.pop()
         this.receiveName = receiveName
         // ! because the extend method instantiates the object for inheritance, 
         // we need this "if"
@@ -1229,12 +1228,11 @@ exports.declareObjects = function(library) {
         }
       }
 
-      if (sendName && sendName !== '-' && sendName !== 'empty') {
-        this.outlets.pop()
+      if (sendName && sendName !== '-' && sendName !== 'empty')
         this.sendName = sendName
-      }
 
-      if (pdInit && this.patch) { // ! here we must test for patch because of extend which instantiates an object
+      // !!! here we must test for patch because of extend which instantiates an object
+      if (pdInit && this.patch) {
         var self = this
         this._onPatchStarted = function() { self._sendMessage([self.value]) }
         this.patch.on('started', this._onPatchStarted)
@@ -1248,8 +1246,9 @@ exports.declareObjects = function(library) {
     },
 
     _sendMessage: function(args) {
-      if (this.outlets.length) this.o(0).message(args)
-      else pdGlob.emitter.emit('msg:' + this.sendName, args)
+      this.o(0).message(args)
+      if (this.sendName) 
+        pdGlob.emitter.emit('msg:' + this.sendName, args)
     }
 
   })
