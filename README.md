@@ -115,6 +115,7 @@ For security reasons, browsers control access to your file system from web pages
 
 Python comes bundled with such a web server. Open a terminal, navigate to the folder containing the web page you want to open, then run `python -m SimpleHTTPServer` if you are using **Python 2** or `python -m http.server` if you are using **Python 3**. Then open your web browser to [http://localhost:8000](http://localhost:8000) and things should start working.
 
+Alternatively, if you prefer node, you may want to install the handy [`http-server`](https://github.com/indexzero/http-server#readme) command-line utility.
 
 ### Other patches have worked before but this one doesn't
 
