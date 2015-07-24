@@ -38,7 +38,7 @@ The following instructions provide a quick start for people with JavaScript know
 </html>
 ```
 
-If you are tesing locally, the ajax request might be blocked by your browser because of [same-origin policy](https://en.wikipedia.org/wiki/Same-origin_policy). For a workaround, see the [troubleshooting section](#i-cant-run-any-webpd-demo-on-my-computer).
+If you are testing locally, the ajax request might be blocked by your browser because of [same-origin policy](https://en.wikipedia.org/wiki/Same-origin_policy). For a workaround, see the [troubleshooting section](#i-cant-run-any-webpd-demo-on-my-computer).
 
 
 Step-by-step guide
@@ -95,7 +95,7 @@ The following instructions provide a detailed guide to start working with WebPd.
 Examples
 ----------
 
-There is a few examples in the [examples/](https://github.com/sebpiq/WebPd/tree/master/examples) folder. You can also open them online :
+There are a few examples in the [examples/](https://github.com/sebpiq/WebPd/tree/master/examples) folder. You can also open them online :
 
 - [abstractions](http://sebpiq.github.io/WebPd/examples/abstractions/)
 - [delays](http://sebpiq.github.io/WebPd/examples/delays/)
@@ -136,7 +136,7 @@ Not all of Pure Data's objects are available in WebPd. Please check-out the [lis
 
 Abstractions are implemented, but at the moment they require a bit of extra JavaScript in order to work. You can check-out the [abstractions example](https://github.com/sebpiq/WebPd/tree/master/examples/abstractions), to see how this works.
 
-While WebPd uses only Web Audio API and should therefore be quite efficient, you might find that some patches perform poorly on mobile devices, or if there is too many objects running at the same time. This is because Web Audio API is not optimized to work in the same way as Pure Data. For example, modulating parameters with an audio signal (frequencies, delay times, ...), though it is very frequent in Pd, can cause audio glitches in the browser if you use it too much or in a big patch.
+While WebPd uses only Web Audio API and should therefore be quite efficient, you might find that some patches perform poorly on mobile devices, or if there are too many objects running at the same time. This is because Web Audio API is not optimized to work in the same way as Pure Data. For example, modulating parameters with an audio signal (frequencies, delay times, ...), though it is very frequent in Pd, can cause audio glitches in the browser if you use it too much or in a big patch.
 
 
 Submitting a bug report
