@@ -332,6 +332,102 @@ describe('objects.glue', function() {
 
   })
 
+  describe('[cos]', function() {
+
+    it('compute the cos of input', function() {
+      var cos = patch.createObject('cos')
+        , mailbox = patch.createObject('testingmailbox')
+      cos.o(0).connect(mailbox.i(0))
+      cos.i(0).message([Math.PI / 2])
+      assert.deepEqual(mailbox.received, [[Math.cos(Math.PI / 2)]])
+    })
+
+  })
+
+  describe('[sin]', function() {
+
+    it('compute the sin of input', function() {
+      var sin = patch.createObject('sin')
+        , mailbox = patch.createObject('testingmailbox')
+      sin.o(0).connect(mailbox.i(0))
+      sin.i(0).message([Math.PI / 2])
+      assert.deepEqual(mailbox.received, [[Math.sin(Math.PI / 2)]])
+    })
+
+  })
+
+  describe('[tan]', function() {
+
+    it('compute the tan of input', function() {
+      var tan = patch.createObject('tan')
+        , mailbox = patch.createObject('testingmailbox')
+      tan.o(0).connect(mailbox.i(0))
+      tan.i(0).message([Math.PI / 2])
+      assert.deepEqual(mailbox.received, [[Math.tan(Math.PI / 2)]])
+    })
+
+  })
+
+  describe('[atan]', function() {
+
+    it('compute the atan of input', function() {
+      var atan = patch.createObject('atan')
+        , mailbox = patch.createObject('testingmailbox')
+      atan.o(0).connect(mailbox.i(0))
+      atan.i(0).message([1])
+      assert.deepEqual(mailbox.received, [[Math.PI / 4]])
+    })
+
+  })
+
+  describe('[exp]', function() {
+
+    it('compute the exp of input', function() {
+      var exp = patch.createObject('exp')
+        , mailbox = patch.createObject('testingmailbox')
+      exp.o(0).connect(mailbox.i(0))
+      exp.i(0).message([2])
+      assert.deepEqual(mailbox.received, [[Math.exp(2)]])
+    })
+
+  })
+
+  describe('[log]', function() {
+
+    it('compute the log of input', function() {
+      var log = patch.createObject('log')
+        , mailbox = patch.createObject('testingmailbox')
+      log.o(0).connect(mailbox.i(0))
+      log.i(0).message([1.5])
+      assert.deepEqual(mailbox.received, [[Math.log(1.5)]])
+    })
+
+  })
+
+  describe('[abs]', function() {
+
+    it('compute the abs of input', function() {
+      var abs = patch.createObject('abs')
+        , mailbox = patch.createObject('testingmailbox')
+      abs.o(0).connect(mailbox.i(0))
+      abs.i(0).message([-10])
+      assert.deepEqual(mailbox.received, [[10]])
+    })
+
+  })
+
+  describe('[sqrt]', function() {
+
+    it('compute the sqrt of input', function() {
+      var sqrt = patch.createObject('sqrt')
+        , mailbox = patch.createObject('testingmailbox')
+      sqrt.o(0).connect(mailbox.i(0))
+      sqrt.i(0).message([9])
+      assert.deepEqual(mailbox.received, [[3]])
+    })
+
+  })
+
   describe('[float]', function() {
 
     it('should have 0 as default value', function() {
@@ -659,6 +755,50 @@ describe('objects.glue', function() {
       moses.i(0).message([9.7])
       assert.deepEqual(mailbox1.received, [[9]])
       assert.deepEqual(mailbox2.received, [[9], [9.7]])
+    })
+
+  })
+
+  describe('[until]', function() {
+
+    it('should send N bangs when receiving N in first inlet', function() {
+      var until = patch.createObject('until')
+        , mailbox = patch.createObject('testingmailbox')
+      until.o(0).connect(mailbox.i(0))
+
+      until.i(0).message([10])
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang'], ['bang'], ['bang'],
+        ['bang'], ['bang'], ['bang'], ['bang'], ['bang']])
+      mailbox.received = []
+
+      until.i(0).message([5])
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang'], ['bang'], ['bang']])
+    })
+
+    it('should send bangs until receiving bang on right inlet', function() {
+      pdGlob.library['testingcounter'] = PdObject.extend({
+        init: function() { this.counter = 0 },
+        inletDefs: [
+          portlets.Inlet.extend({
+            message: function(args) {
+              this.obj.counter++
+              if (this.obj.counter === 7) this.obj.o(0).message(['bang'])
+            }
+          })
+        ],
+        outletDefs: [ portlets.Outlet ]
+      })
+
+      var until = patch.createObject('until')
+        , mailbox = patch.createObject('testingmailbox')
+        , testingCounter = patch.createObject('testingcounter')
+      until.o(0).connect(mailbox.i(0))
+      until.o(0).connect(testingCounter.i(0))
+      testingCounter.o(0).connect(until.i(1))
+
+      until.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang'], 
+        ['bang'], ['bang'], ['bang'], ['bang']])
     })
 
   })

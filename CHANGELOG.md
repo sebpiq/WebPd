@@ -1,10 +1,7 @@
-0.3
-=====
+0.3.2
+-------
 
-0.3.0
-------
-
-- Complete refactor to Web Audio API
+- objects `[until]`, `[cos]`, `[sin]`, `[tan]`, `[atan]`, `[log]`, `[exp]`, `[sqrt]`, `[abs]`
 
 
 0.3.1
@@ -14,19 +11,24 @@
 - object `[int]`
 
 
-0.2
-=======
+0.3.0
+======
+
+- Complete refactor to Web Audio API
+
 
 0.2.3
 ------
 
 - objects `[pack]`, `[sig~]`
 
+
 0.2.2
 ------
 
 - objects `[hip~]`, `[lop~]`, `[delread~]`, `[delwrite~]`, `[clip~]`
 - abbreviations for object names and object arguments
+
 
 0.2.1
 ------
