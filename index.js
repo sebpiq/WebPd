@@ -100,6 +100,7 @@ var Pd = module.exports = {
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     var CustomObject = function(patch, id, args) {
       var patch = new Patch(patch, id, args)
+      patch.patchId = patchIds._generateId()
       Pd._preparePatch(patch, patchData)
       return patch
     }

@@ -215,10 +215,11 @@ describe('core.Patch', function() {
 
     it('should resolve $-args', function() {
       var patch = new Patch(null, null, [11, 'abc', 33])
+      patch.patchId = 9999
 
       assert.deepEqual(
         patch.resolveArgs([123, '$0', '$1', 456, '$2', '$3']),
-        [123, patch.patchId, 11, 456, 'abc', 33]
+        [123, 9999, 11, 456, 'abc', 33]
       )
     })
 
@@ -228,6 +229,29 @@ describe('core.Patch', function() {
         patch.resolveArgs(['bla', 'bang', 'b', 'f', 'l', 'a', 's']), 
         ['bla', 'bang', 'bang', 'float', 'list', 'anything', 'symbol']
       )
+    })
+
+    it('should resolve $0 in a subpatch as parent patch id', function() {
+      var parentPatch = new Patch(null, null)
+        , subpatch = new Patch(parentPatch, 0)
+        , subsubpatch = new Patch(subpatch, 0)
+      parentPatch.patchId = 98765
+      assert.deepEqual(subpatch.resolveArgs(['$0']), [98765])
+      assert.deepEqual(subsubpatch.resolveArgs(['$0']), [98765])
+    })
+
+  })
+
+  describe('.getPatchRoot', function() {
+
+    it('should return the root patch', function() {
+      var parentPatch = new Patch(null, null)
+        , subpatch = new Patch(parentPatch, 0)
+        , subsubpatch = new Patch(subpatch, 0)
+
+      assert.equal(parentPatch.getPatchRoot(), parentPatch)
+      assert.equal(subpatch.getPatchRoot(), parentPatch)
+      assert.equal(subsubpatch.getPatchRoot(), parentPatch)
     })
 
   })

@@ -135,6 +135,17 @@ describe('objects.glue', function() {
       assert.equal(receivedBla, 1)
     })
 
+    it('should send messages across patches', function() {
+      var patch1 = Pd.createPatch()
+        , patch2 = Pd.createPatch()
+        , send = patch1.createObject('send', ['bla'])
+        , receive = patch2.createObject('receive', ['bla'])
+        , mailbox = patch2.createObject('testingmailbox')
+      receive.o(0).connect(mailbox.i(0))
+      send.i(0).message(['bla', 'bli', 'blu'])
+      assert.deepEqual(mailbox.received, [['bla', 'bli', 'blu']])
+    })
+
   })
 
   describe('[msg]', function() {

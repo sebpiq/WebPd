@@ -114,6 +114,7 @@ describe('Pd', function() {
 
       // Check instanciated abstraction
       assert.ok(obj instanceof Patch)
+      assert.ok(_.isNumber(obj.patchId))
       assert.equal(obj.outlets.length, 1)
       assert.equal(obj.inlets.length, 0)
       assert.equal(obj.objects.length, 2)
