@@ -5,9 +5,10 @@
     <meta charset="utf-8">
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
     <script type="text/javascript" src="../../dist/webpd-latest.min.js"></script>
+    <script type="text/javascript" src="../assets/examples.js"></script>
 
     <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
-    <link href='../examples.css' rel='stylesheet' type='text/css'>
+    <link href='../assets/examples.css' rel='stylesheet' type='text/css'>
   </head>
 
   <body>
@@ -28,18 +29,16 @@
 
 
     <script type="text/javascript">
-      
-      $('#startButton').click(function() {
-        $(this).fadeOut(200, function() { $('#controls').fadeIn(200) })
-        Pd.start()
-      })
+      webPdExamples.init()
 
       $('button#sample1Button').click(function() {
-        Pd.send('loadfile', ['monster.wav'])
+        Pd.send('loadfile', ['../assets/samples/monster.wav'])
       })
+
       $('button#sample2Button').click(function() {
-        Pd.send('loadfile', ['breathing.wav'])
+        Pd.send('loadfile', ['../assets/samples/breathing.wav'])
       })
+      
       $('form').submit(function(event) {
         event.preventDefault()
         Pd.send('playrate', [parseFloat($('#playRateInput').val())])
@@ -50,11 +49,7 @@
         // Loading the patch
         patch = Pd.loadPatch(mainStr)
 
-        // Rendering the patch as SVG
-        $('#svg').html(pdfu.renderSvg(pdfu.parse(mainStr), {svgFile: false, ratio: 1.5}))
-
-        // Show start button
-        $('#loading').fadeOut(200, function() { $('#startButton').fadeIn() })
+        webPdExamples.patchLoaded(mainStr)
       })
     </script>
 
