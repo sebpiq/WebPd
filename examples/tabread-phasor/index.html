@@ -8,21 +8,20 @@
 
     <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
     <link href='../examples.css' rel='stylesheet' type='text/css'>
-    <style>
-    #sample1Button, #sample2Button { display: none; }
-    </style>
   </head>
 
   <body>
     <div id="loading">Loading ...</div>
     <button id="startButton">Start</button>
     
-    <button id="sample1Button">Load sample 1</button>
-    <button id="sample2Button">Load sample 2</button>
-    <form>
-      <input type="text" id="playRateInput" />
-      <input type="submit" value="Set play rate" />
-    </form>
+    <div id="controls">
+      <button id="sample1Button">Load sample 1</button>
+      <button id="sample2Button">Load sample 2</button>
+      <form>
+        <input type="text" id="playRateInput" />
+        <input type="submit" value="Set play rate" />
+      </form>
+    </div>
 
     <div id="pdfuNote">Patch rendered to SVG using <a href="https://github.com/sebpiq/pd-fileutils">pd-fileutils</a></div>
     <div id="svg"></div>
@@ -31,11 +30,7 @@
     <script type="text/javascript">
       
       $('#startButton').click(function() {
-        $(this).fadeOut(200, function() {
-          $('form').fadeIn(200)
-          $('button#sample1Button').fadeIn(200)
-          $('button#sample2Button').fadeIn(200)
-        })
+        $(this).fadeOut(200, function() { $('#controls').fadeIn(200) })
         Pd.start()
       })
       

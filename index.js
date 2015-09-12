@@ -84,6 +84,9 @@ var Pd = module.exports = {
   // Returns true if the dsp is started, false otherwise
   isStarted: function() { return pdGlob.isStarted },
 
+  // Returns the audio engine
+  getAudio: function() { return pdGlob.audio },
+
   // Send a message to a named receiver inside the graph
   send: function(name, args) {
     pdGlob.emitter.emit('msg:' + name, args)
@@ -105,6 +108,11 @@ var Pd = module.exports = {
       return patch
     }
     CustomObject.prototype = Patch.prototype
+    this.registerExternal(name, CustomObject)
+  },
+
+  // Register a custom object as `name`. `CustomObject` is a subclass of `core.PdObject`.
+  registerExternal: function(name, CustomObject) {
     pdGlob.library[name] = CustomObject
   },
 

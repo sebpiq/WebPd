@@ -27,6 +27,6 @@ svg text {
   padding: 0.5em 2em;
 }
 
-form {
+#controls {
   display: none;
 }

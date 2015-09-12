@@ -268,6 +268,9 @@ var Pd = module.exports = {
   // Returns true if the dsp is started, false otherwise
   isStarted: function() { return pdGlob.isStarted },
 
+  // Returns the audio engine
+  getAudio: function() { return pdGlob.audio },
+
   // Send a message to a named receiver inside the graph
   send: function(name, args) {
     pdGlob.emitter.emit('msg:' + name, args)
@@ -284,10 +287,16 @@ var Pd = module.exports = {
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     var CustomObject = function(patch, id, args) {
       var patch = new Patch(patch, id, args)
+      patch.patchId = patchIds._generateId()
       Pd._preparePatch(patch, patchData)
       return patch
     }
     CustomObject.prototype = Patch.prototype
+    this.registerExternal(name, CustomObject)
+  },
+
+  // Register a custom object as `name`. `CustomObject` is a subclass of `core.PdObject`.
+  registerExternal: function(name, CustomObject) {
     pdGlob.library[name] = CustomObject
   },
 
@@ -507,7 +516,10 @@ var Patch = module.exports = function() {
   BaseNode.apply(this, arguments)
   this.objects = []
   this.endPoints = []
-  this.patchId = null         // A globally unique id for the patch
+  // A globally unique id for the patch.
+  // Should stay null if the patch is a subpatch.
+  // Instance of an abstraction on the other hand should have a `patchId`.
+  this.patchId = null
   this.sampleRate = pdGlob.settings.sampleRate
   this.blockSize = pdGlob.settings.blockSize
 }
@@ -595,8 +607,10 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, EventEmitter
   // replaced by the corresponding full word.
   resolveArgs: function(args) {
     var cleaned = args.slice(0)
-      , patchArgs = [this.patchId].concat(this.args)
-      , matched
+      , dollar0 = this.getPatchRoot().patchId
+      , patchArgs, matched
+
+    patchArgs = [dollar0].concat(this.args)
 
     // Resolve abbreviations
     args.forEach(function(arg, i) {
@@ -609,6 +623,14 @@ _.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, EventEmitter
 
     // Resolve dollar-args
     return utils.getDollarResolver(cleaned)(patchArgs)
+  },
+
+  // Return the root patch. Only different from `this` if the calling patch
+  // is a subpatch. If it is an abstraction, the situation is different.
+  getPatchRoot: function() {
+    var parentPatch = this
+    while (parentPatch.patch) parentPatch = parentPatch.patch
+    return parentPatch
   }
 
 })

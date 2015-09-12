@@ -1,0 +1,168 @@
+<!doctype HTML>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script type="text/javascript" src="../../dist/webpd-latest.js"></script>
+    
+    <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
+    <link href='../examples.css' rel='stylesheet' type='text/css'>
+  </head>
+
+  <body>
+    <div id="loading">Loading ...</div>
+    <button id="startButton">Start</button>
+    
+    <div id="controls">
+      <form>
+        <input type="text" id="streamUrl" />
+        <input type="submit" value="Set url" />
+      </form>
+
+      <button id="startStream">Start stream</button>
+      <button id="stopStream">Stop stream</button>
+    </div>
+
+    <div id="pdfuNote">Patch rendered to SVG using <a href="https://github.com/sebpiq/pd-fileutils">pd-fileutils</a></div>
+    <div id="svg"></div>
+
+    <script type="text/javascript">
+      
+      // This is a WebPd "external", which takes an url and streams audio from it straight to outlet.
+      var AudioStreamObject = Pd.core.PdObject.extend({
+
+        // Defining portlets (inlets and outlets)
+        // ----------------------------------------
+        // There is 4 base portlets classes `Inlet`, `Outlet`, `DspInlet`, `DspOutlet`.
+        // Note that in portlets' methods, you can access the object with `this.obj`.
+        inletDefs: [
+
+          // First inlet : start / stop audio stream
+          Pd.core.portlets.Inlet.extend({
+
+            // For an `Inlet`, you should at least define the `message` method,
+            // which will be called whenever that inlet receives a message.
+            // Here, our inlet will respond only to "start" and "stop" messages,
+            // and call the corresponding method on the inlet's object.
+            message: function(args) {
+              var action = args[0]
+              if (action === 'start') this.obj.startStream()
+              else if (action === 'stop') this.obj.stopStream()
+              else console.error('action "' + action + '" not understood')
+            }
+
+          }),
+
+          // Second inlet : set stream url
+          Pd.core.portlets.Inlet.extend({
+
+            message: function(args) {
+              var url = args[0]
+              this.obj.setUrl(url)
+            }
+
+          })
+        ],
+
+        outletDefs: [
+          // First outlet : audio.
+          Pd.core.portlets.DspOutlet,
+
+          // Second outlet : bang when audio is ready to play.
+          Pd.core.portlets.Outlet
+        ],
+
+
+        // Object lifecycle
+        // -------------------
+
+        // This method is called when the object is first created.
+        init: function(args) {
+          var initialUrl = args[0]
+          this._audioElement = null
+          this._audioElementNode = null
+          if (initialUrl) this.setUrl(initialUrl)
+        },
+
+        // This method is called when DSP is starting
+        start: function() {
+          if (this._audioElement) this._createAudioElementNode()
+          else {
+            // The methods `i()` and `o()` allow to access the object's
+            // inlets and outlets.
+            // DspInlets and DspOutlets must have a Web Audio API node
+            // associated when DSP is starting. We must call `setWaa(audioNode, nodeOutput)` on the 
+            // portlet to make that association.
+            this.o(0).setWaa(Pd.getAudio().context.createGain(), 0)
+          }
+        },
+
+        // This method is called when DSP is stopping
+        stop: function() {
+          this._audioElementNode = null
+        },
+
+
+        // Other methods
+        // -------------------
+        startStream: function() { this._audioElement.play() },
+        stopStream: function() { this._audioElement.pause() },
+
+        setUrl: function(url) {
+          var self = this
+          this._audioElement = new Audio()
+          this._audioElement.crossOrigin = 'anonymous'
+          this._audioElement.src = url
+          
+          this._audioElement.addEventListener('error', function(err) {
+            console.error('Load error ' + url)
+          })
+
+          this._audioElement.addEventListener('canplay', function() {
+            if (Pd.isStarted()) self._createAudioElementNode()
+            self.o(1).message(['bang'])
+          })
+
+        },
+
+        _createAudioElementNode: function() {
+          this._audioElementNode = Pd.getAudio().context.createMediaElementSource(this._audioElement)
+          this.o(0).setWaa(this._audioElementNode, 0)
+        }
+
+      })
+
+      // Call `Pd.registerExternal` to register a new external
+      Pd.registerExternal('audiostream~', AudioStreamObject)
+
+
+      $('#startButton').click(function() {
+        $(this).fadeOut(200, function() { $('#controls').fadeIn(200) })
+        Pd.start()
+      })
+
+      $('form').submit(function(event) {
+        event.preventDefault()
+        Pd.send('streamUrl', [ $('#streamUrl').val() ])
+      })
+
+      $('#startStream').click(function() { Pd.send('action', ['start']) })
+      $('#stopStream').click(function() { Pd.send('action', ['stop']) })
+
+      var patch
+      $.get('pd/main.pd', function(mainStr) {
+        // Loading the patch
+        patch = Pd.loadPatch(mainStr)
+
+        // Rendering the patch as SVG
+        $('#svg').html(pdfu.renderSvg(pdfu.parse(mainStr), {svgFile: false, ratio: 1.5}))
+
+        // Show start button
+        $('#loading').fadeOut(200, function() { $('#startButton').fadeIn() })
+      })
+
+    </script>
+
+  </body>
+</html>

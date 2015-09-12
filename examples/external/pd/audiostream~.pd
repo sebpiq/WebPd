@@ -1,0 +1,7 @@
+#N canvas 49 82 450 300 10;
+#X text 39 39 this is just a dummy patch so that Pd is happy even if
+the object [audiostream~] doesn't actually exist.;
+#X obj 118 135 inlet;
+#X obj 178 135 inlet;
+#X obj 116 180 outlet~;
+#X obj 178 179 outlet;
