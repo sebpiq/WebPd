@@ -1,0 +1,6 @@
+#N canvas 49 87 450 300 10;
+#X obj 178 135 inlet;
+#X obj 116 180 outlet~;
+#X obj 118 135 inlet~;
+#X text 39 39 this is just a dummy patch so that Pd is happy even if
+the object [bitcrusher~] doesn't actually exist.;
