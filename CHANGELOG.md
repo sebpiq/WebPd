@@ -1,3 +1,9 @@
+0.4.0
+======
+
+- public API to create externals
+
+
 0.3.2
 -------
 

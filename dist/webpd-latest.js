@@ -206,12 +206,12 @@ var _ = require('underscore')
   , pdfu = require('pd-fileutils')
   , Patch = require('./lib/core/Patch')
   , PdObject = require('./lib/core/PdObject')
-  , utils = require('./lib/core/utils')
+  , mixins = require('./lib/core/mixins')
   , portlets = require('./lib/objects/portlets')
   , waa = require('./lib/waa')
   , pdGlob = require('./lib/global')
   , interfaces = require('./lib/core/interfaces')
-  , patchIds = _.extend({}, utils.UniqueIdsMixin)
+  , patchIds = _.extend({}, mixins.UniqueIdsMixin)
 
 // Various initializations
 require('./lib/objects').declareObjects(pdGlob.library)
@@ -373,7 +373,7 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/utils":8,"./lib/global":9,"./lib/objects":13,"./lib/objects/portlets":14,"./lib/waa":18,"pd-fileutils":62,"underscore":69}],2:[function(require,module,exports){
+},{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/mixins":6,"./lib/global":9,"./lib/objects":13,"./lib/objects/portlets":14,"./lib/waa":18,"pd-fileutils":62,"underscore":69}],2:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -507,6 +507,7 @@ _.extend(BaseNode.prototype, {
 
 var _ = require('underscore')
   , EventEmitter = require('events').EventEmitter
+  , mixins = require('./mixins')
   , utils = require('./utils')
   , BaseNode = require('./BaseNode')
   , pdGlob = require('../global')
@@ -524,7 +525,7 @@ var Patch = module.exports = function() {
   this.blockSize = pdGlob.settings.blockSize
 }
 
-_.extend(Patch.prototype, BaseNode.prototype, utils.UniqueIdsMixin, EventEmitter.prototype, {
+_.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitter.prototype, {
 
   type: 'patch',
 
@@ -647,7 +648,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":9,"./BaseNode":2,"./utils":8,"events":24,"underscore":69}],4:[function(require,module,exports){
+},{"../global":9,"./BaseNode":2,"./mixins":6,"./utils":8,"events":24,"underscore":69}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -787,8 +788,18 @@ exports.NamedMixin = {
 }
 
 
-// A mixin for objects that reference another named object, such as [tabread~] or [delread~]
-// Everytime for any reason the `resolved` of the reference changes, "changed" is emitted,
+// Simple EventEmitter mixin, with a destroy method
+var EventEmitterMixin = exports.EventEmitterMixin = _.extend({}, EventEmitter.prototype, {
+
+  destroy: function() {
+    this.removeAllListeners()
+  }
+
+})
+
+
+// Helper to reference a named object (which uses the `NamedMixin`)
+// Every time for any reason the `resolved` of the reference changes, "changed" is emitted,
 // with arguments (newResolved, oldResolved)
 var Reference = exports.Reference = function(referencedType) {
   this.referencedType = referencedType
@@ -796,9 +807,10 @@ var Reference = exports.Reference = function(referencedType) {
   this._onChangedName = null
   this.resolved = null
   this._eventName = 'namedObjects:registered:' + this.referencedType
+  this._eventReceiver = new EventReceiver()
 }
 
-_.extend(Reference.prototype, EventEmitter.prototype, {
+_.extend(Reference.prototype, EventEmitterMixin, {
 
   set: function(name) {
     // Try to fetch the referenced object from `namedObjects`
@@ -820,15 +832,13 @@ _.extend(Reference.prototype, EventEmitter.prototype, {
           self._setResolved(obj)
         }
       }
-      pdGlob.emitter.on(this._eventName, this._onNewObject)
+      this._eventReceiver.on(pdGlob.emitter, this._eventName, this._onNewObject)
     }
   },
 
   destroy: function() {
-    this._stopListening()
-    if (this.resolved)
-      this.resolved.removeListener('changing:name', this._onChangedName)
-    this.removeAllListeners()
+    this._eventReceiver.destroy()
+    EventEmitterMixin.destroy.apply(this)
   },
 
   _setResolved: function(newObj) {
@@ -840,19 +850,78 @@ _.extend(Reference.prototype, EventEmitter.prototype, {
 
     if (newObj) {
       this._onChangedName = function() { self._setResolved(null) }
-      newObj.on('changing:name', this._onChangedName)
+      this._eventReceiver.on(newObj, 'changing:name', this._onChangedName)
     }
     this.emit('changed', newObj, oldObj)
   },
 
   _stopListening: function() {
     if (this._onNewObject) {
-      pdGlob.emitter.removeListener(this._eventName, this._onNewObject)
+      this._eventReceiver.removeListener(pdGlob.emitter, this._eventName, this._onNewObject)
       this._onNewObject = null
     }
   }
 
 })
+
+
+// Simple mixin to add functionalities for generating unique ids.
+// Each object extended with this mixin has a separate id counter.
+// Therefore ids are not unique globally but unique for object.
+exports.UniqueIdsMixin = {
+
+  // Every time it is called, this method returns a new unique id.
+  _generateId: function() {
+    this._idCounter++
+    return this._idCounter
+  },
+
+  // Counter used internally to assign a unique id to objects
+  // this counter should never be decremented to ensure the id unicity
+  _idCounter: -1
+}
+
+
+// This is a object to help managing event handlers, and especially clean
+// properly on destruction of the parent object.
+var EventReceiver = exports.EventReceiver = function() {
+  this._handlers = []
+}
+
+_.extend(EventReceiver.prototype, {
+
+  addListener: function(emitter, eventName, handler) {
+    this._handlers.push([emitter, eventName, handler])
+    emitter.addListener(eventName, handler)
+  },
+
+  once: function(emitter, eventName, handler) {
+    var self = this
+      , handlerData = [emitter, eventName, handler]
+    this._handlers.push(handlerData)
+    emitter.once(eventName, handler)
+  },
+
+  removeListener: function(emitter, eventName, handler) {
+    this._handlers = _.reject(this._handlers, function(handlerData) {
+      var rejected = (handlerData[0] === emitter
+            && handlerData[1] === eventName 
+            && handlerData[2] === handler)
+      if (rejected) emitter.removeListener(eventName, handler)
+      return rejected
+    })
+  },
+
+  destroy: function() {
+    this._handlers.forEach(function(handlerData) {
+      handlerData[0].removeListener(handlerData[1], handlerData[2])
+    })
+    this._handlers = []
+  }
+
+})
+
+EventReceiver.prototype.on = EventReceiver.prototype.addListener
 },{"../global":9,"chai":30,"events":24,"underscore":69}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
@@ -1049,23 +1118,6 @@ exports.chainExtend = function() {
   child.extend = this.extend
   return child
 }
-
-
-// Simple mixin to add functionalities for generating unique ids.
-// Each object extended with this mixin has a separate id counter.
-// Therefore ids are not unique globally but unique for object.
-exports.UniqueIdsMixin = {
-
-  // Every time it is called, this method returns a new unique id.
-  _generateId: function() {
-    this._idCounter++
-    return this._idCounter
-  },
-
-  // Counter used internally to assign a unique id to objects
-  // this counter should never be decremented to ensure the id unicity
-  _idCounter: -1
-}
 },{"chai":30,"underscore":69}],9:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
@@ -1240,13 +1292,14 @@ exports.declareObjects = function(library) {
     outletDefs: [portlets.Outlet],
 
     init: function(receiveName, sendName, pdInit) {
+      this._eventReceiver = new mixins.EventReceiver()
       if (receiveName && receiveName !== '-' && receiveName !== 'empty') {
         this.receiveName = receiveName
         // ! because the extend method instantiates the object for inheritance, 
         // we need this "if"
         if (this._onMessageReceived) {
           this._onMessageReceived = this._onMessageReceived.bind(this)
-          pdGlob.emitter.on('msg:' + this.receiveName, this._onMessageReceived)
+          this._eventReceiver.on(pdGlob.emitter, 'msg:' + this.receiveName, this._onMessageReceived)
         }
       }
 
@@ -1257,14 +1310,12 @@ exports.declareObjects = function(library) {
       if (pdInit && this.patch) {
         var self = this
         this._onPatchStarted = function() { self._sendMessage([self.value]) }
-        this.patch.on('started', this._onPatchStarted)
+        this._eventReceiver.on(this.patch, 'started', this._onPatchStarted)
       }
     },
 
     destroy: function() {
-      pdGlob.emitter.removeListener('msg:' + this.receiveName, this._onMessageReceived)
-      if (this._onPatchStarted)
-        this.patch.removeListener('started', this._onPatchStarted)
+      this._eventReceiver.destroy()
     },
 
     _sendMessage: function(args) {
@@ -1507,8 +1558,7 @@ exports.declareObjects = function(library) {
  *
  */
 
-var EventEmitter = require('events').EventEmitter
-  , _ = require('underscore')
+var _ = require('underscore')
   , expect = require('chai').expect
   , WAAOffset = require('waaoffsetnode')
   , WAAWhiteNoise = require('waawhitenoisenode')
@@ -2171,13 +2221,14 @@ exports.declareObjects = function(library) {
       var self = this
       this.array = new mixins.Reference('array')
       this._onDataChangedHandler = null
+      this._eventReceiver = new mixins.EventReceiver()
 
       // When name of the referenced array is changing, we need to detach handlers
-      this.array.on('changed', function(newArray, oldArray) {
+      this._eventReceiver.on(this.array, 'changed', function(newArray, oldArray) {
         if (oldArray) oldArray.removeListener('changed:data', self._onDataChangedHandler)
         if (newArray) {
           self._onDataChangedHandler = function() { self.dataChanged() }
-          newArray.on('changed:data', self._onDataChangedHandler)
+          self._eventReceiver.on(newArray, 'changed:data', self._onDataChangedHandler)
         }
       })
     },
@@ -2185,8 +2236,7 @@ exports.declareObjects = function(library) {
     dataChanged: function() {},
 
     destroy: function() {
-      if (this.array.resolved)
-        this.array.resolved.removeListener('changed:data', this._onDataChangedHandler)
+      this._eventReceiver.destroy()
       this.array.destroy()
     }
 
@@ -2227,7 +2277,7 @@ exports.declareObjects = function(library) {
       var self = this
         , arrayName = args[0]
       _TabBase.prototype.init.apply(this, arguments)
-      this.array.on('changed', function() { self._updateDsp() })
+      this._eventReceiver.on(this.array, 'changed', function() { self._updateDsp() })
       if (arrayName) this.array.set(arrayName)
     },
 
@@ -2242,10 +2292,6 @@ exports.declareObjects = function(library) {
     stop: function() {
       this._tableNode = null
       this._gainNode = null
-    },
-
-    destroy: function() {
-      _TabBase.prototype.destroy.apply(this, arguments)
     },
 
     dataChanged: function() {
@@ -2263,7 +2309,7 @@ exports.declareObjects = function(library) {
 
   })
 
-  library['delwrite~'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
+  library['delwrite~'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
 
     type: 'delwrite~',
 
@@ -2289,7 +2335,7 @@ exports.declareObjects = function(library) {
 
     destroy: function() {
       mixins.NamedMixin.destroy.apply(this, arguments)
-      this.removeAllListeners()
+      mixins.EventEmitterMixin.destroy.apply(this, arguments)
     }
 
   })
@@ -2312,6 +2358,7 @@ exports.declareObjects = function(library) {
       var self = this
         , delayName = args[0]
         , initialDelayTime = args[1]
+      this._eventReceiver = new mixins.EventReceiver()
       this._delayTime = initialDelayTime || 0
       this._delWrite = new mixins.Reference('delwrite~')
       this._onDelWriteStarted = null
@@ -2323,7 +2370,7 @@ exports.declareObjects = function(library) {
       this._onDelWriteChanged = function(newObj, oldObj) {
         if (pdGlob.isStarted && newObj) self._createDelay()
       }
-      this._delWrite.on('changed', this._onDelWriteChanged)
+      this._eventReceiver.on(this._delWrite, 'changed', this._onDelWriteChanged)
     },
 
     stop: function() {
@@ -2336,8 +2383,7 @@ exports.declareObjects = function(library) {
 
     destroy: function() {
       this._delWrite.destroy()
-      if (this._delWrite.resolved && this._onDelWriteStarted)
-        this._delWrite.resolved.removeListener('started', this._onDelWriteStarted)
+      this._eventReceiver.destroy()
     },
 
     setDelayTime: function(delayTime) {
@@ -2368,7 +2414,7 @@ exports.declareObjects = function(library) {
           doConnection()
         else {
           this._onDelWriteStarted = doConnection
-          this._delWrite.resolved.once('started', this._onDelWriteStarted)
+          this._eventReceiver.once(this._delWrite.resolved, 'started', this._onDelWriteStarted)
         }
       }
         
@@ -2472,7 +2518,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"events":24,"underscore":69,"waaoffsetnode":72,"waatablenode":74,"waawhitenoisenode":78}],12:[function(require,module,exports){
+},{"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"underscore":69,"waaoffsetnode":72,"waatablenode":74,"waawhitenoisenode":78}],12:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2492,8 +2538,7 @@ exports.declareObjects = function(library) {
  *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-var EventEmitter = require('events').EventEmitter
-  , _ = require('underscore')
+var _ = require('underscore')
   , expect = require('chai').expect
   , utils = require('../core/utils')
   , mixins = require('../core/mixins')
@@ -2505,7 +2550,7 @@ var EventEmitter = require('events').EventEmitter
 
 exports.declareObjects = function(library) {
 
-  library['receive'] = library['r'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
+  library['receive'] = library['r'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
 
     type: 'receive',
 
@@ -2515,18 +2560,20 @@ exports.declareObjects = function(library) {
     init: function(args) {
       var name = args[0]
         , self = this
+      this._eventReceiver = new mixins.EventReceiver()
       this._onMessageReceived = this._onMessageReceived.bind(this)
-      this.on('changed:name', function(oldName, newName) {
-        if (oldName) pdGlob.emitter.removeListener('msg:' + oldName, self._onMessageReceived)
-        pdGlob.emitter.on('msg:' + newName, self._onMessageReceived)
+      this._eventReceiver.on(this, 'changed:name', function(oldName, newName) {
+        if (oldName) 
+          self._eventReceiver.removeListener(pdGlob.emitter, 'msg:' + oldName, self._onMessageReceived)
+        self._eventReceiver.on(pdGlob.emitter, 'msg:' + newName, self._onMessageReceived)
       })
       this.setName(name)
     },
 
     destroy: function() {
       mixins.NamedMixin.destroy.apply(this, arguments)
-      pdGlob.emitter.removeListener('msg:' + this.name, this._onMessageReceived)
-      this.removeAllListeners()
+      this._eventReceiver.destroy()
+      mixins.EventEmitterMixin.destroy.apply(this, arguments)
     },
 
     _onMessageReceived: function(args) {
@@ -2535,7 +2582,7 @@ exports.declareObjects = function(library) {
 
   })
 
-  library['send'] = library['s'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
+  library['send'] = library['s'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
 
     type: 'send',
 
@@ -2555,7 +2602,7 @@ exports.declareObjects = function(library) {
 
     destroy: function() {
       mixins.NamedMixin.destroy.apply(this, arguments)
-      this.removeAllListeners()
+      mixins.EventEmitterMixin.destroy.apply(this, arguments)
     }
 
   })
@@ -2625,14 +2672,15 @@ exports.declareObjects = function(library) {
 
     init: function() {
       var self = this
+      this._eventReceiver = new mixins.EventReceiver()
       this._onPatchStarted = function() {
         self.o(0).message(['bang'])
       }
-      this.patch.on('started', this._onPatchStarted)
+      this._eventReceiver.on(this.patch, 'started', this._onPatchStarted)
     },
 
     destroy: function() {
-      this.patch.removeListener('started', this._onPatchStarted)
+      this._eventReceiver.destroy()
     }
 
   })
@@ -3345,7 +3393,7 @@ exports.declareObjects = function(library) {
 
   })
 
-  library['array'] = library['table'] = PdObject.extend(mixins.NamedMixin, EventEmitter.prototype, {
+  library['array'] = library['table'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
 
     type: 'array',
 
@@ -3361,7 +3409,7 @@ exports.declareObjects = function(library) {
 
     destroy: function() {
       mixins.NamedMixin.destroy.apply(this, arguments)
-      this.removeAllListeners()
+      mixins.EventEmitterMixin.destroy.apply(this, arguments)
     },
 
     setData: function(audioData, resize) {
@@ -3451,7 +3499,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"events":24,"underscore":69}],13:[function(require,module,exports){
+},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"underscore":69}],13:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
