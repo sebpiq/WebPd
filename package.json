@@ -47,5 +47,5 @@
     "async": "0.9.x",
     "waatest": "git://github.com/sebpiq/WAATest.git#master"
   },
-  "license": "Standard Improved BSD License"
+  "license": "LGPL-3.0"
 }
