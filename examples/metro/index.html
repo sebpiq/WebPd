@@ -16,32 +16,22 @@
     <button id="startButton">Start</button>
     
     <div id="controls">
-      <button id="sample1Button">Load sample 1</button>
-      <button id="sample2Button">Load sample 2</button>
       <form>
-        <input type="text" id="playRateInput" />
-        <input type="submit" value="Set play rate" />
+        <input type="text" id="metroTime" />
+        <input type="submit" value="Set metro time" />
       </form>
     </div>
 
     <div id="pdfuNote">Patch rendered to SVG using <a href="https://github.com/sebpiq/pd-fileutils">pd-fileutils</a></div>
     <div id="svg"></div>
 
-
     <script type="text/javascript">
+      
       webPdExamples.init()
 
-      $('button#sample1Button').click(function() {
-        Pd.send('loadfile', ['../assets/samples/monster.wav'])
-      })
-
-      $('button#sample2Button').click(function() {
-        Pd.send('loadfile', ['../assets/samples/breathing.wav'])
-      })
-      
       $('form').submit(function(event) {
         event.preventDefault()
-        Pd.send('playrate', [parseFloat($('#playRateInput').val())])
+        Pd.send('metroTime', [parseFloat($('#metroTime').val())])
       })
 
       var patch
@@ -51,6 +41,7 @@
 
         webPdExamples.patchLoaded(mainStr)
       })
+
     </script>
 
   </body>

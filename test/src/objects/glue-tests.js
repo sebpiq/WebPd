@@ -4,6 +4,7 @@ var assert = require('assert')
   , _ = require('underscore')
   , waatest = require('waatest')
   , Pd = require('../../../index')
+  , utils = require('../../../lib/core/utils')
   , PdObject = require('../../../lib/core/PdObject')
   , Patch = require('../../../lib/core/Patch')
   , portlets = require('../../../lib/objects/portlets')
@@ -35,7 +36,10 @@ describe('objects.glue', function() {
     helpers.beforeEach()
   })
 
-  afterEach(function() { helpers.afterEach() })
+  afterEach(function() { 
+    patch.destroy()
+    helpers.afterEach() 
+  })
 
   describe('[send] / [receive]', function() {
     var send1, send2
@@ -105,6 +109,7 @@ describe('objects.glue', function() {
       })
       receive1.destroy()
       assert.equal(unregistered, true)
+      pdGlob.emitter.removeAllListeners('namedObjects:unregistered:receive')
 
       // Once cleaned, the [received] shouldn't receive events anymore
       Pd.send('no1', ['pupu'])
@@ -129,6 +134,7 @@ describe('objects.glue', function() {
       })
       send1.destroy()
       assert.equal(unregistered, true)
+      pdGlob.emitter.removeAllListeners('namedObjects:unregistered:send')
 
       // And event handlers unbound
       send1.emit('bla')
@@ -144,6 +150,13 @@ describe('objects.glue', function() {
       receive.o(0).connect(mailbox.i(0))
       send.i(0).message(['bla', 'bli', 'blu'])
       assert.deepEqual(mailbox.received, [['bla', 'bli', 'blu']])
+    })
+
+    it('should preserve message time tag', function() {
+      var args = [1, 2]
+      args.timeTag = 1443
+      send1.i(0).message(args)
+      assert.equal(mailbox1.rawReceived[0].timeTag, 1443)
     })
 
   })
@@ -182,6 +195,10 @@ describe('objects.glue', function() {
       assert.throws(function() { msg.i(0).message(['ouch', 'ich']) })
       assert.throws(function() { msg.i(0).message([11]) })
       assert.throws(function() { msg.i(0).message(['bang']) })
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('msg'), ['$1', 66])
     })
 
   })
@@ -271,6 +288,10 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox.received, [[11], [33], [32]])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('+', [1]), [2])
+    })
+
   })
 
   describe('[-]', function() {
@@ -332,7 +353,7 @@ describe('objects.glue', function() {
   describe('[pow]', function() {
     // This uses the same code as [+] so no need for full tests
 
-    it('should just work', function() {
+    it('should compute elevate left operand to right operand power', function() {
       var mult = patch.createObject('pow', [2])
         , mailbox = patch.createObject('testingmailbox')
       mult.o(0).connect(mailbox.i(0))
@@ -345,7 +366,7 @@ describe('objects.glue', function() {
 
   describe('[cos]', function() {
 
-    it('compute the cos of input', function() {
+    it('should compute the cos of input', function() {
       var cos = patch.createObject('cos')
         , mailbox = patch.createObject('testingmailbox')
       cos.o(0).connect(mailbox.i(0))
@@ -353,11 +374,15 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox.received, [[Math.cos(Math.PI / 2)]])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('cos'), [1.1])
+    })
+
   })
 
   describe('[sin]', function() {
 
-    it('compute the sin of input', function() {
+    it('should compute the sin of input', function() {
       var sin = patch.createObject('sin')
         , mailbox = patch.createObject('testingmailbox')
       sin.o(0).connect(mailbox.i(0))
@@ -369,7 +394,7 @@ describe('objects.glue', function() {
 
   describe('[tan]', function() {
 
-    it('compute the tan of input', function() {
+    it('should compute the tan of input', function() {
       var tan = patch.createObject('tan')
         , mailbox = patch.createObject('testingmailbox')
       tan.o(0).connect(mailbox.i(0))
@@ -381,7 +406,7 @@ describe('objects.glue', function() {
 
   describe('[atan]', function() {
 
-    it('compute the atan of input', function() {
+    it('should compute the atan of input', function() {
       var atan = patch.createObject('atan')
         , mailbox = patch.createObject('testingmailbox')
       atan.o(0).connect(mailbox.i(0))
@@ -393,7 +418,7 @@ describe('objects.glue', function() {
 
   describe('[exp]', function() {
 
-    it('compute the exp of input', function() {
+    it('should compute the exp of input', function() {
       var exp = patch.createObject('exp')
         , mailbox = patch.createObject('testingmailbox')
       exp.o(0).connect(mailbox.i(0))
@@ -405,7 +430,7 @@ describe('objects.glue', function() {
 
   describe('[log]', function() {
 
-    it('compute the log of input', function() {
+    it('should compute the log of input', function() {
       var log = patch.createObject('log')
         , mailbox = patch.createObject('testingmailbox')
       log.o(0).connect(mailbox.i(0))
@@ -417,7 +442,7 @@ describe('objects.glue', function() {
 
   describe('[abs]', function() {
 
-    it('compute the abs of input', function() {
+    it('should compute the abs of input', function() {
       var abs = patch.createObject('abs')
         , mailbox = patch.createObject('testingmailbox')
       abs.o(0).connect(mailbox.i(0))
@@ -429,7 +454,7 @@ describe('objects.glue', function() {
 
   describe('[sqrt]', function() {
 
-    it('compute the sqrt of input', function() {
+    it('should compute the sqrt of input', function() {
       var sqrt = patch.createObject('sqrt')
         , mailbox = patch.createObject('testingmailbox')
       sqrt.o(0).connect(mailbox.i(0))
@@ -485,6 +510,10 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox.received, [[3], [5]])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('f'), [66])
+    })
+
   })
 
   describe('[int]', function() {
@@ -529,6 +558,12 @@ describe('objects.glue', function() {
 
       spigot.i(0).message(['2266'])
       assert.deepEqual(mailbox.received, [['2266']])
+    })
+
+    it('should preserve message time tag', function() {
+      var spigot = patch.createObject('spigot')
+      spigot.i(1).message([1])
+      helpers.assertPreservesTimeTag(spigot, [88])
     })
 
   })
@@ -593,6 +628,10 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox.received, [['bang']])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('trigger', ['b', 'f']), [88])
+    })
+
   })
 
   describe('[pack]', function() {
@@ -635,6 +674,10 @@ describe('objects.glue', function() {
 
       pack.i(0).message(['bang'])
       assert.deepEqual(mailbox.received, [['prout', 'blo', 999, 3, 101, 'blu']])
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('pack', ['f', 33]), [88])
     })
 
   })
@@ -723,6 +766,10 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox4.received, [['blablabla']])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('select', ['b', 'f']), ['bang'])
+    })
+
   })
 
   describe('[moses]', function() {
@@ -766,6 +813,10 @@ describe('objects.glue', function() {
       moses.i(0).message([9.7])
       assert.deepEqual(mailbox1.received, [[9]])
       assert.deepEqual(mailbox2.received, [[9], [9.7]])
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('moses', [888]), [88])
     })
 
   })
@@ -812,6 +863,10 @@ describe('objects.glue', function() {
         ['bang'], ['bang'], ['bang'], ['bang']])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('until'), [3])
+    })
+
   })
 
   describe('[mtof]', function() {
@@ -841,7 +896,7 @@ describe('objects.glue', function() {
 
   describe('[samplerate~]', function() {
 
-    it('should translate midi to frequency', function() {
+    it('should output the current sample rate', function() {
       var samplerate = patch.createObject('samplerate~')
         , mailbox = patch.createObject('testingmailbox')
       samplerate.o(0).connect(mailbox.i(0))
@@ -880,6 +935,10 @@ describe('objects.glue', function() {
       assert.notEqual(numbers[1], 0)
       assert.notEqual(numbers[2], 0)
       assert.notEqual(numbers[3], 0)
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('random', [10]), ['bang'])
     })
 
   })
@@ -987,6 +1046,51 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox.received, [['bang']])
     })
 
+    it('should start ticking at timeTag', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var metro = patch.createObject('metro', [1000])
+        , mailbox = patch.createObject('testingmailbox')
+      metro.o(0).connect(mailbox.i(0))
+
+      clock.time = 10000
+      metro.i(0).message(utils.timeTag(['bang'], 10010))
+      assert.equal(clock.events.length, 1)
+      assert.equal(clock.events[0].time, 10010)
+    })
+
+    it('should add a timeTag to the output bangs', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var metro = patch.createObject('metro', [1000])
+        , mailbox = patch.createObject('testingmailbox')
+      metro.o(0).connect(mailbox.i(0))
+
+      clock.time = 10000
+      metro.i(0).message(utils.timeTag(['bang'], 10010))
+      clock.time = 10010
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang']])
+      assert.equal(mailbox.rawReceived[0].timeTag, 10010)
+
+      clock.time = 11010
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang']])
+      assert.equal(mailbox.rawReceived[1].timeTag, 11010)
+
+      // Should work fine also when changing rate
+      metro.i(1).message([500])
+      clock.time = 12010
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang']])
+      assert.equal(mailbox.rawReceived[2].timeTag, 12010)
+
+      clock.time = 12510
+      clock.tick()
+      assert.deepEqual(mailbox.received, [['bang'], ['bang'], ['bang'], ['bang']])
+      assert.equal(mailbox.rawReceived[3].timeTag, 12510)
+    })
+
   })
 
   describe('[delay]', function() {
@@ -1087,6 +1191,18 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox.received, [])
     })
 
+    it('should take into account time tag when starting delay', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var delay = patch.createObject('delay', [1000])
+        , mailbox = patch.createObject('testingmailbox')
+      delay.o(0).connect(mailbox.i(0))
+
+      delay.i(0).message(utils.timeTag(['bang'], 100))
+      assert.equal(clock.events.length, 1)
+      assert.equal(clock.events[0].time, 1100)
+    })
+
   })
 
   describe('[timer]', function() {
@@ -1122,6 +1238,20 @@ describe('objects.glue', function() {
       assert.deepEqual(mailbox.received, [[990]])
     })
 
+    it('should handle time tags well', function() {
+      Pd.stop()
+      Pd.start({clock: clock})
+      var timer = patch.createObject('timer')
+        , mailbox = patch.createObject('testingmailbox')
+      timer.o(0).connect(mailbox.i(0))
+      clock.time = 1300
+      timer.i(0).message(['bang'])
+
+      timer.i(1).message(utils.timeTag(['bang'], 1333))
+      assert.deepEqual(mailbox.received, [[33]])
+      assert.deepEqual(utils.getTimeTag(mailbox.rawReceived[0]), 1333)
+    })
+
   })
 
   describe('[change]', function() {
@@ -1139,6 +1269,12 @@ describe('objects.glue', function() {
 
       change.i(0).message([567])
       assert.deepEqual(mailbox.received, [[123], [567]])
+    })
+
+    it('should preserve message time tag', function() {
+      var change = patch.createObject('change')
+      change.i(0).message([88])
+      helpers.assertPreservesTimeTag(change, [99])
     })
 
   })
@@ -1208,6 +1344,7 @@ describe('objects.glue', function() {
       })
       array.destroy()
       assert.equal(unregistered, true)
+      pdGlob.emitter.removeAllListeners('namedObjects:unregistered:array')
 
       // Destroy should unbind events 
       array.emit('bla')

@@ -131,8 +131,6 @@ var Pd = module.exports = {
   },
 
   // Loads a patch from a string (Pd file), or from an object (pd.json)
-  // TODO : problems of scheduling on load, for example executing [loadbang] ???
-  //         should we use the `futureTime` hack? 
   loadPatch: function(patchData) {
     var patch = this._createPatch()
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)

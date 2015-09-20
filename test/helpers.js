@@ -43,17 +43,28 @@ exports.renderSamples = function(channelCount, frameCount, onStarted, done) {
   })
 }
 
+exports.assertPreservesTimeTag = function(pdObject, args) {
+  var mailbox = pdObject.patch.createObject('testingmailbox')
+    , timeTag = Math.random()
+  utils.timeTag(args, timeTag)
+  pdObject.o(0).connect(mailbox.i(0))
+  pdObject.i(0).message(args)
+  assert.equal(mailbox.rawReceived[0].timeTag, timeTag)
+}
+
 var TestingMailBox = exports.TestingMailBox = PdObject.extend({
   type: 'TestingMailBox',
   init: function() {
     this.received = []
+    this.rawReceived = []
     this.events = new EventEmitter()
   },
   inletDefs: [
     portlets.Inlet.extend({
       message: function(args) {
         this.obj.outlets[0].message(args)
-        this.obj.received.push(args)
+        this.obj.rawReceived.push(args)
+        this.obj.received.push(args.slice(0))
         this.obj.events.emit('message')
       }
     })
@@ -86,7 +97,7 @@ var TestClock = exports.TestClock = function() {
 TestClock.prototype.schedule = function(func, time, repetition) {
   var event = { func: func, time: time, repetition: repetition }
   this.events.push(event)
-  if (event.time === this.time) event.func()
+  if (event.time === this.time) event.func(event)
   return event
 }
 TestClock.prototype.unschedule = function(event) { this.events = _.without(this.events, event) },
@@ -94,7 +105,10 @@ TestClock.prototype.tick = function() {
   var self = this
   this.events.forEach(function(e) {
     if (e.repetition) {
-      if (self.time >= e.time && ((self.time - e.time) % e.repetition) === 0) e.func()
-    } else if (e.time === self.time) e.func()
+      if (self.time >= e.time && ((self.time - e.time) % e.repetition) === 0) { 
+        var e = _.extend(e, { time: self.time })
+        e.func(e)
+      }
+    } else if (e.time === self.time) e.func(e)
   })
 }
