@@ -711,10 +711,12 @@ exports.Clock = {
   // Current time of the clock in milliseconds
   time: 0,
 
-  // Schedule `func` to run in `relativeTime` from now. Returns an `Event`
-  schedule: function(func, relativeTime, isRepeated) {},
+  // Schedules `func(event)` to run at `time` and to repeat every `repetition` millisecond.
+  // Returns an `Event`, that has attribute `timeTag`, which is the time at which it is scheduled.
+  // If `time` is now, event must be executed immediately.
+  schedule: function(func, time, repetition) {},
 
-  // Unschedule `event`
+  // Unschedules `event`.
   unschedule: function(event) {}
 }
 
@@ -3247,7 +3249,7 @@ exports.declareObjects = function(library) {
       var self = this
       if (this._metroHandle === null) {
         this._metroHandle = pdGlob.clock.schedule(function(event) {
-          self._metroTick(event.time)
+          self._metroTick(event.timeTag)
         }, timeTag, this.rate)
       }
     },
@@ -3870,7 +3872,18 @@ var Clock = module.exports = function(opts) {
 }
 
 Clock.prototype.schedule = function(func, time, repetition) {
-  var event = this._waaClock.callbackAtTime(func, time / 1000)
+  var _func = function(event) {
+      // In case the event is executed immediately
+      if (event.timeTag == undefined)
+        event.timeTag = event.deadline * 1000 
+      func(event)
+    }
+    , event = this._waaClock.callbackAtTime(_func, time / 1000)
+
+  Object.defineProperty(event, 'timeTag', {
+    get: function() { return this.deadline * 1000 }
+  })
+
   if (_.isNumber(repetition)) event.repeat(repetition / 1000)
   return event
 }

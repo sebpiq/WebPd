@@ -1056,7 +1056,7 @@ describe('objects.glue', function() {
       clock.time = 10000
       metro.i(0).message(utils.timeTag(['bang'], 10010))
       assert.equal(clock.events.length, 1)
-      assert.equal(clock.events[0].time, 10010)
+      assert.equal(clock.events[0].timeTag, 10010)
     })
 
     it('should add a timeTag to the output bangs', function() {
@@ -1200,7 +1200,7 @@ describe('objects.glue', function() {
 
       delay.i(0).message(utils.timeTag(['bang'], 100))
       assert.equal(clock.events.length, 1)
-      assert.equal(clock.events[0].time, 1100)
+      assert.equal(clock.events[0].timeTag, 1100)
     })
 
   })

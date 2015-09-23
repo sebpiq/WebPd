@@ -94,21 +94,24 @@ var TestClock = exports.TestClock = function() {
   this.events = []
   this.time = 0
 }
+
 TestClock.prototype.schedule = function(func, time, repetition) {
-  var event = { func: func, time: time, repetition: repetition }
+  var event = { func: func, timeTag: time, repetition: repetition }
   this.events.push(event)
-  if (event.time === this.time) event.func(event)
+  if (event.timeTag === this.time) event.func(event)
   return event
 }
-TestClock.prototype.unschedule = function(event) { this.events = _.without(this.events, event) },
+
+TestClock.prototype.unschedule = function(event) { this.events = _.without(this.events, event) }
+
 TestClock.prototype.tick = function() {
   var self = this
   this.events.forEach(function(e) {
     if (e.repetition) {
-      if (self.time >= e.time && ((self.time - e.time) % e.repetition) === 0) { 
-        var e = _.extend(e, { time: self.time })
+      if (self.time >= e.timeTag && ((self.time - e.timeTag) % e.repetition) === 0) { 
+        var e = _.extend(e, { timeTag: self.time })
         e.func(e)
       }
-    } else if (e.time === self.time) e.func(e)
+    } else if (e.timeTag === self.time) e.func(e)
   })
 }
