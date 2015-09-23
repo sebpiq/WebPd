@@ -138,6 +138,13 @@ Abstractions are implemented, but at the moment they require a bit of extra Java
 
 While WebPd uses only Web Audio API and should therefore be quite efficient, you might find that some patches perform poorly on mobile devices, or if there are too many objects running at the same time. This is because Web Audio API is not optimized to work in the same way as Pure Data. For example, modulating parameters with an audio signal (frequencies, delay times, ...), though it is very frequent in Pd, can cause audio glitches in the browser if you use it too much or in a big patch.
 
+Non-exhaustive list of other limitations and inconsistencies :
+
+    - commas in messages are not implemented yet
+    - Pd system messages, such as the widely used `[;pd dsp 1(` , are not implemented
+    - [phasor~] is not a real, perfect, phasor. You shouldn't use it to read from an array for example.
+    - [phasor~] inlet 2 (used to set the phase) is not implemented
+
 
 Submitting a bug report
 ------------------------
