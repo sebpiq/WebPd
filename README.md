@@ -117,9 +117,16 @@ Python comes bundled with such a web server. Open a terminal, navigate to the fo
 
 Alternatively, if you prefer node, you may want to install the handy [`http-server`](https://github.com/indexzero/http-server#readme) command-line utility.
 
-### Other patches have worked before but this one doesn't
+### One of my patches doesn't work in WebPd
 
 WebPd has a few [limitations](#list-of-implemented-objects-and-other-limitations). For example, some of the Pd objects are not available. Open your browser's developer console (`ctrl+shift+i` on firefox and chrome for linux or windows), and you should get a clear error message telling you what is wrong. If the error is unclear, or if there is no error, it might be a bug with WebPd. In that case, it would be great if you could [submit a bug report](#submitting-a-bug-report).
+
+Here is a non-exhaustive list of other limitations and inconsistencies with Pure Data :
+
+- commas in messages are not implemented yet
+- Pd system messages, such as the widely used `[;pd dsp 1(` , are not implemented
+- `[phasor~]` is not a real, perfect, phasor. You shouldn't use it to read from an array for example.
+- `[phasor~]` inlet 2 (used to set the phase) is not implemented
 
 
 ### A patch that works fine on the desktop doesn't seem to work on mobile
@@ -137,13 +144,6 @@ Not all of Pure Data's objects are available in WebPd. Please check-out the [lis
 Abstractions are implemented, but at the moment they require a bit of extra JavaScript in order to work. You can check-out the [abstractions example](https://github.com/sebpiq/WebPd/tree/master/examples/abstractions), to see how this works.
 
 While WebPd uses only Web Audio API and should therefore be quite efficient, you might find that some patches perform poorly on mobile devices, or if there are too many objects running at the same time. This is because Web Audio API is not optimized to work in the same way as Pure Data. For example, modulating parameters with an audio signal (frequencies, delay times, ...), though it is very frequent in Pd, can cause audio glitches in the browser if you use it too much or in a big patch.
-
-Non-exhaustive list of other limitations and inconsistencies :
-
-    - commas in messages are not implemented yet
-    - Pd system messages, such as the widely used `[;pd dsp 1(` , are not implemented
-    - [phasor~] is not a real, perfect, phasor. You shouldn't use it to read from an array for example.
-    - [phasor~] inlet 2 (used to set the phase) is not implemented
 
 
 Submitting a bug report
