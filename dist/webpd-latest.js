@@ -532,20 +532,18 @@ _.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitte
   },
 
   start: function() {
-    this._startStopGeneric('start', 'startPortlets')
-    this.emit('started')
+    this._startStopGeneric('start', 'startPortlets', 'started')
   },
 
   stop: function() {
-    this._startStopGeneric('stop', 'stopPortlets')
-    this.emit('stopped')
+    this._startStopGeneric('stop', 'stopPortlets', 'stopped')
   },
 
   destroy: function() {
     this.objects.forEach(function(obj) { obj.destroy() })
   },
 
-  _startStopGeneric: function(methObj, methPortlets) {
+  _startStopGeneric: function(methObj, methPortlets, eventName) {
     // When starting a patch, we need to take into account its nested structure,
     // making sure that all objects even in subpatches are started first.
     var _recursiveStartObjects = function(obj) {
@@ -562,6 +560,9 @@ _.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitte
         if (!(obj instanceof Patch)) obj[methPortlets]()
       })
     })
+
+    // Emit event for each patch
+    patches.forEach(function(patch) { patch.emit(eventName) })
   },
 
   // Adds an object to the patch.

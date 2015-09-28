@@ -79,11 +79,11 @@ describe('core.Patch', function() {
       var patch = new Patch
         , obj1 = patch.createObject('myobject', [])
         , obj2 = patch.createObject('myobject', [])
-        , started = false
+        , started = 0
 
-      patch.on('started', function() { started = true })
+      patch.on('started', function() { started++ })
       patch.start()
-      assert.equal(started, true)
+      assert.equal(started, 1)
     })
 
     it('should start objects before portlets, inside subpatches and abstractions', function() {
@@ -129,6 +129,19 @@ describe('core.Patch', function() {
       assert.equal(obj.o(0).startCalled, 0)
       patch.start()
       assert.equal(obj.o(0).startCalled, 1)
+    })
+
+    it('should call start on subpatches as well', function() {
+      var patch = new Patch
+        , subpatch = patch.createObject('pd')
+        , subsubpatch = subpatch.createObject('pd')
+        , subpatchStarted = 0, subsubpatchStarted = 0
+
+      subpatch.on('started', function() { subpatchStarted++ })
+      subsubpatch.on('started', function() { subsubpatchStarted++ }) 
+      patch.start()
+      assert.equal(subpatchStarted, 1)
+      assert.equal(subsubpatchStarted, 1)
     })
 
   })

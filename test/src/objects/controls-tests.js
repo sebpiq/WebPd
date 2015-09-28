@@ -100,6 +100,9 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('symbolatom'), ['symbol', 'bla'])
+    })
 
   })
 
@@ -169,6 +172,10 @@ describe('objects.controls', function() {
     
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('nbx'), [9])
+    })
+
   })
 
   describe('[bng]', function() {
@@ -201,6 +208,9 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('bng'), ['bang'])
+    })
 
   })
 
@@ -261,6 +271,42 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('tgl'), ['bang'])
+    })
+
+  })
+
+  describe('[hradio]/[vradio]', function() {
+
+    it('should set the radio and output the value', function() {
+      var hradio = patch.createObject('hradio', [0, 0, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      hradio.o(0).connect(mailbox.i(0))
+
+      hradio.i(0).message([3])
+      assert.deepEqual(mailbox.received, [[3]])
+
+      hradio.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[3], [3]])
+    })
+
+    it('should round and limit the number to within the radio range', function() {
+      var hradio = patch.createObject('hradio', [0, 0, 5])
+        , mailbox = patch.createObject('testingmailbox')
+      hradio.o(0).connect(mailbox.i(0))
+
+      hradio.i(0).message([67])
+      assert.deepEqual(mailbox.received, [[4]])
+      hradio.i(0).message([-56])
+      assert.deepEqual(mailbox.received, [[4], [0]])
+      hradio.i(0).message([3.6])
+      assert.deepEqual(mailbox.received, [[4], [0], [3]])
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('hradio'), [2])
+    })
 
   })
 
@@ -276,6 +322,10 @@ describe('objects.controls', function() {
 
       vu.i(0).message([5656])
       assert.deepEqual(mailbox.received, [[5], [5656]])
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('vu'), [789])
     })
 
   })
