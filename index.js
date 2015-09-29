@@ -23,14 +23,14 @@ var _ = require('underscore')
   , Patch = require('./lib/core/Patch')
   , PdObject = require('./lib/core/PdObject')
   , mixins = require('./lib/core/mixins')
-  , portlets = require('./lib/objects/portlets')
-  , waa = require('./lib/waa')
+  , portlets = require('./lib/waa/portlets')
+  , waa = require('./lib/waa/interfaces')
   , pdGlob = require('./lib/global')
   , interfaces = require('./lib/core/interfaces')
   , patchIds = _.extend({}, mixins.UniqueIdsMixin)
 
 // Various initializations
-require('./lib/objects').declareObjects(pdGlob.library)
+require('./lib/index').declareObjects(pdGlob.library)
 
 var Pd = module.exports = {
 

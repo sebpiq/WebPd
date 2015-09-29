@@ -2,7 +2,7 @@ var _ = require('underscore')
   , assert = require('assert')
   , EventEmitter = require('events').EventEmitter
   , waatest = require('waatest')
-  , portlets = require('../lib/objects/portlets')
+  , portlets = require('../lib/waa/portlets')
   , PdObject = require('../lib/core/PdObject')
   , Pd = require('../index')
   , pdGlob = require('../lib/global')
@@ -12,7 +12,7 @@ exports.afterEach = function() {
   pdGlob.namedObjects.reset()
   pdGlob.patches = {}
   pdGlob.library = {}
-  require('../lib/objects').declareObjects(pdGlob.library)
+  require('../lib').declareObjects(pdGlob.library)
   Pd.stop()
 }
 

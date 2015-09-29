@@ -41,7 +41,7 @@ gulp.task('lib.uglify', function() {
 gulp.task('lib.objectList', function() {
   var library = {}
     , rendered
-  require('./lib/objects').declareObjects(library)
+  require('./lib/index').declareObjects(library)
   rendered = mustache.render(
     '{{#objects}}- {{{.}}}\n{{/objects}}', 
     { objects: Object.keys(library).sort() }

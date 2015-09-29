@@ -3,15 +3,15 @@ var assert = require('assert')
   , fs = require('fs')
   , _ = require('underscore')
   , waatest = require('waatest')
-  , Pd = require('../../../index')
-  , PdObject = require('../../../lib/core/PdObject')
-  , Patch = require('../../../lib/core/Patch')
-  , portlets = require('../../../lib/objects/portlets')
-  , pdGlob = require('../../../lib/global')
-  , helpers = require('../../helpers')
+  , Pd = require('../../index')
+  , PdObject = require('../../lib/core/PdObject')
+  , Patch = require('../../lib/core/Patch')
+  , portlets = require('../../lib/waa/portlets')
+  , pdGlob = require('../../lib/global')
+  , helpers = require('../helpers')
 
 
-describe('objects.controls', function() {  
+describe('controls', function() {  
 
   var patch
 

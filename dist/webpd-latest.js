@@ -207,14 +207,14 @@ var _ = require('underscore')
   , Patch = require('./lib/core/Patch')
   , PdObject = require('./lib/core/PdObject')
   , mixins = require('./lib/core/mixins')
-  , portlets = require('./lib/objects/portlets')
-  , waa = require('./lib/waa')
+  , portlets = require('./lib/waa/portlets')
+  , waa = require('./lib/waa/interfaces')
   , pdGlob = require('./lib/global')
   , interfaces = require('./lib/core/interfaces')
   , patchIds = _.extend({}, mixins.UniqueIdsMixin)
 
 // Various initializations
-require('./lib/objects').declareObjects(pdGlob.library)
+require('./lib/index').declareObjects(pdGlob.library)
 
 var Pd = module.exports = {
 
@@ -371,7 +371,291 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/mixins":6,"./lib/global":9,"./lib/objects":13,"./lib/objects/portlets":14,"./lib/waa":18,"pd-fileutils":62,"underscore":69}],2:[function(require,module,exports){
+},{"./lib/core/Patch":4,"./lib/core/PdObject":5,"./lib/core/interfaces":6,"./lib/core/mixins":7,"./lib/global":10,"./lib/index":12,"./lib/waa/interfaces":14,"./lib/waa/portlets":15,"pd-fileutils":59,"underscore":66}],2:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+var EventEmitter = require('events').EventEmitter
+  , _ = require('underscore')
+  , expect = require('chai').expect
+  , utils = require('./core/utils')
+  , mixins = require('./core/mixins')
+  , PdObject = require('./core/PdObject')
+  , Patch = require('./core/Patch')
+  , pdGlob = require('./global')
+  , portlets = require('./waa/portlets')
+
+
+exports.declareObjects = function(library) {
+
+  var _BaseControl = PdObject.extend({
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          this.obj._onMessageReceived(args)
+        }
+      })
+    ],
+    outletDefs: [portlets.Outlet],
+
+    init: function(receiveName, sendName, pdInit) {
+      this._eventReceiver = new mixins.EventReceiver()
+      if (receiveName && receiveName !== '-' && receiveName !== 'empty') {
+        this.receiveName = receiveName
+        // ! because the extend method instantiates the object for inheritance, 
+        // we need this "if"
+        if (this._onMessageReceived) {
+          this._onMessageReceived = this._onMessageReceived.bind(this)
+          this._eventReceiver.on(pdGlob.emitter, 'msg:' + this.receiveName, this._onMessageReceived)
+        }
+      }
+
+      if (sendName && sendName !== '-' && sendName !== 'empty')
+        this.sendName = sendName
+
+      // !!! here we must test for patch because of extend which instantiates an object
+      if (pdInit && this.patch) {
+        var self = this
+        this._onPatchStarted = function() { self._sendMessage([self.value]) }
+        this._eventReceiver.on(this.patch, 'started', this._onPatchStarted)
+      }
+    },
+
+    destroy: function() {
+      this._eventReceiver.destroy()
+    },
+
+    _sendMessage: function(args) {
+      this.o(0).message(args)
+      if (this.sendName) 
+        pdGlob.emitter.emit('msg:' + this.sendName, args)
+    }
+
+  })
+
+  
+  library['symbolatom'] = _BaseControl.extend({
+    
+    type: 'symbolatom',
+
+    init: function(args) {
+      var minValue = args[0] || undefined
+        , maxValue = args[1] || undefined
+        , receiveName = args[2]
+        , sendName = args[3]
+      this.value = 'symbol'
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, 0])
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang' || _.isNumber(value) || value === 'symbol') {
+        if (_.isNumber(value)) this.value = 'float'
+        else if (value === 'symbol') this.value = args[1]
+        this._sendMessage(utils.timeTag(['symbol', this.value], args))
+      } else return console.error('invalid ' + value)
+    }
+
+  })
+
+
+  var _BaseNumber = _BaseControl.extend({
+
+    init: function(pdInit, receiveName, sendName, minValue, maxValue, initialValue) {
+      this.value = initialValue
+      this._limitInput = function(value) {
+        if (_.isNumber(maxValue)) value = Math.min(value, maxValue)
+        if (_.isNumber(minValue)) value = Math.max(value, minValue)
+        return value
+      }
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang' || _.isNumber(value)) {
+        if (_.isNumber(value)) this.value = value
+        this._sendMessage(utils.timeTag([this._limitInput(this.value)], args))
+      } else return console.error('invalid ' + value)
+    }
+
+  })
+
+
+  library['floatatom'] = _BaseNumber.extend({
+    
+    type: 'floatatom',
+
+    init: function(args) {
+      var minValue = args[0] || undefined
+        , maxValue = args[1] || undefined
+        , receiveName = args[2]
+        , sendName = args[3]
+      _BaseNumber.prototype.init.apply(this, [0, receiveName, sendName, minValue, maxValue, 0])
+    }
+
+  })
+
+
+  library['nbx'] = _BaseNumber.extend({
+
+    type: 'nbx',
+
+    init: function(args) {
+      var minValue = args[0] || undefined
+        , maxValue = args[1] || undefined
+        , pdInit = args[2] || 0
+        , receiveName = args[3]
+        , sendName = args[4]
+        , initialValue = args[5] || 0
+      _BaseNumber.prototype.init.apply(this, 
+        [pdInit, receiveName, sendName, minValue, maxValue, initialValue])
+    }
+
+  })
+
+
+  library['bng'] = _BaseControl.extend({
+
+    type: 'bng',
+
+    init: function(args) {
+      var pdInit = args[0] || 0
+        , receiveName = args[1]
+        , sendName = args[2]
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+      this.value = 'bang'
+    },
+
+    _onMessageReceived: function(args) {
+      this._sendMessage(utils.timeTag(['bang'], args))
+    }
+
+  })
+
+
+  library['tgl'] = _BaseControl.extend({
+
+    type: 'tgl',
+
+    init: function(args) {
+      var pdInit = args[0] || 0
+        , receiveName = args[1]
+        , sendName = args[2]
+        , initialValue = args[3] || 0
+        , nonZeroValue = _.isNumber(args[4]) ? args[4] : 1
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+
+      this.nonZeroValue = nonZeroValue
+      this.value = initialValue
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang') {
+        if (this.value === 0) this.value = this.nonZeroValue
+        else this.value = 0
+        this._sendMessage(utils.timeTag([this.value], args))
+      } else if (_.isNumber(value)) {
+        if (value === 0) this.value = 0
+        else this.value = this.nonZeroValue
+        this._sendMessage(utils.timeTag([value], args))
+      } else return console.error('invalid message received ' + args)
+      
+    }
+
+  })
+
+
+  var _BaseSlider = _BaseNumber.extend({
+
+    init: function(args) {
+      var minValue = args[0] || 0
+        , maxValue = _.isNumber(args[1]) ? args[1] : 127
+        , pdInit = args[2] || 0
+        , receiveName = args[3]
+        , sendName = args[4]
+        , initialValue = args[5] || 0
+      _BaseNumber.prototype.init.apply(this, 
+        [pdInit, receiveName, sendName, minValue, maxValue, initialValue])
+    }
+
+  })
+
+  library['hsl'] = _BaseSlider.extend({
+    type: 'hsl'
+  })
+
+
+  library['vsl'] = _BaseSlider.extend({
+    type: 'vsl'
+  })
+
+
+  var _BaseRadio = _BaseControl.extend({
+
+    init: function(args) {
+      var oldNew = args[0]
+        , pdInit = args[1]
+        , number = _.isNumber(args[2]) ? args[2] : 8
+        , receiveName = args[3]
+        , sendName = args[4]
+        , initialValue = args[5] || 0
+      this.value = initialValue
+      this._limitInput = function(value) { return Math.floor(Math.min(Math.max(value, 0), number - 1)) }
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+    },
+
+    _onMessageReceived: function(args) {
+      var value = args[0]
+      if (value === 'bang' || _.isNumber(value)) {
+        if (_.isNumber(value)) this.value = value
+        this._sendMessage(utils.timeTag([this._limitInput(this.value)], args))
+      } else return console.error('invalid ' + value)
+    }
+
+  })
+
+  library['hradio'] = _BaseRadio.extend({
+    type: 'hradio'
+  })
+
+  library['vradio'] = _BaseRadio.extend({
+    type: 'vradio'
+  })
+
+
+  library['vu'] = _BaseControl.extend({
+
+    init: function(args) {
+      var receiveName = args[0]
+      _BaseControl.prototype.init.apply(this, [receiveName, undefined, 0])
+    },
+
+    _onMessageReceived: function(args) {
+      this._sendMessage(args)
+    }
+
+  })
+}
+},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":7,"./core/utils":9,"./global":10,"./waa/portlets":15,"chai":27,"events":21,"underscore":66}],3:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -482,7 +766,7 @@ _.extend(BaseNode.prototype, {
 })
 
 
-},{"./portlets":7,"./utils":8,"underscore":69,"util":29}],3:[function(require,module,exports){
+},{"./portlets":8,"./utils":9,"underscore":66,"util":26}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -647,7 +931,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":9,"./BaseNode":2,"./mixins":6,"./utils":8,"events":24,"underscore":69}],4:[function(require,module,exports){
+},{"../global":10,"./BaseNode":3,"./mixins":7,"./utils":9,"events":21,"underscore":66}],5:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -685,7 +969,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
   doResolveArgs: true
 })
 
-},{"../global":9,"./BaseNode":2,"./Patch":3,"./portlets":7,"./utils":8,"underscore":69,"util":29}],5:[function(require,module,exports){
+},{"../global":10,"./BaseNode":3,"./Patch":4,"./portlets":8,"./utils":9,"underscore":66,"util":26}],6:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -740,7 +1024,7 @@ exports.Storage = {
   // Gets the file stored at `uri` and returns `done(err, arrayBuffer)`
   get: function(uri, done) { }
 }
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -923,7 +1207,7 @@ _.extend(EventReceiver.prototype, {
 })
 
 EventReceiver.prototype.on = EventReceiver.prototype.addListener
-},{"../global":9,"chai":30,"events":24,"underscore":69}],7:[function(require,module,exports){
+},{"../global":10,"chai":27,"events":21,"underscore":66}],8:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1017,7 +1301,7 @@ var Inlet = exports.Inlet = Portlet.extend({})
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
 
-},{"./utils":8,"underscore":69}],8:[function(require,module,exports){
+},{"./utils":9,"underscore":66}],9:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1138,9 +1422,9 @@ exports.timeTag = function(args, timeTag) {
 // Helper function to get the timeTag of a list of arguments.
 // Returns current clock time if `args` is not time tagged.
 exports.getTimeTag = function(args) {
-  return (args && args.timeTag) || pdGlob.clock.time
+  return (args && args.timeTag) || (pdGlob.clock && pdGlob.clock.time) || 0
 }
-},{"../global":9,"chai":30,"underscore":69}],9:[function(require,module,exports){
+},{"../global":10,"chai":27,"underscore":66}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1269,7 +1553,7 @@ exports.namedObjects = {
   _store: {}
 }
 
-},{"events":24,"underscore":69}],10:[function(require,module,exports){
+},{"events":21,"underscore":66}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1289,277 +1573,988 @@ exports.namedObjects = {
  *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-var EventEmitter = require('events').EventEmitter
-  , _ = require('underscore')
+var _ = require('underscore')
   , expect = require('chai').expect
-  , utils = require('../core/utils')
-  , mixins = require('../core/mixins')
-  , PdObject = require('../core/PdObject')
-  , Patch = require('../core/Patch')
-  , pdGlob = require('../global')
-  , portlets = require('./portlets')
+  , utils = require('./core/utils')
+  , mixins = require('./core/mixins')
+  , PdObject = require('./core/PdObject')
+  , Patch = require('./core/Patch')
+  , pdGlob = require('./global')
+  , portlets = require('./waa/portlets')
 
 
 exports.declareObjects = function(library) {
 
-  var _BaseControl = PdObject.extend({
+  library['receive'] = library['r'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
+
+    type: 'receive',
+
+    outletDefs: [portlets.Outlet],
+    abbreviations: ['r'],
+
+    init: function(args) {
+      var name = args[0]
+        , self = this
+      this._eventReceiver = new mixins.EventReceiver()
+      this._onMessageReceived = this._onMessageReceived.bind(this)
+      this._eventReceiver.on(this, 'changed:name', function(oldName, newName) {
+        if (oldName) 
+          self._eventReceiver.removeListener(pdGlob.emitter, 'msg:' + oldName, self._onMessageReceived)
+        self._eventReceiver.on(pdGlob.emitter, 'msg:' + newName, self._onMessageReceived)
+      })
+      this.setName(name)
+    },
+
+    destroy: function() {
+      mixins.NamedMixin.destroy.apply(this, arguments)
+      this._eventReceiver.destroy()
+      mixins.EventEmitterMixin.destroy.apply(this, arguments)
+    },
+
+    _onMessageReceived: function(args) {
+      this.o(0).message(args)
+    }
+
+  })
+
+  library['send'] = library['s'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
+
+    type: 'send',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          pdGlob.emitter.emit('msg:' + this.obj.name, args)
+        }
+      })
+
+    ],
+
+    abbreviations: ['s'],
+
+    init: function(args) { this.setName(args[0]) },
+
+    destroy: function() {
+      mixins.NamedMixin.destroy.apply(this, arguments)
+      mixins.EventEmitterMixin.destroy.apply(this, arguments)
+    }
+
+  })
+
+  library['msg'] = PdObject.extend({
+
+    type: 'msg',
+
+    doResolveArgs: false,
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var timeTag = args.timeTag
+          // For some reason in Pd $0 in a message is always 0.
+          args = args.slice(0)
+          args.unshift(0)
+          this.obj.outlets[0].message(utils.timeTag(this.obj.resolver(args), timeTag))
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      this.resolver = utils.getDollarResolver(args)
+    }
+
+  })
+
+  library['print'] = PdObject.extend({
+
+    type: 'print',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          console.log(this.obj.prefix ? [this.obj.prefix].concat(args) : args)
+        }
+      })
+
+    ],
+
+    init: function(args) {
+      this.prefix = (args[0] || 'print');
+    }
+
+  })
+
+  library['text'] = PdObject.extend({
+    
+    type: 'text',
+
+    init: function(args) {
+      this.text = args[0]
+    }
+
+  })
+
+  library['loadbang'] = PdObject.extend({
+
+    type: 'loadbang',
+
+    outletDefs: [portlets.Outlet],
+
+    init: function() {
+      var self = this
+      this._eventReceiver = new mixins.EventReceiver()
+      this._onPatchStarted = function() {
+        self.o(0).message(['bang'])
+      }
+      this._eventReceiver.on(this.patch, 'started', this._onPatchStarted)
+    },
+
+    destroy: function() {
+      this._eventReceiver.destroy()
+    }
+
+  })
+
+  var _NumberBase = PdObject.extend({
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val !== 'bang') this.obj.setVal(val)
+          this.obj.o(0).message(utils.timeTag([this.obj.val], args))
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setVal(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) { this.val = val }
+
+  })
+
+  library['float'] = library['f'] = _NumberBase.extend({
+
+    type: 'float',
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', 'float::value')
+      this.val = val
+    }
+
+  })
+
+  library['int'] = library['i'] = _NumberBase.extend({
+
+    type: 'int',
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', 'float::value')
+      this.val = Math.floor(val)
+    }
+
+  })
+
+  var _TwoVarFunctionBase = PdObject.extend({
 
     inletDefs: [
       portlets.Inlet.extend({
         message: function(args) {
-          this.obj._onMessageReceived(args)
+          var val = args[0]
+          if (_.isNumber(val))
+            this.obj.valLeft = val
+          else if (val !== 'bang')
+            console.error('invalid message : ' + args)
+          this.obj.o(0).message(utils.timeTag([this.obj.compute()], args))
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          expect(val).to.be.a('number', this.obj.type + '::value')
+          this.obj.valRight = val
         }
       })
     ],
     outletDefs: [portlets.Outlet],
 
-    init: function(receiveName, sendName, pdInit) {
-      this._eventReceiver = new mixins.EventReceiver()
-      if (receiveName && receiveName !== '-' && receiveName !== 'empty') {
-        this.receiveName = receiveName
-        // ! because the extend method instantiates the object for inheritance, 
-        // we need this "if"
-        if (this._onMessageReceived) {
-          this._onMessageReceived = this._onMessageReceived.bind(this)
-          this._eventReceiver.on(pdGlob.emitter, 'msg:' + this.receiveName, this._onMessageReceived)
+    init: function(args) {
+      this.valRight = args[0] || 0
+      this.valLeft = 0
+    },
+    
+    // Must be overriden
+    compute: function() { return }
+  })
+
+  library['+'] = _TwoVarFunctionBase.extend({
+    type: '+',
+
+    compute: function() { return this.valLeft + this.valRight }
+  })
+
+  library['-'] = _TwoVarFunctionBase.extend({
+    type: '-',
+    compute: function() { return this.valLeft - this.valRight }
+  })
+
+  library['*'] = _TwoVarFunctionBase.extend({
+    type: '*',
+    compute: function() { return this.valLeft * this.valRight }
+  })
+
+  library['/'] = _TwoVarFunctionBase.extend({
+    type: '/',
+    compute: function() { return this.valLeft / this.valRight }
+  })
+
+  library['mod'] = library['%'] = _TwoVarFunctionBase.extend({
+    type: 'mod',
+    compute: function() { return this.valLeft % this.valRight }
+  })
+
+  library['pow'] = _TwoVarFunctionBase.extend({
+    type: 'pow',
+    compute: function() { return Math.pow(this.valLeft, this.valRight) }
+  })
+
+  var _OneVarFunctionBase = PdObject.extend({
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          var inVal = args[0]
+          this.obj.checkInput(inVal)
+          this.obj.o(0).message(utils.timeTag([this.obj.compute(inVal)], args))
         }
-      }
+      })
+    ],
+    outletDefs: [portlets.Outlet],
 
-      if (sendName && sendName !== '-' && sendName !== 'empty')
-        this.sendName = sendName
+    // Must be overriden    
+    checkInput: function(inVal) {},
 
-      // !!! here we must test for patch because of extend which instantiates an object
-      if (pdInit && this.patch) {
-        var self = this
-        this._onPatchStarted = function() { self._sendMessage([self.value]) }
-        this._eventReceiver.on(this.patch, 'started', this._onPatchStarted)
+    // Must be overriden
+    compute: function() { return }
+  })
+
+  var _OneNumVarFunctionBase = _OneVarFunctionBase.extend({
+    checkInput: function(inVal) { expect(inVal).to.be.a('number') }
+  })
+
+  library['cos'] = _OneNumVarFunctionBase.extend({
+    type: 'cos',
+    compute: function(inVal) { return Math.cos(inVal) }
+  })
+
+  library['sin'] = _OneNumVarFunctionBase.extend({
+    type: 'sin',
+    compute: function(inVal) { return Math.sin(inVal) }
+  })
+
+  library['tan'] = _OneNumVarFunctionBase.extend({
+    type: 'tan',
+    compute: function(inVal) { return Math.tan(inVal) }
+  })
+
+  library['atan'] = _OneNumVarFunctionBase.extend({
+    type: 'atan',
+    compute: function(inVal) { return Math.atan(inVal) }
+  })
+
+  library['exp'] = _OneNumVarFunctionBase.extend({
+    type: 'exp',
+    compute: function(inVal) { return Math.exp(inVal) }
+  })
+
+  library['log'] = _OneNumVarFunctionBase.extend({
+    type: 'log',
+    compute: function(inVal) { return Math.log(inVal) }
+  })
+
+  library['abs'] = _OneNumVarFunctionBase.extend({
+    type: 'abs',
+    compute: function(inVal) { return Math.abs(inVal) }
+  })
+
+  library['sqrt'] = _OneNumVarFunctionBase.extend({
+    type: 'sqrt',
+    compute: function(inVal) { return Math.sqrt(inVal) }
+  })
+
+  library['mtof'] = _OneNumVarFunctionBase.extend({
+    type: 'mtof',
+    maxMidiNote: 8.17579891564 * Math.exp((0.0577622650 * 1499)),
+    // TODO: round output ?
+    compute: function(note) { 
+      var out = 0
+      expect(note).to.be.a('number', 'mtof::value')
+      if (note <= -1500) out = 0
+      else if (note > 1499) out = this.maxMidiNote
+      else out = 8.17579891564 * Math.exp((0.0577622650 * note))
+      return out 
+    }
+  })
+
+  library['samplerate~'] = _OneVarFunctionBase.extend({
+    type: 'samplerate~',
+    compute: function () { return pdGlob.settings.sampleRate }
+  })
+
+  library['spigot'] = PdObject.extend({
+    
+    type: 'spigot',
+
+    inletDefs: [
+      
+      portlets.Inlet.extend({
+        message: function(args) {
+          if (this.obj.passing) this.obj.o(0).message(args)
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setPassing(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setPassing(val || 0)
+    },
+
+    setPassing: function(val) {
+      expect(val).to.be.a('number', 'spigot::passing')
+      this.passing = Boolean(val)
+    }
+
+  })
+
+  library['trigger'] = library['t'] = PdObject.extend({
+
+    type: 'trigger',
+
+    inletDefs: [
+      portlets.Inlet.extend({
+
+        message: function(args) {
+          var i, length, filter, msg
+
+          for (i = this.obj.filters.length - 1; i >= 0; i--) {
+            filter = this.obj.filters[i]
+            if (filter === 'bang')
+              this.obj.o(i).message(utils.timeTag(['bang'], args))
+            else if (filter === 'list' || filter === 'anything')
+              this.obj.o(i).message(args)
+            else if (filter === 'float' || _.isNumber(filter)) {
+              msg = args[0]
+              if (_.isNumber(msg)) this.obj.o(i).message(utils.timeTag([msg], args))
+              else this.obj.o(i).message(utils.timeTag([0], args))
+            } else if (filter === 'symbol') {
+              msg = args[0]
+              if (msg === 'bang') this.obj.o(i).message(utils.timeTag(['symbol'], args))
+              else if (_.isNumber(msg)) this.obj.o(i).message(utils.timeTag(['float'], args))
+              else if (_.isString(msg)) this.obj.o(i).message(utils.timeTag([msg], args))
+              else throw new Error('Got unexpected input ' + args)
+            } else this.obj.o(i).message(utils.timeTag(['bang'], args))
+          }
+        }
+
+      })
+    ],
+
+    init: function(args) {
+      var i, length
+      if (args.length === 0)
+        args = ['bang', 'bang']
+      for (i = 0, length = args.length; i < length; i++)
+        this.outlets.push(new portlets.Outlet(this, i))
+      this.filters = args
+    }
+
+  })
+
+  var _PackInlet0 = portlets.Inlet.extend({
+    message: function(args) {
+      var msg = args[0]
+      if (msg !== 'bang') this.obj.memory[0] = msg
+      this.obj.o(0).message(utils.timeTag(this.obj.memory.slice(0), args))
+    }
+  })
+
+  var _PackInletN = portlets.Inlet.extend({
+    message: function(args) {
+      var msg = args[0]
+      this.obj.memory[this.id] = msg
+    }
+  })
+
+  library['pack'] = PdObject.extend({
+    
+    type: 'pack',
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var i, length = args.length
+
+      if (length === 0) args = ['float', 'float']
+      length = args.length
+      this.filters = args
+      this.memory = new Array(length)
+
+      for (i = 0; i < length; i++) {
+        if (i === 0)
+          this.inlets[i] = new _PackInlet0(this, i)
+        else 
+          this.inlets[i] = new _PackInletN(this, i)
+        if (args[i] === 'float') this.memory[i] = 0
+        else if (args[i] === 'symbol') this.memory[i] = 'symbol'
+        else this.memory[i] = args[i]
       }
+    }
+
+  })
+
+  library['select'] = library['sel'] = PdObject.extend({
+
+    type: 'select',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var ind, msg = args[0]
+          if ((ind = this.obj.filters.indexOf(msg)) !== -1)
+            this.obj.o(ind).message(utils.timeTag(['bang'], args))
+          else this.obj.outlets.slice(-1)[0].message(utils.timeTag([msg], args))
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          if (this.obj.filters.length <= 1) this.obj.filters = args
+        }
+      })
+
+    ],
+
+    init: function(args) {
+      var i, length
+      if (args.length === 0) args = [0]
+      if (args.length > 1) this.inlets.pop() 
+
+      for (i = 0, length = args.length; i < length; i++)
+        this.outlets[i] = new portlets.Outlet(this, i)
+      this.outlets[i] = new portlets.Outlet(this, i)
+      this.filters = args
+    }
+
+  })
+
+  library['moses'] = PdObject.extend({
+
+    type: 'moses',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          expect(val).to.be.a('number', 'moses::value')
+          if (val < this.obj.val) this.obj.o(0).message(utils.timeTag([val], args))
+          else this.obj.o(1).message(utils.timeTag([val], args))
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          this.obj.setVal(val)
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet, portlets.Outlet],
+
+    init: function(args) {
+      var val = args[0]
+      this.setVal(val || 0)
+    },
+
+    setVal: function(val) {
+      expect(val).to.be.a('number', 'moses::value')
+      this.val = val
+    }
+
+  })
+
+  library['until'] = PdObject.extend({
+
+    type: 'until',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val === 'bang') {
+            this.obj._startLoop(args.timeTag)
+          } else {
+            expect(val).to.be.a('number', 'moses::value')
+            this.obj._startLoop(args.timeTag, val)
+          }
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          expect(val).to.equal('bang')
+          this.obj._stopLoop()
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function() {
+      this._looping = false
+    },
+
+    _startLoop: function(timeTag, max) {
+      this._looping = true
+      var self = this
+        , counter = 0
+        , sendBang =  function() { self.o(0).message(utils.timeTag(['bang'], timeTag)) }
+
+      if (_.isNumber(max)) {
+        while (this._looping && counter < max) {
+          sendBang()
+          counter++
+        }
+      } else while (this._looping) sendBang()
+        
+      this._looping = false
+    },
+
+    _stopLoop: function() {
+      this._looping = false
+    }
+
+  })
+
+  library['random'] = PdObject.extend({
+
+    type: 'random',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang')
+            this.obj.o(0).message(utils.timeTag([Math.floor(Math.random() * this.obj.max)], args))
+          else if (msg === 'seed') 1 // TODO: seeding, not available with `Math.rand`
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          this.obj.setMax(msg)
+        }
+      })
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var maxInt = args[0]
+      this.setMax(maxInt || 1)
+    },
+
+    setMax: function(maxInt) {
+      expect(maxInt).to.be.a('number', 'random::max')
+      this.max = maxInt
+    }
+
+  })
+
+
+  library['metro'] = PdObject.extend({
+
+    type: 'metro',
+
+    inletDefs: [
+    
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang') this.obj._restartMetroTick(utils.getTimeTag(args))
+          else if (msg === 'stop') this.obj._stopMetroTick() 
+          else {
+            expect(msg).to.be.a('number', 'metro::command')
+            if (msg === 0) this.obj._stopMetroTick()
+            else this.obj._restartMetroTick(utils.getTimeTag(args))
+          }
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var rate = args[0]
+          this.obj.setRate(rate)
+          this.obj._metroTick = this.obj._metroTickRateChange
+        }
+      })
+
+    ],
+
+    outletDefs: [portlets.Outlet],
+
+    init: function(args) {
+      var rate = args[0]
+      this.setRate(rate || 0)
+      this._metroHandle = null
+      this._metroTick = this._metroTickNormal
+    },
+
+    // Metronome rate, in ms per tick
+    setRate: function(rate) {
+      expect(rate).to.be.a('number', 'metro::rate')
+      this.rate = Math.max(rate, 1)
     },
 
     destroy: function() {
-      this._eventReceiver.destroy()
+      this._stopMetroTick()
     },
 
-    _sendMessage: function(args) {
-      this.o(0).message(args)
-      if (this.sendName) 
-        pdGlob.emitter.emit('msg:' + this.sendName, args)
-    }
-
-  })
-
-  
-  library['symbolatom'] = _BaseControl.extend({
-    
-    type: 'symbolatom',
-
-    init: function(args) {
-      var minValue = args[0] || undefined
-        , maxValue = args[1] || undefined
-        , receiveName = args[2]
-        , sendName = args[3]
-      this.value = 'symbol'
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, 0])
-    },
-
-    _onMessageReceived: function(args) {
-      var value = args[0]
-      if (value === 'bang' || _.isNumber(value) || value === 'symbol') {
-        if (_.isNumber(value)) this.value = 'float'
-        else if (value === 'symbol') this.value = args[1]
-        args = ['symbol', this.value]
-      } else return console.error('invalid ' + value)
-
-      this._sendMessage(args)
-    }
-
-  })
-
-
-  var _BaseNumber = _BaseControl.extend({
-
-    init: function(pdInit, receiveName, sendName, minValue, maxValue, initialValue) {
-      this.value = initialValue
-      this._limitInput = function(value) {
-        if (_.isNumber(maxValue)) value = Math.min(value, maxValue)
-        if (_.isNumber(minValue)) value = Math.max(value, minValue)
-        return value
+    _startMetroTick: function(timeTag) {
+      var self = this
+      if (this._metroHandle === null) {
+        this._metroHandle = pdGlob.clock.schedule(function(event) {
+          self._metroTick(event.timeTag)
+        }, timeTag, this.rate)
       }
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
     },
 
-    _onMessageReceived: function(args) {
-      var value = args[0]
-      if (value === 'bang' || _.isNumber(value)) {
-        if (_.isNumber(value)) this.value = value
-        args = [this._limitInput(this.value)]
-      } else return console.error('invalid ' + value)
-
-      this._sendMessage(args)
-    }
-
-  })
-
-
-  library['floatatom'] = _BaseNumber.extend({
-    
-    type: 'floatatom',
-
-    init: function(args) {
-      var minValue = args[0] || undefined
-        , maxValue = args[1] || undefined
-        , receiveName = args[2]
-        , sendName = args[3]
-      _BaseNumber.prototype.init.apply(this, [0, receiveName, sendName, minValue, maxValue, 0])
-    }
-
-  })
-
-
-  library['nbx'] = _BaseNumber.extend({
-
-    type: 'nbx',
-
-    init: function(args) {
-      var minValue = args[0] || undefined
-        , maxValue = args[1] || undefined
-        , pdInit = args[2] || 0
-        , receiveName = args[3]
-        , sendName = args[4]
-        , initialValue = args[5] || 0
-      _BaseNumber.prototype.init.apply(this, 
-        [pdInit, receiveName, sendName, minValue, maxValue, initialValue])
-    }
-
-  })
-
-
-  library['bng'] = _BaseControl.extend({
-
-    type: 'bng',
-
-    init: function(args) {
-      var pdInit = args[0] || 0
-        , receiveName = args[1]
-        , sendName = args[2]
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
-      this.value = 'bang'
+    _stopMetroTick: function() {
+      if (this._metroHandle !== null) {
+        pdGlob.clock.unschedule(this._metroHandle)
+        this._metroHandle = null
+      }
     },
 
-    _onMessageReceived: function() {
-      this._sendMessage(['bang'])
-    }
-
-  })
-
-
-  library['tgl'] = _BaseControl.extend({
-
-    type: 'tgl',
-
-    init: function(args) {
-      var pdInit = args[0] || 0
-        , receiveName = args[1]
-        , sendName = args[2]
-        , initialValue = args[3] || 0
-        , nonZeroValue = _.isNumber(args[4]) ? args[4] : 1
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
-
-      this.nonZeroValue = nonZeroValue
-      this.value = initialValue
+    _restartMetroTick: function(timeTag) {
+      // If a rate change was made and `_restartMetroTick` is called before the next tick,
+      // we should do this to avoid `_restartMetroTick` to be called twice recursively,
+      // which would cause _metroHandle to not be unscheduled properly... 
+      if (this._metroTick === this._metroTickRateChange)
+        this._metroTick = this._metroTickNormal
+      this._stopMetroTick()
+      this._startMetroTick(timeTag)
     },
 
-    _onMessageReceived: function(args) {
-      var value = args[0]
-      if (value === 'bang') {
-        if (this.value === 0) this.value = this.nonZeroValue
-        else this.value = 0
-        this._sendMessage([this.value])
-      } else if (_.isNumber(value)) {
-        if (value === 0) this.value = 0
-        else this.value = this.nonZeroValue
-        this._sendMessage([value])
-      } else return console.error('invalid message received ' + args)
+    _metroTickNormal: function(timeTag) { 
+      this.outlets[0].message(utils.timeTag(['bang'], timeTag))
+    },
+
+    // On next tick, restarts the interval and switches to normal ticking.
+    _metroTickRateChange: function(timeTag) {
+      this._metroTick = this._metroTickNormal
+      this._restartMetroTick(timeTag)
+    }
+  })
+
+  library['delay'] = library['del'] = PdObject.extend({
+
+    type: 'delay',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          if (msg === 'bang') {
+            this.obj._stopDelay()
+            this.obj._startDelay(utils.getTimeTag(args))
+          } else if (msg === 'stop') {
+            this.obj._stopDelay() 
+          } else {
+            this.obj.setDelay(msg)
+            this.obj._stopDelay()
+            this.obj._startDelay(utils.getTimeTag(args))
+          }
+        }
+      }),
       
-    }
+      portlets.Inlet.extend({
+        message: function(args) {
+          var delay = args[0]
+          this.obj.setDelay(delay)
+        }
+      })
 
-  })
+    ],
 
-
-  var _BaseSlider = _BaseNumber.extend({
-
-    init: function(args) {
-      var minValue = args[0] || 0
-        , maxValue = _.isNumber(args[1]) ? args[1] : 127
-        , pdInit = args[2] || 0
-        , receiveName = args[3]
-        , sendName = args[4]
-        , initialValue = args[5] || 0
-      _BaseNumber.prototype.init.apply(this, 
-        [pdInit, receiveName, sendName, minValue, maxValue, initialValue])
-    }
-
-  })
-
-  library['hsl'] = _BaseSlider.extend({
-    type: 'hsl'
-  })
-
-
-  library['vsl'] = _BaseSlider.extend({
-    type: 'vsl'
-  })
-
-
-  var _BaseRadio = _BaseControl.extend({
+    outletDefs: [portlets.Outlet],
 
     init: function(args) {
-      var oldNew = args[0]
-        , pdInit = args[1]
-        , number = _.isNumber(args[2]) ? args[2] : 8
-        , receiveName = args[3]
-        , sendName = args[4]
-        , initialValue = args[5] || 0
-      this.value = initialValue
-      this._limitInput = function(value) { return Math.floor(Math.min(Math.max(value, 0), number - 1)) }
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+      var delay = args[0]
+      this.setDelay(delay || 0)
+      this._delayHandle = null
     },
 
-    _onMessageReceived: function(args) {
-      var value = args[0]
-      if (value === 'bang' || _.isNumber(value)) {
-        if (_.isNumber(value)) this.value = value
-        args = [this._limitInput(this.value)]
-      } else return console.error('invalid ' + value)
-
-      this._sendMessage(args)
-    }
-
-  })
-
-  library['hradio'] = _BaseRadio.extend({
-    type: 'hradio'
-  })
-
-  library['vradio'] = _BaseRadio.extend({
-    type: 'vradio'
-  })
-
-
-  library['vu'] = _BaseControl.extend({
-
-    init: function(args) {
-      var receiveName = args[0]
-      _BaseControl.prototype.init.apply(this, [receiveName, undefined, 0])
+    // Delay time, in ms
+    setDelay: function(delay) {
+      expect(delay).to.be.a('number', 'delay::time')
+      this.delay = delay
     },
 
-    _onMessageReceived: function(args) {
-      this._sendMessage(args)
+    destroy: function() {
+      this._stopDelay()
+    },
+
+    _startDelay: function(timeTag) {
+      var self = this
+      if (this._delayHandle === null) {
+        this._delayHandle = pdGlob.clock.schedule(function() {
+          self.outlets[0].message(['bang'])
+        }, timeTag + this.delay)
+      }
+    },
+
+    _stopDelay: function() {
+      if (this._delayHandle !== null) {
+        pdGlob.clock.unschedule(this._delayHandle)
+        this._delayHandle = null
+      }
+    }
+  })
+
+  // TODO: How does it work in pd ?
+  library['timer'] = PdObject.extend({
+
+    type: 'timer',
+
+    inletDefs: [
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          expect(msg).to.be.equal('bang', 'timer::startStop')
+          this.obj.refTime = utils.getTimeTag(args)
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var msg = args[0]
+          expect(msg).to.be.equal('bang', 'timer::measure')
+          this.obj.outlets[0].message(utils.timeTag([utils.getTimeTag(args) - this.obj.refTime], args))
+        }
+      })
+
+    ],
+    
+    outletDefs: [portlets.Outlet],
+
+    init: function() {
+      // Reference time, the timer count starts from this  
+      this.refTime = 0
     }
 
   })
+
+  library['change'] = PdObject.extend({
+
+    type: 'change',
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val !== this.obj.last) {
+            this.obj.last = val
+            this.obj.o(0).message(utils.timeTag([val], args))
+          }
+        }
+      })
+    ],
+    
+    outletDefs: [portlets.Outlet],
+
+    init: function() {
+      this.last = null
+    }
+
+  })
+
+  library['array'] = library['table'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
+
+    type: 'array',
+
+    nameIsUnique: true,
+
+    init: function(args) {
+      var name = args[0]
+        , size = args[1] || 100
+      if (name) this.setName(name)
+      this.size = size
+      this.data = new Float32Array(size)
+    },
+
+    destroy: function() {
+      mixins.NamedMixin.destroy.apply(this, arguments)
+      mixins.EventEmitterMixin.destroy.apply(this, arguments)
+    },
+
+    setData: function(audioData, resize) {
+      if (resize) this.data = new Float32Array(audioData.length)
+      this.data.set(audioData.subarray(0, Math.min(this.data.length, audioData.length)))
+      this.size = this.data.length
+      this.emit('changed:data')
+    }
+
+  })
+
+  library['soundfiler'] = PdObject.extend({
+
+    type: 'soundfiler',
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          var self = this
+            , command = args[0]
+            , doResize = false
+            , arg, url, arrayNames
+          args = args.slice(1)
+          if (command === 'read') {
+            
+            // Handle options
+            while (args.length && args[0][0] === '-') {
+              arg = args.shift()
+              if (arg === '-resize') doResize = true
+              
+              else if (arg === '-wave' && arg === '-aiff'
+                    && arg === '-nextstep' && arg === '-raw'
+                    && arg === '-bytes' && arg === '-nframes')
+                return console.error(arg + ' not supported')
+              else return console.error(arg + ' not understood')
+            }
+
+            // Handle url to load and arrays to load the sound data to
+            url = args.shift()
+            arrayNames = args
+
+            // GET the audio resource 
+            pdGlob.storage.get(url, function(err, arrayBuffer) {
+              if (err) return console.error('could not load file : ' + err)
+
+              // Try to decode it
+              pdGlob.audio.decode(arrayBuffer, function(err, audioData) {
+                if (err) return console.error('Could not decode file : ' + err)
+
+                var array, arrays, channelData
+
+                arrays = arrayNames.map(function(arrayName) {
+                  array = pdGlob.namedObjects.get('array', arrayName)[0]
+                  if (!array) {
+                    console.error('array "' + arrayName + '" not found')
+                    return null
+                  } else return array
+                })
+
+                if (_.contains(arrays, null)) return
+                if (_.uniq(_.pluck(arrays, 'size')).length !== 1)
+                  doResize = true
+
+
+                // For each array, set the data
+                arrays.forEach(function(array, i) {
+                  channelData = audioData[i]
+                  if (!channelData) return
+                  array.setData(channelData, doResize)
+                })
+
+                // Send the amount of frames read to the outlet 
+                self.obj.o(0).message([Math.min(arrays[0].size, audioData[0].length)])
+              })
+            })
+
+          } else console.error('command "' + command + '" is not supported')
+        }
+      })
+    ],
+    
+    outletDefs: [ portlets.Outlet ]
+
+  })
+
+  library['pd'] = Patch
+
 }
-},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"events":24,"underscore":69}],11:[function(require,module,exports){
+
+},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":7,"./core/utils":9,"./global":10,"./waa/portlets":15,"chai":27,"underscore":66}],12:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+var _ = require('underscore')
+
+exports.declareObjects = function(library) {
+  require('./glue').declareObjects(library)
+  require('./controls').declareObjects(library)
+  require('./waa/dsp').declareObjects(library)
+  require('./waa/portlets').declareObjects(library)
+}
+},{"./controls":2,"./glue":11,"./waa/dsp":13,"./waa/portlets":15,"underscore":66}],13:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2540,7 +3535,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"underscore":69,"waaoffsetnode":72,"waatablenode":74,"waawhitenoisenode":78}],12:[function(require,module,exports){
+},{"../core/PdObject":5,"../core/mixins":7,"../core/utils":9,"../global":10,"./portlets":15,"chai":27,"underscore":66,"waaoffsetnode":69,"waatablenode":71,"waawhitenoisenode":75}],14:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2560,988 +3555,111 @@ exports.declareObjects = function(library) {
  *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
+
 var _ = require('underscore')
-  , expect = require('chai').expect
-  , utils = require('../core/utils')
-  , mixins = require('../core/mixins')
-  , PdObject = require('../core/PdObject')
-  , Patch = require('../core/Patch')
+  , WAAClock = require('waaclock')
   , pdGlob = require('../global')
-  , portlets = require('./portlets')
 
 
-exports.declareObjects = function(library) {
-
-  library['receive'] = library['r'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
-
-    type: 'receive',
-
-    outletDefs: [portlets.Outlet],
-    abbreviations: ['r'],
-
-    init: function(args) {
-      var name = args[0]
-        , self = this
-      this._eventReceiver = new mixins.EventReceiver()
-      this._onMessageReceived = this._onMessageReceived.bind(this)
-      this._eventReceiver.on(this, 'changed:name', function(oldName, newName) {
-        if (oldName) 
-          self._eventReceiver.removeListener(pdGlob.emitter, 'msg:' + oldName, self._onMessageReceived)
-        self._eventReceiver.on(pdGlob.emitter, 'msg:' + newName, self._onMessageReceived)
-      })
-      this.setName(name)
-    },
-
-    destroy: function() {
-      mixins.NamedMixin.destroy.apply(this, arguments)
-      this._eventReceiver.destroy()
-      mixins.EventEmitterMixin.destroy.apply(this, arguments)
-    },
-
-    _onMessageReceived: function(args) {
-      this.o(0).message(args)
-    }
-
+var Audio = exports.Audio = function(opts) {
+  if (typeof AudioContext === 'undefined') 
+    return console.error('this environment doesn\'t support Web Audio API')
+  this.channelCount = opts.channelCount
+  this.setContext(opts.audioContext || new AudioContext)
+  pdGlob.settings.sampleRate = this.context.sampleRate
+  Object.defineProperty(this, 'time', {
+    get: function() { return this.context.currentTime * 1000 },
   })
-
-  library['send'] = library['s'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
-
-    type: 'send',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          pdGlob.emitter.emit('msg:' + this.obj.name, args)
-        }
-      })
-
-    ],
-
-    abbreviations: ['s'],
-
-    init: function(args) { this.setName(args[0]) },
-
-    destroy: function() {
-      mixins.NamedMixin.destroy.apply(this, arguments)
-      mixins.EventEmitterMixin.destroy.apply(this, arguments)
-    }
-
-  })
-
-  library['msg'] = PdObject.extend({
-
-    type: 'msg',
-
-    doResolveArgs: false,
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var timeTag = args.timeTag
-          // For some reason in Pd $0 in a message is always 0.
-          args = args.slice(0)
-          args.unshift(0)
-          this.obj.outlets[0].message(utils.timeTag(this.obj.resolver(args), timeTag))
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      this.resolver = utils.getDollarResolver(args)
-    }
-
-  })
-
-  library['print'] = PdObject.extend({
-
-    type: 'print',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          console.log(this.obj.prefix ? [this.obj.prefix].concat(args) : args)
-        }
-      })
-
-    ],
-
-    init: function(args) {
-      this.prefix = (args[0] || 'print');
-    }
-
-  })
-
-  library['text'] = PdObject.extend({
-    
-    type: 'text',
-
-    init: function(args) {
-      this.text = args[0]
-    }
-
-  })
-
-  library['loadbang'] = PdObject.extend({
-
-    type: 'loadbang',
-
-    outletDefs: [portlets.Outlet],
-
-    init: function() {
-      var self = this
-      this._eventReceiver = new mixins.EventReceiver()
-      this._onPatchStarted = function() {
-        self.o(0).message(['bang'])
-      }
-      this._eventReceiver.on(this.patch, 'started', this._onPatchStarted)
-    },
-
-    destroy: function() {
-      this._eventReceiver.destroy()
-    }
-
-  })
-
-  var _NumberBase = PdObject.extend({
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          if (val !== 'bang') this.obj.setVal(val)
-          this.obj.o(0).message(utils.timeTag([this.obj.val], args))
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          this.obj.setVal(val)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.setVal(val || 0)
-    },
-
-    setVal: function(val) { this.val = val }
-
-  })
-
-  library['float'] = library['f'] = _NumberBase.extend({
-
-    type: 'float',
-
-    setVal: function(val) {
-      expect(val).to.be.a('number', 'float::value')
-      this.val = val
-    }
-
-  })
-
-  library['int'] = library['i'] = _NumberBase.extend({
-
-    type: 'int',
-
-    setVal: function(val) {
-      expect(val).to.be.a('number', 'float::value')
-      this.val = Math.floor(val)
-    }
-
-  })
-
-  var _TwoVarFunctionBase = PdObject.extend({
-
-    inletDefs: [
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          if (_.isNumber(val))
-            this.obj.valLeft = val
-          else if (val !== 'bang')
-            console.error('invalid message : ' + args)
-          this.obj.o(0).message(utils.timeTag([this.obj.compute()], args))
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          expect(val).to.be.a('number', this.obj.type + '::value')
-          this.obj.valRight = val
-        }
-      })
-    ],
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      this.valRight = args[0] || 0
-      this.valLeft = 0
-    },
-    
-    // Must be overriden
-    compute: function() { return }
-  })
-
-  library['+'] = _TwoVarFunctionBase.extend({
-    type: '+',
-
-    compute: function() { return this.valLeft + this.valRight }
-  })
-
-  library['-'] = _TwoVarFunctionBase.extend({
-    type: '-',
-    compute: function() { return this.valLeft - this.valRight }
-  })
-
-  library['*'] = _TwoVarFunctionBase.extend({
-    type: '*',
-    compute: function() { return this.valLeft * this.valRight }
-  })
-
-  library['/'] = _TwoVarFunctionBase.extend({
-    type: '/',
-    compute: function() { return this.valLeft / this.valRight }
-  })
-
-  library['mod'] = library['%'] = _TwoVarFunctionBase.extend({
-    type: 'mod',
-    compute: function() { return this.valLeft % this.valRight }
-  })
-
-  library['pow'] = _TwoVarFunctionBase.extend({
-    type: 'pow',
-    compute: function() { return Math.pow(this.valLeft, this.valRight) }
-  })
-
-  var _OneVarFunctionBase = PdObject.extend({
-
-    inletDefs: [
-      portlets.Inlet.extend({
-        message: function(args) {
-          var inVal = args[0]
-          this.obj.checkInput(inVal)
-          this.obj.o(0).message(utils.timeTag([this.obj.compute(inVal)], args))
-        }
-      })
-    ],
-    outletDefs: [portlets.Outlet],
-
-    // Must be overriden    
-    checkInput: function(inVal) {},
-
-    // Must be overriden
-    compute: function() { return }
-  })
-
-  var _OneNumVarFunctionBase = _OneVarFunctionBase.extend({
-    checkInput: function(inVal) { expect(inVal).to.be.a('number') }
-  })
-
-  library['cos'] = _OneNumVarFunctionBase.extend({
-    type: 'cos',
-    compute: function(inVal) { return Math.cos(inVal) }
-  })
-
-  library['sin'] = _OneNumVarFunctionBase.extend({
-    type: 'sin',
-    compute: function(inVal) { return Math.sin(inVal) }
-  })
-
-  library['tan'] = _OneNumVarFunctionBase.extend({
-    type: 'tan',
-    compute: function(inVal) { return Math.tan(inVal) }
-  })
-
-  library['atan'] = _OneNumVarFunctionBase.extend({
-    type: 'atan',
-    compute: function(inVal) { return Math.atan(inVal) }
-  })
-
-  library['exp'] = _OneNumVarFunctionBase.extend({
-    type: 'exp',
-    compute: function(inVal) { return Math.exp(inVal) }
-  })
-
-  library['log'] = _OneNumVarFunctionBase.extend({
-    type: 'log',
-    compute: function(inVal) { return Math.log(inVal) }
-  })
-
-  library['abs'] = _OneNumVarFunctionBase.extend({
-    type: 'abs',
-    compute: function(inVal) { return Math.abs(inVal) }
-  })
-
-  library['sqrt'] = _OneNumVarFunctionBase.extend({
-    type: 'sqrt',
-    compute: function(inVal) { return Math.sqrt(inVal) }
-  })
-
-  library['mtof'] = _OneNumVarFunctionBase.extend({
-    type: 'mtof',
-    maxMidiNote: 8.17579891564 * Math.exp((0.0577622650 * 1499)),
-    // TODO: round output ?
-    compute: function(note) { 
-      var out = 0
-      expect(note).to.be.a('number', 'mtof::value')
-      if (note <= -1500) out = 0
-      else if (note > 1499) out = this.maxMidiNote
-      else out = 8.17579891564 * Math.exp((0.0577622650 * note))
-      return out 
-    }
-  })
-
-  library['samplerate~'] = _OneVarFunctionBase.extend({
-    type: 'samplerate~',
-    compute: function () { return pdGlob.settings.sampleRate }
-  })
-
-  library['spigot'] = PdObject.extend({
-    
-    type: 'spigot',
-
-    inletDefs: [
-      
-      portlets.Inlet.extend({
-        message: function(args) {
-          if (this.obj.passing) this.obj.o(0).message(args)
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          this.obj.setPassing(val)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.setPassing(val || 0)
-    },
-
-    setPassing: function(val) {
-      expect(val).to.be.a('number', 'spigot::passing')
-      this.passing = Boolean(val)
-    }
-
-  })
-
-  library['trigger'] = library['t'] = PdObject.extend({
-
-    type: 'trigger',
-
-    inletDefs: [
-      portlets.Inlet.extend({
-
-        message: function(args) {
-          var i, length, filter, msg
-
-          for (i = this.obj.filters.length - 1; i >= 0; i--) {
-            filter = this.obj.filters[i]
-            if (filter === 'bang')
-              this.obj.o(i).message(utils.timeTag(['bang'], args))
-            else if (filter === 'list' || filter === 'anything')
-              this.obj.o(i).message(args)
-            else if (filter === 'float' || _.isNumber(filter)) {
-              msg = args[0]
-              if (_.isNumber(msg)) this.obj.o(i).message(utils.timeTag([msg], args))
-              else this.obj.o(i).message(utils.timeTag([0], args))
-            } else if (filter === 'symbol') {
-              msg = args[0]
-              if (msg === 'bang') this.obj.o(i).message(utils.timeTag(['symbol'], args))
-              else if (_.isNumber(msg)) this.obj.o(i).message(utils.timeTag(['float'], args))
-              else if (_.isString(msg)) this.obj.o(i).message(utils.timeTag([msg], args))
-              else throw new Error('Got unexpected input ' + args)
-            } else this.obj.o(i).message(utils.timeTag(['bang'], args))
-          }
-        }
-
-      })
-    ],
-
-    init: function(args) {
-      var i, length
-      if (args.length === 0)
-        args = ['bang', 'bang']
-      for (i = 0, length = args.length; i < length; i++)
-        this.outlets.push(new portlets.Outlet(this, i))
-      this.filters = args
-    }
-
-  })
-
-  var _PackInlet0 = portlets.Inlet.extend({
-    message: function(args) {
-      var msg = args[0]
-      if (msg !== 'bang') this.obj.memory[0] = msg
-      this.obj.o(0).message(utils.timeTag(this.obj.memory.slice(0), args))
-    }
-  })
-
-  var _PackInletN = portlets.Inlet.extend({
-    message: function(args) {
-      var msg = args[0]
-      this.obj.memory[this.id] = msg
-    }
-  })
-
-  library['pack'] = PdObject.extend({
-    
-    type: 'pack',
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var i, length = args.length
-
-      if (length === 0) args = ['float', 'float']
-      length = args.length
-      this.filters = args
-      this.memory = new Array(length)
-
-      for (i = 0; i < length; i++) {
-        if (i === 0)
-          this.inlets[i] = new _PackInlet0(this, i)
-        else 
-          this.inlets[i] = new _PackInletN(this, i)
-        if (args[i] === 'float') this.memory[i] = 0
-        else if (args[i] === 'symbol') this.memory[i] = 'symbol'
-        else this.memory[i] = args[i]
-      }
-    }
-
-  })
-
-  library['select'] = library['sel'] = PdObject.extend({
-
-    type: 'select',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var ind, msg = args[0]
-          if ((ind = this.obj.filters.indexOf(msg)) !== -1)
-            this.obj.o(ind).message(utils.timeTag(['bang'], args))
-          else this.obj.outlets.slice(-1)[0].message(utils.timeTag([msg], args))
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          if (this.obj.filters.length <= 1) this.obj.filters = args
-        }
-      })
-
-    ],
-
-    init: function(args) {
-      var i, length
-      if (args.length === 0) args = [0]
-      if (args.length > 1) this.inlets.pop() 
-
-      for (i = 0, length = args.length; i < length; i++)
-        this.outlets[i] = new portlets.Outlet(this, i)
-      this.outlets[i] = new portlets.Outlet(this, i)
-      this.filters = args
-    }
-
-  })
-
-  library['moses'] = PdObject.extend({
-
-    type: 'moses',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          expect(val).to.be.a('number', 'moses::value')
-          if (val < this.obj.val) this.obj.o(0).message(utils.timeTag([val], args))
-          else this.obj.o(1).message(utils.timeTag([val], args))
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          this.obj.setVal(val)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet, portlets.Outlet],
-
-    init: function(args) {
-      var val = args[0]
-      this.setVal(val || 0)
-    },
-
-    setVal: function(val) {
-      expect(val).to.be.a('number', 'moses::value')
-      this.val = val
-    }
-
-  })
-
-  library['until'] = PdObject.extend({
-
-    type: 'until',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          if (val === 'bang') {
-            this.obj._startLoop(args.timeTag)
-          } else {
-            expect(val).to.be.a('number', 'moses::value')
-            this.obj._startLoop(args.timeTag, val)
-          }
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          expect(val).to.equal('bang')
-          this.obj._stopLoop()
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function() {
-      this._looping = false
-    },
-
-    _startLoop: function(timeTag, max) {
-      this._looping = true
-      var self = this
-        , counter = 0
-        , sendBang =  function() { self.o(0).message(utils.timeTag(['bang'], timeTag)) }
-
-      if (_.isNumber(max)) {
-        while (this._looping && counter < max) {
-          sendBang()
-          counter++
-        }
-      } else while (this._looping) sendBang()
-        
-      this._looping = false
-    },
-
-    _stopLoop: function() {
-      this._looping = false
-    }
-
-  })
-
-  library['random'] = PdObject.extend({
-
-    type: 'random',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          if (msg === 'bang')
-            this.obj.o(0).message(utils.timeTag([Math.floor(Math.random() * this.obj.max)], args))
-          else if (msg === 'seed') 1 // TODO: seeding, not available with `Math.rand`
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          this.obj.setMax(msg)
-        }
-      })
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var maxInt = args[0]
-      this.setMax(maxInt || 1)
-    },
-
-    setMax: function(maxInt) {
-      expect(maxInt).to.be.a('number', 'random::max')
-      this.max = maxInt
-    }
-
-  })
-
-
-  library['metro'] = PdObject.extend({
-
-    type: 'metro',
-
-    inletDefs: [
-    
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          if (msg === 'bang') this.obj._restartMetroTick(utils.getTimeTag(args))
-          else if (msg === 'stop') this.obj._stopMetroTick() 
-          else {
-            expect(msg).to.be.a('number', 'metro::command')
-            if (msg === 0) this.obj._stopMetroTick()
-            else this.obj._restartMetroTick(utils.getTimeTag(args))
-          }
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var rate = args[0]
-          this.obj.setRate(rate)
-          this.obj._metroTick = this.obj._metroTickRateChange
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var rate = args[0]
-      this.setRate(rate || 0)
-      this._metroHandle = null
-      this._metroTick = this._metroTickNormal
-    },
-
-    // Metronome rate, in ms per tick
-    setRate: function(rate) {
-      expect(rate).to.be.a('number', 'metro::rate')
-      this.rate = Math.max(rate, 1)
-    },
-
-    destroy: function() {
-      this._stopMetroTick()
-    },
-
-    _startMetroTick: function(timeTag) {
-      var self = this
-      if (this._metroHandle === null) {
-        this._metroHandle = pdGlob.clock.schedule(function(event) {
-          self._metroTick(event.timeTag)
-        }, timeTag, this.rate)
-      }
-    },
-
-    _stopMetroTick: function() {
-      if (this._metroHandle !== null) {
-        pdGlob.clock.unschedule(this._metroHandle)
-        this._metroHandle = null
-      }
-    },
-
-    _restartMetroTick: function(timeTag) {
-      // If a rate change was made and `_restartMetroTick` is called before the next tick,
-      // we should do this to avoid `_restartMetroTick` to be called twice recursively,
-      // which would cause _metroHandle to not be unscheduled properly... 
-      if (this._metroTick === this._metroTickRateChange)
-        this._metroTick = this._metroTickNormal
-      this._stopMetroTick()
-      this._startMetroTick(timeTag)
-    },
-
-    _metroTickNormal: function(timeTag) { 
-      this.outlets[0].message(utils.timeTag(['bang'], timeTag))
-    },
-
-    // On next tick, restarts the interval and switches to normal ticking.
-    _metroTickRateChange: function(timeTag) {
-      this._metroTick = this._metroTickNormal
-      this._restartMetroTick(timeTag)
-    }
-  })
-
-  library['delay'] = library['del'] = PdObject.extend({
-
-    type: 'delay',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          if (msg === 'bang') {
-            this.obj._stopDelay()
-            this.obj._startDelay(utils.getTimeTag(args))
-          } else if (msg === 'stop') {
-            this.obj._stopDelay() 
-          } else {
-            this.obj.setDelay(msg)
-            this.obj._stopDelay()
-            this.obj._startDelay(utils.getTimeTag(args))
-          }
-        }
-      }),
-      
-      portlets.Inlet.extend({
-        message: function(args) {
-          var delay = args[0]
-          this.obj.setDelay(delay)
-        }
-      })
-
-    ],
-
-    outletDefs: [portlets.Outlet],
-
-    init: function(args) {
-      var delay = args[0]
-      this.setDelay(delay || 0)
-      this._delayHandle = null
-    },
-
-    // Delay time, in ms
-    setDelay: function(delay) {
-      expect(delay).to.be.a('number', 'delay::time')
-      this.delay = delay
-    },
-
-    destroy: function() {
-      this._stopDelay()
-    },
-
-    _startDelay: function(timeTag) {
-      var self = this
-      if (this._delayHandle === null) {
-        this._delayHandle = pdGlob.clock.schedule(function() {
-          self.outlets[0].message(['bang'])
-        }, timeTag + this.delay)
-      }
-    },
-
-    _stopDelay: function() {
-      if (this._delayHandle !== null) {
-        pdGlob.clock.unschedule(this._delayHandle)
-        this._delayHandle = null
-      }
-    }
-  })
-
-  // TODO: How does it work in pd ?
-  library['timer'] = PdObject.extend({
-
-    type: 'timer',
-
-    inletDefs: [
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          expect(msg).to.be.equal('bang', 'timer::startStop')
-          this.obj.refTime = utils.getTimeTag(args)
-        }
-      }),
-
-      portlets.Inlet.extend({
-        message: function(args) {
-          var msg = args[0]
-          expect(msg).to.be.equal('bang', 'timer::measure')
-          this.obj.outlets[0].message(utils.timeTag([utils.getTimeTag(args) - this.obj.refTime], args))
-        }
-      })
-
-    ],
-    
-    outletDefs: [portlets.Outlet],
-
-    init: function() {
-      // Reference time, the timer count starts from this  
-      this.refTime = 0
-    }
-
-  })
-
-  library['change'] = PdObject.extend({
-
-    type: 'change',
-
-    inletDefs: [
-      portlets.Inlet.extend({
-        message: function(args) {
-          var val = args[0]
-          if (val !== this.obj.last) {
-            this.obj.last = val
-            this.obj.o(0).message(utils.timeTag([val], args))
-          }
-        }
-      })
-    ],
-    
-    outletDefs: [portlets.Outlet],
-
-    init: function() {
-      this.last = null
-    }
-
-  })
-
-  library['array'] = library['table'] = PdObject.extend(mixins.NamedMixin, mixins.EventEmitterMixin, {
-
-    type: 'array',
-
-    nameIsUnique: true,
-
-    init: function(args) {
-      var name = args[0]
-        , size = args[1] || 100
-      if (name) this.setName(name)
-      this.size = size
-      this.data = new Float32Array(size)
-    },
-
-    destroy: function() {
-      mixins.NamedMixin.destroy.apply(this, arguments)
-      mixins.EventEmitterMixin.destroy.apply(this, arguments)
-    },
-
-    setData: function(audioData, resize) {
-      if (resize) this.data = new Float32Array(audioData.length)
-      this.data.set(audioData.subarray(0, Math.min(this.data.length, audioData.length)))
-      this.size = this.data.length
-      this.emit('changed:data')
-    }
-
-  })
-
-  library['soundfiler'] = PdObject.extend({
-
-    type: 'soundfiler',
-
-    inletDefs: [
-      portlets.Inlet.extend({
-        message: function(args) {
-          var self = this
-            , command = args[0]
-            , doResize = false
-            , arg, url, arrayNames
-          args = args.slice(1)
-          if (command === 'read') {
-            
-            // Handle options
-            while (args.length && args[0][0] === '-') {
-              arg = args.shift()
-              if (arg === '-resize') doResize = true
-              
-              else if (arg === '-wave' && arg === '-aiff'
-                    && arg === '-nextstep' && arg === '-raw'
-                    && arg === '-bytes' && arg === '-nframes')
-                return console.error(arg + ' not supported')
-              else return console.error(arg + ' not understood')
-            }
-
-            // Handle url to load and arrays to load the sound data to
-            url = args.shift()
-            arrayNames = args
-
-            // GET the audio resource 
-            pdGlob.storage.get(url, function(err, arrayBuffer) {
-              if (err) return console.error('could not load file : ' + err)
-
-              // Try to decode it
-              pdGlob.audio.decode(arrayBuffer, function(err, audioData) {
-                if (err) return console.error('Could not decode file : ' + err)
-
-                var array, arrays, channelData
-
-                arrays = arrayNames.map(function(arrayName) {
-                  array = pdGlob.namedObjects.get('array', arrayName)[0]
-                  if (!array) {
-                    console.error('array "' + arrayName + '" not found')
-                    return null
-                  } else return array
-                })
-
-                if (_.contains(arrays, null)) return
-                if (_.uniq(_.pluck(arrays, 'size')).length !== 1)
-                  doResize = true
-
-
-                // For each array, set the data
-                arrays.forEach(function(array, i) {
-                  channelData = audioData[i]
-                  if (!channelData) return
-                  array.setData(channelData, doResize)
-                })
-
-                // Send the amount of frames read to the outlet 
-                self.obj.o(0).message([Math.min(arrays[0].size, audioData[0].length)])
-              })
-            })
-
-          } else console.error('command "' + command + '" is not supported')
-        }
-      })
-    ],
-    
-    outletDefs: [ portlets.Outlet ]
-
-  })
-
-  library['pd'] = Patch
-
 }
 
-},{"../core/Patch":3,"../core/PdObject":4,"../core/mixins":6,"../core/utils":8,"../global":9,"./portlets":14,"chai":30,"underscore":69}],13:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-var _ = require('underscore')
+Audio.prototype.start = function() {}
 
-exports.declareObjects = function(library) {
-  require('./glue').declareObjects(library)
-  require('./controls').declareObjects(library)
-  require('./dsp').declareObjects(library)
-  require('./portlets').declareObjects(library)
+Audio.prototype.stop = function() {}
+
+Audio.prototype.decode = function(arrayBuffer, done) {
+  this.context.decodeAudioData(arrayBuffer, 
+    function(audioBuffer) {
+      var chArrays = [], ch
+      for (ch = 0; ch < audioBuffer.numberOfChannels; ch++)
+        chArrays.push(audioBuffer.getChannelData(ch))
+      done(null, chArrays)
+    },
+    function(err) {
+      done(new Error('error decoding ' + err))
+    }
+  )
 }
-},{"./controls":10,"./dsp":11,"./glue":12,"./portlets":14,"underscore":69}],14:[function(require,module,exports){
+
+// TODO: This is just a hack to be able to override the AudioContext automatically
+// created. A cleaner public API for this would be good
+Audio.prototype.setContext = function(context) {
+  var ch
+  this.context = context
+  this._channelMerger = this.context.createChannelMerger(this.channelCount)
+  this._channelMerger.connect(this.context.destination)
+  this.channels = []
+  for (ch = 0; ch < this.channelCount; ch++) {
+    this.channels.push(this.context.createGain())
+    this.channels[ch].connect(this._channelMerger, 0, ch)
+  }
+}
+
+
+// A little wrapper to WAAClock, to implement the Clock interface.
+var Clock = exports.Clock = function(opts) {
+  var self = this
+  this._audioContext = opts.audioContext
+  this._waaClock = opts.waaClock || new WAAClock(opts.audioContext)
+  this._waaClock.start()
+  Object.defineProperty(this, 'time', {
+    get: function() { return self._audioContext.currentTime * 1000 }
+  })
+}
+
+Clock.prototype.schedule = function(func, time, repetition) {
+  var _func = function(event) {
+      // In case the event is executed immediately
+      if (event.timeTag == undefined)
+        event.timeTag = event.deadline * 1000 
+      func(event)
+    }
+    , event = this._waaClock.callbackAtTime(_func, time / 1000)
+
+  Object.defineProperty(event, 'timeTag', {
+    get: function() { return this.deadline * 1000 }
+  })
+
+  if (_.isNumber(repetition)) event.repeat(repetition / 1000)
+  return event
+}
+
+Clock.prototype.unschedule = function(event) {
+  event.clear()
+}
+
+
+var WebStorage = exports.Storage = function() {}
+
+// Gets an array buffer through an ajax request, then calls `done(err, arrayBuffer)`
+WebStorage.prototype.get = function(url, done) {
+  var req = new XMLHttpRequest()
+
+  req.onload = function(e) {
+    if (this.status === 200)
+      done(null, this.response)
+    else done(new Error('HTTP ' + this.status + ': ' + this.statusText))
+  }
+
+  req.onerror = function(e) {
+    done(e)
+  }
+
+  req.open('GET', url, true)
+  req.responseType = 'arraybuffer'
+  req.send()
+}
+},{"../global":10,"underscore":66,"waaclock":67}],15:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3772,194 +3890,9 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":4,"../core/portlets":7,"../core/utils":8,"../global":9,"chai":30,"underscore":69,"waawire":80}],15:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+},{"../core/PdObject":5,"../core/portlets":8,"../core/utils":9,"../global":10,"chai":27,"underscore":66,"waawire":77}],16:[function(require,module,exports){
 
-var pdGlob = require('../global')
-
-var Audio = module.exports = function(opts) {
-  if (typeof AudioContext === 'undefined') 
-    return console.error('this environment doesn\'t support Web Audio API')
-  this.channelCount = opts.channelCount
-  this.setContext(opts.audioContext || new AudioContext)
-  pdGlob.settings.sampleRate = this.context.sampleRate
-  Object.defineProperty(this, 'time', {
-    get: function() { return this.context.currentTime * 1000 },
-  })
-}
-
-Audio.prototype.start = function() {}
-
-Audio.prototype.stop = function() {}
-
-Audio.prototype.decode = function(arrayBuffer, done) {
-  this.context.decodeAudioData(arrayBuffer, 
-    function(audioBuffer) {
-      var chArrays = [], ch
-      for (ch = 0; ch < audioBuffer.numberOfChannels; ch++)
-        chArrays.push(audioBuffer.getChannelData(ch))
-      done(null, chArrays)
-    },
-    function(err) {
-      done(new Error('error decoding ' + err))
-    }
-  )
-}
-
-// TODO: This is just a hack to be able to override the AudioContext automatically
-// created. A cleaner public API for this would be good
-Audio.prototype.setContext = function(context) {
-  var ch
-  this.context = context
-  this._channelMerger = this.context.createChannelMerger(this.channelCount)
-  this._channelMerger.connect(this.context.destination)
-  this.channels = []
-  for (ch = 0; ch < this.channelCount; ch++) {
-    this.channels.push(this.context.createGain())
-    this.channels[ch].connect(this._channelMerger, 0, ch)
-  }
-}
-},{"../global":9}],16:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var _ = require('underscore')
-  , WAAClock = require('waaclock')
-
-// A little wrapper to WAAClock, to implement the Clock interface.
-var Clock = module.exports = function(opts) {
-  var self = this
-  this._audioContext = opts.audioContext
-  this._waaClock = opts.waaClock || new WAAClock(opts.audioContext)
-  this._waaClock.start()
-  Object.defineProperty(this, 'time', {
-    get: function() { return self._audioContext.currentTime * 1000 }
-  })
-}
-
-Clock.prototype.schedule = function(func, time, repetition) {
-  var _func = function(event) {
-      // In case the event is executed immediately
-      if (event.timeTag == undefined)
-        event.timeTag = event.deadline * 1000 
-      func(event)
-    }
-    , event = this._waaClock.callbackAtTime(_func, time / 1000)
-
-  Object.defineProperty(event, 'timeTag', {
-    get: function() { return this.deadline * 1000 }
-  })
-
-  if (_.isNumber(repetition)) event.repeat(repetition / 1000)
-  return event
-}
-
-Clock.prototype.unschedule = function(event) {
-  event.clear()
-}
-},{"underscore":69,"waaclock":70}],17:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-var WebStorage = module.exports = function() {}
-
-// Gets an array buffer through an ajax request, then calls `done(err, arrayBuffer)`
-WebStorage.prototype.get = function(url, done) {
-  var req = new XMLHttpRequest()
-
-  req.onload = function(e) {
-    if (this.status === 200)
-      done(null, this.response)
-    else done(new Error('HTTP ' + this.status + ': ' + this.statusText))
-  }
-
-  req.onerror = function(e) {
-    done(e)
-  }
-
-  req.open('GET', url, true)
-  req.responseType = 'arraybuffer'
-  req.send()
-}
-},{}],18:[function(require,module,exports){
-/*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
- *
- *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
- *
- *  WebPd is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  WebPd is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-exports.Clock = require('./Clock')
-exports.Audio = require('./Audio')
-exports.Storage = require('./Storage')
-},{"./Audio":15,"./Clock":16,"./Storage":17}],19:[function(require,module,exports){
-
-},{}],20:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -5013,7 +4946,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":21,"ieee754":22,"is-array":23}],21:[function(require,module,exports){
+},{"base64-js":18,"ieee754":19,"is-array":20}],18:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -5135,7 +5068,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],22:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -5221,7 +5154,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],23:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 
 /**
  * isArray
@@ -5256,7 +5189,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],24:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5559,7 +5492,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],25:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -5584,7 +5517,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],26:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -5812,7 +5745,7 @@ var substr = 'ab'.substr(-1) === 'b'
 ;
 
 }).call(this,require('_process'))
-},{"_process":27}],27:[function(require,module,exports){
+},{"_process":24}],24:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -5900,14 +5833,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],28:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],29:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -6497,10 +6430,10 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":28,"_process":27,"inherits":25}],30:[function(require,module,exports){
+},{"./support/isBuffer":25,"_process":24,"inherits":22}],27:[function(require,module,exports){
 module.exports = require('./lib/chai');
 
-},{"./lib/chai":31}],31:[function(require,module,exports){
+},{"./lib/chai":28}],28:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -6589,7 +6522,7 @@ exports.use(should);
 var assert = require('./chai/interface/assert');
 exports.use(assert);
 
-},{"./chai/assertion":32,"./chai/config":33,"./chai/core/assertions":34,"./chai/interface/assert":35,"./chai/interface/expect":36,"./chai/interface/should":37,"./chai/utils":48,"assertion-error":57}],32:[function(require,module,exports){
+},{"./chai/assertion":29,"./chai/config":30,"./chai/core/assertions":31,"./chai/interface/assert":32,"./chai/interface/expect":33,"./chai/interface/should":34,"./chai/utils":45,"assertion-error":54}],29:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -6726,7 +6659,7 @@ module.exports = function (_chai, util) {
   });
 };
 
-},{"./config":33}],33:[function(require,module,exports){
+},{"./config":30}],30:[function(require,module,exports){
 module.exports = {
 
   /**
@@ -6778,7 +6711,7 @@ module.exports = {
 
 };
 
-},{}],34:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -8139,7 +8072,7 @@ module.exports = function (chai, _) {
   });
 };
 
-},{}],35:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9197,7 +9130,7 @@ module.exports = function (chai, util) {
   ('Throw', 'throws');
 };
 
-},{}],36:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9211,7 +9144,7 @@ module.exports = function (chai, util) {
 };
 
 
-},{}],37:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9291,7 +9224,7 @@ module.exports = function (chai, util) {
   chai.Should = loadShould;
 };
 
-},{}],38:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 /*!
  * Chai - addChainingMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9404,7 +9337,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   });
 };
 
-},{"../config":33,"./flag":41,"./transferFlags":55}],39:[function(require,module,exports){
+},{"../config":30,"./flag":38,"./transferFlags":52}],36:[function(require,module,exports){
 /*!
  * Chai - addMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9449,7 +9382,7 @@ module.exports = function (ctx, name, method) {
   };
 };
 
-},{"../config":33,"./flag":41}],40:[function(require,module,exports){
+},{"../config":30,"./flag":38}],37:[function(require,module,exports){
 /*!
  * Chai - addProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9491,7 +9424,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],41:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9525,7 +9458,7 @@ module.exports = function (obj, key, value) {
   }
 };
 
-},{}],42:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 /*!
  * Chai - getActual utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9545,7 +9478,7 @@ module.exports = function (obj, args) {
   return args.length > 4 ? args[4] : obj._obj;
 };
 
-},{}],43:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 /*!
  * Chai - getEnumerableProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9572,7 +9505,7 @@ module.exports = function getEnumerableProperties(object) {
   return result;
 };
 
-},{}],44:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*!
  * Chai - message composition utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9624,7 +9557,7 @@ module.exports = function (obj, args) {
   return flagMsg ? flagMsg + ': ' + msg : msg;
 };
 
-},{"./flag":41,"./getActual":42,"./inspect":49,"./objDisplay":50}],45:[function(require,module,exports){
+},{"./flag":38,"./getActual":39,"./inspect":46,"./objDisplay":47}],42:[function(require,module,exports){
 /*!
  * Chai - getName utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9646,7 +9579,7 @@ module.exports = function (func) {
   return match && match[1] ? match[1] : "";
 };
 
-},{}],46:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 /*!
  * Chai - getPathValue utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9750,7 +9683,7 @@ function _getPathValue (parsed, obj) {
   return res;
 };
 
-},{}],47:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 /*!
  * Chai - getProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9787,7 +9720,7 @@ module.exports = function getProperties(object) {
   return result;
 };
 
-},{}],48:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011 Jake Luer <jake@alogicalparadox.com>
@@ -9903,7 +9836,7 @@ exports.addChainableMethod = require('./addChainableMethod');
 exports.overwriteChainableMethod = require('./overwriteChainableMethod');
 
 
-},{"./addChainableMethod":38,"./addMethod":39,"./addProperty":40,"./flag":41,"./getActual":42,"./getMessage":44,"./getName":45,"./getPathValue":46,"./inspect":49,"./objDisplay":50,"./overwriteChainableMethod":51,"./overwriteMethod":52,"./overwriteProperty":53,"./test":54,"./transferFlags":55,"./type":56,"deep-eql":58}],49:[function(require,module,exports){
+},{"./addChainableMethod":35,"./addMethod":36,"./addProperty":37,"./flag":38,"./getActual":39,"./getMessage":41,"./getName":42,"./getPathValue":43,"./inspect":46,"./objDisplay":47,"./overwriteChainableMethod":48,"./overwriteMethod":49,"./overwriteProperty":50,"./test":51,"./transferFlags":52,"./type":53,"deep-eql":55}],46:[function(require,module,exports){
 // This is (almost) directly from Node.js utils
 // https://github.com/joyent/node/blob/f8c335d0caf47f16d31413f89aa28eda3878e3aa/lib/util.js
 
@@ -10238,7 +10171,7 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-},{"./getEnumerableProperties":43,"./getName":45,"./getProperties":47}],50:[function(require,module,exports){
+},{"./getEnumerableProperties":40,"./getName":42,"./getProperties":44}],47:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -10289,7 +10222,7 @@ module.exports = function (obj) {
   }
 };
 
-},{"../config":33,"./inspect":49}],51:[function(require,module,exports){
+},{"../config":30,"./inspect":46}],48:[function(require,module,exports){
 /*!
  * Chai - overwriteChainableMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -10344,7 +10277,7 @@ module.exports = function (ctx, name, method, chainingBehavior) {
   };
 };
 
-},{}],52:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 /*!
  * Chai - overwriteMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -10397,7 +10330,7 @@ module.exports = function (ctx, name, method) {
   }
 };
 
-},{}],53:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 /*!
  * Chai - overwriteProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -10453,7 +10386,7 @@ module.exports = function (ctx, name, getter) {
   });
 };
 
-},{}],54:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /*!
  * Chai - test utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -10481,7 +10414,7 @@ module.exports = function (obj, args) {
   return negate ? !expr : expr;
 };
 
-},{"./flag":41}],55:[function(require,module,exports){
+},{"./flag":38}],52:[function(require,module,exports){
 /*!
  * Chai - transferFlags utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -10527,7 +10460,7 @@ module.exports = function (assertion, object, includeAll) {
   }
 };
 
-},{}],56:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /*!
  * Chai - type utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -10574,7 +10507,7 @@ module.exports = function (obj) {
   return typeof obj;
 };
 
-},{}],57:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 /*!
  * assertion-error
  * Copyright(c) 2013 Jake Luer <jake@qualiancy.com>
@@ -10686,10 +10619,10 @@ AssertionError.prototype.toJSON = function (stack) {
   return props;
 };
 
-},{}],58:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 module.exports = require('./lib/eql');
 
-},{"./lib/eql":59}],59:[function(require,module,exports){
+},{"./lib/eql":56}],56:[function(require,module,exports){
 /*!
  * deep-eql
  * Copyright(c) 2013 Jake Luer <jake@alogicalparadox.com>
@@ -10948,10 +10881,10 @@ function objectEqual(a, b, m) {
   return true;
 }
 
-},{"buffer":20,"type-detect":60}],60:[function(require,module,exports){
+},{"buffer":17,"type-detect":57}],57:[function(require,module,exports){
 module.exports = require('./lib/type');
 
-},{"./lib/type":61}],61:[function(require,module,exports){
+},{"./lib/type":58}],58:[function(require,module,exports){
 /*!
  * type-detect
  * Copyright(c) 2013 jake luer <jake@alogicalparadox.com>
@@ -11095,7 +11028,7 @@ Library.prototype.test = function (obj, type) {
   }
 };
 
-},{}],62:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 exports.parse = require('./lib/parsing').parse
 exports.renderSvg = require('./lib/svg-rendering').render
 exports.renderPd = require('./lib/pd-rendering').render
@@ -11103,7 +11036,7 @@ exports.Patch = require('./lib/Patch')
 
 if (typeof window !== 'undefined') window.pdfu = exports
 
-},{"./lib/Patch":63,"./lib/parsing":64,"./lib/pd-rendering":65,"./lib/svg-rendering":66}],63:[function(require,module,exports){
+},{"./lib/Patch":60,"./lib/parsing":61,"./lib/pd-rendering":62,"./lib/svg-rendering":63}],60:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -11170,7 +11103,7 @@ _.extend(Patch.prototype, {
 
 })
 
-},{"underscore":69}],64:[function(require,module,exports){
+},{"underscore":66}],61:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -11513,7 +11446,7 @@ var parseControls = function(proto, args, layout) {
 
 }
 
-},{"underscore":69}],65:[function(require,module,exports){
+},{"underscore":66}],62:[function(require,module,exports){
 var mustache = require('mustache')
   , _ = require('underscore')
 
@@ -11555,7 +11488,7 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
   , cnvTpl = '#X obj {{{layout.x}}} {{{layout.y}}} cnv {{{layout.size}}} {{{layout.width}}} {{{layout.height}}} {{{args.0}}} {{{args.1}}} {{{layout.label}}} {{{layout.labelX}}} {{{layout.labelY}}} {{{layout.labelFont}}} {{{layout.labelFontSize}}} {{{layout.bgColor}}} {{{layout.labelColor}}} {{{args.2}}}'
   , objTpl = '#X obj {{{layout.x}}} {{{layout.y}}} {{{proto}}}{{#args}} {{.}}{{/args}}'
 
-},{"mustache":68,"underscore":69}],66:[function(require,module,exports){
+},{"mustache":65,"underscore":66}],63:[function(require,module,exports){
 (function (__dirname){
 /*
  * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
@@ -12192,7 +12125,7 @@ _.extend(TextRenderer.prototype, NodeRenderer.prototype, {
 })
 
 }).call(this,"/node_modules/pd-fileutils/lib")
-},{"./Patch":63,"d3":67,"fs":19,"path":26,"underscore":69}],67:[function(require,module,exports){
+},{"./Patch":60,"d3":64,"fs":16,"path":23,"underscore":66}],64:[function(require,module,exports){
 !function() {
   var d3 = {
     version: "3.5.3"
@@ -21659,7 +21592,7 @@ _.extend(TextRenderer.prototype, NodeRenderer.prototype, {
   if (typeof define === "function" && define.amd) define(d3); else if (typeof module === "object" && module.exports) module.exports = d3;
   this.d3 = d3;
 }();
-},{}],68:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 /*!
  * mustache.js - Logic-less {{mustache}} templates with JavaScript
  * http://github.com/janl/mustache.js
@@ -22212,7 +22145,7 @@ _.extend(TextRenderer.prototype, NodeRenderer.prototype, {
 
 }));
 
-},{}],69:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -23440,13 +23373,13 @@ _.extend(TextRenderer.prototype, NodeRenderer.prototype, {
 
 }).call(this);
 
-},{}],70:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 var WAAClock = require('./lib/WAAClock')
 
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":71}],71:[function(require,module,exports){
+},{"./lib/WAAClock":68}],68:[function(require,module,exports){
 (function (process){
 var isBrowser = (typeof window !== 'undefined')
 
@@ -23686,11 +23619,11 @@ WAAClock.prototype._relTime = function(absTime) {
   return absTime - this.context.currentTime
 }
 }).call(this,require('_process'))
-},{"_process":27}],72:[function(require,module,exports){
+},{"_process":24}],69:[function(require,module,exports){
 var WAAOffsetNode = require('./lib/WAAOffsetNode')
 module.exports = WAAOffsetNode
 if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
-},{"./lib/WAAOffsetNode":73}],73:[function(require,module,exports){
+},{"./lib/WAAOffsetNode":70}],70:[function(require,module,exports){
 var WAAOffsetNode = module.exports = function(context) {
   this.context = context
 
@@ -23725,11 +23658,11 @@ WAAOffsetNode.prototype.disconnect = function() {
 }
 
 WAAOffsetNode._ones = []
-},{}],74:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 var WAATableNode = require('./lib/WAATableNode')
 module.exports = WAATableNode
 if (typeof window !== 'undefined') window.WAATableNode = WAATableNode
-},{"./lib/WAATableNode":75}],75:[function(require,module,exports){
+},{"./lib/WAATableNode":72}],72:[function(require,module,exports){
 var WAAOffset = require('waaoffset')
 
 var WAATableNode = module.exports = function(context) {
@@ -23765,11 +23698,11 @@ WAATableNode.prototype._setTable = function(table) {
   this._output.curve = table
   this.position.gain.setValueAtTime(2 / (table.length - 1), 0)
 }
-},{"waaoffset":76}],76:[function(require,module,exports){
+},{"waaoffset":73}],73:[function(require,module,exports){
 var WAAOffset = require('./lib/WAAOffset')
 module.exports = WAAOffset
 if (typeof window !== 'undefined') window.WAAOffset = WAAOffset
-},{"./lib/WAAOffset":77}],77:[function(require,module,exports){
+},{"./lib/WAAOffset":74}],74:[function(require,module,exports){
 var WAAOffset = module.exports = function(context) {
   this.context = context
 
@@ -23794,11 +23727,11 @@ WAAOffset.prototype.connect = function() {
 WAAOffset.prototype.disconnect = function() {
   this._output.disconnect.apply(this._output, arguments)
 }
-},{}],78:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 var WAAWhiteNoiseNode = require('./lib/WAAWhiteNoiseNode')
 module.exports = WAAWhiteNoiseNode
 if (typeof window !== 'undefined') window.WAAWhiteNoiseNode = WAAWhiteNoiseNode
-},{"./lib/WAAWhiteNoiseNode":79}],79:[function(require,module,exports){
+},{"./lib/WAAWhiteNoiseNode":76}],76:[function(require,module,exports){
 var WAAWhiteNoiseNode = module.exports = function(context) {
   this.context = context
 
@@ -23833,11 +23766,11 @@ WAAWhiteNoiseNode.prototype._prepareOutput = function() {
   this._output.buffer = this._buffer
   this._output.loop = true
 }
-},{}],80:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 var WAAWire = require('./lib/WAAWire')
 module.exports = WAAWire
 if (typeof window !== 'undefined') window.WAAWire = WAAWire
-},{"./lib/WAAWire":81}],81:[function(require,module,exports){
+},{"./lib/WAAWire":78}],78:[function(require,module,exports){
 var WAAWire = module.exports = function(context) {
   this.context = context
   

@@ -3,16 +3,16 @@ var assert = require('assert')
   , fs = require('fs')
   , _ = require('underscore')
   , waatest = require('waatest')
-  , Pd = require('../../../index')
-  , utils = require('../../../lib/core/utils')
-  , PdObject = require('../../../lib/core/PdObject')
-  , Patch = require('../../../lib/core/Patch')
-  , portlets = require('../../../lib/objects/portlets')
-  , pdGlob = require('../../../lib/global')
-  , helpers = require('../../helpers')
+  , Pd = require('../../index')
+  , utils = require('../../lib/core/utils')
+  , PdObject = require('../../lib/core/PdObject')
+  , Patch = require('../../lib/core/Patch')
+  , portlets = require('../../lib/waa/portlets')
+  , pdGlob = require('../../lib/global')
+  , helpers = require('../helpers')
 
 
-describe('objects.glue', function() {  
+describe('glue', function() {  
 
   var patch
 
@@ -912,25 +912,29 @@ describe('objects.glue', function() {
       var randObj = patch.createObject('random', [3])
         , mailbox = patch.createObject('testingmailbox')
         , numbers = [0, 0, 0]
-        , i
+        , i, lastPick
       randObj.o(0).connect(mailbox.i(0))
 
-      for (i = 0; i < 20; i++) {
+      // Count the amount of numbers picked for each possibility
+      for (i = 0; i < 40; i++) {
         randObj.i(0).message(['bang'])
-        numbers[mailbox.received.slice(-1)[0][0]]++
+        lastPick = mailbox.received.slice(-1)[0][0]
+        numbers[lastPick]++
+        assert.ok(_.contains([0, 1, 2], lastPick))
       }
-      assert.equal(numbers.length, 3)
       assert.notEqual(numbers[0], 0)
       assert.notEqual(numbers[1], 0)
       assert.notEqual(numbers[2], 0)
 
       randObj.i(1).message([4])
       numbers = [0, 0, 0, 0]
-      for (i = 0; i < 20; i++) {
+      // Count the amount of numbers picked for each possibility
+      for (i = 0; i < 50; i++) {
         randObj.i(0).message(['bang'])
-        numbers[mailbox.received.slice(-1)[0][0]]++
+        lastPick = mailbox.received.slice(-1)[0][0]
+        numbers[lastPick]++
+        assert.ok(_.contains([0, 1, 2, 3], lastPick))
       }
-      assert.equal(numbers.length, 4)
       assert.notEqual(numbers[0], 0)
       assert.notEqual(numbers[1], 0)
       assert.notEqual(numbers[2], 0)
@@ -1322,7 +1326,7 @@ describe('objects.glue', function() {
         inletDefs: [portlets.Inlet, portlets.Inlet],
         outletDefs: [portlets.Outlet],
       }) // Just because not available ATM
-      var patchStr = fs.readFileSync(path.resolve(__dirname, '..', 'patches', 'array-saved-data.pd'))
+      var patchStr = fs.readFileSync(path.resolve(__dirname, 'patches', 'array-saved-data.pd'))
         , patch = Pd.loadPatch(patchStr.toString())
         , array = _.find(patch.objects, function(obj) { return obj.type === 'array' })
       assert.deepEqual(array.data, new Float32Array([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8]))
