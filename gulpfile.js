@@ -7,6 +7,7 @@ var path = require('path')
   , uglify = require('gulp-uglify')
   , mustache = require('mustache')
   , concat = require('gulp-concat')
+  , contribs = require('gulp-contribs')
   , runSequence = require('run-sequence')
   , source = require('vinyl-source-stream')
 
@@ -48,6 +49,13 @@ gulp.task('lib.objectList', function() {
   )
 
   return file('OBJECTLIST.md', rendered, { src: true })
+    .pipe(gulp.dest('.'))
+})
+
+gulp.task('authors', function () {
+  return gulp.src('AUTHORS.md')
+    .pipe(contribs('Authors\n----------', '   '))
+    .on('error', gutil.log)
     .pipe(gulp.dest('.'))
 })
 

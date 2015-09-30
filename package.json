@@ -44,7 +44,8 @@
     "run-sequence": "1.0.x",
     "vinyl-source-stream": "1.0.x",
     "async": "0.9.x",
-    "waatest": "git://github.com/sebpiq/WAATest.git#master"
+    "waatest": "git://github.com/sebpiq/WAATest.git#master",
+    "gulp-contribs": "0.0.3"
   },
   "license": "LGPL-3.0"
 }
