@@ -19,7 +19,7 @@
  */
 
 var _ = require('underscore')
-  , pdfu = require('pd-fileutils')
+  , pdfu = require('pd-fileutils.parser')
   , Patch = require('./lib/core/Patch')
   , PdObject = require('./lib/core/PdObject')
   , mixins = require('./lib/core/mixins')
