@@ -48,6 +48,30 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [['bang']])
     })
 
+    it('should send and receive properly - test with a parsed patch', function() {
+      var patchStr = fs.readFileSync(path.resolve(
+        __dirname, '..', 'patches', 'send-rcv-controls.pd')).toString()
+
+      var patch = Pd.loadPatch(patchStr)
+        , send = patch.objects[0]
+        , receive = patch.objects[1]
+        , rcvNb = patch.objects[2]
+        , sendNb = patch.objects[3]
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+
+      rcvNb.o(0).connect(mailbox1.i(0))
+      receive.o(0).connect(mailbox2.i(0))
+
+      send.i(0).message([123])
+      assert.deepEqual(mailbox1.received, [[123]])
+      assert.deepEqual(mailbox2.received, [])
+      
+      sendNb.i(0).message([456])
+      assert.deepEqual(mailbox1.received, [[123]])
+      assert.deepEqual(mailbox2.received, [[456]])
+    })
+
     it('should set default value if init is false, even if init value is set', function() {
       var tgl = patch.createObject('tgl', [0, '-', '-', 21, 21])
       assert.equal(tgl.value, 0)

@@ -1,0 +1,5 @@
+#N canvas 360 305 450 300 10;
+#X obj 124 78 s nbRcv;
+#X obj 233 95 r nbSend;
+#X floatatom 124 95 5 0 0 0 - nbRcv -;
+#X floatatom 233 79 5 0 0 0 - - nbSend;
