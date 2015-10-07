@@ -373,7 +373,7 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/utils":8,"./lib/global":9,"./lib/objects":13,"./lib/objects/portlets":14,"./lib/waa":18,"pd-fileutils":62,"underscore":69}],2:[function(require,module,exports){
+},{"./lib/core/Patch":3,"./lib/core/PdObject":4,"./lib/core/interfaces":5,"./lib/core/utils":8,"./lib/global":9,"./lib/objects":13,"./lib/objects/portlets":14,"./lib/waa":18,"pd-fileutils":63,"underscore":69}],2:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1240,7 +1240,12 @@ exports.declareObjects = function(library) {
     ],
     outletDefs: [portlets.Outlet],
 
-    init: function(receiveName, sendName, pdInit) {
+    init: function(receiveName, sendName, pdInit, defaultValue, initialValue) {
+      // Assign initial value
+      if (pdInit)
+        this.value = initialValue
+      else this.value = defaultValue
+
       if (receiveName && receiveName !== '-' && receiveName !== 'empty') {
         this.receiveName = receiveName
         // ! because the extend method instantiates the object for inheritance, 
@@ -1286,8 +1291,7 @@ exports.declareObjects = function(library) {
         , maxValue = args[1] || undefined
         , receiveName = args[2]
         , sendName = args[3]
-      this.value = 'symbol'
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, 0])
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, 0, 'symbol', 0])
     },
 
     _onMessageReceived: function(args) {
@@ -1307,13 +1311,12 @@ exports.declareObjects = function(library) {
   var _BaseNumber = _BaseControl.extend({
 
     init: function(pdInit, receiveName, sendName, minValue, maxValue, initialValue) {
-      this.value = initialValue
       this._limitInput = function(value) {
         if (_.isNumber(maxValue)) value = Math.min(value, maxValue)
         if (_.isNumber(minValue)) value = Math.max(value, minValue)
         return value
       }
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit, 0, initialValue])
     },
 
     _onMessageReceived: function(args) {
@@ -1370,8 +1373,7 @@ exports.declareObjects = function(library) {
       var pdInit = args[0] || 0
         , receiveName = args[1]
         , sendName = args[2]
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
-      this.value = 'bang'
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit, 'bang', 'bang'])
     },
 
     _onMessageReceived: function() {
@@ -1391,10 +1393,8 @@ exports.declareObjects = function(library) {
         , sendName = args[2]
         , initialValue = args[3] || 0
         , nonZeroValue = _.isNumber(args[4]) ? args[4] : 1
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
-
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit, 0, initialValue])
       this.nonZeroValue = nonZeroValue
-      this.value = initialValue
     },
 
     _onMessageReceived: function(args) {
@@ -1448,9 +1448,8 @@ exports.declareObjects = function(library) {
         , receiveName = args[3]
         , sendName = args[4]
         , initialValue = args[5] || 0
-      this.value = initialValue
       this._limitInput = function(value) { return Math.floor(Math.min(Math.max(value, 0), number - 1)) }
-      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit])
+      _BaseControl.prototype.init.apply(this, [receiveName, sendName, pdInit, 0, initialValue])
     },
 
     _onMessageReceived: function(args) {
@@ -1478,7 +1477,7 @@ exports.declareObjects = function(library) {
 
     init: function(args) {
       var receiveName = args[0]
-      _BaseControl.prototype.init.apply(this, [receiveName, undefined, 0])
+      _BaseControl.prototype.init.apply(this, [receiveName, undefined, 0, 0, 0])
     },
 
     _onMessageReceived: function(args) {
@@ -11026,83 +11025,8 @@ Library.prototype.test = function (obj, type) {
 };
 
 },{}],62:[function(require,module,exports){
-exports.parse = require('./lib/parsing').parse
-exports.renderSvg = require('./lib/svg-rendering').render
-exports.renderPd = require('./lib/pd-rendering').render
-exports.Patch = require('./lib/Patch')
-
-if (typeof window !== 'undefined') window.pdfu = exports
-
-},{"./lib/Patch":63,"./lib/parsing":64,"./lib/pd-rendering":65,"./lib/svg-rendering":66}],63:[function(require,module,exports){
 /*
- * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
- *
- * BSD Simplified License.
- * For information on usage and redistribution, and for a DISCLAIMER OF ALL
- * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
- *
- * See https://github.com/sebpiq/pd-fileutils for documentation
- *
- */
-
-var _ = require('underscore')
-
-var Patch = module.exports = function(obj) { _.extend(this, obj) }
-
-
-_.extend(Patch.prototype, {
-
-  getNode: function(id) {
-    return _.find(this.nodes, function(node) { return node.id === id }) || null
-  },
-
-  guessPortlets: function() {
-    var self = this
-    _.each(this.nodes, function(node) {
-      node.outlets = _.reduce(self.connections, function(memo, conn) {
-        if (conn.source.id === node.id) {
-          return Math.max(memo, conn.source.port)
-        } else return memo
-      }, -1) + 1
-      node.inlets = _.reduce(self.connections, function(memo, conn) {
-        if (conn.sink.id === node.id) {
-          return Math.max(memo, conn.sink.port)
-        } else return memo
-      }, -1) + 1
-    })
-  },
-
-  getSinks: function(node) {
-    var conns = _.filter(this.connections, function(conn) { return conn.source.id === node.id })
-      , sinkIds = _.uniq(_.map(conns, function(conn) { return conn.sink.id }))
-      , self = this
-    return _.map(sinkIds, function(sinkId) { return self.getNode(sinkId) })
-  },
-
-  getSources: function(node) {
-    var conns = _.filter(this.connections, function(conn) { return conn.sink.id === node.id })
-      , sourceIds = _.uniq(_.map(conns, function(conn) { return conn.source.id }))
-      , self = this
-    return _.map(sourceIds, function(sourceId) { return self.getNode(sourceId) })
-  },
-
-  addNode: function(node) {
-    if (node.id === undefined) node.id = this.nextId()
-    else if (this.getNode(node.id) !== null) return
-    this.nodes.push(node)
-  },
-
-  nextId: function() {
-    if (this.nodes.length) {
-      return Math.max.apply(Math, _.pluck(this.nodes, 'id')) + 1
-    } else return 0
-  }
-
-})
-
-},{"underscore":69}],64:[function(require,module,exports){
-/*
- * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2012-2015 Sébastien Piquemal <sebpiq@gmail.com>
  *
  * BSD Simplified License.
  * For information on usage and redistribution, and for a DISCLAIMER OF ALL
@@ -11443,7 +11367,93 @@ var parseControls = function(proto, args, layout) {
 
 }
 
+},{"underscore":69}],63:[function(require,module,exports){
+exports.parse = require('pd-fileutils.parser').parse
+exports.renderSvg = require('./lib/svg-rendering').render
+exports.renderPd = require('./lib/pd-rendering').render
+exports.Patch = require('./lib/Patch')
+
+if (typeof window !== 'undefined') window.pdfu = exports
+
+},{"./lib/Patch":64,"./lib/pd-rendering":65,"./lib/svg-rendering":66,"pd-fileutils.parser":62}],64:[function(require,module,exports){
+/*
+ * Copyright (c) 2012-2015 Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ * BSD Simplified License.
+ * For information on usage and redistribution, and for a DISCLAIMER OF ALL
+ * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+ *
+ * See https://github.com/sebpiq/pd-fileutils for documentation
+ *
+ */
+
+var _ = require('underscore')
+
+var Patch = module.exports = function(obj) { _.extend(this, obj) }
+
+
+_.extend(Patch.prototype, {
+
+  getNode: function(id) {
+    return _.find(this.nodes, function(node) { return node.id === id }) || null
+  },
+
+  guessPortlets: function() {
+    var self = this
+    _.each(this.nodes, function(node) {
+      node.outlets = _.reduce(self.connections, function(memo, conn) {
+        if (conn.source.id === node.id) {
+          return Math.max(memo, conn.source.port)
+        } else return memo
+      }, -1) + 1
+      node.inlets = _.reduce(self.connections, function(memo, conn) {
+        if (conn.sink.id === node.id) {
+          return Math.max(memo, conn.sink.port)
+        } else return memo
+      }, -1) + 1
+    })
+  },
+
+  getSinks: function(node) {
+    var conns = _.filter(this.connections, function(conn) { return conn.source.id === node.id })
+      , sinkIds = _.uniq(_.map(conns, function(conn) { return conn.sink.id }))
+      , self = this
+    return _.map(sinkIds, function(sinkId) { return self.getNode(sinkId) })
+  },
+
+  getSources: function(node) {
+    var conns = _.filter(this.connections, function(conn) { return conn.sink.id === node.id })
+      , sourceIds = _.uniq(_.map(conns, function(conn) { return conn.source.id }))
+      , self = this
+    return _.map(sourceIds, function(sourceId) { return self.getNode(sourceId) })
+  },
+
+  addNode: function(node) {
+    if (node.id === undefined) node.id = this.nextId()
+    else if (this.getNode(node.id) !== null) return
+    this.nodes.push(node)
+  },
+
+  nextId: function() {
+    if (this.nodes.length) {
+      return Math.max.apply(Math, _.pluck(this.nodes, 'id')) + 1
+    } else return 0
+  }
+
+})
+
 },{"underscore":69}],65:[function(require,module,exports){
+/*
+ * Copyright (c) 2012-2015 Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ * BSD Simplified License.
+ * For information on usage and redistribution, and for a DISCLAIMER OF ALL
+ * WARRANTIES, see the file, "LICENSE.txt," in this distribution.
+ *
+ * See https://github.com/sebpiq/pd-fileutils for documentation
+ *
+ */
+ 
 var mustache = require('mustache')
   , _ = require('underscore')
 
@@ -11488,7 +11498,7 @@ var floatAtomTpl = '#X floatatom {{{layout.x}}} {{{layout.y}}} {{{layout.width}}
 },{"mustache":68,"underscore":69}],66:[function(require,module,exports){
 (function (__dirname){
 /*
- * Copyright (c) 2012-2013 Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2012-2015 Sébastien Piquemal <sebpiq@gmail.com>
  *
  * BSD Simplified License.
  * For information on usage and redistribution, and for a DISCLAIMER OF ALL
@@ -12122,7 +12132,7 @@ _.extend(TextRenderer.prototype, NodeRenderer.prototype, {
 })
 
 }).call(this,"/node_modules/pd-fileutils/lib")
-},{"./Patch":63,"d3":67,"fs":19,"path":26,"underscore":69}],67:[function(require,module,exports){
+},{"./Patch":64,"d3":67,"fs":19,"path":26,"underscore":69}],67:[function(require,module,exports){
 !function() {
   var d3 = {
     version: "3.5.3"

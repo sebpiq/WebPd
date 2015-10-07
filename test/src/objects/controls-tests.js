@@ -48,6 +48,16 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [['bang']])
     })
 
+    it('should set default value if init is false, even if init value is set', function() {
+      var tgl = patch.createObject('tgl', [0, '-', '-', 21, 21])
+      assert.equal(tgl.value, 0)
+    })
+
+    it('should set initial value if init is true', function() {
+      var tgl = patch.createObject('tgl', [1, '-', '-', 21, 21])
+      assert.equal(tgl.value, 21)
+    })
+
   })
 
   describe('[symbolatom]', function() {
@@ -142,7 +152,7 @@ describe('objects.controls', function() {
     })
 
     it('should set the initial value properly', function() {
-      var nbx = patch.createObject('nbx', [undefined, undefined, 0, '-', '-', 778877])
+      var nbx = patch.createObject('nbx', [undefined, undefined, 1, '-', '-', 778877])
         , mailbox = patch.createObject('testingmailbox')
       nbx.o(0).connect(mailbox.i(0))
 
@@ -153,7 +163,7 @@ describe('objects.controls', function() {
     describe('[hsl]/[vsl]', function() {
       
       it('should work properly', function() {
-        var hsl = patch.createObject('hsl', [undefined, undefined, 0, '-', '-', 5])
+        var hsl = patch.createObject('hsl', [undefined, undefined, 1, '-', '-', 5])
           , mailbox = patch.createObject('testingmailbox')
         hsl.o(0).connect(mailbox.i(0))
 
