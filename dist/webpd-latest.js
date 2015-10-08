@@ -6509,9 +6509,6 @@ if (typeof window !== 'undefined') window.WAAClock = WAAClock
 (function (process){
 var isBrowser = (typeof window !== 'undefined')
 
-if (isBrowser && !AudioContext)
-  throw new Error('This browser doesn\'t seem to support web audio API')
-
 var CLOCK_DEFAULTS = {
   toleranceLate: 0.10,
   toleranceEarly: 0.001
