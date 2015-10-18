@@ -2,7 +2,7 @@ var _ = require('underscore')
   , assert = require('assert')
   , EventEmitter = require('events').EventEmitter
   , waatest = require('waatest')
-  , portlets = require('../lib/objects/portlets')
+  , portlets = require('../lib/waa/portlets')
   , PdObject = require('../lib/core/PdObject')
   , Pd = require('../index')
   , pdGlob = require('../lib/global')
@@ -12,7 +12,7 @@ exports.afterEach = function() {
   pdGlob.namedObjects.reset()
   pdGlob.patches = {}
   pdGlob.library = {}
-  require('../lib/objects').declareObjects(pdGlob.library)
+  require('../lib').declareObjects(pdGlob.library)
   Pd.stop()
 }
 
@@ -43,17 +43,28 @@ exports.renderSamples = function(channelCount, frameCount, onStarted, done) {
   })
 }
 
+exports.assertPreservesTimeTag = function(pdObject, args) {
+  var mailbox = pdObject.patch.createObject('testingmailbox')
+    , timeTag = Math.random()
+  utils.timeTag(args, timeTag)
+  pdObject.o(0).connect(mailbox.i(0))
+  pdObject.i(0).message(args)
+  assert.equal(mailbox.rawReceived[0].timeTag, timeTag)
+}
+
 var TestingMailBox = exports.TestingMailBox = PdObject.extend({
   type: 'TestingMailBox',
   init: function() {
     this.received = []
+    this.rawReceived = []
     this.events = new EventEmitter()
   },
   inletDefs: [
     portlets.Inlet.extend({
       message: function(args) {
         this.obj.outlets[0].message(args)
-        this.obj.received.push(args)
+        this.obj.rawReceived.push(args)
+        this.obj.received.push(args.slice(0))
         this.obj.events.emit('message')
       }
     })
@@ -83,18 +94,24 @@ var TestClock = exports.TestClock = function() {
   this.events = []
   this.time = 0
 }
+
 TestClock.prototype.schedule = function(func, time, repetition) {
-  var event = { func: func, time: time, repetition: repetition }
+  var event = { func: func, timeTag: time, repetition: repetition }
   this.events.push(event)
-  if (event.time === this.time) event.func()
+  if (event.timeTag === this.time) event.func(event)
   return event
 }
-TestClock.prototype.unschedule = function(event) { this.events = _.without(this.events, event) },
+
+TestClock.prototype.unschedule = function(event) { this.events = _.without(this.events, event) }
+
 TestClock.prototype.tick = function() {
   var self = this
   this.events.forEach(function(e) {
     if (e.repetition) {
-      if (self.time >= e.time && ((self.time - e.time) % e.repetition) === 0) e.func()
-    } else if (e.time === self.time) e.func()
+      if (self.time >= e.timeTag && ((self.time - e.timeTag) % e.repetition) === 0) { 
+        var e = _.extend(e, { timeTag: self.time })
+        e.func(e)
+      }
+    } else if (e.timeTag === self.time) e.func(e)
   })
 }

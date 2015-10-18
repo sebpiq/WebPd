@@ -2,7 +2,7 @@ var assert = require('assert')
   , _ = require('underscore')
   , async = require('async')
   , helpers = require('../helpers')
-  , waa = require('../../lib/waa')
+  , waa = require('../../lib/waa/interfaces')
 
 describe('waa.Storage', function() {
 

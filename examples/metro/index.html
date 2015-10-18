@@ -18,8 +18,8 @@
     
     <div id="controls">
       <form>
-        <input type="text" id="freqInput" />
-        <input type="submit" value="Set frequency" />
+        <input type="text" id="metroTime" />
+        <input type="submit" value="Set metro time" />
       </form>
     </div>
 
@@ -27,22 +27,23 @@
     <div id="svg"></div>
 
     <script type="text/javascript">
+      
       webPdExamples.init()
 
       $('form').submit(function(event) {
         event.preventDefault()
-        Pd.send('freq', [parseFloat($('#freqInput').val())])
+        Pd.send('metroTime', [parseFloat($('#metroTime').val())])
       })
 
       var patch
-      $.get('./pd/main.pd', function(mainStr) {
+      $.get('pd/main.pd', function(mainStr) {
         // Loading the patch
         patch = Pd.loadPatch(mainStr)
 
         webPdExamples.patchLoaded(mainStr)
       })
+
     </script>
 
   </body>
-  
 </html>

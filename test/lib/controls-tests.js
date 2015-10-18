@@ -3,15 +3,15 @@ var assert = require('assert')
   , fs = require('fs')
   , _ = require('underscore')
   , waatest = require('waatest')
-  , Pd = require('../../../index')
-  , PdObject = require('../../../lib/core/PdObject')
-  , Patch = require('../../../lib/core/Patch')
-  , portlets = require('../../../lib/objects/portlets')
-  , pdGlob = require('../../../lib/global')
-  , helpers = require('../../helpers')
+  , Pd = require('../../index')
+  , PdObject = require('../../lib/core/PdObject')
+  , Patch = require('../../lib/core/Patch')
+  , portlets = require('../../lib/waa/portlets')
+  , pdGlob = require('../../lib/global')
+  , helpers = require('../helpers')
 
 
-describe('objects.controls', function() {  
+describe('controls', function() {  
 
   var patch
 
@@ -50,7 +50,7 @@ describe('objects.controls', function() {
 
     it('should send and receive properly - test with a parsed patch', function() {
       var patchStr = fs.readFileSync(path.resolve(
-        __dirname, '..', 'patches', 'send-rcv-controls.pd')).toString()
+        __dirname, 'patches', 'send-rcv-controls.pd')).toString()
 
       var patch = Pd.loadPatch(patchStr)
         , send = patch.objects[0]
@@ -134,6 +134,9 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('symbolatom'), ['symbol', 'bla'])
+    })
 
   })
 
@@ -203,6 +206,10 @@ describe('objects.controls', function() {
     
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('nbx'), [9])
+    })
+
   })
 
   describe('[bng]', function() {
@@ -235,6 +242,9 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('bng'), ['bang'])
+    })
 
   })
 
@@ -295,6 +305,42 @@ describe('objects.controls', function() {
       assert.deepEqual(mailbox.received, [])
     })
 
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('tgl'), ['bang'])
+    })
+
+  })
+
+  describe('[hradio]/[vradio]', function() {
+
+    it('should set the radio and output the value', function() {
+      var hradio = patch.createObject('hradio', [0, 0, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      hradio.o(0).connect(mailbox.i(0))
+
+      hradio.i(0).message([3])
+      assert.deepEqual(mailbox.received, [[3]])
+
+      hradio.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[3], [3]])
+    })
+
+    it('should round and limit the number to within the radio range', function() {
+      var hradio = patch.createObject('hradio', [0, 0, 5])
+        , mailbox = patch.createObject('testingmailbox')
+      hradio.o(0).connect(mailbox.i(0))
+
+      hradio.i(0).message([67])
+      assert.deepEqual(mailbox.received, [[4]])
+      hradio.i(0).message([-56])
+      assert.deepEqual(mailbox.received, [[4], [0]])
+      hradio.i(0).message([3.6])
+      assert.deepEqual(mailbox.received, [[4], [0], [3]])
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('hradio'), [2])
+    })
 
   })
 
@@ -310,6 +356,10 @@ describe('objects.controls', function() {
 
       vu.i(0).message([5656])
       assert.deepEqual(mailbox.received, [[5], [5656]])
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('vu'), [789])
     })
 
   })

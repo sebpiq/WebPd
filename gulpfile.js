@@ -7,6 +7,7 @@ var path = require('path')
   , uglify = require('gulp-uglify')
   , mustache = require('mustache')
   , concat = require('gulp-concat')
+  , contribs = require('gulp-contribs')
   , runSequence = require('run-sequence')
   , source = require('vinyl-source-stream')
 
@@ -41,13 +42,20 @@ gulp.task('lib.uglify', function() {
 gulp.task('lib.objectList', function() {
   var library = {}
     , rendered
-  require('./lib/objects').declareObjects(library)
+  require('./lib/index').declareObjects(library)
   rendered = mustache.render(
     '{{#objects}}- {{{.}}}\n{{/objects}}', 
     { objects: Object.keys(library).sort() }
   )
 
   return file('OBJECTLIST.md', rendered, { src: true })
+    .pipe(gulp.dest('.'))
+})
+
+gulp.task('authors', function () {
+  return gulp.src('AUTHORS.md')
+    .pipe(contribs('Authors\n----------', '   '))
+    .on('error', gutil.log)
     .pipe(gulp.dest('.'))
 })
 

@@ -59,20 +59,5 @@ describe('core.utils', function() {
 
   })
 
-  describe('.UniqueIdsMixin', function() {
-
-    var uniqueIds1 = _.extend({}, utils.UniqueIdsMixin)
-      , uniqueIds2 = _.extend({}, utils.UniqueIdsMixin)
-
-    it('should generate different ids everytime called', function() {
-      var id11 = uniqueIds1._generateId()
-        , id12 = uniqueIds1._generateId()
-        , id21 = uniqueIds2._generateId()
-      assert.ok(id11 != id12)
-      assert.equal(id11, id21)
-    })
-
-  })
-
 })
 

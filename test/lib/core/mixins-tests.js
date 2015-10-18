@@ -123,5 +123,65 @@ describe('core.mixins', function() {
 
   })
 
+  describe('.UniqueIdsMixin', function() {
+
+    var uniqueIds1 = _.extend({}, mixins.UniqueIdsMixin)
+      , uniqueIds2 = _.extend({}, mixins.UniqueIdsMixin)
+
+    it('should generate different ids everytime called', function() {
+      var id11 = uniqueIds1._generateId()
+        , id12 = uniqueIds1._generateId()
+        , id21 = uniqueIds2._generateId()
+      assert.ok(id11 != id12)
+      assert.equal(id11, id21)
+    })
+
+  })
+
+  describe('.EventReceiver', function() {
+
+    it('should keep remove all listeners on destroy', function() {
+      var eventReceiver = new mixins.EventReceiver
+        , eventEmitter = new EventEmitter
+        , received = []
+        , handler = function() { received.push(arguments[0]) }
+
+      eventReceiver.addListener(eventEmitter, 'bla', handler)
+      eventReceiver.once(eventEmitter, 'blo', handler)
+      eventReceiver.once(eventEmitter, 'blu', handler)
+      
+      eventEmitter.emit('bla', 1)
+      eventEmitter.emit('blo', 2)
+      eventEmitter.emit('bla', 3)
+      eventEmitter.emit('blo', 4)
+      eventReceiver.destroy()
+      eventEmitter.emit('bla', 5)
+      eventEmitter.emit('blu', 6)
+    
+      assert.deepEqual(received, [1, 2, 3])
+    })
+
+    it('should remove listener when removeListener called', function() {
+      var eventReceiver = new mixins.EventReceiver
+        , eventEmitter = new EventEmitter
+        , received = []
+        , handler = function() { received.push(arguments[0]) }
+      
+      eventReceiver.addListener(eventEmitter, 'bla', handler)
+      eventReceiver.addListener(eventEmitter, 'blu', handler)
+      eventReceiver.once(eventEmitter, 'blo', handler)
+
+      eventEmitter.emit('bla', 1)
+      eventReceiver.removeListener(eventEmitter, 'bla', handler)
+      eventEmitter.emit('bla', 2)
+      eventEmitter.emit('blu', 3)
+      eventReceiver.removeListener(eventEmitter, 'blo', handler)
+      eventEmitter.emit('blo', 4)
+
+      assert.deepEqual(received, [1, 3])
+    })
+
+  })
+
 })
 

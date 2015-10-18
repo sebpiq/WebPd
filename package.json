@@ -15,15 +15,14 @@
   ],
   "scripts": {
     "build": "gulp lib.build; gulp lib.uglify",
-    "test": "mocha --reporter list --recursive test/src",
+    "test": "mocha --reporter list --recursive test/lib",
     "test.browser.build": "gulp test.browser.build",
-    "coverage": "istanbul cover _mocha -- test/src --reporter spec --recursive",
+    "coverage": "istanbul cover _mocha -- test/lib --reporter spec --recursive",
     "objectList": "gulp lib.objectList"
   },
   "dependencies": {
     "underscore": "1.4.x",
-    "chai": "1.10.x",
-    "pd-fileutils": "git://github.com/sebpiq/pd-fileutils.git#master",
+    "pd-fileutils.parser": "git://github.com/sebpiq/pd-fileutils.parser.git#master",
     "waaclock": "0.5.x",
     "waaoffsetnode": "0.1.x",
     "waawhitenoisenode": "0.1.x",
@@ -45,7 +44,8 @@
     "run-sequence": "1.0.x",
     "vinyl-source-stream": "1.0.x",
     "async": "0.9.x",
-    "waatest": "git://github.com/sebpiq/WAATest.git#master"
+    "waatest": "git://github.com/sebpiq/WAATest.git#master",
+    "gulp-contribs": "0.0.3"
   },
   "license": "LGPL-3.0"
 }

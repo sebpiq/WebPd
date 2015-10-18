@@ -19,18 +19,18 @@
  */
 
 var _ = require('underscore')
-  , pdfu = require('pd-fileutils')
+  , pdfu = require('pd-fileutils.parser')
   , Patch = require('./lib/core/Patch')
   , PdObject = require('./lib/core/PdObject')
-  , utils = require('./lib/core/utils')
-  , portlets = require('./lib/objects/portlets')
-  , waa = require('./lib/waa')
+  , mixins = require('./lib/core/mixins')
+  , portlets = require('./lib/waa/portlets')
+  , waa = require('./lib/waa/interfaces')
   , pdGlob = require('./lib/global')
   , interfaces = require('./lib/core/interfaces')
-  , patchIds = _.extend({}, utils.UniqueIdsMixin)
+  , patchIds = _.extend({}, mixins.UniqueIdsMixin)
 
 // Various initializations
-require('./lib/objects').declareObjects(pdGlob.library)
+require('./lib/index').declareObjects(pdGlob.library)
 
 var Pd = module.exports = {
 
@@ -131,8 +131,6 @@ var Pd = module.exports = {
   },
 
   // Loads a patch from a string (Pd file), or from an object (pd.json)
-  // TODO : problems of scheduling on load, for example executing [loadbang] ???
-  //         should we use the `futureTime` hack? 
   loadPatch: function(patchData) {
     var patch = this._createPatch()
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)

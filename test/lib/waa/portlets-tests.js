@@ -2,16 +2,15 @@ var assert = require('assert')
   , _ = require('underscore')
   , PdObject = require('../../../lib/core/PdObject')
   , interfaces = require('../../../lib/core/interfaces')
-  , portlets = require('../../../lib/objects/portlets')
+  , portlets = require('../../../lib/waa/portlets')
   , Patch = require('../../../lib/core/Patch')
   , Pd = require('../../../index')
   , pdGlob = require('../../../lib/global')
   , helpers = require('../../helpers')
-  , TestingMailBox = require('./utils').TestingMailBox
 require('web-audio-test-api')
 WebAudioTestAPI.unuse()
 
-describe('objects.portlets', function() {
+describe('portlets', function() {
 
   var DummyObject = PdObject.extend({
     type: 'dummy',
@@ -48,7 +47,7 @@ describe('objects.portlets', function() {
       stop: function() {},
       context: new AudioContext()
     }
-    pdGlob.library['testingmailbox'] = TestingMailBox
+    pdGlob.library['testingmailbox'] = helpers.TestingMailBox
     pdGlob.library['dummyobject'] = DummyObject
     pdGlob.library['dummysink'] = DummySink
     pdGlob.library['dummysource'] = DummySource

@@ -199,7 +199,7 @@ WebPd comes with two test suites.
 
 ### Automated tests
 
-The tests in `test/src` run on **node.js** using [mocha](http://mochajs.org/). To run them, simply execute the command `npm test`.
+The tests in `test/lib` run on **node.js** using [mocha](http://mochajs.org/). To run them, simply execute the command `npm test`.
 
 
 ### Browser tests
