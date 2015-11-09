@@ -16,7 +16,7 @@ describe('dsp.lop~', function() {
         , osc = patch.createObject('osc~', [440])
         , lop = patch.createObject('lop~', [220])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / Pd.getAudio().sampleRate
 
       osc.o(0).connect(lop.i(0))
       lop.o(0).connect(dac.i(0))
@@ -49,7 +49,7 @@ describe('dsp.hip~', function() {
         , osc = patch.createObject('osc~', [440])
         , hip = patch.createObject('hip~', [220])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / Pd.getAudio().sampleRate
 
       osc.o(0).connect(hip.i(0))
       hip.o(0).connect(dac.i(0))
@@ -82,7 +82,7 @@ describe('dsp.bp~', function() {
         , osc = patch.createObject('osc~', [440])
         , bp = patch.createObject('bp~', [220, 10])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / Pd.getAudio().sampleRate
 
       osc.o(0).connect(bp.i(0))
       bp.o(0).connect(dac.i(0))
@@ -116,7 +116,7 @@ describe('dsp.vcf~', function() {
         , osc = patch.createObject('osc~', [440])
         , vcf = patch.createObject('vcf~', [220, 10])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / Pd.getAudio().sampleRate
 
       osc.o(0).connect(vcf.i(0))
       vcf.o(0).connect(dac.i(0))

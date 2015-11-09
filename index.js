@@ -34,9 +34,6 @@ require('./lib/index').declareObjects(pdGlob.library)
 
 var Pd = module.exports = {
 
-  // Returns the current sample rate
-  getSampleRate: function() { return pdGlob.settings.sampleRate },
-
   // Start dsp
   start: function(opts) {
     opts = opts || {}

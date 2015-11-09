@@ -51,7 +51,7 @@ describe('dsp.' + name, function() {
       arithm.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {
-        arithm.i(1).future(3 / Pd.getSampleRate() * 1000, [2.2])
+        arithm.i(1).future(3 / Pd.getAudio().sampleRate * 1000, [2.2])
       }, [
         [operation(3, 1.1), operation(3, 1.1), operation(3, 1.1), operation(3, 2.2), operation(3, 2.2)],
         [0, 0, 0, 0, 0]

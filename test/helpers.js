@@ -79,6 +79,7 @@ var TestAudio = function(channelCount, context) {
     get: function() { return context.currentTime * 1000 }
   })
   this.context = context
+  this.sampleRate = context.sampleRate
   this._channelMerger = this.context.createChannelMerger(channelCount)
   this._channelMerger.connect(this.context.destination)
   this.channels = []

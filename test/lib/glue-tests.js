@@ -19,7 +19,8 @@ describe('glue', function() {
   var dummyAudio = {
     start: function() {},
     stop: function() {},
-    decode: function(audioData, done) { done(null, audioData) }
+    decode: function(audioData, done) { done(null, audioData) },
+    sampleRate: 44100
   }
 
   var dummyStorage = {

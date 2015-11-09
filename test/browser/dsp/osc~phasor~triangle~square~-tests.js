@@ -3,6 +3,8 @@ var assert = require('assert')
   , _ = require('underscore')
   , async = require('async')
   , helpers = require('../../helpers')
+  , sampleRate = 44100
+
 
 describe('dsp.osc~', function() {
   var cos = Math.cos
@@ -28,7 +30,7 @@ describe('dsp.osc~', function() {
       var patch = Pd.createPatch()
         , osc = patch.createObject('osc~', [440])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / sampleRate
       osc.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {}, [
@@ -45,7 +47,7 @@ describe('dsp.osc~', function() {
       var patch = Pd.createPatch()
         , osc = patch.createObject('osc~', [440])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*660 / Pd.getSampleRate()
+        , k = 2*Math.PI*660 / sampleRate
       osc.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {
@@ -76,7 +78,7 @@ describe('dsp.osc~', function() {
         , osc = patch.createObject('osc~')
         , dac = patch.createObject('dac~')
         , line = patch.createObject('line~')
-        , k = 2*Math.PI / Pd.getSampleRate()
+        , k = 2*Math.PI / sampleRate
         , phases = [0], acc = 0
       _.range(9).forEach(function(i) {
         acc += (i * 10) * k
@@ -99,8 +101,8 @@ describe('dsp.osc~', function() {
       var patch = Pd.createPatch()
         , osc = patch.createObject('osc~', [440])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
-        , k2 = 2*Math.PI*660 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / sampleRate
+        , k2 = 2*Math.PI*660 / sampleRate
         , phases = [0], acc = 0
       _.range(8).forEach(function(i) {
         acc += (i < 5) ? k : k2
@@ -110,7 +112,7 @@ describe('dsp.osc~', function() {
       osc.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {
-        osc.i(0).future((1 / Pd.getSampleRate()) * 5 * 1000, [660])
+        osc.i(0).future((1 / sampleRate) * 5 * 1000, [660])
       }, [
         phases.map(cos),
         [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -125,7 +127,7 @@ describe('dsp.osc~', function() {
       var patch = Pd.createPatch()
         , osc = patch.createObject('osc~', [440])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / sampleRate
       osc.o(0).connect(dac.i(0))
 
       async.series([
@@ -191,7 +193,7 @@ describe('dsp.triangle~', function() {
     var patch = Pd.createPatch()
       , triangle = patch.createObject('triangle~', [1])
       , dac = patch.createObject('dac~')
-      , k = 4 / Pd.getSampleRate()
+      , k = 4 / sampleRate
       , acc = 0
       , expected = []
     for (var i = 0; i < 10; i++) {
@@ -222,7 +224,7 @@ describe('dsp.square~', function() {
       , sampleCount = 20
       , square = patch.createObject('square~', [44100 / sampleCount])
       , dac = patch.createObject('dac~')
-      , k = 4 / Pd.getSampleRate()
+      , k = 4 / sampleRate
       , acc = 0
       , expected = []
     for (var i = 0; i < sampleCount; i++) {
@@ -269,7 +271,7 @@ describe.skip('dsp.phasor~', function() {
       var patch = Pd.createPatch()
         , phasor = patch.createObject('phasor~', [440])
         , dac = patch.createObject('dac~')
-        , k = 1 / (Pd.getSampleRate() / 440)
+        , k = 1 / (sampleRate / 440)
       phasor.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {}, [
@@ -286,7 +288,7 @@ describe.skip('dsp.phasor~', function() {
       var patch = Pd.createPatch()
         , phasor = patch.createObject('phasor~', [440])
         , dac = patch.createObject('dac~')
-        , k = 1 / (Pd.getSampleRate() / 660)
+        , k = 1 / (sampleRate / 660)
       phasor.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {
@@ -302,12 +304,12 @@ describe.skip('dsp.phasor~', function() {
         , phasor = patch.createObject('phasor~')
         , dac = patch.createObject('dac~')
         , line = patch.createObject('line~')
-        , k = 1 / Pd.getSampleRate()
+        , k = 1 / sampleRate
         , phases = [0], acc = 0
 
       _.range(4410).forEach(function(i) {
         if (i % 128 === 0)
-          k = 1 / (Pd.getSampleRate() / (i + 1))
+          k = 1 / (sampleRate / (i + 1))
         acc += k
         phases.push(acc % 1)
       })
@@ -329,8 +331,8 @@ describe.skip('dsp.phasor~', function() {
       var patch = Pd.createPatch()
         , phasor = patch.createObject('phasor~', [440])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
-        , k2 = 2*Math.PI*660 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / sampleRate
+        , k2 = 2*Math.PI*660 / sampleRate
         , phases = [0], acc = 0
       _.range(8).forEach(function(i) {
         acc += (i < 5) ? k : k2
@@ -340,7 +342,7 @@ describe.skip('dsp.phasor~', function() {
       phasor.o(0).connect(dac.i(0))
 
       helpers.expectSamples(function() {
-        phasor.i(0).future((1 / Pd.getSampleRate()) * 5 * 1000, [660])
+        phasor.i(0).future((1 / sampleRate) * 5 * 1000, [660])
       }, [
         phases.map(cos),
         [0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -355,7 +357,7 @@ describe.skip('dsp.phasor~', function() {
       var patch = Pd.createPatch()
         , phasor = patch.createObject('phasor~', [440])
         , dac = patch.createObject('dac~')
-        , k = 2*Math.PI*440 / Pd.getSampleRate()
+        , k = 2*Math.PI*440 / sampleRate
       phasor.o(0).connect(dac.i(0))
 
       async.series([

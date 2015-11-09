@@ -2,6 +2,7 @@ var assert = require('assert')
   , _ = require('underscore')
   , waatest = require('waatest')
   , helpers = require('../../helpers')
+  , sampleRate = 44100
 
 describe('dsp.clip~', function() {
 
@@ -33,10 +34,10 @@ describe('dsp.clip~', function() {
       helpers.renderSamples(2, 10, function() {
         sig.o(0).connect(clip.i(0))
         clip.o(0).connect(dac.i(0))
-        sig.i(0).future(2 * (1 / Pd.getSampleRate()) * 1000, [-2])
-        sig.i(0).future(4 * (1 / Pd.getSampleRate()) * 1000, [35])
-        sig.i(0).future(6 * (1 / Pd.getSampleRate()) * 1000, [40])
-        sig.i(0).future(8 * (1 / Pd.getSampleRate()) * 1000, [42])
+        sig.i(0).future(2 * (1 / sampleRate) * 1000, [-2])
+        sig.i(0).future(4 * (1 / sampleRate) * 1000, [35])
+        sig.i(0).future(6 * (1 / sampleRate) * 1000, [40])
+        sig.i(0).future(8 * (1 / sampleRate) * 1000, [42])
       }, function(err, block) {
         assert.deepEqual(
           block[0].map(function(v) { return waatest.utils.round(v, 2) }),
@@ -64,10 +65,10 @@ describe('dsp.clip~', function() {
       helpers.renderSamples(2, 10, function() {
         sig.o(0).connect(clip.i(0))
         clip.o(0).connect(dac.i(0))
-        sig.i(0).future(2 * (1 / Pd.getSampleRate()) * 1000, [-2])
-        sig.i(0).future(4 * (1 / Pd.getSampleRate()) * 1000, [35])
-        sig.i(0).future(6 * (1 / Pd.getSampleRate()) * 1000, [40])
-        sig.i(0).future(8 * (1 / Pd.getSampleRate()) * 1000, [42])
+        sig.i(0).future(2 * (1 / sampleRate) * 1000, [-2])
+        sig.i(0).future(4 * (1 / sampleRate) * 1000, [35])
+        sig.i(0).future(6 * (1 / sampleRate) * 1000, [40])
+        sig.i(0).future(8 * (1 / sampleRate) * 1000, [42])
       }, function(err, block) {
         assert.deepEqual(
           block[0].map(function(v) { return waatest.utils.round(v, 2) }),

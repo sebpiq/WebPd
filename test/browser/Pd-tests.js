@@ -10,9 +10,8 @@ describe('Pd', function() {
   describe('start', function() {
 
     it('should create an Audio adapter and set the sampleRate', function() {
-      pdGlob.settings.sampleRate = 77777
       Pd.start()
-      assert.equal(pdGlob.settings.sampleRate, pdGlob.audio.context.sampleRate)
+      assert.equal(pdGlob.audio.sampleRate, pdGlob.audio.context.sampleRate)
     })
 
   })
