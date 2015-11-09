@@ -133,7 +133,7 @@ Here is a non-exhaustive list of other limitations and inconsistencies with Pure
 
 WebPd uses Web Audio API, and as it happens, running Web Audio API on mobile is not always easy. First, make sure that you use a browser **that does support Web Audio API**. For example the default Android browser does not, and so on Android you have to use Chrome or Firefox. 
 
-On iPhone and iPad, things are even trickier. For security reasons, audio is blocked by iOS, unless you start it in direct answer to a user action (click, touch, ...). So to get sound with WebPd, you will need to do exactly that and for example call `Pd.start` in a button's `onclick` handler : `onclick="Pd.start()"`.
+On iPhone and iPad, things are even trickier. For security reasons, audio is blocked by iOS, unless you start it in direct answer to a user action (click, touch, ...). So to get sound with WebPd, you will need to do exactly that and for example call `Pd.start` in a button's `ontouchend` handler : `ontouchend="Pd.start()"`. You can copy the [code to launch WebPd's examples](https://github.com/sebpiq/WebPd/blob/master/examples/assets/examples.js) to get around this, and work in all browsers.
 
 
 List of implemented objects and other limitations
