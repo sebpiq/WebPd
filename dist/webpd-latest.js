@@ -360,7 +360,7 @@ var Pd = module.exports = {
       sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
     })
 
-    if (patch) patch.patchData = patchData
+    patch.patchData = patchData
   },
 
   core: {
