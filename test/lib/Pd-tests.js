@@ -118,7 +118,7 @@ describe('Pd', function() {
       assert.equal(obj.outlets.length, 1)
       assert.equal(obj.inlets.length, 0)
       assert.equal(obj.objects.length, 2)
-      
+
       // Check objects and connections
       assert.equal(osc.o(0).connections.length, 1)
       assert.equal(outlet.i(0).connections.length, 1)
@@ -139,7 +139,7 @@ describe('Pd', function() {
       assert.equal(obj.outlets.length, 1)
       assert.equal(obj.inlets.length, 0)
       assert.equal(obj.objects.length, 2)
-      
+
       // Check objects and connections
       assert.equal(osc.o(0).connections.length, 1)
       assert.equal(outlet.i(0).connections.length, 1)
@@ -150,7 +150,7 @@ describe('Pd', function() {
   })
 
   describe('.loadPatch', function() {
-    
+
     it('should load a simple patch properly', function() {
       var patchStr = fs.readFileSync(__dirname + '/patches/simple.pd').toString()
         , patch = Pd.loadPatch(patchStr)
@@ -209,7 +209,7 @@ describe('Pd', function() {
       assert.ok(subpatch.o(0).connections[0] === dac.i(0))
       assert.ok(subpatch.o(0).connections[1] === dac.i(1))
     })
-    
+
     it('should not call object.start twice if Pd already started', function() {
       var patchStr = fs.readFileSync(__dirname + '/patches/logStartPatch.pd').toString()
         , startCalled = 0
@@ -222,6 +222,32 @@ describe('Pd', function() {
       patch = Pd.loadPatch(patchStr)
       assert.equal(patch.objects.length, 1)
       assert.equal(startCalled, 1)
+    })
+
+  })
+
+  describe('.getPatchData', function() {
+
+    it('should return patch data and reuse it in .loadPatch', function() {
+        var patchStr = fs.readFileSync(__dirname + '/patches/simple.pd').toString()
+
+        var patchData = Pd.getPatchData(patchStr)
+
+        assert.equal(patchData.nodes.length, 2)
+
+        var patch = Pd.loadPatch(patchData)
+
+        assert.equal(patch.objects.length, 2)
+
+        var osc = patch.objects[0]
+          , dac = patch.objects[1]
+
+        // Check objects
+        assert.equal(osc.type, 'osc~')
+        assert.equal(osc.frequency, 440)
+        assert.equal(dac.type, 'dac~')
+
+        assert.equal(patch.patchData, patchData)
     })
 
   })
