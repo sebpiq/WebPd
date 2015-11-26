@@ -3,6 +3,7 @@ var _ = require('underscore')
   , path = require('path')
   , assert = require('assert')
   , helpers = require('../helpers')
+  , errors = require('../../lib/core/errors')
   , Patch = require('../../lib/core/Patch')
   , PdObject = require('../../lib/core/PdObject')
   , portlets = require('../../lib/core/portlets')
@@ -226,6 +227,62 @@ describe('Pd', function() {
       patch = Pd.loadPatch(patchStr)
       assert.equal(patch.objects.length, 1)
       assert.equal(startCalled, 1)
+    })
+
+    it('should throw PatchLoadError if unknown objects', function() {
+      var patchData = {
+          nodes: [ 
+            {id: 0, proto: 'idontexist'}, 
+            {id: 1, proto: 'outlet~'}, 
+            {id: 2, proto: 'meneither'}
+          ], connections: []
+        }, thrown = false
+
+      try { Pd.loadPatch(patchData) } catch(err) {
+        thrown = true
+        assert.ok(err instanceof errors.PatchLoadError)
+        assert.equal(err.errorList.length, 2)
+      }
+      assert.ok(thrown)
+    })
+
+    it('should throw PatchLoadError if unknown objects and connections between them', function() {
+      var patchData = {
+          nodes: [ 
+            {id: 0, proto: 'idontexist'}, 
+            {id: 1, proto: 'outlet~'}
+          ], 
+          connections: [
+            { source: { id: 0, port: 0 }, sink: { id: 1, port: 0 } }
+          ]
+        }, thrown = false
+
+      try { Pd.loadPatch(patchData) } catch(err) {
+        thrown = true
+        assert.ok(err instanceof errors.PatchLoadError)
+        assert.equal(err.errorList.length, 2)
+      }
+      assert.ok(thrown)
+    })
+
+    it('should throw PatchLoadError if invalid connection', function() {
+      var patchData = {
+          nodes: [ 
+            {id: 0, proto: 'osc~'}, 
+            {id: 1, proto: 'outlet~'}
+          ], 
+          connections: [
+            { source: { id: 0, port: 0 }, sink: { id: 1, port: 33 } }, // Invalid portlet
+            { source: { id: 0, port: 0 }, sink: { id: 11, port: 0 } }  // Invalid object id
+          ]
+        }, thrown = false
+
+      try { Pd.loadPatch(patchData) } catch(err) {
+        thrown = true
+        assert.ok(err instanceof errors.PatchLoadError)
+        assert.equal(err.errorList.length, 2)
+      }
+      assert.ok(thrown)
     })
 
   })

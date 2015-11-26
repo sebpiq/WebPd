@@ -1,5 +1,6 @@
 var assert = require('assert')
   , _ = require('underscore')
+  , errors = require('../../../lib/core/errors')
   , Patch = require('../../../lib/core/Patch')
   , portlets = require('../../../lib/core/portlets')
   , PdObject = require('../../../lib/core/PdObject')
@@ -220,6 +221,14 @@ describe('core.Patch', function() {
 
       assert.ok(!_.contains(patch.endPoints, obj))
       assert.ok(_.contains(patch.endPoints, endPointObj))
+    })
+
+    it('should throw UnkownObjectError if object unknown', function() {
+      var patch = new Patch
+      assert.throws(
+        function() { patch.createObject('Idonotexist', []) }, 
+        errors.UnkownObjectError
+      )
     })
 
   })

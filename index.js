@@ -23,6 +23,7 @@ var _ = require('underscore')
   , Patch = require('./lib/core/Patch')
   , PdObject = require('./lib/core/PdObject')
   , mixins = require('./lib/core/mixins')
+  , errors = require('./lib/core/errors')
   , portlets = require('./lib/waa/portlets')
   , waa = require('./lib/waa/interfaces')
   , pdGlob = require('./lib/global')
@@ -151,19 +152,29 @@ var Pd = module.exports = {
   // TODO: handling graph better? But ... what is graph :?
   _preparePatch: function(patch, patchData) {
     var createdObjs = {}
+      , errorList = []
 
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
         , obj
+      
       if (proto === 'graph') {
         var arrayNodeData = nodeData.subpatch.nodes[0]
         obj = patch._createObject('array', arrayNodeData.args || [])
         obj.setData(new Float32Array(arrayNodeData.data), true)
         proto = 'array'
+
       } else {
-        obj = patch._createObject(proto, nodeData.args || [])
+        try {
+          obj = patch._createObject(proto, nodeData.args || [])
+        } catch (err) {
+          if (err instanceof errors.UnkownObjectError) 
+            errorList.push(err.message)
+          else throw err
+        }
       }
+      
       if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
@@ -172,12 +183,23 @@ var Pd = module.exports = {
     patchData.connections.forEach(function(conn) {
       var sourceObj = createdObjs[conn.source.id]
         , sinkObj = createdObjs[conn.sink.id]
-      if (!sourceObj || !sinkObj) throw new Error('invalid connection')
-      sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
+      if (!sourceObj || !sinkObj)
+        return errorList.push('invalid connection ' + conn.source.id 
+          + '.* -> ' + conn.sink.id + '.*')
+      try {
+        sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
+      } catch (err) {
+        if (err instanceof errors.InvalidPortletError)
+          return errorList.push('invalid connection ' + conn.source.id + '.' + conn.source.port 
+            + ' -> ' + conn.sink.id + '.' + conn.sink.port)
+      }
     })
 
     // Binding patch data to the prepared patch
     patch.patchData = patchData
+
+    // Handling errors
+    if (errorList.length) throw new errors.PatchLoadError(errorList)
   },
 
   core: {
