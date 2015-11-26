@@ -207,6 +207,7 @@ var _ = require('underscore')
   , Patch = require('./lib/core/Patch')
   , PdObject = require('./lib/core/PdObject')
   , mixins = require('./lib/core/mixins')
+  , errors = require('./lib/core/errors')
   , portlets = require('./lib/waa/portlets')
   , waa = require('./lib/waa/interfaces')
   , pdGlob = require('./lib/global')
@@ -335,19 +336,29 @@ var Pd = module.exports = {
   // TODO: handling graph better? But ... what is graph :?
   _preparePatch: function(patch, patchData) {
     var createdObjs = {}
+      , errorList = []
 
     // Creating nodes
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
         , obj
+      
       if (proto === 'graph') {
         var arrayNodeData = nodeData.subpatch.nodes[0]
         obj = patch._createObject('array', arrayNodeData.args || [])
         obj.setData(new Float32Array(arrayNodeData.data), true)
         proto = 'array'
+
       } else {
-        obj = patch._createObject(proto, nodeData.args || [])
+        try {
+          obj = patch._createObject(proto, nodeData.args || [])
+        } catch (err) {
+          if (err instanceof errors.UnkownObjectError) 
+            errorList.push(err.message)
+          else throw err
+        }
       }
+      
       if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
@@ -356,12 +367,23 @@ var Pd = module.exports = {
     patchData.connections.forEach(function(conn) {
       var sourceObj = createdObjs[conn.source.id]
         , sinkObj = createdObjs[conn.sink.id]
-      if (!sourceObj || !sinkObj) throw new Error('invalid connection')
-      sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
+      if (!sourceObj || !sinkObj)
+        return errorList.push('invalid connection ' + conn.source.id 
+          + '.* -> ' + conn.sink.id + '.*')
+      try {
+        sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
+      } catch (err) {
+        if (err instanceof errors.InvalidPortletError)
+          return errorList.push('invalid connection ' + conn.source.id + '.' + conn.source.port 
+            + ' -> ' + conn.sink.id + '.' + conn.sink.port)
+      }
     })
 
     // Binding patch data to the prepared patch
     patch.patchData = patchData
+
+    // Handling errors
+    if (errorList.length) throw new errors.PatchLoadError(errorList)
   },
 
   core: {
@@ -376,7 +398,7 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Patch":4,"./lib/core/PdObject":5,"./lib/core/interfaces":6,"./lib/core/mixins":7,"./lib/global":10,"./lib/index":12,"./lib/waa/interfaces":14,"./lib/waa/portlets":15,"pd-fileutils.parser":21,"underscore":22}],2:[function(require,module,exports){
+},{"./lib/core/Patch":4,"./lib/core/PdObject":5,"./lib/core/errors":6,"./lib/core/interfaces":7,"./lib/core/mixins":8,"./lib/global":11,"./lib/index":13,"./lib/waa/interfaces":15,"./lib/waa/portlets":16,"pd-fileutils.parser":22,"underscore":23}],2:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -659,7 +681,7 @@ exports.declareObjects = function(library) {
 
   })
 }
-},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":7,"./core/utils":9,"./global":10,"./waa/portlets":15,"events":16,"underscore":22}],3:[function(require,module,exports){
+},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":8,"./core/utils":10,"./global":11,"./waa/portlets":16,"events":17,"underscore":23}],3:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -682,6 +704,7 @@ exports.declareObjects = function(library) {
 
 var _ = require('underscore')
   , inherits = require('util').inherits
+  , errors = require('./errors')
   , portlets = require('./portlets')
   , utils = require('./utils')
   
@@ -743,13 +766,13 @@ _.extend(BaseNode.prototype, {
   // Returns inlet `id` if it exists.
   i: function(id) {
     if (id < this.inlets.length) return this.inlets[id]
-    else throw (new Error('invalid inlet ' + id))
+    else throw (new errors.InvalidPortletError('invalid inlet ' + id))
   },
 
   // Returns outlet `id` if it exists.
   o: function(id) {
     if (id < this.outlets.length) return this.outlets[id]
-    else throw (new Error('invalid outlet ' + id))
+    else throw (new errors.InvalidPortletError('invalid outlet ' + id))
   },
 
 
@@ -770,7 +793,7 @@ _.extend(BaseNode.prototype, {
 })
 
 
-},{"./portlets":8,"./utils":9,"underscore":22,"util":20}],4:[function(require,module,exports){
+},{"./errors":6,"./portlets":9,"./utils":10,"underscore":23,"util":21}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -796,6 +819,7 @@ var _ = require('underscore')
   , mixins = require('./mixins')
   , utils = require('./utils')
   , BaseNode = require('./BaseNode')
+  , errors = require('./errors')
   , pdGlob = require('../global')
 
 
@@ -878,7 +902,7 @@ _.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitte
       if (constructor.prototype.doResolveArgs)
         objArgs = this.resolveArgs(objArgs)
       obj = new constructor(this, this._generateId(), objArgs)
-    } else throw new Error('unknown object ' + type)
+    } else throw new errors.UnkownObjectError(type)
 
     // Assign object unique id and add it to the patch
     this.objects[obj.id] = obj
@@ -937,7 +961,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":10,"./BaseNode":3,"./mixins":7,"./utils":9,"events":16,"underscore":22}],5:[function(require,module,exports){
+},{"../global":11,"./BaseNode":3,"./errors":6,"./mixins":8,"./utils":10,"events":17,"underscore":23}],5:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -975,7 +999,58 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
   doResolveArgs: true
 })
 
-},{"../global":10,"./BaseNode":3,"./Patch":4,"./portlets":8,"./utils":9,"underscore":22,"util":20}],6:[function(require,module,exports){
+},{"../global":11,"./BaseNode":3,"./Patch":4,"./portlets":9,"./utils":10,"underscore":23,"util":21}],6:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
+// Error thrown when Pd.loadPatch failed
+var PatchLoadError = exports.PatchLoadError = function PatchLoadError(errorList) {
+  this.name = 'PatchLoadError'
+  this.errorList = errorList
+  this.message = errorList.join('\n')
+  this.stack = (new Error()).stack
+}
+PatchLoadError.prototype = Object.create(Error.prototype)
+PatchLoadError.prototype.constructor = PatchLoadError
+
+
+// Error thrown when trying to create an unknown object
+var UnkownObjectError = exports.UnkownObjectError = function UnkownObjectError(type) {
+  this.name = 'UnkownObjectError'
+  this.message = 'unknown object ' + type
+  this.stack = (new Error()).stack
+}
+UnkownObjectError.prototype = Object.create(Error.prototype)
+UnkownObjectError.prototype.constructor = UnkownObjectError
+
+
+// Error thrown when trying to access an invalid portlet with `.i` or `.o`
+var InvalidPortletError = exports.InvalidPortletError = function InvalidPortletError(msg) {
+  this.name = 'InvalidPortletError'
+  this.message = msg
+  this.stack = (new Error()).stack
+}
+InvalidPortletError.prototype = Object.create(Error.prototype)
+InvalidPortletError.prototype.constructor = InvalidPortletError
+},{}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1033,7 +1108,7 @@ exports.Storage = {
   // Gets the file stored at `uri` and returns `done(err, arrayBuffer)`
   get: function(uri, done) { }
 }
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1216,7 +1291,7 @@ _.extend(EventReceiver.prototype, {
 })
 
 EventReceiver.prototype.on = EventReceiver.prototype.addListener
-},{"../global":10,"events":16,"underscore":22}],8:[function(require,module,exports){
+},{"../global":11,"events":17,"underscore":23}],9:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1310,7 +1385,7 @@ var Inlet = exports.Inlet = Portlet.extend({})
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
 
-},{"./utils":9,"underscore":22}],9:[function(require,module,exports){
+},{"./utils":10,"underscore":23}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1432,7 +1507,7 @@ exports.timeTag = function(args, timeTag) {
 exports.getTimeTag = function(args) {
   return (args && args.timeTag) || (pdGlob.clock && pdGlob.clock.time) || 0
 }
-},{"../global":10,"underscore":22}],10:[function(require,module,exports){
+},{"../global":11,"underscore":23}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1558,7 +1633,7 @@ exports.namedObjects = {
   _store: {}
 }
 
-},{"events":16,"underscore":22}],11:[function(require,module,exports){
+},{"events":17,"underscore":23}],12:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2548,7 +2623,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":7,"./core/utils":9,"./global":10,"./waa/portlets":15,"underscore":22}],12:[function(require,module,exports){
+},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":8,"./core/utils":10,"./global":11,"./waa/portlets":16,"underscore":23}],13:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2576,7 +2651,7 @@ exports.declareObjects = function(library) {
   require('./waa/dsp').declareObjects(library)
   require('./waa/portlets').declareObjects(library)
 }
-},{"./controls":2,"./glue":11,"./waa/dsp":13,"./waa/portlets":15,"underscore":22}],13:[function(require,module,exports){
+},{"./controls":2,"./glue":12,"./waa/dsp":14,"./waa/portlets":16,"underscore":23}],14:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3568,7 +3643,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":5,"../core/mixins":7,"../core/utils":9,"../global":10,"./portlets":15,"underscore":22,"waaoffsetnode":25,"waatablenode":27,"waawhitenoisenode":31}],14:[function(require,module,exports){
+},{"../core/PdObject":5,"../core/mixins":8,"../core/utils":10,"../global":11,"./portlets":16,"underscore":23,"waaoffsetnode":26,"waatablenode":28,"waawhitenoisenode":32}],15:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3692,7 +3767,7 @@ WebStorage.prototype.get = function(url, done) {
   req.responseType = 'arraybuffer'
   req.send()
 }
-},{"../global":10,"underscore":22,"waaclock":23}],15:[function(require,module,exports){
+},{"../global":11,"underscore":23,"waaclock":24}],16:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3922,7 +3997,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":5,"../core/portlets":8,"../core/utils":9,"../global":10,"underscore":22,"waawire":33}],16:[function(require,module,exports){
+},{"../core/PdObject":5,"../core/portlets":9,"../core/utils":10,"../global":11,"underscore":23,"waawire":34}],17:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4225,7 +4300,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -4250,7 +4325,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -4338,14 +4413,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -4935,7 +5010,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":19,"_process":18,"inherits":17}],21:[function(require,module,exports){
+},{"./support/isBuffer":20,"_process":19,"inherits":18}],22:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2015 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -5278,7 +5353,7 @@ var parseControls = function(proto, args, layout) {
 
 }
 
-},{"underscore":22}],22:[function(require,module,exports){
+},{"underscore":23}],23:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -6506,13 +6581,13 @@ var parseControls = function(proto, args, layout) {
 
 }).call(this);
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var WAAClock = require('./lib/WAAClock')
 
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":24}],24:[function(require,module,exports){
+},{"./lib/WAAClock":25}],25:[function(require,module,exports){
 (function (process){
 var isBrowser = (typeof window !== 'undefined')
 
@@ -6749,11 +6824,11 @@ WAAClock.prototype._relTime = function(absTime) {
   return absTime - this.context.currentTime
 }
 }).call(this,require('_process'))
-},{"_process":18}],25:[function(require,module,exports){
+},{"_process":19}],26:[function(require,module,exports){
 var WAAOffsetNode = require('./lib/WAAOffsetNode')
 module.exports = WAAOffsetNode
 if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
-},{"./lib/WAAOffsetNode":26}],26:[function(require,module,exports){
+},{"./lib/WAAOffsetNode":27}],27:[function(require,module,exports){
 var WAAOffsetNode = module.exports = function(context) {
   this.context = context
 
@@ -6788,11 +6863,11 @@ WAAOffsetNode.prototype.disconnect = function() {
 }
 
 WAAOffsetNode._ones = []
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 var WAATableNode = require('./lib/WAATableNode')
 module.exports = WAATableNode
 if (typeof window !== 'undefined') window.WAATableNode = WAATableNode
-},{"./lib/WAATableNode":28}],28:[function(require,module,exports){
+},{"./lib/WAATableNode":29}],29:[function(require,module,exports){
 var WAAOffset = require('waaoffset')
 
 var WAATableNode = module.exports = function(context) {
@@ -6828,11 +6903,11 @@ WAATableNode.prototype._setTable = function(table) {
   this._output.curve = table
   this.position.gain.setValueAtTime(2 / (table.length - 1), 0)
 }
-},{"waaoffset":29}],29:[function(require,module,exports){
+},{"waaoffset":30}],30:[function(require,module,exports){
 var WAAOffset = require('./lib/WAAOffset')
 module.exports = WAAOffset
 if (typeof window !== 'undefined') window.WAAOffset = WAAOffset
-},{"./lib/WAAOffset":30}],30:[function(require,module,exports){
+},{"./lib/WAAOffset":31}],31:[function(require,module,exports){
 var WAAOffset = module.exports = function(context) {
   this.context = context
 
@@ -6857,11 +6932,11 @@ WAAOffset.prototype.connect = function() {
 WAAOffset.prototype.disconnect = function() {
   this._output.disconnect.apply(this._output, arguments)
 }
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 var WAAWhiteNoiseNode = require('./lib/WAAWhiteNoiseNode')
 module.exports = WAAWhiteNoiseNode
 if (typeof window !== 'undefined') window.WAAWhiteNoiseNode = WAAWhiteNoiseNode
-},{"./lib/WAAWhiteNoiseNode":32}],32:[function(require,module,exports){
+},{"./lib/WAAWhiteNoiseNode":33}],33:[function(require,module,exports){
 var WAAWhiteNoiseNode = module.exports = function(context) {
   this.context = context
 
@@ -6896,11 +6971,11 @@ WAAWhiteNoiseNode.prototype._prepareOutput = function() {
   this._output.buffer = this._buffer
   this._output.loop = true
 }
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 var WAAWire = require('./lib/WAAWire')
 module.exports = WAAWire
 if (typeof window !== 'undefined') window.WAAWire = WAAWire
-},{"./lib/WAAWire":34}],34:[function(require,module,exports){
+},{"./lib/WAAWire":35}],35:[function(require,module,exports){
 var WAAWire = module.exports = function(context) {
   this.context = context
   
