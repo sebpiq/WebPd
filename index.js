@@ -130,13 +130,13 @@ var Pd = module.exports = {
   // Loads a patch from a string (Pd file), or from an object (pd.json)
   loadPatch: function(patchData) {
     var patch = this._createPatch()
-    if (_.isString(patchData)) patchData = this.getPatchData(patchData)
+    if (_.isString(patchData)) patchData = this.parsePatch(patchData)
     this._preparePatch(patch, patchData)
     if (pdGlob.isStarted) patch.start()
     return patch
   },
 
-  getPatchData: function(patchData) {
+  parsePatch: function(patchData) {
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     return patchData
   },
@@ -176,6 +176,7 @@ var Pd = module.exports = {
       sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
     })
 
+    // Binding patch data to the prepared patch
     patch.patchData = patchData
   },
 

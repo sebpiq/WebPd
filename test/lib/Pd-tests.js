@@ -170,6 +170,10 @@ describe('Pd', function() {
       assert.equal(dac.i(0).connections.length, 1)
       assert.equal(dac.i(1).connections.length, 0)
       assert.ok(dac.i(0).connections[0] === osc.o(0))
+
+      // Check patchData is present
+      assert.equal(patch.patchData.nodes.length, 2)
+      assert.equal(patch.patchData.connections.length, 1)
     })
 
     it('should load a patch with a subpatch properly', function() {
@@ -226,28 +230,12 @@ describe('Pd', function() {
 
   })
 
-  describe('.getPatchData', function() {
+  describe('.parsePatch', function() {
 
     it('should return patch data and reuse it in .loadPatch', function() {
-        var patchStr = fs.readFileSync(__dirname + '/patches/simple.pd').toString()
-
-        var patchData = Pd.getPatchData(patchStr)
-
-        assert.equal(patchData.nodes.length, 2)
-
-        var patch = Pd.loadPatch(patchData)
-
-        assert.equal(patch.objects.length, 2)
-
-        var osc = patch.objects[0]
-          , dac = patch.objects[1]
-
-        // Check objects
-        assert.equal(osc.type, 'osc~')
-        assert.equal(osc.frequency, 440)
-        assert.equal(dac.type, 'dac~')
-
-        assert.equal(patch.patchData, patchData)
+      var patchStr = fs.readFileSync(__dirname + '/patches/simple.pd').toString()
+        , patchData = Pd.parsePatch(patchStr)
+      assert.equal(patchData.nodes.length, 2)
     })
 
   })
