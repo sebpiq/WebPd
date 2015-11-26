@@ -56,7 +56,7 @@ var Pd = module.exports = {
       }
 
       if (opts.storage) pdGlob.storage = opts.storage
-      else if (typeof window !== 'undefined') 
+      else if (typeof window !== 'undefined')
         pdGlob.storage = new waa.Storage()
       else pdGlob.storage = interfaces.Storage
 
@@ -130,10 +130,15 @@ var Pd = module.exports = {
   // Loads a patch from a string (Pd file), or from an object (pd.json)
   loadPatch: function(patchData) {
     var patch = this._createPatch()
-    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+    if (_.isString(patchData)) patchData = this.parsePatch(patchData)
     this._preparePatch(patch, patchData)
     if (pdGlob.isStarted) patch.start()
     return patch
+  },
+
+  parsePatch: function(patchData) {
+    if (_.isString(patchData)) patchData = pdfu.parse(patchData)
+    return patchData
   },
 
   _createPatch: function() {
@@ -170,6 +175,9 @@ var Pd = module.exports = {
       if (!sourceObj || !sinkObj) throw new Error('invalid connection')
       sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
     })
+
+    // Binding patch data to the prepared patch
+    patch.patchData = patchData
   },
 
   core: {
