@@ -242,6 +242,10 @@ describe('Pd', function() {
         thrown = true
         assert.ok(err instanceof errors.PatchLoadError)
         assert.equal(err.errorList.length, 2)
+        assert.ok(err.errorList[0][1] instanceof errors.UnkownObjectError)
+        assert.equal(err.errorList[0][1].objectType, 'idontexist')
+        assert.ok(err.errorList[1][1] instanceof errors.UnkownObjectError)
+        assert.equal(err.errorList[1][1].objectType, 'meneither')
       }
       assert.ok(thrown)
     })

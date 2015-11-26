@@ -170,7 +170,7 @@ var Pd = module.exports = {
           obj = patch._createObject(proto, nodeData.args || [])
         } catch (err) {
           if (err instanceof errors.UnkownObjectError) 
-            errorList.push(err.message)
+            errorList.push([ err.message, err ])
           else throw err
         }
       }
@@ -183,15 +183,19 @@ var Pd = module.exports = {
     patchData.connections.forEach(function(conn) {
       var sourceObj = createdObjs[conn.source.id]
         , sinkObj = createdObjs[conn.sink.id]
-      if (!sourceObj || !sinkObj)
-        return errorList.push('invalid connection ' + conn.source.id 
-          + '.* -> ' + conn.sink.id + '.*')
+      if (!sourceObj || !sinkObj) {
+        var errMsg = 'invalid connection ' + conn.source.id 
+          + '.* -> ' + conn.sink.id + '.*'
+        return errorList.push([ errMsg, new Error(errMsg) ])
+      }
       try {
         sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
       } catch (err) {
-        if (err instanceof errors.InvalidPortletError)
-          return errorList.push('invalid connection ' + conn.source.id + '.' + conn.source.port 
-            + ' -> ' + conn.sink.id + '.' + conn.sink.port)
+        if (err instanceof errors.InvalidPortletError) {
+          var errMsg = 'invalid connection ' + conn.source.id + '.' + conn.source.port 
+            + ' -> ' + conn.sink.id + '.' + conn.sink.port
+          return errorList.push([ errMsg, err ])
+        }
       }
     })
 
@@ -204,7 +208,8 @@ var Pd = module.exports = {
 
   core: {
     PdObject: PdObject,
-    portlets: portlets
+    portlets: portlets,
+    errors: errors
   },
 
   // Exposing this mostly for testing

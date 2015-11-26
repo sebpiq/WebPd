@@ -354,7 +354,7 @@ var Pd = module.exports = {
           obj = patch._createObject(proto, nodeData.args || [])
         } catch (err) {
           if (err instanceof errors.UnkownObjectError) 
-            errorList.push(err.message)
+            errorList.push([ err.message, err ])
           else throw err
         }
       }
@@ -367,15 +367,19 @@ var Pd = module.exports = {
     patchData.connections.forEach(function(conn) {
       var sourceObj = createdObjs[conn.source.id]
         , sinkObj = createdObjs[conn.sink.id]
-      if (!sourceObj || !sinkObj)
-        return errorList.push('invalid connection ' + conn.source.id 
-          + '.* -> ' + conn.sink.id + '.*')
+      if (!sourceObj || !sinkObj) {
+        var errMsg = 'invalid connection ' + conn.source.id 
+          + '.* -> ' + conn.sink.id + '.*'
+        return errorList.push([ errMsg, new Error(errMsg) ])
+      }
       try {
         sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
       } catch (err) {
-        if (err instanceof errors.InvalidPortletError)
-          return errorList.push('invalid connection ' + conn.source.id + '.' + conn.source.port 
-            + ' -> ' + conn.sink.id + '.' + conn.sink.port)
+        if (err instanceof errors.InvalidPortletError) {
+          var errMsg = 'invalid connection ' + conn.source.id + '.' + conn.source.port 
+            + ' -> ' + conn.sink.id + '.' + conn.sink.port
+          return errorList.push([ errMsg, err ])
+        }
       }
     })
 
@@ -388,7 +392,8 @@ var Pd = module.exports = {
 
   core: {
     PdObject: PdObject,
-    portlets: portlets
+    portlets: portlets,
+    errors: errors
   },
 
   // Exposing this mostly for testing
@@ -1019,13 +1024,13 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
  *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
+var _ = require('underscore')
 
 // Error thrown when Pd.loadPatch failed
 var PatchLoadError = exports.PatchLoadError = function PatchLoadError(errorList) {
   this.name = 'PatchLoadError'
   this.errorList = errorList
-  this.message = errorList.join('\n')
+  this.message = _.pluck(errorList, 0).join('\n')
   this.stack = (new Error()).stack
 }
 PatchLoadError.prototype = Object.create(Error.prototype)
@@ -1036,6 +1041,7 @@ PatchLoadError.prototype.constructor = PatchLoadError
 var UnkownObjectError = exports.UnkownObjectError = function UnkownObjectError(type) {
   this.name = 'UnkownObjectError'
   this.message = 'unknown object ' + type
+  this.objectType = type
   this.stack = (new Error()).stack
 }
 UnkownObjectError.prototype = Object.create(Error.prototype)
@@ -1050,7 +1056,7 @@ var InvalidPortletError = exports.InvalidPortletError = function InvalidPortletE
 }
 InvalidPortletError.prototype = Object.create(Error.prototype)
 InvalidPortletError.prototype.constructor = InvalidPortletError
-},{}],7:[function(require,module,exports){
+},{"underscore":23}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
