@@ -350,8 +350,8 @@ var Pd = module.exports = {
           return errorList.push([ err.message, err ])
         else throw err
       }
-      
-      if (obj.type == 'array')
+
+      if (obj.type == 'array' && nodeData.data)
         obj.setData(new Float32Array(nodeData.data), true)
 
       if (proto === 'pd' || proto === 'graph') 
