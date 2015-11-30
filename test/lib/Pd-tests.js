@@ -229,6 +229,11 @@ describe('Pd', function() {
       assert.equal(startCalled, 1)
     })
 
+    it('should load patch with graph', function() {
+      var patchStr = fs.readFileSync(__dirname + '/patches/graph.pd').toString()
+        , patch = Pd.loadPatch(patchStr)
+    })
+
     it('should throw PatchLoadError if unknown objects', function() {
       var patchData = {
           nodes: [ 

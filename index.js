@@ -159,23 +159,19 @@ var Pd = module.exports = {
       var proto = nodeData.proto
         , obj
       
-      if (proto === 'graph') {
-        var arrayNodeData = nodeData.subpatch.nodes[0]
-        obj = patch._createObject('array', arrayNodeData.args || [])
-        obj.setData(new Float32Array(arrayNodeData.data), true)
-        proto = 'array'
-
-      } else {
-        try {
-          obj = patch._createObject(proto, nodeData.args || [])
-        } catch (err) {
-          if (err instanceof errors.UnkownObjectError) 
-            errorList.push([ err.message, err ])
-          else throw err
-        }
+      try {
+        obj = patch._createObject(proto, nodeData.args || [])
+      } catch (err) {
+        if (err instanceof errors.UnkownObjectError) 
+          return errorList.push([ err.message, err ])
+        else throw err
       }
       
-      if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
+      if (obj.type == 'array')
+        obj.setData(new Float32Array(nodeData.data), true)
+
+      if (proto === 'pd' || proto === 'graph') 
+        Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
 

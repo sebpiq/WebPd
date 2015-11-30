@@ -1329,7 +1329,8 @@ describe('glue', function() {
       }) // Just because not available ATM
       var patchStr = fs.readFileSync(path.resolve(__dirname, 'patches', 'array-saved-data.pd'))
         , patch = Pd.loadPatch(patchStr.toString())
-        , array = _.find(patch.objects, function(obj) { return obj.type === 'array' })
+        , graph = _.find(patch.objects, function(obj) { return obj.type === 'patch' })
+        , array = _.find(graph.objects, function(obj) { return obj.type === 'array' })
       assert.deepEqual(array.data, new Float32Array([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8]))
       assert.equal(array.name, 'BLA')
     })
