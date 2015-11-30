@@ -223,11 +223,11 @@ describe('core.Patch', function() {
       assert.ok(_.contains(patch.endPoints, endPointObj))
     })
 
-    it('should throw UnkownObjectError if object unknown', function() {
+    it('should throw UnknownObjectError if object unknown', function() {
       var patch = new Patch
       assert.throws(
         function() { patch.createObject('Idonotexist', []) }, 
-        errors.UnkownObjectError
+        errors.UnknownObjectError
       )
     })
 

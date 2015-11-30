@@ -162,7 +162,7 @@ var Pd = module.exports = {
       try {
         obj = patch._createObject(proto, nodeData.args || [])
       } catch (err) {
-        if (err instanceof errors.UnkownObjectError) 
+        if (err instanceof errors.UnknownObjectError) 
           return errorList.push([ err.message, err ])
         else throw err
       }

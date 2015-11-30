@@ -343,23 +343,19 @@ var Pd = module.exports = {
       var proto = nodeData.proto
         , obj
       
-      if (proto === 'graph') {
-        var arrayNodeData = nodeData.subpatch.nodes[0]
-        obj = patch._createObject('array', arrayNodeData.args || [])
-        obj.setData(new Float32Array(arrayNodeData.data), true)
-        proto = 'array'
-
-      } else {
-        try {
-          obj = patch._createObject(proto, nodeData.args || [])
-        } catch (err) {
-          if (err instanceof errors.UnkownObjectError) 
-            errorList.push([ err.message, err ])
-          else throw err
-        }
+      try {
+        obj = patch._createObject(proto, nodeData.args || [])
+      } catch (err) {
+        if (err instanceof errors.UnknownObjectError) 
+          return errorList.push([ err.message, err ])
+        else throw err
       }
       
-      if (proto === 'pd') Pd._preparePatch(obj, nodeData.subpatch)
+      if (obj.type == 'array')
+        obj.setData(new Float32Array(nodeData.data), true)
+
+      if (proto === 'pd' || proto === 'graph') 
+        Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
 
@@ -907,7 +903,7 @@ _.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitte
       if (constructor.prototype.doResolveArgs)
         objArgs = this.resolveArgs(objArgs)
       obj = new constructor(this, this._generateId(), objArgs)
-    } else throw new errors.UnkownObjectError(type)
+    } else throw new errors.UnknownObjectError(type)
 
     // Assign object unique id and add it to the patch
     this.objects[obj.id] = obj
@@ -1038,14 +1034,14 @@ PatchLoadError.prototype.constructor = PatchLoadError
 
 
 // Error thrown when trying to create an unknown object
-var UnkownObjectError = exports.UnkownObjectError = function UnkownObjectError(type) {
-  this.name = 'UnkownObjectError'
+var UnknownObjectError = exports.UnknownObjectError = function UnknownObjectError(type) {
+  this.name = 'UnknownObjectError'
   this.message = 'unknown object ' + type
   this.objectType = type
   this.stack = (new Error()).stack
 }
-UnkownObjectError.prototype = Object.create(Error.prototype)
-UnkownObjectError.prototype.constructor = UnkownObjectError
+UnknownObjectError.prototype = Object.create(Error.prototype)
+UnknownObjectError.prototype.constructor = UnknownObjectError
 
 
 // Error thrown when trying to access an invalid portlet with `.i` or `.o`
@@ -2625,7 +2621,7 @@ exports.declareObjects = function(library) {
 
   })
 
-  library['pd'] = Patch
+  library['pd'] = library['graph'] = Patch
 
 }
 
