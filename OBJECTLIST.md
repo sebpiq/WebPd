@@ -7,6 +7,7 @@
 - -~
 - /
 - abs
+- adc~
 - array
 - atan
 - bng
@@ -23,6 +24,7 @@
 - f
 - float
 - floatatom
+- graph
 - hip~
 - hradio
 - hsl
