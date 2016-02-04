@@ -1,0 +1,34 @@
+<!doctype HTML>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="../assets/jquery-2.1.0.min.js"></script>
+    <script type="text/javascript" src="../assets/pd-fileutils.js"></script>
+    <script type="text/javascript" src="../../dist/webpd-latest.js"></script>
+    <script type="text/javascript" src="../assets/examples.js"></script>
+
+    <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro' rel='stylesheet' type='text/css'>
+    <link href='../assets/examples.css' rel='stylesheet' type='text/css'>
+  </head>
+
+  <body>
+    <div id="loading">Loading ...</div>
+    <button id="startButton">Start</button>
+    
+    <div id="pdfuNote">Patch rendered to SVG using <a href="https://github.com/sebpiq/pd-fileutils">pd-fileutils</a></div>
+    <div id="svg"></div>
+
+    <script type="text/javascript">
+      webPdExamples.init()
+    
+      var patch
+      $.get('pd/main.pd', function(mainStr) {
+        // Loading the patch
+        patch = Pd.loadPatch(mainStr)
+
+        webPdExamples.patchLoaded(mainStr)
+      })
+    </script>
+  </body>
+</html>

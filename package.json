@@ -27,7 +27,8 @@
     "waaoffsetnode": "0.1.x",
     "waawhitenoisenode": "0.1.x",
     "waawire": "0.1.x",
-    "waatablenode": "0.1.x"
+    "waatablenode": "0.1.x",
+    "getusermedia": "^1.3.5"
   },
   "devDependencies": {
     "web-audio-test-api": "0.2.x",
