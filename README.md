@@ -156,6 +156,27 @@ If you find a bug, you can submit a bug report on the project's [issue tracker](
 Please try to include as much information as possible. Also try to include code, and **the patch** that you cannot get to work.
 
 
+Cookbook
+---------
+
+### Connecting a patch [outlet~] to an external Web Audio node
+
+```javascript
+// We assume this patch has an [outlet~] object.
+var patch = Pd.loadPatch(patchStr)
+
+// In order to establish the connection, nodes need to have been created in the 
+// same audio context. You can for example use WebPd's audio context.
+var webPdContext = Pd.getAudio().context
+
+// Some web audio node
+var myExternalAudioNode = webPdContext.createGain()
+
+// Connect the output 0 of the patch to our audio node
+patch.o(0).getOutNode().connect(myExternalAudioNode)
+``` 
+
+
 API
 -----
 
@@ -182,6 +203,19 @@ Sends messages from JavaScript to a named receiver within a patch (e.g. `[receiv
 ```javascript
 Pd.send('someName', ['hello!'])
 ```
+
+### BaseNode
+
+This is the base class for all WebPd nodes, patches, dsp or glue objects.
+
+#### BaseNode.o(ind)
+
+Returns the outlet `ind` of the node. If `ind` is out of range, an error will be thrown. 
+
+#### BaseNode.i(ind)
+
+Returns the inlet `ind` of the node. If `ind` is out of range, an error will be thrown.
+
 
 
 Instructions for building webpd.js
