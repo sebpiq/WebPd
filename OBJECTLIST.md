@@ -65,6 +65,7 @@
 - spigot
 - sqrt
 - square~
+- swap
 - symbolatom
 - t
 - table

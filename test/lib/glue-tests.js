@@ -1471,4 +1471,36 @@ describe('glue', function() {
 
   })
 
+  describe('[swap]', function() {
+
+    it('should swap messages from inlets to outlets', function() {
+      var swap = patch.createObject('swap', [3.55])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+      swap.o(0).connect(mailbox1.i(0))
+      swap.o(1).connect(mailbox2.i(0))
+
+      swap.i(0).message([1])
+      assert.deepEqual(mailbox1.received, [[3.55]])
+      assert.deepEqual(mailbox2.received, [[1]])
+    })
+
+    it('should change the left message when sending to inlet 1', function() {
+      var swap = patch.createObject('swap', [3.55])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+      swap.o(0).connect(mailbox1.i(0))
+      swap.o(1).connect(mailbox2.i(0))
+
+      swap.i(1).message([8.47])
+      swap.i(0).message([2.12])
+      assert.deepEqual(mailbox1.received, [[8.47]])
+      assert.deepEqual(mailbox2.received, [[2.12]])
+    })
+
+    it('should preserve message time tag', function() {
+      helpers.assertPreservesTimeTag(patch.createObject('swap', [888]), [88])
+    })
+
+  })
 })
