@@ -1049,6 +1049,80 @@ describe('glue', function() {
 
   })
 
+  describe('[powtodb]', function() {
+
+    it('should convert Power to decibels', function() {
+      var powtodb = patch.createObject('powtodb')
+        , mailbox = patch.createObject('testingmailbox')
+      powtodb.o(0).connect(mailbox.i(0))
+
+      powtodb.i(0).message([1])
+      assert.equal(mailbox.received[0][0].toFixed(10), 100)
+
+      powtodb.i(0).message([10])
+      assert.equal(mailbox.received[1][0].toFixed(10), 110)
+
+      powtodb.i(0).message([100])
+      assert.equal(mailbox.received[2][0].toFixed(10), 120)
+
+      powtodb.i(0).message([0.1])
+      assert.equal(mailbox.received[3][0].toFixed(10), 90)
+
+      powtodb.i(0).message([0.01])
+      assert.equal(mailbox.received[4][0].toFixed(10), 80)
+    })
+
+    it('non positif cases', function() {
+      var powtodb = patch.createObject('powtodb')
+        , mailbox = patch.createObject('testingmailbox')
+      powtodb.o(0).connect(mailbox.i(0))
+
+      powtodb.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      powtodb.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
+    })
+
+  })
+
+  describe('[dbtopow]', function() {
+
+    it('should convert decibels to Power', function() {
+      var dbtopow = patch.createObject('dbtopow')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtopow.o(0).connect(mailbox.i(0))
+
+      dbtopow.i(0).message([100])
+      assert.equal(mailbox.received[0][0].toFixed(10), 1)
+
+      dbtopow.i(0).message([110])
+      assert.equal(mailbox.received[1][0].toFixed(10), 10)
+
+      dbtopow.i(0).message([120])
+      assert.equal(mailbox.received[2][0].toFixed(10), 100)
+
+      dbtopow.i(0).message([90])
+      assert.equal(mailbox.received[3][0].toFixed(10), 0.1)
+
+      dbtopow.i(0).message([80])
+      assert.equal(mailbox.received[4][0].toFixed(10), 0.01)
+    })
+
+    it('non positif cases', function() {
+      var dbtopow = patch.createObject('dbtopow')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtopow.o(0).connect(mailbox.i(0))
+
+      dbtopow.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      dbtopow.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
+    })
+
+  })
+
   describe('[samplerate~]', function() {
 
     it('should output the current sample rate', function() {
