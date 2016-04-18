@@ -975,6 +975,80 @@ describe('glue', function() {
 
   })
 
+  describe('[rmstodb]', function() {
+
+    it('should convert RMS to decibels', function() {
+      var rmstodb = patch.createObject('rmstodb')
+        , mailbox = patch.createObject('testingmailbox')
+      rmstodb.o(0).connect(mailbox.i(0))
+
+      rmstodb.i(0).message([1])
+      assert.equal(mailbox.received[0][0].toFixed(10), 100)
+
+      rmstodb.i(0).message([10])
+      assert.equal(mailbox.received[1][0].toFixed(10), 120)
+
+      rmstodb.i(0).message([100])
+      assert.equal(mailbox.received[2][0].toFixed(10), 140)
+
+      rmstodb.i(0).message([0.1])
+      assert.equal(mailbox.received[3][0].toFixed(10), 80)
+
+      rmstodb.i(0).message([0.01])
+      assert.equal(mailbox.received[4][0].toFixed(10), 60)
+    })
+
+    it('non positif cases', function() {
+      var rmstodb = patch.createObject('rmstodb')
+        , mailbox = patch.createObject('testingmailbox')
+      rmstodb.o(0).connect(mailbox.i(0))
+
+      rmstodb.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      rmstodb.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
+    })
+
+  })
+
+  describe('[dbtorms]', function() {
+
+    it('should convert decibels to RMS', function() {
+      var dbtorms = patch.createObject('dbtorms')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtorms.o(0).connect(mailbox.i(0))
+
+      dbtorms.i(0).message([100])
+      assert.equal(mailbox.received[0][0].toFixed(10), 1)
+
+      dbtorms.i(0).message([120])
+      assert.equal(mailbox.received[1][0].toFixed(10), 10)
+
+      dbtorms.i(0).message([140])
+      assert.equal(mailbox.received[2][0].toFixed(10), 100)
+
+      dbtorms.i(0).message([80])
+      assert.equal(mailbox.received[3][0].toFixed(10), 0.1)
+
+      dbtorms.i(0).message([60])
+      assert.equal(mailbox.received[4][0].toFixed(10), 0.01)
+    })
+
+    it('non positif cases', function() {
+      var dbtorms = patch.createObject('dbtorms')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtorms.o(0).connect(mailbox.i(0))
+
+      dbtorms.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      dbtorms.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
+    })
+
+  })
+
   describe('[samplerate~]', function() {
 
     it('should output the current sample rate', function() {
