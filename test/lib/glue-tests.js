@@ -975,6 +975,34 @@ describe('glue', function() {
 
   })
 
+  describe('[ftom]', function() {
+
+    it('should translate frequency to midi', function() {
+      var ftom = patch.createObject('ftom')
+        , mailbox = patch.createObject('testingmailbox')
+      ftom.o(0).connect(mailbox.i(0))
+
+      ftom.i(0).message([440])
+      assert.equal(mailbox.received[0][0].toFixed(6), 69)
+
+      ftom.i(0).message([880])
+      assert.equal(mailbox.received[1][0].toFixed(6), 81)
+    })
+
+    it('non positive frequency', function() {
+      var ftom = patch.createObject('ftom')
+        , mailbox = patch.createObject('testingmailbox')
+      ftom.o(0).connect(mailbox.i(0))
+
+      ftom.i(0).message([0])
+      assert.equal(mailbox.received[0][0].toFixed(6), -1500)
+
+      ftom.i(0).message([-1])
+      assert.equal(mailbox.received[1][0].toFixed(6), -1500)
+    })
+
+  })
+
   describe('[rmstodb]', function() {
 
     it('should convert RMS to decibels', function() {
