@@ -337,6 +337,50 @@ describe('glue', function() {
 
   })
 
+  describe('[min]', function() {
+
+    it('left > right', function() {
+      var min = patch.createObject('min', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      min.o(0).connect(mailbox.i(0))
+      
+      min.i(0).message([46])
+      assert.deepEqual(mailbox.received, [[11]])
+    })
+
+    it('left < right', function() {
+      var min = patch.createObject('min', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      min.o(0).connect(mailbox.i(0))
+      
+      min.i(0).message([2])
+      assert.deepEqual(mailbox.received, [[2]])
+    })
+
+  })
+
+  describe('[max]', function() {
+
+    it('left > right', function() {
+      var max = patch.createObject('max', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      max.o(0).connect(mailbox.i(0))
+      
+      max.i(0).message([46])
+      assert.deepEqual(mailbox.received, [[46]])
+    })
+
+    it('left < right', function() {
+      var max = patch.createObject('max', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      max.o(0).connect(mailbox.i(0))
+      
+      max.i(0).message([2])
+      assert.deepEqual(mailbox.received, [[11]])
+    })
+
+  })
+
   describe('[mod]', function() {
     // This uses the same code as [+] so no need for full tests
 
