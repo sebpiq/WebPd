@@ -358,6 +358,32 @@ describe('glue', function() {
       assert.deepEqual(mailbox.received, [[2]])
     })
 
+    it('zero case', function() {
+      var mod = patch.createObject('%', [0])
+        , mailbox = patch.createObject('testingmailbox')
+      mod.o(0).connect(mailbox.i(0))
+      
+      mod.i(0).message([46])
+      assert.deepEqual(mailbox.received, [[0]])
+    })
+
+    it('negative modulus', function() {
+      var mod = patch.createObject('%', [-13])
+        , mailbox = patch.createObject('testingmailbox')
+      mod.o(0).connect(mailbox.i(0))
+      
+      mod.i(0).message([46])
+      assert.deepEqual(mailbox.received, [[0]])
+    })
+
+    it('negative numbers', function() {
+      var mod = patch.createObject('%', [8])
+        , mailbox = patch.createObject('testingmailbox')
+      mod.o(0).connect(mailbox.i(0))
+      
+      mod.i(0).message([-13])
+      assert.deepEqual(mailbox.received, [[3]])
+    })
   })
 
   describe('[pow]', function() {
