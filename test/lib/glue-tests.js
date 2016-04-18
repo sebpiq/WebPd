@@ -1759,4 +1759,60 @@ describe('glue', function() {
     })
 
   })
+
+  describe('[clip]', function() {
+
+    it('should pass messages between min and max', function() {
+      var clip = patch.createObject('clip', [-3, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([5.32])
+      assert.deepEqual(mailbox.received, [[5.32]])
+    })
+
+    it('should clip messages below min', function() {
+      var clip = patch.createObject('clip', [-3, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([-5])
+      assert.deepEqual(mailbox.received, [[-3]])
+    })
+
+    it('should clip messages above max', function() {
+      var clip = patch.createObject('clip', [-3, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([13])
+      assert.deepEqual(mailbox.received, [[7]])
+    })
+
+    it('min and max can be changed by inlets (default to zero)', function() {
+      var clip = patch.createObject('clip', [])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([13])
+      assert.deepEqual(mailbox.received[0][0], 0)
+      clip.i(0).message([-13])
+      assert.deepEqual(mailbox.received[1][0], 0)
+
+      // change min
+      clip.i(1).message([5])
+      clip.i(0).message([2])
+      assert.deepEqual(mailbox.received[2][0], 5)
+
+      // here min is greater then max
+      clip.i(0).message([7])
+      assert.deepEqual(mailbox.received[3][0], 0)
+
+      // change max
+      clip.i(2).message([8])
+      clip.i(0).message([9])
+      assert.deepEqual(mailbox.received[4][0], 8)
+    })
+
+  })
 })
