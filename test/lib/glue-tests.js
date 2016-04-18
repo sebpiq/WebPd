@@ -335,6 +335,15 @@ describe('glue', function() {
       assert.deepEqual(mailbox.received, [[11]])
     })
 
+    it('zero case', function() {
+      var div = patch.createObject('/', [0])
+        , mailbox = patch.createObject('testingmailbox')
+      div.o(0).connect(mailbox.i(0))
+      
+      div.i(0).message([44])
+      assert.deepEqual(mailbox.received, [[0]])
+    })
+
   })
 
   describe('[mod]', function() {
