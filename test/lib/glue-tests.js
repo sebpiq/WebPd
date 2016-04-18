@@ -461,6 +461,18 @@ describe('glue', function() {
 
   })
 
+  describe('[atan2]', function() {
+
+    it('should compute the atan2 of input', function() {
+      var atan2 = patch.createObject('atan2', [5 * Math.sin(Math.PI / 3)])
+        , mailbox = patch.createObject('testingmailbox')
+      atan2.o(0).connect(mailbox.i(0))
+      atan2.i(0).message([5 * Math.cos(Math.PI / 3)])
+      assert.deepEqual(mailbox.received, [[Math.PI / 3]])
+    })
+
+  })
+
   describe('[exp]', function() {
 
     it('should compute the exp of input', function() {
