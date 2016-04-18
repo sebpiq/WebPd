@@ -521,6 +521,30 @@ describe('glue', function() {
 
   })
 
+  describe('[wrap]', function() {
+
+    it('should compute the wrap of input', function() {
+      var wrap = patch.createObject('wrap')
+        , mailbox = patch.createObject('testingmailbox')
+      wrap.o(0).connect(mailbox.i(0))
+      wrap.i(0).message([3.2])
+      // we can't use deep equal here because of rounding errors.
+      assert.equal(mailbox.received.length, 1)
+      assert.equal(mailbox.received[0].length, 1)
+      assert.equal(mailbox.received[0][0].toFixed(4), 0.2)
+    })
+
+    it('negative case', function() {
+      var wrap = patch.createObject('wrap')
+        , mailbox = patch.createObject('testingmailbox')
+      wrap.o(0).connect(mailbox.i(0))
+      wrap.i(0).message([(-4.9).toFixed(1)])
+      // we can't use deep equal here because of rounding errors.
+      assert.equal(mailbox.received[0][0].toFixed(4), 0.1)
+    })
+
+  })
+
   describe('[float]', function() {
 
     it('should have 0 as default value', function() {
