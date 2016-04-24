@@ -199,9 +199,41 @@ describe('glue', function() {
     })
 
     it('should preserve message time tag', function() {
-      helpers.assertPreservesTimeTag(patch.createObject('msg'), ['$1', 66])
+      helpers.assertPreservesTimeTag(patch.createObject('msg', ['$1', 66]), [4])
     })
 
+    it('empty message output nothing', function() {
+      var msg = patch.createObject('msg')
+        , mailbox = patch.createObject('testingmailbox')
+      msg.o(0).connect(mailbox.i(0))
+
+      msg.i(0).message([5, 'foo'])
+      assert.deepEqual(mailbox.received, [])
+    })
+
+    it('should split comma separated messages', function() {
+      var msg = patch.createObject('msg', [22, ',', '33'])
+        , mailbox = patch.createObject('testingmailbox')
+      msg.o(0).connect(mailbox.i(0))
+
+      msg.i(0).message([5])
+      assert.deepEqual(mailbox.received, [[22], ['33']])
+
+      msg.i(0).message(['bang'])
+      assert.deepEqual(mailbox.received, [[22], ['33'], [22], ['33']])
+
+      msg.i(0).message(['bla', 123])
+      assert.deepEqual(mailbox.received, [[22], ['33'], [22], ['33'], [22], ['33']])
+    })
+
+    it('should split comma separated messages and resolve $-args', function() {
+      var msg = patch.createObject('msg', [22, '$2', ',', '33', '$1'])
+        , mailbox = patch.createObject('testingmailbox')
+      msg.o(0).connect(mailbox.i(0))
+
+      msg.i(0).message([5, 'foo'])
+      assert.deepEqual(mailbox.received, [[22, 'foo'], ['33', 5]])
+    })
   })
 
   describe('[text]', function() {
