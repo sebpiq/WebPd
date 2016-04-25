@@ -346,6 +346,50 @@ describe('glue', function() {
 
   })
 
+  describe('[min]', function() {
+
+    it('left > right', function() {
+      var min = patch.createObject('min', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      min.o(0).connect(mailbox.i(0))
+      
+      min.i(0).message([46])
+      assert.deepEqual(mailbox.received, [[11]])
+    })
+
+    it('left < right', function() {
+      var min = patch.createObject('min', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      min.o(0).connect(mailbox.i(0))
+      
+      min.i(0).message([2])
+      assert.deepEqual(mailbox.received, [[2]])
+    })
+
+  })
+
+  describe('[max]', function() {
+
+    it('left > right', function() {
+      var max = patch.createObject('max', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      max.o(0).connect(mailbox.i(0))
+      
+      max.i(0).message([46])
+      assert.deepEqual(mailbox.received, [[46]])
+    })
+
+    it('left < right', function() {
+      var max = patch.createObject('max', [11])
+        , mailbox = patch.createObject('testingmailbox')
+      max.o(0).connect(mailbox.i(0))
+      
+      max.i(0).message([2])
+      assert.deepEqual(mailbox.received, [[11]])
+    })
+
+  })
+
   describe('[mod]', function() {
     // This uses the same code as [+] so no need for full tests
 
@@ -452,6 +496,18 @@ describe('glue', function() {
 
   })
 
+  describe('[atan2]', function() {
+
+    it('should compute the atan2 of input', function() {
+      var atan2 = patch.createObject('atan2', [5 * Math.sin(Math.PI / 3)])
+        , mailbox = patch.createObject('testingmailbox')
+      atan2.o(0).connect(mailbox.i(0))
+      atan2.i(0).message([5 * Math.cos(Math.PI / 3)])
+      assert.deepEqual(mailbox.received, [[Math.PI / 3]])
+    })
+
+  })
+
   describe('[exp]', function() {
 
     it('should compute the exp of input', function() {
@@ -496,6 +552,30 @@ describe('glue', function() {
       sqrt.o(0).connect(mailbox.i(0))
       sqrt.i(0).message([9])
       assert.deepEqual(mailbox.received, [[3]])
+    })
+
+  })
+
+  describe('[wrap]', function() {
+
+    it('should compute the wrap of input', function() {
+      var wrap = patch.createObject('wrap')
+        , mailbox = patch.createObject('testingmailbox')
+      wrap.o(0).connect(mailbox.i(0))
+      wrap.i(0).message([3.2])
+      // we can't use deep equal here because of rounding errors.
+      assert.equal(mailbox.received.length, 1)
+      assert.equal(mailbox.received[0].length, 1)
+      assert.equal(mailbox.received[0][0].toFixed(4), 0.2)
+    })
+
+    it('negative case', function() {
+      var wrap = patch.createObject('wrap')
+        , mailbox = patch.createObject('testingmailbox')
+      wrap.o(0).connect(mailbox.i(0))
+      wrap.i(0).message([(-4.9).toFixed(1)])
+      // we can't use deep equal here because of rounding errors.
+      assert.equal(mailbox.received[0][0].toFixed(4), 0.1)
     })
 
   })
@@ -926,6 +1006,182 @@ describe('glue', function() {
       // -1500 < val < 1500
       mtof.i(0).message([69])
       assert.equal(round(round(mailbox.received[3][0])), 440)
+    })
+
+  })
+
+  describe('[ftom]', function() {
+
+    it('should translate frequency to midi', function() {
+      var ftom = patch.createObject('ftom')
+        , mailbox = patch.createObject('testingmailbox')
+      ftom.o(0).connect(mailbox.i(0))
+
+      ftom.i(0).message([440])
+      assert.equal(mailbox.received[0][0].toFixed(6), 69)
+
+      ftom.i(0).message([880])
+      assert.equal(mailbox.received[1][0].toFixed(6), 81)
+    })
+
+    it('non positive frequency', function() {
+      var ftom = patch.createObject('ftom')
+        , mailbox = patch.createObject('testingmailbox')
+      ftom.o(0).connect(mailbox.i(0))
+
+      ftom.i(0).message([0])
+      assert.equal(mailbox.received[0][0].toFixed(6), -1500)
+
+      ftom.i(0).message([-1])
+      assert.equal(mailbox.received[1][0].toFixed(6), -1500)
+    })
+
+  })
+
+  describe('[rmstodb]', function() {
+
+    it('should convert RMS to decibels', function() {
+      var rmstodb = patch.createObject('rmstodb')
+        , mailbox = patch.createObject('testingmailbox')
+      rmstodb.o(0).connect(mailbox.i(0))
+
+      rmstodb.i(0).message([1])
+      assert.equal(mailbox.received[0][0].toFixed(10), 100)
+
+      rmstodb.i(0).message([10])
+      assert.equal(mailbox.received[1][0].toFixed(10), 120)
+
+      rmstodb.i(0).message([100])
+      assert.equal(mailbox.received[2][0].toFixed(10), 140)
+
+      rmstodb.i(0).message([0.1])
+      assert.equal(mailbox.received[3][0].toFixed(10), 80)
+
+      rmstodb.i(0).message([0.01])
+      assert.equal(mailbox.received[4][0].toFixed(10), 60)
+    })
+
+    it('non positif cases', function() {
+      var rmstodb = patch.createObject('rmstodb')
+        , mailbox = patch.createObject('testingmailbox')
+      rmstodb.o(0).connect(mailbox.i(0))
+
+      rmstodb.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      rmstodb.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
+    })
+
+  })
+
+  describe('[dbtorms]', function() {
+
+    it('should convert decibels to RMS', function() {
+      var dbtorms = patch.createObject('dbtorms')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtorms.o(0).connect(mailbox.i(0))
+
+      dbtorms.i(0).message([100])
+      assert.equal(mailbox.received[0][0].toFixed(10), 1)
+
+      dbtorms.i(0).message([120])
+      assert.equal(mailbox.received[1][0].toFixed(10), 10)
+
+      dbtorms.i(0).message([140])
+      assert.equal(mailbox.received[2][0].toFixed(10), 100)
+
+      dbtorms.i(0).message([80])
+      assert.equal(mailbox.received[3][0].toFixed(10), 0.1)
+
+      dbtorms.i(0).message([60])
+      assert.equal(mailbox.received[4][0].toFixed(10), 0.01)
+    })
+
+    it('non positif cases', function() {
+      var dbtorms = patch.createObject('dbtorms')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtorms.o(0).connect(mailbox.i(0))
+
+      dbtorms.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      dbtorms.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
+    })
+
+  })
+
+  describe('[powtodb]', function() {
+
+    it('should convert Power to decibels', function() {
+      var powtodb = patch.createObject('powtodb')
+        , mailbox = patch.createObject('testingmailbox')
+      powtodb.o(0).connect(mailbox.i(0))
+
+      powtodb.i(0).message([1])
+      assert.equal(mailbox.received[0][0].toFixed(10), 100)
+
+      powtodb.i(0).message([10])
+      assert.equal(mailbox.received[1][0].toFixed(10), 110)
+
+      powtodb.i(0).message([100])
+      assert.equal(mailbox.received[2][0].toFixed(10), 120)
+
+      powtodb.i(0).message([0.1])
+      assert.equal(mailbox.received[3][0].toFixed(10), 90)
+
+      powtodb.i(0).message([0.01])
+      assert.equal(mailbox.received[4][0].toFixed(10), 80)
+    })
+
+    it('non positif cases', function() {
+      var powtodb = patch.createObject('powtodb')
+        , mailbox = patch.createObject('testingmailbox')
+      powtodb.o(0).connect(mailbox.i(0))
+
+      powtodb.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      powtodb.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
+    })
+
+  })
+
+  describe('[dbtopow]', function() {
+
+    it('should convert decibels to Power', function() {
+      var dbtopow = patch.createObject('dbtopow')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtopow.o(0).connect(mailbox.i(0))
+
+      dbtopow.i(0).message([100])
+      assert.equal(mailbox.received[0][0].toFixed(10), 1)
+
+      dbtopow.i(0).message([110])
+      assert.equal(mailbox.received[1][0].toFixed(10), 10)
+
+      dbtopow.i(0).message([120])
+      assert.equal(mailbox.received[2][0].toFixed(10), 100)
+
+      dbtopow.i(0).message([90])
+      assert.equal(mailbox.received[3][0].toFixed(10), 0.1)
+
+      dbtopow.i(0).message([80])
+      assert.equal(mailbox.received[4][0].toFixed(10), 0.01)
+    })
+
+    it('non positif cases', function() {
+      var dbtopow = patch.createObject('dbtopow')
+        , mailbox = patch.createObject('testingmailbox')
+      dbtopow.o(0).connect(mailbox.i(0))
+
+      dbtopow.i(0).message([0])
+      assert.equal(mailbox.received[0][0], 0)
+
+      dbtopow.i(0).message([-5])
+      assert.equal(mailbox.received[1][0], 0)
     })
 
   })
@@ -1535,6 +1791,62 @@ describe('glue', function() {
 
     it('should preserve message time tag', function() {
       helpers.assertPreservesTimeTag(patch.createObject('swap', [888]), [88])
+    })
+
+  })
+
+  describe('[clip]', function() {
+
+    it('should pass messages between min and max', function() {
+      var clip = patch.createObject('clip', [-3, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([5.32])
+      assert.deepEqual(mailbox.received, [[5.32]])
+    })
+
+    it('should clip messages below min', function() {
+      var clip = patch.createObject('clip', [-3, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([-5])
+      assert.deepEqual(mailbox.received, [[-3]])
+    })
+
+    it('should clip messages above max', function() {
+      var clip = patch.createObject('clip', [-3, 7])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([13])
+      assert.deepEqual(mailbox.received, [[7]])
+    })
+
+    it('min and max can be changed by inlets (default to zero)', function() {
+      var clip = patch.createObject('clip', [])
+        , mailbox = patch.createObject('testingmailbox')
+      clip.o(0).connect(mailbox.i(0))
+
+      clip.i(0).message([13])
+      assert.deepEqual(mailbox.received[0][0], 0)
+      clip.i(0).message([-13])
+      assert.deepEqual(mailbox.received[1][0], 0)
+
+      // change min
+      clip.i(1).message([5])
+      clip.i(0).message([2])
+      assert.deepEqual(mailbox.received[2][0], 5)
+
+      // here min is greater then max
+      clip.i(0).message([7])
+      assert.deepEqual(mailbox.received[3][0], 0)
+
+      // change max
+      clip.i(2).message([8])
+      clip.i(0).message([9])
+      assert.deepEqual(mailbox.received[4][0], 8)
     })
 
   })
