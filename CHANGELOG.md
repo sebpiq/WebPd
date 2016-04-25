@@ -1,3 +1,11 @@
+0.4.2
+------
+
+- objects `[swap]`, `[min]`, `[max]`, `[atan2]`, `[wrap]`, `[rmstodb]`, `[dbtorms]`, `[powtodb]`, `[dbtopow]`, `[ftom]`, `[clip]`
+- fix bug with zeros in `[/]` and `[%]`
+- support for comma separated messages
+
+
 0.4.1
 ------
 

@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/sebpiq/WebPd.png)](https://travis-ci.org/sebpiq/WebPd)
+[![Dependency status](https://david-dm.org/sebpiq/WebPd.svg)](https://david-dm.org/sebpiq/WebPd)
 
 WebPd
 =====
@@ -123,7 +124,6 @@ WebPd has a few [limitations](#list-of-implemented-objects-and-other-limitations
 
 Here is a non-exhaustive list of other limitations and inconsistencies with Pure Data :
 
-- commas in messages are not implemented yet
 - Pd system messages, such as the widely used `[;pd dsp 1(` , are not implemented
 - `[phasor~]` is not a real, perfect, phasor. You shouldn't use it to read from an array for example.
 - `[phasor~]` inlet 2 (used to set the phase) is not implemented
