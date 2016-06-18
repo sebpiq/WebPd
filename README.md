@@ -156,35 +156,53 @@ If you find a bug, you can submit a bug report on the project's [issue tracker](
 Please try to include as much information as possible. Also try to include code, and **the patch** that you cannot get to work.
 
 
-Cookbook
----------
-
-### Connecting a patch [outlet~] to an external Web Audio node
-
-```javascript
-// We assume this patch has an [outlet~] object.
-var patch = Pd.loadPatch(patchStr)
-
-// In order to establish the connection, nodes need to have been created in the 
-// same audio context. You can for example use WebPd's audio context.
-var webPdContext = Pd.getAudio().context
-
-// Some web audio node
-var myExternalAudioNode = webPdContext.createGain()
-
-// Connect the output 0 of the patch to our audio node
-patch.o(0).getOutNode().connect(myExternalAudioNode)
-``` 
-
-
 API
 -----
 
+You can use WebPd API to create patches, add objects, connect them, disconnect them, etc ... with JavaScript. Something called "dynamic patching" in Pure Data. Here is a quick example :
+
+```javascript
+Pd.start()
+var patch = Pd.createPatch()                  // Create an empty patch 
+  , osc = patch.createObject('osc~', [440])   // Create an [osc~ 440]
+  , dac = patch.createObject('dac~')          // Create a [dac~]
+osc.o(0).connect(dac.i(0))                    // Connect outlet of [osc~] to left inlet of [dac~]
+osc.o(0).connect(dac.i(1))                    // Connect outlet of [osc~] to right inlet of [dac~]
+osc.i(0).message([330])                       // Send frequency of [osc~] to 330Hz
+```
+
+You can also use the API to integrate WebPd with pure Web Audio code. For example : 
+
+```javascript
+var patch = Pd.loadPatch(patchStr)            // We assume this patch has an [outlet~] object
+  , gain = Pd.getAudio().context.createGain() // We create a web audio API GainNode
+patch.o(0).getOutNode().connect(gain)         // Connect the output 0 of the patch to our audio node
+``` 
+
+Below you can find a (mostly) complete documentation of the WebPd API. Please note that dynamic patching with WebPd is still experimental, so you might encounter some bugs. If you do, please report them to in the [issue tracker](https://github.com/sebpiq/WebPd/issues).
+
+
 ### Pd
+
+#### Pd.start()
+
+Starts WebPd DSP.
+
+#### Pd.isStarted()
+
+Returns `true` is WebPd DSP is started, `false` otherwise.
+
+#### Pd.stop()
+
+Stops WebPd DSP.
 
 #### Pd.loadPatch(patchStr)
 
 Loads a Pd patch, and returns a `Patch` object. `patchStr` is the whole contents of a Pd file (and not only a file name).
+
+#### Pd.createPatch()
+
+Creates and returns an empty `Patch` object.
 
 #### Pd.receive(name, callback)
 
@@ -192,7 +210,7 @@ Receives messages from named senders within a patch (e.g. `[send someName]`). Ex
 
 ```javascript
 Pd.receive('someName', function(args) {
-    console.log('received a message from "someName" : ', args)
+  console.log('received a message from "someName" : ', args)
 })
 ```
 
@@ -203,6 +221,19 @@ Sends messages from JavaScript to a named receiver within a patch (e.g. `[receiv
 ```javascript
 Pd.send('someName', ['hello!'])
 ```
+
+#### Pd.getAudio()
+
+Returns the audio driver used by WebPd on the current page. the returned object has an attribute `context` which is an instance of Web Audio API `AudioContext` used by WebPd in the current page to instantiate low-level audio nodes. This can be useful to integrate WebPd with pure Web Audio code.
+
+#### Pd.registerAbstraction(name, patchStr)
+
+Registers an abstraction to WebPd. See full example [there](https://github.com/sebpiq/WebPd/tree/master/examples/abstractions).
+
+#### Pd.registerExternal(name, customWebPdObject)
+
+Registers a custom object to WebPd. See full example [there](https://github.com/sebpiq/WebPd/tree/master/examples/external).
+
 
 ### BaseNode
 
@@ -215,6 +246,41 @@ Returns the outlet `ind` of the node. If `ind` is out of range, an error will be
 #### BaseNode.i(ind)
 
 Returns the inlet `ind` of the node. If `ind` is out of range, an error will be thrown.
+
+
+### Patch
+
+#### Patch.createObject(name, args)
+
+Creates a new object of type `name` with arguments `args`. Example :
+
+```
+var triggerObject = patch.createObject('trigger', ['bang', 'float', 'float'])
+```
+
+
+### Portlet
+
+Base class for `Inlet` and `Outlet` objects.
+
+#### Portlet.connect(otherPortlet)
+
+Connects an inlet with and outlet. If they are already connected, nothing will happen.
+
+#### Portlet.disconnect(otherPortlet)
+
+Disconnects an inlet and an outlet. If they are not connected, nothing will happen.
+
+
+### Inlet
+
+#### Inlet.message(args)
+
+Sends a message to the inlet. `args` is a list of arguments. Example :
+
+```
+print.i(0).message(['hello'])
+```
 
 
 
