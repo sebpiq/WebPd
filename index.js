@@ -21,6 +21,7 @@
 var _ = require('underscore')
   , pdfu = require('pd-fileutils.parser')
   , Patch = require('./lib/core/Patch')
+  , Abstraction = require('./lib/core/Abstraction')
   , PdObject = require('./lib/core/PdObject')
   , mixins = require('./lib/core/mixins')
   , errors = require('./lib/core/errors')
@@ -63,8 +64,7 @@ var Pd = module.exports = {
 
 
       pdGlob.audio.start()
-      for (var patchId in pdGlob.patches)
-        pdGlob.patches[patchId].start()
+      _.values(pdGlob.patches).forEach(function(patch) { patch.start() })
       pdGlob.isStarted = true
     }
   },
@@ -73,8 +73,7 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.isStarted = false
-      for (var patchId in pdGlob.patches)
-        pdGlob.patches[patchId].stop()
+      _.values(pdGlob.patches).forEach(function(patch) { patch.stop() })
       pdGlob.audio.stop()
     }
   },
@@ -100,12 +99,12 @@ var Pd = module.exports = {
   registerAbstraction: function(name, patchData) {
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     var CustomObject = function(patch, id, args) {
-      var patch = new Patch(patch, id, args)
+      var patch = new Abstraction(patch, id, args)
       patch.patchId = patchIds._generateId()
       Pd._preparePatch(patch, patchData)
       return patch
     }
-    CustomObject.prototype = Patch.prototype
+    CustomObject.prototype = Abstraction.prototype
     this.registerExternal(name, CustomObject)
   },
 

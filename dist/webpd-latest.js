@@ -205,6 +205,7 @@ BiquadFilterNode.type and OscillatorNode.type.
 var _ = require('underscore')
   , pdfu = require('pd-fileutils.parser')
   , Patch = require('./lib/core/Patch')
+  , Abstraction = require('./lib/core/Abstraction')
   , PdObject = require('./lib/core/PdObject')
   , mixins = require('./lib/core/mixins')
   , errors = require('./lib/core/errors')
@@ -247,8 +248,7 @@ var Pd = module.exports = {
 
 
       pdGlob.audio.start()
-      for (var patchId in pdGlob.patches)
-        pdGlob.patches[patchId].start()
+      _.values(pdGlob.patches).forEach(function(patch) { patch.start() })
       pdGlob.isStarted = true
     }
   },
@@ -257,8 +257,7 @@ var Pd = module.exports = {
   stop: function() {
     if (pdGlob.isStarted) {
       pdGlob.isStarted = false
-      for (var patchId in pdGlob.patches)
-        pdGlob.patches[patchId].stop()
+      _.values(pdGlob.patches).forEach(function(patch) { patch.stop() })
       pdGlob.audio.stop()
     }
   },
@@ -284,12 +283,12 @@ var Pd = module.exports = {
   registerAbstraction: function(name, patchData) {
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     var CustomObject = function(patch, id, args) {
-      var patch = new Patch(patch, id, args)
+      var patch = new Abstraction(patch, id, args)
       patch.patchId = patchIds._generateId()
       Pd._preparePatch(patch, patchData)
       return patch
     }
-    CustomObject.prototype = Patch.prototype
+    CustomObject.prototype = Abstraction.prototype
     this.registerExternal(name, CustomObject)
   },
 
@@ -399,7 +398,7 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Patch":4,"./lib/core/PdObject":5,"./lib/core/errors":6,"./lib/core/interfaces":7,"./lib/core/mixins":8,"./lib/global":11,"./lib/index":13,"./lib/waa/interfaces":15,"./lib/waa/portlets":16,"pd-fileutils.parser":32,"underscore":34}],2:[function(require,module,exports){
+},{"./lib/core/Abstraction":3,"./lib/core/Patch":5,"./lib/core/PdObject":6,"./lib/core/errors":7,"./lib/core/interfaces":8,"./lib/core/mixins":9,"./lib/global":12,"./lib/index":14,"./lib/waa/interfaces":16,"./lib/waa/portlets":17,"pd-fileutils.parser":33,"underscore":35}],2:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -682,7 +681,36 @@ exports.declareObjects = function(library) {
 
   })
 }
-},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":8,"./core/utils":10,"./global":11,"./waa/portlets":16,"events":17,"underscore":34}],3:[function(require,module,exports){
+},{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":17,"events":18,"underscore":35}],3:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+var _ = require('underscore')
+  , Patch = require('./Patch')
+
+var Abstraction = module.exports = function(patch, id, args) {
+  Patch.apply(this, arguments)
+}
+
+_.extend(Abstraction.prototype, Patch.prototype)
+},{"./Patch":5,"underscore":35}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -794,7 +822,7 @@ _.extend(BaseNode.prototype, {
 })
 
 
-},{"./errors":6,"./portlets":9,"./utils":10,"underscore":34,"util":21}],4:[function(require,module,exports){
+},{"./errors":7,"./portlets":10,"./utils":11,"underscore":35,"util":22}],5:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -944,7 +972,9 @@ _.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitte
   // is a subpatch. If it is an abstraction, the situation is different.
   getPatchRoot: function() {
     var parentPatch = this
-    while (parentPatch.patch) parentPatch = parentPatch.patch
+      , Abstraction = require('./Abstraction')
+    while (parentPatch.patch && !(parentPatch instanceof Abstraction)) 
+      parentPatch = parentPatch.patch
     return parentPatch
   }
 
@@ -962,7 +992,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":11,"./BaseNode":3,"./errors":6,"./mixins":8,"./utils":10,"events":17,"underscore":34}],5:[function(require,module,exports){
+},{"../global":12,"./Abstraction":3,"./BaseNode":4,"./errors":7,"./mixins":9,"./utils":11,"events":18,"underscore":35}],6:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1000,7 +1030,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
   doResolveArgs: true
 })
 
-},{"../global":11,"./BaseNode":3,"./Patch":4,"./portlets":9,"./utils":10,"underscore":34,"util":21}],6:[function(require,module,exports){
+},{"../global":12,"./BaseNode":4,"./Patch":5,"./portlets":10,"./utils":11,"underscore":35,"util":22}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1052,7 +1082,7 @@ var InvalidPortletError = exports.InvalidPortletError = function InvalidPortletE
 }
 InvalidPortletError.prototype = Object.create(Error.prototype)
 InvalidPortletError.prototype.constructor = InvalidPortletError
-},{"underscore":34}],7:[function(require,module,exports){
+},{"underscore":35}],8:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1110,7 +1140,7 @@ exports.Storage = {
   // Gets the file stored at `uri` and returns `done(err, arrayBuffer)`
   get: function(uri, done) { }
 }
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1293,7 +1323,7 @@ _.extend(EventReceiver.prototype, {
 })
 
 EventReceiver.prototype.on = EventReceiver.prototype.addListener
-},{"../global":11,"events":17,"underscore":34}],9:[function(require,module,exports){
+},{"../global":12,"events":18,"underscore":35}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1387,7 +1417,7 @@ var Inlet = exports.Inlet = Portlet.extend({})
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
 
-},{"./utils":10,"underscore":34}],10:[function(require,module,exports){
+},{"./utils":11,"underscore":35}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1509,7 +1539,7 @@ exports.timeTag = function(args, timeTag) {
 exports.getTimeTag = function(args) {
   return (args && args.timeTag) || (pdGlob.clock && pdGlob.clock.time) || 0
 }
-},{"../global":11,"underscore":34}],11:[function(require,module,exports){
+},{"../global":12,"underscore":35}],12:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1635,7 +1665,7 @@ exports.namedObjects = {
   _store: {}
 }
 
-},{"events":17,"underscore":34}],12:[function(require,module,exports){
+},{"events":18,"underscore":35}],13:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2809,7 +2839,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"./core/Patch":4,"./core/PdObject":5,"./core/mixins":8,"./core/utils":10,"./global":11,"./waa/portlets":16,"underscore":34}],13:[function(require,module,exports){
+},{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":17,"underscore":35}],14:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2837,7 +2867,7 @@ exports.declareObjects = function(library) {
   require('./waa/dsp').declareObjects(library)
   require('./waa/portlets').declareObjects(library)
 }
-},{"./controls":2,"./glue":12,"./waa/dsp":14,"./waa/portlets":16,"underscore":34}],14:[function(require,module,exports){
+},{"./controls":2,"./glue":13,"./waa/dsp":15,"./waa/portlets":17,"underscore":35}],15:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3871,7 +3901,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":5,"../core/mixins":8,"../core/utils":10,"../global":11,"./portlets":16,"underscore":34,"waaoffsetnode":37,"waatablenode":39,"waawhitenoisenode":41}],15:[function(require,module,exports){
+},{"../core/PdObject":6,"../core/mixins":9,"../core/utils":11,"../global":12,"./portlets":17,"underscore":35,"waaoffsetnode":38,"waatablenode":40,"waawhitenoisenode":42}],16:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -4017,7 +4047,7 @@ WebStorage.prototype.get = function(url, done) {
   req.responseType = 'arraybuffer'
   req.send()
 }
-},{"../global":11,"getusermedia":22,"underscore":34,"waaclock":35}],16:[function(require,module,exports){
+},{"../global":12,"getusermedia":23,"underscore":35,"waaclock":36}],17:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -4264,7 +4294,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":5,"../core/portlets":9,"../core/utils":10,"../global":11,"underscore":34,"waawire":43}],17:[function(require,module,exports){
+},{"../core/PdObject":6,"../core/portlets":10,"../core/utils":11,"../global":12,"underscore":35,"waawire":44}],18:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4567,7 +4597,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -4592,7 +4622,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -4680,14 +4710,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -5277,7 +5307,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":20,"_process":19,"inherits":18}],22:[function(require,module,exports){
+},{"./support/isBuffer":21,"_process":20,"inherits":19}],23:[function(require,module,exports){
 // getUserMedia helper by @HenrikJoreteg used for navigator.getUserMedia shim
 var adapter = require('webrtc-adapter');
 
@@ -5360,7 +5390,7 @@ module.exports = function (constraints, cb) {
     });
 };
 
-},{"webrtc-adapter":23}],23:[function(require,module,exports){
+},{"webrtc-adapter":24}],24:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -5452,7 +5482,7 @@ module.exports = function (constraints, cb) {
   }
 })();
 
-},{"./chrome/chrome_shim":24,"./edge/edge_shim":27,"./firefox/firefox_shim":28,"./safari/safari_shim":30,"./utils":31}],24:[function(require,module,exports){
+},{"./chrome/chrome_shim":25,"./edge/edge_shim":28,"./firefox/firefox_shim":29,"./safari/safari_shim":31,"./utils":32}],25:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -5697,7 +5727,7 @@ module.exports = {
   reattachMediaStream: chromeShim.reattachMediaStream
 };
 
-},{"../utils.js":31,"./getusermedia":25}],25:[function(require,module,exports){
+},{"../utils.js":32,"./getusermedia":26}],26:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -5838,7 +5868,7 @@ module.exports = function() {
   }
 };
 
-},{"../utils.js":31}],26:[function(require,module,exports){
+},{"../utils.js":32}],27:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -6336,7 +6366,7 @@ SDPUtils.getDirection = function(mediaSection, sessionpart) {
 // Expose public methods.
 module.exports = SDPUtils;
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7292,7 +7322,7 @@ module.exports = {
   reattachMediaStream: edgeShim.reattachMediaStream
 };
 
-},{"../utils":31,"./edge_sdp":26}],28:[function(require,module,exports){
+},{"../utils":32,"./edge_sdp":27}],29:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7535,7 +7565,7 @@ module.exports = {
   reattachMediaStream: firefoxShim.reattachMediaStream
 };
 
-},{"../utils":31,"./getusermedia":29}],29:[function(require,module,exports){
+},{"../utils":32,"./getusermedia":30}],30:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7652,7 +7682,7 @@ module.exports = function() {
   }
 };
 
-},{"../utils":31}],30:[function(require,module,exports){
+},{"../utils":32}],31:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7688,7 +7718,7 @@ module.exports = {
   // reattachMediaStream: safariShim.reattachMediaStream
 };
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7833,7 +7863,7 @@ module.exports = {
   extractVersion: utils.extractVersion
 };
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2015 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -8176,7 +8206,7 @@ var parseControls = function(proto, args, layout) {
 
 }
 
-},{"underscore":33}],33:[function(require,module,exports){
+},{"underscore":34}],34:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -9404,7 +9434,7 @@ var parseControls = function(proto, args, layout) {
 
 }).call(this);
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -10954,13 +10984,13 @@ var parseControls = function(proto, args, layout) {
   }
 }.call(this));
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var WAAClock = require('./lib/WAAClock')
 
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":36}],36:[function(require,module,exports){
+},{"./lib/WAAClock":37}],37:[function(require,module,exports){
 (function (process){
 var isBrowser = (typeof window !== 'undefined')
 
@@ -11197,11 +11227,11 @@ WAAClock.prototype._relTime = function(absTime) {
   return absTime - this.context.currentTime
 }
 }).call(this,require('_process'))
-},{"_process":19}],37:[function(require,module,exports){
+},{"_process":20}],38:[function(require,module,exports){
 var WAAOffsetNode = require('./lib/WAAOffsetNode')
 module.exports = WAAOffsetNode
 if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
-},{"./lib/WAAOffsetNode":38}],38:[function(require,module,exports){
+},{"./lib/WAAOffsetNode":39}],39:[function(require,module,exports){
 var WAAOffsetNode = module.exports = function(context) {
   this.context = context
 
@@ -11238,11 +11268,11 @@ WAAOffsetNode.prototype.disconnect = function() {
 }
 
 WAAOffsetNode._ones = []
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 var WAATableNode = require('./lib/WAATableNode')
 module.exports = WAATableNode
 if (typeof window !== 'undefined') window.WAATableNode = WAATableNode
-},{"./lib/WAATableNode":40}],40:[function(require,module,exports){
+},{"./lib/WAATableNode":41}],41:[function(require,module,exports){
 var WAAOffset = require('waaoffsetnode')
 
 var WAATableNode = module.exports = function(context) {
@@ -11278,11 +11308,11 @@ WAATableNode.prototype._setTable = function(table) {
   this._output.curve = table
   this.position.gain.setValueAtTime(2 / (table.length - 1), 0)
 }
-},{"waaoffsetnode":37}],41:[function(require,module,exports){
+},{"waaoffsetnode":38}],42:[function(require,module,exports){
 var WAAWhiteNoiseNode = require('./lib/WAAWhiteNoiseNode')
 module.exports = WAAWhiteNoiseNode
 if (typeof window !== 'undefined') window.WAAWhiteNoiseNode = WAAWhiteNoiseNode
-},{"./lib/WAAWhiteNoiseNode":42}],42:[function(require,module,exports){
+},{"./lib/WAAWhiteNoiseNode":43}],43:[function(require,module,exports){
 var WAAWhiteNoiseNode = module.exports = function(context) {
   this.context = context
 
@@ -11317,11 +11347,11 @@ WAAWhiteNoiseNode.prototype._prepareOutput = function() {
   this._output.buffer = this._buffer
   this._output.loop = true
 }
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var WAAWire = require('./lib/WAAWire')
 module.exports = WAAWire
 if (typeof window !== 'undefined') window.WAAWire = WAAWire
-},{"./lib/WAAWire":44}],44:[function(require,module,exports){
+},{"./lib/WAAWire":45}],45:[function(require,module,exports){
 var WAAWire = module.exports = function(context) {
   this.context = context
   

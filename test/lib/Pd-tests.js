@@ -5,6 +5,7 @@ var _ = require('underscore')
   , helpers = require('../helpers')
   , errors = require('../../lib/core/errors')
   , Patch = require('../../lib/core/Patch')
+  , Abstraction = require('../../lib/core/Abstraction')
   , PdObject = require('../../lib/core/PdObject')
   , portlets = require('../../lib/core/portlets')
   , pdGlob = require('../../lib/global')
@@ -114,7 +115,7 @@ describe('Pd', function() {
         , outlet = obj.objects[1]
 
       // Check instanciated abstraction
-      assert.ok(obj instanceof Patch)
+      assert.ok(obj instanceof Abstraction)
       assert.ok(_.isNumber(obj.patchId))
       assert.equal(obj.outlets.length, 1)
       assert.equal(obj.inlets.length, 0)
@@ -136,7 +137,7 @@ describe('Pd', function() {
         , outlet = obj.objects[1]
 
       // Check instanciated abstraction
-      assert.ok(obj instanceof Patch)
+      assert.ok(obj instanceof Abstraction)
       assert.equal(obj.outlets.length, 1)
       assert.equal(obj.inlets.length, 0)
       assert.equal(obj.objects.length, 2)

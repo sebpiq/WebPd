@@ -4,6 +4,7 @@ var assert = require('assert')
   , Patch = require('../../../lib/core/Patch')
   , portlets = require('../../../lib/core/portlets')
   , PdObject = require('../../../lib/core/PdObject')
+  , Pd = require('../../../index')
   , pdGlob = require('../../../lib/global')
   , helpers = require('../../helpers')
 
@@ -262,6 +263,20 @@ describe('core.Patch', function() {
       assert.deepEqual(subsubpatch.resolveArgs(['$0']), [98765])
     })
 
+    it('should resolve $0 in an abstraction as its own patch id and not the parent', function() {
+      var parentPatch = new Patch(null, null)
+        , abs1Instance, abs2Instance
+      Pd.registerAbstraction('abs1', '#N canvas 49 82 450 300 10;\n#X obj 143 70 abs2;')
+      Pd.registerAbstraction('abs2', '')
+      abs1Instance = parentPatch.createObject('abs1')
+      abs2Instance = abs1Instance.objects[0]
+      parentPatch.patchId = 111
+      abs1Instance.patchId = 222
+      abs2Instance.patchId = 333
+      assert.deepEqual(abs1Instance.resolveArgs(['$0']), [222])
+      assert.deepEqual(abs2Instance.resolveArgs(['$0']), [333])
+    })
+
   })
 
   describe('.getPatchRoot', function() {
@@ -274,6 +289,21 @@ describe('core.Patch', function() {
       assert.equal(parentPatch.getPatchRoot(), parentPatch)
       assert.equal(subpatch.getPatchRoot(), parentPatch)
       assert.equal(subsubpatch.getPatchRoot(), parentPatch)
+    })
+
+    it('should return the abstraction if it is the root patch', function() {
+      var parentPatch = new Patch(null, null)
+        , abs1Instance, abs1InstanceSubpatch
+        , abs2Instance
+      Pd.registerAbstraction('abs1', '#N canvas 49 82 450 300 10;\n#X obj 143 70 abs2;')
+      Pd.registerAbstraction('abs2', '')
+      abs1Instance = parentPatch.createObject('abs1')
+      abs1InstanceSubpatch = new Patch(abs1Instance, 0)
+      abs2Instance = abs1Instance.objects[0]
+
+      assert.equal(abs1Instance.getPatchRoot(), abs1Instance)
+      assert.equal(abs1InstanceSubpatch.getPatchRoot(), abs1Instance)
+      assert.equal(abs2Instance.getPatchRoot(), abs2Instance)
     })
 
   })

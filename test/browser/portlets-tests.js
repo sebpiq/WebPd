@@ -2,6 +2,7 @@ var assert = require('assert')
   , _ = require('underscore')
   , async = require('async')
   , waatest = require('waatest')
+  , WAAOffset = require('waaoffsetnode')
   , helpers = require('../helpers')
 
 describe('portlets.outlet~', function() {

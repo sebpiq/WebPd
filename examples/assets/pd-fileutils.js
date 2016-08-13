@@ -168,7 +168,7 @@ exports.render = function(patch, opts) {
   opts = opts || {}
   _.defaults(opts, defaults)
 
-  d3.select('svg').remove()
+  //d3.select('svg').remove()
   var svgContainer = d3.select('body').append('div')
     , svg = svgContainer.append('svg')
       .attr('xmlns', 'http://www.w3.org/2000/svg')
