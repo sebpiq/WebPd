@@ -94,28 +94,32 @@ describe('core.Patch', function() {
       // So calling subpatch.start() is not good as it will result in subpatch's portlets
       // being started before the parent patch's objects are all started.
       var called = []
+      
       pdGlob.library['spy'] = PdObject.extend({
         outletDefs: [
           portlets.Outlet.extend({
             start: function() { called.push(this.obj.spyId + ':o(0).start') }
           })
         ],
-        init: function(args) {
-          this.spyId = args[0]
-        },
-        start: function() {
-          called.push(this.spyId + ':start')
-        }
+        init: function(args) { this.spyId = args[0] },
+        start: function() { called.push(this.spyId + ':start') }
       })
+
+      Pd.registerAbstraction('spy-abs', '#N canvas 49 82 450 300 10;\n#X obj 143 70 spy 2;')
 
       var patch = new Patch()
         , subpatch = patch.createObject('pd')
         , spy1 = subpatch.createObject('spy', [1])
-        , spy2 = patch.createObject('spy', [2])
+        , spyAbs = patch.createObject('spy-abs')
+        , spy2 = spyAbs.objects[0]
+        , spy3 = patch.createObject('spy', [3])
 
       patch.start()
-      assert.equal(called.length, 4)
-      assert.deepEqual(called, ['1:start', '2:start', '2:o(0).start', '1:o(0).start'])
+      assert.equal(called.length, 6)
+      assert.deepEqual(called, [
+        '1:start', '2:start', '3:start',
+        '1:o(0).start', '2:o(0).start', '3:o(0).start'
+      ])
     })
 
     it('should not call start twice on patch portlets', function() {

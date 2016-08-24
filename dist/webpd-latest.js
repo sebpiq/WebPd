@@ -709,7 +709,15 @@ var Abstraction = module.exports = function(patch, id, args) {
   Patch.apply(this, arguments)
 }
 
-_.extend(Abstraction.prototype, Patch.prototype)
+_.extend(Abstraction.prototype, Patch.prototype, {
+
+  // An abstraction is always root, even if instantiated within another patch,
+  // it needs its own id, and is completely encapsulated to its parent.
+  getPatchRoot: function() {
+    return this
+  }
+
+})
 },{"./Patch":5,"underscore":35}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
@@ -874,38 +882,45 @@ _.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitte
     this.args = args
   },
 
+  // When starting a patch, we need to take into account its nested structure,
+  // making sure that all objects even in subpatches are started first, and only then we start
+  // portlets.
   start: function() {
-    this._startStopGeneric('start', 'startPortlets', 'started')
+    this.startObjects()
+    this.startPortlets()
   },
 
   stop: function() {
-    this._startStopGeneric('stop', 'stopPortlets', 'stopped')
+    this.stopObjects()
+    this.stopPortlets()
   },
 
   destroy: function() {
     this.objects.forEach(function(obj) { obj.destroy() })
   },
 
-  _startStopGeneric: function(methObj, methPortlets, eventName) {
-    // When starting a patch, we need to take into account its nested structure,
-    // making sure that all objects even in subpatches are started first.
-    var _recursiveStartObjects = function(obj) {
-      if (obj instanceof Patch) {
-        patches.push(obj)
-        obj.objects.forEach(_recursiveStartObjects)
-      } else obj[methObj]()
-    }, patches = [this]
-    this.objects.forEach(_recursiveStartObjects)
-
-    // Only when all objects are started, we start all portlets including in subpatches.
-    patches.forEach(function(patch) {
-      patch.objects.forEach(function(obj) {
-        if (!(obj instanceof Patch)) obj[methPortlets]()
-      })
+  startObjects: function() {
+    this.objects.forEach(function(obj) { 
+      if (obj.startObjects) obj.startObjects()
+      else obj.start() 
     })
+  },
 
-    // Emit event for each patch
-    patches.forEach(function(patch) { patch.emit(eventName) })
+  stopObjects: function() {
+    this.objects.forEach(function(obj) { 
+      if (obj.stopObjects) obj.stopObjects()
+      else obj.stop()
+    })
+  },
+
+  startPortlets: function() {
+    this.objects.forEach(function(obj) { obj.startPortlets() })
+    this.emit('started')
+  },
+
+  stopPortlets: function() {
+    this.objects.forEach(function(obj) { obj.stopPortlets() })
+    this.emit('stopped')
   },
 
   // Adds an object to the patch.
@@ -971,11 +986,8 @@ _.extend(Patch.prototype, BaseNode.prototype, mixins.UniqueIdsMixin, EventEmitte
   // Return the root patch. Only different from `this` if the calling patch
   // is a subpatch. If it is an abstraction, the situation is different.
   getPatchRoot: function() {
-    var parentPatch = this
-      , Abstraction = require('./Abstraction')
-    while (parentPatch.patch && !(parentPatch instanceof Abstraction)) 
-      parentPatch = parentPatch.patch
-    return parentPatch
+    if (this.patch) return this.patch.getPatchRoot()
+    else return this
   }
 
 })
@@ -992,7 +1004,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":12,"./Abstraction":3,"./BaseNode":4,"./errors":7,"./mixins":9,"./utils":11,"events":18,"underscore":35}],6:[function(require,module,exports){
+},{"../global":12,"./BaseNode":4,"./errors":7,"./mixins":9,"./utils":11,"events":18,"underscore":35}],6:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
