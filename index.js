@@ -34,6 +34,10 @@ var _ = require('underscore')
 // Various initializations
 require('./lib/index').declareObjects(pdGlob.library)
 
+function handleMidiMessage(midiMessage) {
+  pdGlob.emitter.emit('midiMessage', midiMessage)
+}
+
 var Pd = module.exports = {
 
   // Start dsp
@@ -139,6 +143,27 @@ var Pd = module.exports = {
   parsePatch: function(patchData) {
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     return patchData
+  },
+
+  getMidiInput: function() {
+    return pdGlob.midiInput
+  },
+
+  // Associate a MIDIInput object per the Web MIDI spec
+  // See <https://www.w3.org/TR/webmidi/#midiinput-interface>
+  setMidiInput: function(midiInput) {
+    if (midiInput === pdGlob.midiInput) {
+      return
+    }
+    if (pdGlob.midiInput) {
+      pdGlob.midiInput.removeEventListener('midimessage', handleMidiMessage)
+    }
+
+    pdGlob.midiInput = midiInput
+
+    if (midiInput) {
+      midiInput.addEventListener('midimessage', handleMidiMessage)
+    }
   },
 
   _createPatch: function() {
