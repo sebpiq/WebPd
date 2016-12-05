@@ -123,4 +123,168 @@ describe('midi', function() {
       mockMidiInput.sendEvent({ data: [0x90, 57, 77] })
     })
   })
+
+  describe('[poly]', function() {
+    it('should distribute simultaneous messages among different voices', function() {
+      var poly = patch.createObject('poly', [3, 1])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(1).message([64])
+      poly.i(0).message([60])
+
+      assert.equal(mailbox1.received[0][0], 1)
+      assert.equal(mailbox2.received[0][0], 60)
+      assert.equal(mailbox3.received[0][0], 64)
+
+      poly.i(1).message([64])
+      poly.i(0).message([62])
+
+      assert.equal(mailbox1.received[1][0], 2)
+      assert.equal(mailbox2.received[1][0], 62)
+      assert.equal(mailbox3.received[1][0], 64)
+
+      poly.i(1).message([64])
+      poly.i(0).message([64])
+
+      assert.equal(mailbox1.received[2][0], 3)
+      assert.equal(mailbox2.received[2][0], 64)
+      assert.equal(mailbox3.received[2][0], 64)
+    })
+
+    it('should send off messages when velocity is zero', function() {
+      var poly = patch.createObject('poly', [3, 1])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(1).message([64])
+      poly.i(0).message([60])
+      poly.i(1).message([64])
+      poly.i(0).message([62])
+      poly.i(1).message([0])
+      poly.i(0).message([62])
+
+      assert.equal(mailbox1.received[2][0], 2)
+      assert.equal(mailbox2.received[2][0], 62)
+      assert.equal(mailbox3.received[2][0], 0)
+
+      poly.i(1).message([64])
+      poly.i(0).message([64])
+      poly.i(1).message([0])
+      poly.i(0).message([64])
+
+      assert.equal(mailbox1.received[4][0], 3)
+      assert.equal(mailbox2.received[4][0], 64)
+      assert.equal(mailbox3.received[4][0], 0)
+    })
+
+    it('should not send off messages if the note is not playing', function() {
+      var poly = patch.createObject('poly', [3, 1])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(1).message([64])
+      poly.i(0).message([60])
+      poly.i(1).message([64])
+      poly.i(0).message([62])
+      poly.i(1).message([0])
+      poly.i(0).message([62])
+      poly.i(1).message([0])
+      poly.i(0).message([62])
+
+      assert.equal(mailbox1.received.length, 3)
+      assert.equal(mailbox2.received.length, 3)
+      assert.equal(mailbox3.received.length, 3)
+    })
+
+    it('should rotate among available voices', function() {
+      var poly = patch.createObject('poly', [3, 1])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(1).message([64])
+      poly.i(0).message([60])
+      poly.i(1).message([64])
+      poly.i(0).message([62])
+      poly.i(1).message([0])
+      poly.i(0).message([62])
+      poly.i(1).message([60])
+      poly.i(0).message([66])
+      poly.i(1).message([58])
+      poly.i(0).message([62])
+
+      assert.equal(mailbox1.received[3][0], 3)
+      assert.equal(mailbox2.received[3][0], 66)
+      assert.equal(mailbox3.received[3][0], 60)
+      assert.equal(mailbox1.received[4][0], 2)
+      assert.equal(mailbox2.received[4][0], 62)
+      assert.equal(mailbox3.received[4][0], 58)
+    })
+
+    it('should not steal voices if voice stealing is disabled', function() {
+      var poly = patch.createObject('poly', [3, 0])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(1).message([64])
+      poly.i(0).message([60])
+      poly.i(1).message([64])
+      poly.i(0).message([62])
+      poly.i(1).message([60])
+      poly.i(0).message([64])
+      // Voices are now saturated
+      poly.i(1).message([64])
+      poly.i(0).message([58])
+      poly.i(1).message([64])
+      poly.i(0).message([42])
+
+      assert.equal(mailbox1.received[2][0], 3)
+      assert.equal(mailbox2.received[2][0], 64)
+      assert.equal(mailbox3.received[2][0], 60)
+      assert.equal(mailbox1.received.length, 3)
+      assert.equal(mailbox2.received.length, 3)
+      assert.equal(mailbox3.received.length, 3)
+    })
+
+    it('should disable voice stealing by default', function() {
+      var poly = patch.createObject('poly', [1])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(1).message([64])
+      poly.i(0).message([60])
+      poly.i(1).message([64])
+      poly.i(0).message([62])
+
+      assert.equal(mailbox1.received.length, 1)
+      assert.equal(mailbox2.received.length, 1)
+      assert.equal(mailbox3.received.length, 1)
+    })
+
+    // TODO: More tests
+  })
 })
