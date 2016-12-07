@@ -146,20 +146,20 @@ var Pd = module.exports = {
   },
 
   getMidiInput: function() {
-    return pdGlob.midiInput
+    return this._midiInput
   },
 
   // Associate a MIDIInput object per the Web MIDI spec
   // See <https://www.w3.org/TR/webmidi/#midiinput-interface>
   setMidiInput: function(midiInput) {
-    if (midiInput === pdGlob.midiInput) {
+    if (midiInput === this._midiInput) {
       return
     }
-    if (pdGlob.midiInput) {
-      pdGlob.midiInput.removeEventListener('midimessage', handleMidiMessage)
+    if (this._midiInput) {
+      this._midiInput.removeEventListener('midimessage', handleMidiMessage)
     }
 
-    pdGlob.midiInput = midiInput
+    this._midiInput = midiInput
 
     if (midiInput) {
       midiInput.addEventListener('midimessage', handleMidiMessage)
@@ -225,6 +225,8 @@ var Pd = module.exports = {
     // Handling errors
     if (errorList.length) throw new errors.PatchLoadError(errorList)
   },
+
+  _midiInput: null,
 
   core: {
     PdObject: PdObject,
