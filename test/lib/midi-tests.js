@@ -411,5 +411,24 @@ describe('midi', function() {
       assert.equal(mailbox2.received[1][0], 64)
       assert.equal(mailbox3.received[1][0], 77)
     })
+
+    it('should preserve a time tag from the input args', function() {
+      var poly = patch.createObject('poly', [1, 1])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , timeTags = [Math.random(), Math.random()]
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+
+      poly.i(1).message(utils.timeTag([64], timeTags[0]))
+      poly.i(0).message(utils.timeTag([60], timeTags[0]))
+      poly.i(1).message(utils.timeTag([64], timeTags[1]))
+      poly.i(0).message(utils.timeTag([62], timeTags[1]))
+
+      assert.equal(mailbox1.rawReceived[0].timeTag, timeTags[0])
+      assert.equal(mailbox2.rawReceived[0].timeTag, timeTags[0])
+      assert.equal(mailbox2.rawReceived[1].timeTag, timeTags[1])
+      assert.equal(mailbox2.rawReceived[1].timeTag, timeTags[1])
+    })
   })
 })
