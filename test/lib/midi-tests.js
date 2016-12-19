@@ -430,5 +430,101 @@ describe('midi', function() {
       assert.equal(mailbox2.rawReceived[1].timeTag, timeTags[1])
       assert.equal(mailbox2.rawReceived[1].timeTag, timeTags[1])
     })
+
+    it('should take a second array argument as velocity', function() {
+      var poly = patch.createObject('poly', [3, 1])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(0).message([60, 64])
+
+      assert.equal(mailbox1.received[0][0], 1)
+      assert.equal(mailbox2.received[0][0], 60)
+      assert.equal(mailbox3.received[0][0], 64)
+
+      poly.i(0).message([62, 64])
+
+      assert.equal(mailbox1.received[1][0], 2)
+      assert.equal(mailbox2.received[1][0], 62)
+      assert.equal(mailbox3.received[1][0], 64)
+
+      poly.i(0).message([64, 64])
+
+      assert.equal(mailbox1.received[2][0], 3)
+      assert.equal(mailbox2.received[2][0], 64)
+      assert.equal(mailbox3.received[2][0], 64)
+    })
+
+    it('should cancel all notes when it receives a \'stop\' message', function() {
+      var poly = patch.createObject('poly', [3, 0])
+        , mailbox1 = patch.createObject('testingmailbox')
+        , mailbox2 = patch.createObject('testingmailbox')
+        , mailbox3 = patch.createObject('testingmailbox')
+      poly.o(0).connect(mailbox1.i(0))
+      poly.o(1).connect(mailbox2.i(0))
+      poly.o(2).connect(mailbox3.i(0))
+
+      poly.i(1).message([64])
+      poly.i(0).message([60])
+      poly.i(1).message([64])
+      poly.i(0).message([62])
+      poly.i(1).message([60])
+      poly.i(0).message([64])
+      poly.i(0).message(['stop'])
+      poly.i(0).message([61, 55])
+
+      assert.equal(mailbox1.received[2][0], 3)
+      assert.equal(mailbox2.received[2][0], 64)
+      assert.equal(mailbox3.received[2][0], 60)
+      assert.equal(mailbox2.received[6][0], 61)
+      assert.equal(mailbox3.received[6][0], 55)
+
+      var foundNotes = []
+        , foundVoices = []
+      for (var i = 3; i < 6; i++) {
+        foundVoices.push(mailbox1.received[i][0])
+        foundNotes.push(mailbox2.received[i][0])
+        assert.equal(mailbox3.received[i][0], 0)
+      }
+      assert.deepEqual(foundVoices.sort(), [1, 2, 3])
+      assert.deepEqual(foundNotes.sort(), [60, 62, 64])
+
+      assert.equal(mailbox1.received.length, 7)
+      assert.equal(mailbox2.received.length, 7)
+      assert.equal(mailbox3.received.length, 7)
+    })
+  })
+
+  it('should reset its memory when it receives a \'clear\' message', function() {
+    var poly = patch.createObject('poly', [3, 0])
+      , mailbox1 = patch.createObject('testingmailbox')
+      , mailbox2 = patch.createObject('testingmailbox')
+      , mailbox3 = patch.createObject('testingmailbox')
+    poly.o(0).connect(mailbox1.i(0))
+    poly.o(1).connect(mailbox2.i(0))
+    poly.o(2).connect(mailbox3.i(0))
+
+    poly.i(1).message([64])
+    poly.i(0).message([60])
+    poly.i(1).message([64])
+    poly.i(0).message([62])
+    poly.i(1).message([60])
+    poly.i(0).message([64])
+    poly.i(0).message(['clear'])
+    poly.i(0).message([61, 55])
+
+    assert.equal(mailbox1.received[2][0], 3)
+    assert.equal(mailbox2.received[2][0], 64)
+    assert.equal(mailbox3.received[2][0], 60)
+    assert.equal(mailbox2.received[3][0], 61)
+    assert.equal(mailbox3.received[3][0], 55)
+
+    assert.equal(mailbox1.received.length, 4)
+    assert.equal(mailbox2.received.length, 4)
+    assert.equal(mailbox3.received.length, 4)
   })
 })
