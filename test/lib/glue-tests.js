@@ -1880,6 +1880,5 @@ describe('glue', function() {
       clip.i(0).message([9])
       assert.deepEqual(mailbox.received[4][0], 8)
     })
-
   })
 })

@@ -116,3 +116,32 @@ TestClock.prototype.tick = function() {
     } else if (e.timeTag === self.time) e.func(e)
   })
 }
+
+var MockMidiInput = exports.MockMidiInput = function() {
+  this.eventListeners = []
+}
+
+MockMidiInput.prototype.addEventListener = function(name, eventHandler) {
+  if (name === 'midimessage') {
+    this.eventListeners.push(eventHandler)
+  }
+}
+
+MockMidiInput.prototype.removeEventListener = function(name, eventHandler) {
+  if (name === 'midimessage') {
+    var index = this.eventListeners.indexOf(eventHandler)
+    if (index > -1) {
+      this.eventListeners.splice(index, 1)
+    }
+  }
+}
+
+MockMidiInput.prototype.sendEvent = function(midiMessage) {
+  this.eventListeners.forEach(function(listener) {
+    if (listener && typeof listener.handleEvent === 'function') {
+      listener.handleEvent(midiMessage)
+    } else if (typeof listener === 'function') {
+      listener.apply(undefined, [midiMessage])
+    }
+  })
+}

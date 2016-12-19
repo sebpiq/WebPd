@@ -50,12 +50,14 @@
 - mtof
 - nbx
 - noise~
+- notein
 - osc~
 - outlet
 - outlet~
 - pack
 - pd
 - phasor~
+- poly
 - pow
 - powtodb
 - print
