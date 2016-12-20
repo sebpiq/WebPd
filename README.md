@@ -204,6 +204,10 @@ Loads a Pd patch, and returns a `Patch` object. `patchStr` is the whole contents
 
 Creates and returns an empty `Patch` object.
 
+#### Pd.destroyPatch(patch)
+
+Stops and destroys `patch`.
+
 #### Pd.receive(name, callback)
 
 Receives messages from named senders within a patch (e.g. `[send someName]`). Example :
