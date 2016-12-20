@@ -307,47 +307,4 @@ describe('Pd', function() {
 
   })
 
-  describe('.getMidiInput', function () {
-
-    it('should return the current midi input', function() {
-      var mockMidiInput = new helpers.MockMidiInput()
-      Pd.setMidiInput(mockMidiInput)
-      assert.equal(Pd.getMidiInput(), mockMidiInput)
-      Pd.setMidiInput(null)
-      assert.equal(Pd.getMidiInput(), null)
-    })
-  })
-
-  describe('.setMidiInput', function () {
-
-    it('should register for the midimessage event listener', function() {
-      var mockMidiInput = new helpers.MockMidiInput()
-      assert.equal(mockMidiInput.eventListeners.length, 0)
-      Pd.setMidiInput(mockMidiInput)
-      assert.equal(mockMidiInput.eventListeners.length, 1)
-      Pd.setMidiInput(null)
-    })
-
-    it('should unregister the midimessage event listener when the value changes', function() {
-      var mockInput1 = new helpers.MockMidiInput()
-      Pd.setMidiInput(mockInput1)
-      var mockInput2 = new helpers.MockMidiInput()
-      Pd.setMidiInput(mockInput2)
-      assert.equal(mockInput1.eventListeners.length, 0)
-      Pd.setMidiInput(null)
-      assert.equal(mockInput2.eventListeners.length, 0)
-    })
-
-    it('should send midimessage events to the global event emitter', function(done) {
-      var message = { data: [ 0x00, 0x00, 0x00 ] }
-      Pd._glob.emitter.once('midiMessage', function(midiMessage) {
-        assert.equal(midiMessage, message)
-        done()
-      })
-      var mockMidiInput = new helpers.MockMidiInput()
-      Pd.setMidiInput(mockMidiInput)
-      mockMidiInput.sendEvent(message)
-    })
-  })
-
 })

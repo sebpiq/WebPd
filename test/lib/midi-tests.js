@@ -15,24 +15,20 @@ describe('midi', function() {
 
   var patch
 
-  var dummyAudio = {
-    start: function() {},
-    stop: function() {},
-    decode: function(audioData, done) { done(null, audioData) },
-    sampleRate: 44100
-  }
-
-  var dummyStorage = {
-    get: function(uri, done) {
-      if (this.data !== null) done(null, this.data)
-      else done(new Error('bla'), null)
+  dummyMidi = {
+    onMessage: function(callback) {
+      this._callback = callback
     },
-    data: [new Float32Array([1, 2, 3, 4])]
+    sendEvent: function(midiMessage) {
+      this._callback(midiMessage)
+    }
   }
 
   beforeEach(function() {
     patch = Pd.createPatch()
-    Pd.start({ audio: dummyAudio, storage: dummyStorage })
+    Pd.start({
+      midi: dummyMidi
+    })
     helpers.beforeEach()
   })
 
@@ -113,14 +109,12 @@ describe('midi', function() {
     it('should send midi messages from Pd.setMidiInput', function(done) {
       var notein = patch.createObject('notein', [])
         , mailbox = patch.createObject('testingmailbox')
-        , mockMidiInput = new helpers.MockMidiInput()
       notein.o(0).connect(mailbox.i(0))
       mailbox.events.once('message', function() {
         assert.equal(mailbox.received[0][0], 57)
         done()
       })
-      Pd.setMidiInput(mockMidiInput)
-      mockMidiInput.sendEvent({ data: [0x90, 57, 77] })
+      dummyMidi.sendEvent({ data: [0x90, 57, 77] })
     })
   })
 

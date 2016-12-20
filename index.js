@@ -34,9 +34,6 @@ var _ = require('underscore')
 // Various initializations
 require('./lib/index').declareObjects(pdGlob.library)
 
-function handleMidiMessage(midiMessage) {
-  pdGlob.emitter.emit('midiMessage', midiMessage)
-}
 
 var Pd = module.exports = {
 
@@ -54,11 +51,13 @@ var Pd = module.exports = {
           audioContext: pdGlob.audio.context,
           waaClock: opts.waaClock
         })
+        pdGlob.midi = opts.midi || new waa.Midi()
 
       // TODO : handle other environments better than like this
       } else {
         pdGlob.audio = opts.audio || interfaces.Audio
         pdGlob.clock = opts.clock || interfaces.Clock
+        pdGlob.midi = opts.midi || interfaces.Midi
       }
 
       if (opts.storage) pdGlob.storage = opts.storage
@@ -66,7 +65,9 @@ var Pd = module.exports = {
         pdGlob.storage = new waa.Storage()
       else pdGlob.storage = interfaces.Storage
 
-
+      pdGlob.midi.onMessage(function(midiMessage) {
+        pdGlob.emitter.emit('midiMessage', midiMessage)
+      })
       pdGlob.audio.start()
       _.values(pdGlob.patches).forEach(function(patch) { patch.start() })
       pdGlob.isStarted = true
@@ -87,6 +88,9 @@ var Pd = module.exports = {
 
   // Returns the audio engine
   getAudio: function() { return pdGlob.audio },
+
+  // Returns the midi engine
+  getMidi: function() { return pdGlob.midi },
 
   // Send a message to a named receiver inside the graph
   send: function(name, args) {
@@ -143,27 +147,6 @@ var Pd = module.exports = {
   parsePatch: function(patchData) {
     if (_.isString(patchData)) patchData = pdfu.parse(patchData)
     return patchData
-  },
-
-  getMidiInput: function() {
-    return this._midiInput
-  },
-
-  // Associate a MIDIInput object per the Web MIDI spec
-  // See <https://www.w3.org/TR/webmidi/#midiinput-interface>
-  setMidiInput: function(midiInput) {
-    if (midiInput === this._midiInput) {
-      return
-    }
-    if (this._midiInput) {
-      this._midiInput.removeEventListener('midimessage', handleMidiMessage)
-    }
-
-    this._midiInput = midiInput
-
-    if (midiInput) {
-      midiInput.addEventListener('midimessage', handleMidiMessage)
-    }
   },
 
   _createPatch: function() {
@@ -225,8 +208,6 @@ var Pd = module.exports = {
     // Handling errors
     if (errorList.length) throw new errors.PatchLoadError(errorList)
   },
-
-  _midiInput: null,
 
   core: {
     PdObject: PdObject,
