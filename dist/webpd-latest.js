@@ -183,7 +183,7 @@ BiquadFilterNode.type and OscillatorNode.type.
 
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -400,7 +400,7 @@ if (typeof window !== 'undefined') window.Pd = Pd
 
 },{"./lib/core/Abstraction":3,"./lib/core/Patch":5,"./lib/core/PdObject":6,"./lib/core/errors":7,"./lib/core/interfaces":8,"./lib/core/mixins":9,"./lib/global":12,"./lib/index":14,"./lib/waa/interfaces":16,"./lib/waa/portlets":17,"pd-fileutils.parser":33,"underscore":35}],2:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -683,7 +683,7 @@ exports.declareObjects = function(library) {
 }
 },{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":17,"events":18,"underscore":35}],3:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -720,7 +720,7 @@ _.extend(Abstraction.prototype, Patch.prototype, {
 })
 },{"./Patch":5,"underscore":35}],4:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -832,7 +832,7 @@ _.extend(BaseNode.prototype, {
 
 },{"./errors":7,"./portlets":10,"./utils":11,"underscore":35,"util":22}],5:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1006,7 +1006,7 @@ var isOutletObject = function(obj) {
 
 },{"../global":12,"./BaseNode":4,"./errors":7,"./mixins":9,"./utils":11,"events":18,"underscore":35}],6:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1044,7 +1044,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
 
 },{"../global":12,"./BaseNode":4,"./Patch":5,"./portlets":10,"./utils":11,"underscore":35,"util":22}],7:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1096,7 +1096,7 @@ InvalidPortletError.prototype = Object.create(Error.prototype)
 InvalidPortletError.prototype.constructor = InvalidPortletError
 },{"underscore":35}],8:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1154,7 +1154,7 @@ exports.Storage = {
 }
 },{}],9:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1337,7 +1337,7 @@ _.extend(EventReceiver.prototype, {
 EventReceiver.prototype.on = EventReceiver.prototype.addListener
 },{"../global":12,"events":18,"underscore":35}],10:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1431,7 +1431,7 @@ var Outlet = exports.Outlet = Portlet.extend({})
 
 },{"./utils":11,"underscore":35}],11:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1553,7 +1553,7 @@ exports.getTimeTag = function(args) {
 }
 },{"../global":12,"underscore":35}],12:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -1679,7 +1679,7 @@ exports.namedObjects = {
 
 },{"events":18,"underscore":35}],13:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -2853,7 +2853,7 @@ exports.declareObjects = function(library) {
 
 },{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":17,"underscore":35}],14:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -2881,7 +2881,7 @@ exports.declareObjects = function(library) {
 }
 },{"./controls":2,"./glue":13,"./waa/dsp":15,"./waa/portlets":17,"underscore":35}],15:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -3915,7 +3915,7 @@ exports.declareObjects = function(library) {
 
 },{"../core/PdObject":6,"../core/mixins":9,"../core/utils":11,"../global":12,"./portlets":17,"underscore":35,"waaoffsetnode":38,"waatablenode":40,"waawhitenoisenode":42}],16:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
@@ -4061,7 +4061,7 @@ WebStorage.prototype.get = function(url, done) {
 }
 },{"../global":12,"getusermedia":23,"underscore":35,"waaclock":36}],17:[function(require,module,exports){
 /*
- * Copyright (c) 2011-2015 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
  *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
  *
