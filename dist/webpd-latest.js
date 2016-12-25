@@ -218,6 +218,7 @@ var _ = require('underscore')
 // Various initializations
 require('./lib/index').declareObjects(pdGlob.library)
 
+
 var Pd = module.exports = {
 
   // Start dsp
@@ -234,11 +235,13 @@ var Pd = module.exports = {
           audioContext: pdGlob.audio.context,
           waaClock: opts.waaClock
         })
+        pdGlob.midi = opts.midi || new waa.Midi()
 
       // TODO : handle other environments better than like this
       } else {
         pdGlob.audio = opts.audio || interfaces.Audio
         pdGlob.clock = opts.clock || interfaces.Clock
+        pdGlob.midi = opts.midi || interfaces.Midi
       }
 
       if (opts.storage) pdGlob.storage = opts.storage
@@ -246,7 +249,9 @@ var Pd = module.exports = {
         pdGlob.storage = new waa.Storage()
       else pdGlob.storage = interfaces.Storage
 
-
+      pdGlob.midi.onMessage(function(midiMessage) {
+        pdGlob.emitter.emit('midiMessage', midiMessage)
+      })
       pdGlob.audio.start()
       _.values(pdGlob.patches).forEach(function(patch) { patch.start() })
       pdGlob.isStarted = true
@@ -267,6 +272,9 @@ var Pd = module.exports = {
 
   // Returns the audio engine
   getAudio: function() { return pdGlob.audio },
+
+  // Returns the midi engine
+  getMidi: function() { return pdGlob.midi },
 
   // Send a message to a named receiver inside the graph
   send: function(name, args) {
@@ -398,7 +406,7 @@ var Pd = module.exports = {
 
 if (typeof window !== 'undefined') window.Pd = Pd
 
-},{"./lib/core/Abstraction":3,"./lib/core/Patch":5,"./lib/core/PdObject":6,"./lib/core/errors":7,"./lib/core/interfaces":8,"./lib/core/mixins":9,"./lib/global":12,"./lib/index":14,"./lib/waa/interfaces":16,"./lib/waa/portlets":17,"pd-fileutils.parser":33,"underscore":35}],2:[function(require,module,exports){
+},{"./lib/core/Abstraction":3,"./lib/core/Patch":5,"./lib/core/PdObject":6,"./lib/core/errors":7,"./lib/core/interfaces":8,"./lib/core/mixins":9,"./lib/global":12,"./lib/index":14,"./lib/waa/interfaces":17,"./lib/waa/portlets":18,"pd-fileutils.parser":34,"underscore":36}],2:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -681,7 +689,7 @@ exports.declareObjects = function(library) {
 
   })
 }
-},{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":17,"events":18,"underscore":35}],3:[function(require,module,exports){
+},{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":18,"events":19,"underscore":36}],3:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -718,7 +726,7 @@ _.extend(Abstraction.prototype, Patch.prototype, {
   }
 
 })
-},{"./Patch":5,"underscore":35}],4:[function(require,module,exports){
+},{"./Patch":5,"underscore":36}],4:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -830,7 +838,7 @@ _.extend(BaseNode.prototype, {
 })
 
 
-},{"./errors":7,"./portlets":10,"./utils":11,"underscore":35,"util":22}],5:[function(require,module,exports){
+},{"./errors":7,"./portlets":10,"./utils":11,"underscore":36,"util":23}],5:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1004,7 +1012,7 @@ var isOutletObject = function(obj) {
   })
 }
 
-},{"../global":12,"./BaseNode":4,"./errors":7,"./mixins":9,"./utils":11,"events":18,"underscore":35}],6:[function(require,module,exports){
+},{"../global":12,"./BaseNode":4,"./errors":7,"./mixins":9,"./utils":11,"events":19,"underscore":36}],6:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1042,7 +1050,7 @@ _.extend(PdObject.prototype, BaseNode.prototype, {
   doResolveArgs: true
 })
 
-},{"../global":12,"./BaseNode":4,"./Patch":5,"./portlets":10,"./utils":11,"underscore":35,"util":22}],7:[function(require,module,exports){
+},{"../global":12,"./BaseNode":4,"./Patch":5,"./portlets":10,"./utils":11,"underscore":36,"util":23}],7:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1094,7 +1102,7 @@ var InvalidPortletError = exports.InvalidPortletError = function InvalidPortletE
 }
 InvalidPortletError.prototype = Object.create(Error.prototype)
 InvalidPortletError.prototype.constructor = InvalidPortletError
-},{"underscore":35}],8:[function(require,module,exports){
+},{"underscore":36}],8:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1144,6 +1152,13 @@ exports.Audio = {
 
   // Decode array buffer to a list of channels of Float32Array
   decode: function(arrayBuffer, done) { done(null, arrayBuffer) }
+}
+
+// Midi engine
+exports.Midi = {
+
+  // Tells the midi engine to call `callback` to handle incoming midi messages
+  onMessage: function(callback) {}
 }
 
 // File storage
@@ -1335,7 +1350,7 @@ _.extend(EventReceiver.prototype, {
 })
 
 EventReceiver.prototype.on = EventReceiver.prototype.addListener
-},{"../global":12,"events":18,"underscore":35}],10:[function(require,module,exports){
+},{"../global":12,"events":19,"underscore":36}],10:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1429,7 +1444,7 @@ var Inlet = exports.Inlet = Portlet.extend({})
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
 
-},{"./utils":11,"underscore":35}],11:[function(require,module,exports){
+},{"./utils":11,"underscore":36}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1551,7 +1566,7 @@ exports.timeTag = function(args, timeTag) {
 exports.getTimeTag = function(args) {
   return (args && args.timeTag) || (pdGlob.clock && pdGlob.clock.time) || 0
 }
-},{"../global":12,"underscore":35}],12:[function(require,module,exports){
+},{"../global":12,"underscore":36}],12:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -1597,7 +1612,7 @@ var emitter = exports.emitter = new EventEmitter()
 emitter.emit = function(eventName) {
   var valid = false
   if (
-    _.contains([], eventName)
+    _.contains(['midiMessage'], eventName)
     || eventName.indexOf('msg:') === 0
     || eventName.indexOf('namedObjects:registered') === 0
     || eventName.indexOf('namedObjects:unregistered') === 0
@@ -1617,13 +1632,16 @@ exports.patches = {}
 exports.audio = null
 
 
+// Midi engine. Must implement the `interfaces.Midi`
+exports.midi = null
+
+
 // The clock used to schedule stuff. Must implement the `interfaces.Clock`
 exports.clock = null
 
 
 // File storage
 exports.storage = null
-
 
 // Store containing named objects (e.g. arrays, [send] / [receive], ...).
 // Objects are stored by pair (<type>, <obj.name>)
@@ -1677,7 +1695,7 @@ exports.namedObjects = {
   _store: {}
 }
 
-},{"events":18,"underscore":35}],13:[function(require,module,exports){
+},{"events":19,"underscore":36}],13:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2671,8 +2689,8 @@ exports.declareObjects = function(library) {
     _startDelay: function(timeTag) {
       var self = this
       if (this._delayHandle === null) {
-        this._delayHandle = pdGlob.clock.schedule(function() {
-          self.outlets[0].message(['bang'])
+        this._delayHandle = pdGlob.clock.schedule(function(event) {
+          self.outlets[0].message(utils.timeTag(['bang'], event.timeTag))
         }, timeTag + this.delay)
       }
     },
@@ -2851,7 +2869,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":17,"underscore":35}],14:[function(require,module,exports){
+},{"./core/Patch":5,"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":18,"underscore":36}],14:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -2878,8 +2896,214 @@ exports.declareObjects = function(library) {
   require('./controls').declareObjects(library)
   require('./waa/dsp').declareObjects(library)
   require('./waa/portlets').declareObjects(library)
+  require('./midi').declareObjects(library)
 }
-},{"./controls":2,"./glue":13,"./waa/dsp":15,"./waa/portlets":17,"underscore":35}],15:[function(require,module,exports){
+},{"./controls":2,"./glue":13,"./midi":15,"./waa/dsp":16,"./waa/portlets":18,"underscore":36}],15:[function(require,module,exports){
+/*
+ * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>, Jacob Stern <jacob.stern@outlook.com>
+ *
+ *  This file is part of WebPd. See https://github.com/sebpiq/WebPd for documentation
+ *
+ *  WebPd is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  WebPd is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with WebPd.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+var _ = require('underscore')
+  , utils = require('./core/utils')
+  , mixins = require('./core/mixins')
+  , PdObject = require('./core/PdObject')
+  , pdGlob = require('./global')
+  , portlets = require('./waa/portlets')
+
+exports.declareObjects = function(library) {
+
+  library['notein'] = PdObject.extend({
+
+    type: 'notein',
+
+    inletDefs: [],
+
+    outletDefs: [portlets.Outlet, portlets.Outlet, portlets.Outlet],
+
+    init: function(args) {
+      this._eventReceiver = new mixins.EventReceiver()
+      this._eventReceiver.on(pdGlob.emitter, 'midiMessage', this._onMidiMessage.bind(this))
+      this._channel = args[0]
+    },
+
+    _onMidiMessage: function(midiMessage) {
+      var data = midiMessage.data
+        , event = data[0] >> 4
+      // Respond to note on and note off events
+      if (event === 8 || event === 9) {
+        var channel = (data[0] & 0x0F) + 1
+          , note = data[1]
+          , velocity = data[2]
+        if (typeof this._channel === 'number') {
+          if (channel === this._channel) {
+            this.o(1).message([velocity])
+            this.o(0).message([note])
+          }
+        } else {
+          this.o(2).message([channel])
+          this.o(1).message([velocity])
+          this.o(0).message([note])
+        }
+      }
+    },
+
+    destroy: function() {
+      this._eventReceiver.destroy()
+    }
+  })
+
+  library['poly'] = PdObject.extend({
+
+    type: 'poly',
+
+    inletDefs: [
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (val === 'stop') {
+            this.obj._stop()
+            return
+          }
+          if (val === 'clear') {
+            this.obj._clear()
+            return
+          }
+          if (!_.isNumber(val))
+            return console.error('invalid [poly] value: ' + val)
+          var velocityArg = args[1]
+          if (_.isNumber(velocityArg))
+            this.obj._vel = velocityArg
+          this.obj._onFloat(args)
+        }
+      }),
+
+      portlets.Inlet.extend({
+        message: function(args) {
+          var val = args[0]
+          if (!_.isNumber(val))
+            return console.error('invalid [poly] value: ' + val)
+          this.obj._vel = val
+        }
+      })
+    ],
+
+    outletDefs: [portlets.Outlet, portlets.Outlet, portlets.Outlet],
+
+    init: function(args) {
+      this._n = args[0] >= 1 ? args[0] : 1
+      this._steal = args[1] === 1
+      this._vel = 0
+      this._resetMemory()
+    },
+
+    _onFloat: function(args) {
+      // Translated from https://github.com/pure-data/pure-data/blob/master/src/x_midi.c
+      var val = args[0]
+        , firstOn = null
+        , firstOff = null
+        , onIndex = 0
+        , offIndex = 0
+      if (this._vel > 0) {
+        var serialOn = Number.MAX_VALUE
+          , serialOff = Number.MAX_VALUE
+        this._vec.forEach(function(v, i) {
+          if (v.used && v.serial < serialOn) {
+            firstOn = v;
+            serialOn = v.serial;
+            onIndex = i;
+          } else if (!v.used && v.serial < serialOff) {
+            firstOff = v;
+            serialOff = v.serial;
+            offIndex = i;
+          }
+        })
+        if (firstOff) {
+          this._message(2, this._vel, args)
+          this._message(1, val, args)
+          this._message(0, offIndex + 1, args)
+          firstOff.pitch = val
+          firstOff.used = true
+          firstOff.serial = this._serial++
+        } else if (firstOn && this._steal) {
+          // If no available voice, steal one
+          this._message(2, 0, args)
+          this._message(1, firstOn.pitch, args)
+          this._message(0, onIndex + 1, args)
+          this._message(2, this._vel, args)
+          this._message(1, val, args)
+          this._message(0, onIndex + 1, args)
+          firstOn.pitch = val
+          firstOn.serial = this._serial++
+        }
+      } else {
+        // Note off, turn off oldest match
+        var serialOn = Number.MAX_VALUE
+        this._vec.forEach(function(v, i) {
+          if (v.used && v.pitch === val && v.serial < serialOn) {
+            firstOn = v
+            serialOn = v.serial
+            onIndex = i
+          }
+        })
+        if (firstOn) {
+          firstOn.used = 0
+          firstOn.serial = this._serial++
+          this._message(2, 0, args)
+          this._message(1, firstOn.pitch, args)
+          this._message(0, onIndex + 1, args)
+        }
+      }
+    },
+
+    _stop: function(args) {
+      var self = this
+      this._vec.forEach(function(v, i) {
+        if (v.used) {
+          self._message(2, 0, args)
+          self._message(1, v.pitch, args)
+          self._message(0, i + 1, args)
+        }
+      })
+      this._resetMemory()
+    },
+
+    _clear: function(args) {
+      this._resetMemory()
+    },
+
+    _resetMemory: function() {
+      this._vec = []
+      this._serial = 0
+      for (var i = 0; i < this._n; i++) {
+        this._vec.push({
+          pitch: 0,
+          used: false,
+          serial: 0
+        })
+      }
+    },
+
+    _message: function(index, value, args) {
+      this.o(index).message(utils.timeTag([value], args))
+    }
+  })
+}
+},{"./core/PdObject":6,"./core/mixins":9,"./core/utils":11,"./global":12,"./waa/portlets":18,"underscore":36}],16:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3913,7 +4137,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":6,"../core/mixins":9,"../core/utils":11,"../global":12,"./portlets":17,"underscore":35,"waaoffsetnode":38,"waatablenode":40,"waawhitenoisenode":42}],16:[function(require,module,exports){
+},{"../core/PdObject":6,"../core/mixins":9,"../core/utils":11,"../global":12,"./portlets":18,"underscore":36,"waaoffsetnode":39,"waatablenode":41,"waawhitenoisenode":43}],17:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3991,8 +4215,6 @@ Audio.prototype.getUserMedia = function(done) {
   }
 }
 
-// TODO: This is just a hack to be able to override the AudioContext automatically
-// created. A cleaner public API for this would be good
 Audio.prototype.setContext = function(context) {
   var ch
   this.context = context
@@ -4003,6 +4225,33 @@ Audio.prototype.setContext = function(context) {
     this.channels.push(this.context.createGain())
     this.channels[ch].connect(this._channelMerger, 0, ch)
   }
+}
+
+
+var Midi = exports.Midi = function() {
+  this._midiInput = null
+  this._callback = function() {}
+}
+
+Midi.prototype.onMessage = function(callback) {
+  this._callback = callback
+}
+
+Midi.prototype.getMidiInput = function() {
+  return this._midiInput
+}
+
+// Associate a MIDIInput object per the Web MIDI spec
+// See <https://www.w3.org/TR/webmidi/#midiinput-interface>
+// Set to `null` to deactivate midi input
+Midi.prototype.setMidiInput = function(midiInput) {
+  if (midiInput === this._midiInput)
+    return
+  if (this._midiInput)
+    this._midiInput.removeEventListener('midimessage', this._callback)
+  this._midiInput = midiInput
+  if (this._midiInput)
+    this._midiInput.addEventListener('midimessage', this._callback)
 }
 
 
@@ -4059,7 +4308,7 @@ WebStorage.prototype.get = function(url, done) {
   req.responseType = 'arraybuffer'
   req.send()
 }
-},{"../global":12,"getusermedia":23,"underscore":35,"waaclock":36}],17:[function(require,module,exports){
+},{"../global":12,"getusermedia":24,"underscore":36,"waaclock":37}],18:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -4306,7 +4555,7 @@ exports.declareObjects = function(library) {
 
 }
 
-},{"../core/PdObject":6,"../core/portlets":10,"../core/utils":11,"../global":12,"underscore":35,"waawire":44}],18:[function(require,module,exports){
+},{"../core/PdObject":6,"../core/portlets":10,"../core/utils":11,"../global":12,"underscore":36,"waawire":45}],19:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -4609,7 +4858,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -4634,7 +4883,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -4722,14 +4971,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -5319,7 +5568,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":21,"_process":20,"inherits":19}],23:[function(require,module,exports){
+},{"./support/isBuffer":22,"_process":21,"inherits":20}],24:[function(require,module,exports){
 // getUserMedia helper by @HenrikJoreteg used for navigator.getUserMedia shim
 var adapter = require('webrtc-adapter');
 
@@ -5402,7 +5651,7 @@ module.exports = function (constraints, cb) {
     });
 };
 
-},{"webrtc-adapter":24}],24:[function(require,module,exports){
+},{"webrtc-adapter":25}],25:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -5494,7 +5743,7 @@ module.exports = function (constraints, cb) {
   }
 })();
 
-},{"./chrome/chrome_shim":25,"./edge/edge_shim":28,"./firefox/firefox_shim":29,"./safari/safari_shim":31,"./utils":32}],25:[function(require,module,exports){
+},{"./chrome/chrome_shim":26,"./edge/edge_shim":29,"./firefox/firefox_shim":30,"./safari/safari_shim":32,"./utils":33}],26:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -5739,7 +5988,7 @@ module.exports = {
   reattachMediaStream: chromeShim.reattachMediaStream
 };
 
-},{"../utils.js":32,"./getusermedia":26}],26:[function(require,module,exports){
+},{"../utils.js":33,"./getusermedia":27}],27:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -5880,7 +6129,7 @@ module.exports = function() {
   }
 };
 
-},{"../utils.js":32}],27:[function(require,module,exports){
+},{"../utils.js":33}],28:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -6378,7 +6627,7 @@ SDPUtils.getDirection = function(mediaSection, sessionpart) {
 // Expose public methods.
 module.exports = SDPUtils;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7334,7 +7583,7 @@ module.exports = {
   reattachMediaStream: edgeShim.reattachMediaStream
 };
 
-},{"../utils":32,"./edge_sdp":27}],29:[function(require,module,exports){
+},{"../utils":33,"./edge_sdp":28}],30:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7577,7 +7826,7 @@ module.exports = {
   reattachMediaStream: firefoxShim.reattachMediaStream
 };
 
-},{"../utils":32,"./getusermedia":30}],30:[function(require,module,exports){
+},{"../utils":33,"./getusermedia":31}],31:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7694,7 +7943,7 @@ module.exports = function() {
   }
 };
 
-},{"../utils":32}],31:[function(require,module,exports){
+},{"../utils":33}],32:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7730,7 +7979,7 @@ module.exports = {
   // reattachMediaStream: safariShim.reattachMediaStream
 };
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -7875,7 +8124,7 @@ module.exports = {
   extractVersion: utils.extractVersion
 };
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*
  * Copyright (c) 2012-2015 Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -8218,7 +8467,7 @@ var parseControls = function(proto, args, layout) {
 
 }
 
-},{"underscore":34}],34:[function(require,module,exports){
+},{"underscore":35}],35:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -9446,7 +9695,7 @@ var parseControls = function(proto, args, layout) {
 
 }).call(this);
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 //     Underscore.js 1.8.3
 //     http://underscorejs.org
 //     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -10996,13 +11245,13 @@ var parseControls = function(proto, args, layout) {
   }
 }.call(this));
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 var WAAClock = require('./lib/WAAClock')
 
 module.exports = WAAClock
 if (typeof window !== 'undefined') window.WAAClock = WAAClock
 
-},{"./lib/WAAClock":37}],37:[function(require,module,exports){
+},{"./lib/WAAClock":38}],38:[function(require,module,exports){
 (function (process){
 var isBrowser = (typeof window !== 'undefined')
 
@@ -11239,11 +11488,11 @@ WAAClock.prototype._relTime = function(absTime) {
   return absTime - this.context.currentTime
 }
 }).call(this,require('_process'))
-},{"_process":20}],38:[function(require,module,exports){
+},{"_process":21}],39:[function(require,module,exports){
 var WAAOffsetNode = require('./lib/WAAOffsetNode')
 module.exports = WAAOffsetNode
 if (typeof window !== 'undefined') window.WAAOffsetNode = WAAOffsetNode
-},{"./lib/WAAOffsetNode":39}],39:[function(require,module,exports){
+},{"./lib/WAAOffsetNode":40}],40:[function(require,module,exports){
 var WAAOffsetNode = module.exports = function(context) {
   this.context = context
 
@@ -11280,11 +11529,11 @@ WAAOffsetNode.prototype.disconnect = function() {
 }
 
 WAAOffsetNode._ones = []
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 var WAATableNode = require('./lib/WAATableNode')
 module.exports = WAATableNode
 if (typeof window !== 'undefined') window.WAATableNode = WAATableNode
-},{"./lib/WAATableNode":41}],41:[function(require,module,exports){
+},{"./lib/WAATableNode":42}],42:[function(require,module,exports){
 var WAAOffset = require('waaoffsetnode')
 
 var WAATableNode = module.exports = function(context) {
@@ -11320,11 +11569,11 @@ WAATableNode.prototype._setTable = function(table) {
   this._output.curve = table
   this.position.gain.setValueAtTime(2 / (table.length - 1), 0)
 }
-},{"waaoffsetnode":38}],42:[function(require,module,exports){
+},{"waaoffsetnode":39}],43:[function(require,module,exports){
 var WAAWhiteNoiseNode = require('./lib/WAAWhiteNoiseNode')
 module.exports = WAAWhiteNoiseNode
 if (typeof window !== 'undefined') window.WAAWhiteNoiseNode = WAAWhiteNoiseNode
-},{"./lib/WAAWhiteNoiseNode":43}],43:[function(require,module,exports){
+},{"./lib/WAAWhiteNoiseNode":44}],44:[function(require,module,exports){
 var WAAWhiteNoiseNode = module.exports = function(context) {
   this.context = context
 
@@ -11359,11 +11608,11 @@ WAAWhiteNoiseNode.prototype._prepareOutput = function() {
   this._output.buffer = this._buffer
   this._output.loop = true
 }
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 var WAAWire = require('./lib/WAAWire')
 module.exports = WAAWire
 if (typeof window !== 'undefined') window.WAAWire = WAAWire
-},{"./lib/WAAWire":45}],45:[function(require,module,exports){
+},{"./lib/WAAWire":46}],46:[function(require,module,exports){
 var WAAWire = module.exports = function(context) {
   this.context = context
   
