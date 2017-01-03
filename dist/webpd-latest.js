@@ -373,7 +373,7 @@ var Pd = module.exports = {
       if (!sourceObj || !sinkObj) {
         var errMsg = 'invalid connection ' + conn.source.id 
           + '.* -> ' + conn.sink.id + '.*'
-        return errorList.push([ errMsg, new Error(errMsg) ])
+        return errorList.push([ errMsg, new Error('unknown portlet') ])
       }
       try {
         sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
@@ -811,13 +811,13 @@ _.extend(BaseNode.prototype, {
   // Returns inlet `id` if it exists.
   i: function(id) {
     if (id < this.inlets.length) return this.inlets[id]
-    else throw (new errors.InvalidPortletError('invalid inlet ' + id))
+    else throw (new errors.InvalidPortletError('inlet ' + id + ' doesn\'t exist'))
   },
 
   // Returns outlet `id` if it exists.
   o: function(id) {
     if (id < this.outlets.length) return this.outlets[id]
-    else throw (new errors.InvalidPortletError('invalid outlet ' + id))
+    else throw (new errors.InvalidPortletError('outlet ' + id + ' doesn\'t exist'))
   },
 
 
@@ -1076,7 +1076,9 @@ var _ = require('underscore')
 var PatchLoadError = exports.PatchLoadError = function PatchLoadError(errorList) {
   this.name = 'PatchLoadError'
   this.errorList = errorList
-  this.message = _.pluck(errorList, 0).join('\n')
+  this.message = _.map(errorList, function(errPair) {
+    return errPair[0] + '\n\t' + errPair[1].message
+  }).join('\n')
   this.stack = (new Error()).stack
 }
 PatchLoadError.prototype = Object.create(Error.prototype)
@@ -1095,9 +1097,9 @@ UnknownObjectError.prototype.constructor = UnknownObjectError
 
 
 // Error thrown when trying to access an invalid portlet with `.i` or `.o`
-var InvalidPortletError = exports.InvalidPortletError = function InvalidPortletError(msg) {
+var InvalidPortletError = exports.InvalidPortletError = function InvalidPortletError(message) {
   this.name = 'InvalidPortletError'
-  this.message = msg
+  this.message = message
   this.stack = (new Error()).stack
 }
 InvalidPortletError.prototype = Object.create(Error.prototype)
@@ -1373,6 +1375,7 @@ EventReceiver.prototype.on = EventReceiver.prototype.addListener
 
 var _ = require('underscore')
   , utils = require('./utils')
+  , errors = require('./errors')
 
 // Base for outlets and inlets. Mostly handles connections and disconnections
 var Portlet = exports.Portlet = function(obj, id) {
@@ -1444,7 +1447,21 @@ var Inlet = exports.Inlet = Portlet.extend({})
 // Base outlet
 var Outlet = exports.Outlet = Portlet.extend({})
 
-},{"./utils":11,"underscore":36}],11:[function(require,module,exports){
+// Portlet for object's ports that exist in Pd but are not implemented yet in WebPd.
+var UnimplementedPortlet = Portlet.extend({
+  portletType: null,
+  connect: function() { 
+    throw new errors.InvalidPortletError(this.portletType 
+      + ' ' + this.id + ' is not implemented in WebPd yet') 
+  },
+  disconnect: function() {
+    throw new errors.InvalidPortletError(this.portletType 
+      + ' ' + this.id + ' is not implemented in WebPd yet') 
+  }
+})
+exports.UnimplementedInlet = UnimplementedPortlet.extend({ portletType: 'inlet' })
+exports.UnimplementedOutlet = UnimplementedPortlet.extend({ portletType: 'outlet' })
+},{"./errors":7,"./utils":11,"underscore":36}],11:[function(require,module,exports){
 /*
  * Copyright (c) 2011-2017 Chris McCormick, Sébastien Piquemal <sebpiq@gmail.com>
  *
@@ -3636,6 +3653,7 @@ exports.declareObjects = function(library) {
       portlets.DspInlet.extend(_FilterFrequencyInletMixin),
       portlets.Inlet.extend(_FilterQInletMixin)
     ],
+    outletDefs: [portlets.DspOutlet, portlets.UnimplementedOutlet],
 
     start: function(args) {
       _BaseBandFilter.prototype.start.call(this, args)
@@ -4333,8 +4351,7 @@ var _ = require('underscore')
   , WAAWire = require('waawire')
   , utils = require('../core/utils')
   , PdObject = require('../core/PdObject')
-  , BaseInlet = require('../core/portlets').Inlet
-  , BaseOutlet = require('../core/portlets').Outlet
+  , corePortlets = require('../core/portlets')
   , pdGlob = require('../global')
   , AudioParam = typeof window !== 'undefined' ? window.AudioParam : function() {} // for testing purpose
 
@@ -4353,10 +4370,10 @@ var InletMixin = {
 }
 
 // message inlet.
-var Inlet = exports.Inlet = BaseInlet.extend(InletMixin)
+var Inlet = exports.Inlet = corePortlets.Inlet.extend(InletMixin)
 
 // message outlet. Dispatches messages to all the sinks
-var Outlet = exports.Outlet = BaseOutlet.extend({
+var Outlet = exports.Outlet = corePortlets.Outlet.extend({
 
   message: function(args) {
     this.connections.forEach(function(sink) {
@@ -4366,8 +4383,12 @@ var Outlet = exports.Outlet = BaseOutlet.extend({
 
 })
 
+exports.UnimplementedInlet = corePortlets.UnimplementedPortlet
+exports.UnimplementedOutlet = corePortlets.UnimplementedOutlet
+
+
 // dsp inlet.
-var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
+var DspInlet = exports.DspInlet = corePortlets.Inlet.extend(InletMixin, {
 
   hasDspSource: function() {
     return _.filter(this.connections, function(outlet) {
@@ -4405,7 +4426,7 @@ var DspInlet = exports.DspInlet = BaseInlet.extend(InletMixin, {
 })
 
 // dsp outlet.
-var DspOutlet = exports.DspOutlet = BaseOutlet.extend({
+var DspOutlet = exports.DspOutlet = corePortlets.Outlet.extend({
 
   init: function() {
     this._waaConnections = {}

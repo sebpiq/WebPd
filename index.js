@@ -189,7 +189,7 @@ var Pd = module.exports = {
       if (!sourceObj || !sinkObj) {
         var errMsg = 'invalid connection ' + conn.source.id 
           + '.* -> ' + conn.sink.id + '.*'
-        return errorList.push([ errMsg, new Error(errMsg) ])
+        return errorList.push([ errMsg, new Error('unknown portlet') ])
       }
       try {
         sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))

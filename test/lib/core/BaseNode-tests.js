@@ -3,6 +3,7 @@ var assert = require('assert')
   , portlets = require('../../../lib/core/portlets')
   , BaseNode = require('../../../lib/core/BaseNode')
   , Patch = require('../../../lib/core/Patch')
+  , errors = require('../../../lib/core/errors')
   , helpers = require('../../helpers')
 
 
@@ -67,8 +68,8 @@ describe('core.BaseNode', function() {
 
     it('should raise an error if inlet/outlet doesn\'t exists', function() {
       var node = new MyNode()
-      assert.throws(function() { node.i(2) })
-      assert.throws(function() { node.o(3) })
+      assert.throws(function() { node.i(2) }, errors.InvalidPortletError)
+      assert.throws(function() { node.o(3) }, errors.InvalidPortletError)
     })
 
   })
