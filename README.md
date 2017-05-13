@@ -20,7 +20,7 @@ The following instructions provide a quick start for people with JavaScript know
 
 2. Add WebPd to your Web page, and load a patch by calling [Pd.loadPatch](#pdloadpatchpatchstr).
 
-```javascript
+```html
 <!doctype HTML>
 <html>
   <head>
@@ -61,7 +61,7 @@ The following instructions provide a detailed guide to start working with WebPd.
 
 4. In the folder `myProject`, create a file called `index.html` and copy/paste the following code in it
 
-  ```
+  ```html
   <!doctype HTML>
   <html>
     <head>
@@ -80,7 +80,7 @@ The following instructions provide a detailed guide to start working with WebPd.
   </html>
   ```
 
-  Save that file. Be sure to use a text editor that is programmer-friendly. Microsoft Word and other text processors will add a lot of extra informations, making your code impossible to understand by a web browser. I recommend using something like *notepad*, *gedit*, ...
+  Save that file. Be sure to use a text editor that is programmer-friendly. Microsoft Word and other text processors will add a lot of extra informations, making your code impossible to understand by a web browser. I recommend using something like *atom*, *notepad*, *gedit*, ...
 
 5. Create a patch using Pure Data. Make sure that you use only [features and objects supported by WebPd](#list-of-implemented-objects-and-other-limitations). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
 
@@ -92,6 +92,10 @@ The following instructions provide a detailed guide to start working with WebPd.
 
 7. You can finally open your web page and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
 
+8. Next :
+  - Check-out the [list of available objects](https://github.com/sebpiq/WebPd/tree/master/OBJECTLIST.md), be sure to use only these in your patch.
+  - Make your patch run on all browsers (including mobile), replace `Pd.start` with the [Pd.startOnClick](#pdstartonclickhtmlelement-callback) function.
+  - if your patch doesn't work, check-out the [troubleshooting](#troubleshooting) section.
 
 Examples
 ----------
@@ -133,7 +137,7 @@ Here is a non-exhaustive list of other limitations and inconsistencies with Pure
 
 WebPd uses Web Audio API, and as it happens, running Web Audio API on mobile is not always easy. First, make sure that you use a browser **that does support Web Audio API**. For example the default Android browser does not, and so on Android you have to use Chrome or Firefox.
 
-On iPhone and iPad, things are even trickier. For security reasons, audio is blocked by iOS, unless you start it in direct answer to a user action (click, touch, ...). So to get sound with WebPd, you will need to do exactly that and for example call `Pd.start` in a button's `ontouchend` handler : `ontouchend="Pd.start()"`. You can copy the [code to launch WebPd's examples](https://github.com/sebpiq/WebPd/blob/master/examples/assets/examples.js) to get around this, and work in all browsers.
+On iPhone and iPad, you need to use the `Pd.startOnClick` helper, otherwise the sound will not work.
 
 Also some objects such as `[adc~]` depend on features which are not available in all browsers and on all platforms. For example `[adc~]` won't work on iOS.  
 
