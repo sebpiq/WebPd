@@ -20,6 +20,7 @@
 
 var _ = require('underscore')
   , pdfu = require('pd-fileutils.parser')
+  , webaudioBoilerplate = require('web-audio-boilerplate')
   , Patch = require('./lib/core/Patch')
   , Abstraction = require('./lib/core/Abstraction')
   , PdObject = require('./lib/core/PdObject')
@@ -149,6 +150,24 @@ var Pd = module.exports = {
     return patchData
   },
 
+  // Helpers imported from web-audio-boilerplate
+  getSupportedFormats: function(done) {
+    var audioContext = new AudioContext
+    webaudioBoilerplate.getSupportedFormats(audioContext, done)
+  },
+
+  startOnClick: function(elem, callback, opts) {
+    webaudioBoilerplate.getAudioContextOnClick(elem, function(err, audioContext) {
+      if (err)
+        return console.error(err)
+      opts = opts || {}
+      opts.audioContext = audioContext
+      Pd.start(opts)
+      if (callback)
+        callback()
+    })
+  },
+
   _createPatch: function() {
     var patch = new Patch()
     patch.patchId = patchIds._generateId()
@@ -165,11 +184,11 @@ var Pd = module.exports = {
     patchData.nodes.forEach(function(nodeData) {
       var proto = nodeData.proto
         , obj
-      
+
       try {
         obj = patch._createObject(proto, nodeData.args || [])
       } catch (err) {
-        if (err instanceof errors.UnknownObjectError) 
+        if (err instanceof errors.UnknownObjectError)
           return errorList.push([ err.message, err ])
         else throw err
       }
@@ -177,7 +196,7 @@ var Pd = module.exports = {
       if (obj.type == 'array' && nodeData.data)
         obj.setData(new Float32Array(nodeData.data), true)
 
-      if (proto === 'pd' || proto === 'graph') 
+      if (proto === 'pd' || proto === 'graph')
         Pd._preparePatch(obj, nodeData.subpatch)
       createdObjs[nodeData.id] = obj
     })
@@ -187,7 +206,7 @@ var Pd = module.exports = {
       var sourceObj = createdObjs[conn.source.id]
         , sinkObj = createdObjs[conn.sink.id]
       if (!sourceObj || !sinkObj) {
-        var errMsg = 'invalid connection ' + conn.source.id 
+        var errMsg = 'invalid connection ' + conn.source.id
           + '.* -> ' + conn.sink.id + '.*'
         return errorList.push([ errMsg, new Error('unknown portlet') ])
       }
@@ -195,7 +214,7 @@ var Pd = module.exports = {
         sourceObj.o(conn.source.port).connect(sinkObj.i(conn.sink.port))
       } catch (err) {
         if (err instanceof errors.InvalidPortletError) {
-          var errMsg = 'invalid connection ' + conn.source.id + '.' + conn.source.port 
+          var errMsg = 'invalid connection ' + conn.source.id + '.' + conn.source.port
             + ' -> ' + conn.sink.id + '.' + conn.sink.port
           return errorList.push([ errMsg, err ])
         }

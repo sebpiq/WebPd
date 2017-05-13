@@ -48,7 +48,7 @@ Step-by-step guide
 The following instructions provide a detailed guide to start working with WebPd. If you have experience with web development, you might want to read the [quick start](#quick-start) instead.
 
 1. First create a folder `myProject` in which you will create your first WebPd project. In this folder, create the following structure :
-  
+
   ```
   myProject/
       patches/
@@ -75,7 +75,7 @@ The following instructions provide a detailed guide to start working with WebPd.
           })
       </script>
     </head>
-  
+
     <body></body>
   </html>
   ```
@@ -84,11 +84,11 @@ The following instructions provide a detailed guide to start working with WebPd.
 
 5. Create a patch using Pure Data. Make sure that you use only [features and objects supported by WebPd](#list-of-implemented-objects-and-other-limitations). Save that patch as `myPatch.pd` in the folder `myProject/patches`.
 
-6. Because we are working locally on our computer, we now need to run a web server to be able to open the web page `index.html` properly. For this, we will use the web server that comes with [Python](https://www.python.org/). 
+6. Because we are working locally on our computer, we now need to run a web server to be able to open the web page `index.html` properly. For this, we will use the web server that comes with [Python](https://www.python.org/).
 
-  Chances are, you already have Python installed on your computer. To check this, open a terminal (or command prompt), and run `python --version`, this should print the version of Python installed. If instead you get something like `command not found`, then you need to install Python. 
+  Chances are, you already have Python installed on your computer. To check this, open a terminal (or command prompt), and run `python --version`, this should print the version of Python installed. If instead you get something like `command not found`, then you need to install Python.
 
-  In the terminal use the command `cd` to navigate to the folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you have **Python 2** or `python -m http.server` if you have **Python 3**. 
+  In the terminal use the command `cd` to navigate to the folder `myProject`. When you've arrived there, run the command `python -m SimpleHTTPServer` if you have **Python 2** or `python -m http.server` if you have **Python 3**.
 
 7. You can finally open your web page and listen to your patch, by opening a web browser and navigating to [http://localhost:8000/index.html](http://localhost:8000/index.html).
 
@@ -112,7 +112,7 @@ Troubleshooting
 
 ### I can't run any WebPd demo on my computer
 
-For security reasons, browsers control access to your file system from web pages. Because of this, getting Pd files with Ajax might fail on your local machine. A workaround is to start a local server and access all the example web pages through it. 
+For security reasons, browsers control access to your file system from web pages. Because of this, getting Pd files with Ajax might fail on your local machine. A workaround is to start a local server and access all the example web pages through it.
 
 Python comes bundled with such a web server. Open a terminal, navigate to the folder containing the web page you want to open, then run `python -m SimpleHTTPServer` if you are using **Python 2** or `python -m http.server` if you are using **Python 3**. Then open your web browser to [http://localhost:8000](http://localhost:8000) and things should start working.
 
@@ -131,7 +131,7 @@ Here is a non-exhaustive list of other limitations and inconsistencies with Pure
 
 ### A patch that works fine on the desktop doesn't seem to work on mobile
 
-WebPd uses Web Audio API, and as it happens, running Web Audio API on mobile is not always easy. First, make sure that you use a browser **that does support Web Audio API**. For example the default Android browser does not, and so on Android you have to use Chrome or Firefox. 
+WebPd uses Web Audio API, and as it happens, running Web Audio API on mobile is not always easy. First, make sure that you use a browser **that does support Web Audio API**. For example the default Android browser does not, and so on Android you have to use Chrome or Firefox.
 
 On iPhone and iPad, things are even trickier. For security reasons, audio is blocked by iOS, unless you start it in direct answer to a user action (click, touch, ...). So to get sound with WebPd, you will need to do exactly that and for example call `Pd.start` in a button's `ontouchend` handler : `ontouchend="Pd.start()"`. You can copy the [code to launch WebPd's examples](https://github.com/sebpiq/WebPd/blob/master/examples/assets/examples.js) to get around this, and work in all browsers.
 
@@ -163,7 +163,7 @@ You can use WebPd API to create patches, add objects, connect them, disconnect t
 
 ```javascript
 Pd.start()
-var patch = Pd.createPatch()                  // Create an empty patch 
+var patch = Pd.createPatch()                  // Create an empty patch
   , osc = patch.createObject('osc~', [440])   // Create an [osc~ 440]
   , dac = patch.createObject('dac~')          // Create a [dac~]
 osc.o(0).connect(dac.i(0))                    // Connect outlet of [osc~] to left inlet of [dac~]
@@ -171,13 +171,13 @@ osc.o(0).connect(dac.i(1))                    // Connect outlet of [osc~] to rig
 osc.i(0).message([330])                       // Send frequency of [osc~] to 330Hz
 ```
 
-You can also use the API to integrate WebPd with pure Web Audio code. For example : 
+You can also use the API to integrate WebPd with pure Web Audio code. For example :
 
 ```javascript
 var patch = Pd.loadPatch(patchStr)            // We assume this patch has an [outlet~] object
   , gain = Pd.getAudio().context.createGain() // We create a web audio API GainNode
 patch.o(0).getOutNode().connect(gain)         // Connect the output 0 of the patch to our audio node
-``` 
+```
 
 Below you can find a (mostly) complete documentation of the WebPd API. Please note that dynamic patching with WebPd is still experimental, so you might encounter some bugs. If you do, please report them to in the [issue tracker](https://github.com/sebpiq/WebPd/issues).
 
@@ -238,6 +238,44 @@ Registers an abstraction to WebPd. See full example [there](https://github.com/s
 
 Registers a custom object to WebPd. See full example [there](https://github.com/sebpiq/WebPd/tree/master/examples/external).
 
+#### Pd.getSupportedFormats(callback)
+
+Get a list of audio formats supported by the current browser. For more info see [web-audio-boilerplate](https://github.com/sebpiq/web-audio-boilerplate).
+Example usage :
+
+```javascript
+Pd.getSupportedFormats(function(supported) {
+
+  // If ogg is supported, send a message to [receive MY-SAMPLE] with url to ogg file
+  if (supported.indexOf('ogg') !== -1) {
+    Pd.send('MY-SAMPLE', '/path/to/sample.ogg')
+
+  // Otherwise if ogg not supported but mp3 is ...
+  } else if (supported.indexOf('mp3') !== -1) {
+    Pd.send('MY-SAMPLE', '/path/to/sample.mp3')
+
+  } else {
+    alert('this web browser is not supported, sorry!')
+  }
+})
+```
+
+#### Pd.startOnClick(htmlElement, callback)
+
+This is a helper to maximize browser support, especially useful for iOS. For more info see [web-audio-boilerplate](https://github.com/sebpiq/web-audio-boilerplate).
+Example usage :
+
+```html
+<button id="startButton">Start patch</button>
+<script>
+  // Now, when user clicks on button, Pd will start and sound should work even on iOS.
+  var button = document.getElementById('startButton')
+  Pd.startOnClick(button, function() {
+    console.log('clicked!')
+  })
+</script>
+```
+
 
 ### BaseNode
 
@@ -245,7 +283,7 @@ This is the base class for all WebPd nodes, patches, dsp or glue objects.
 
 #### BaseNode.o(ind)
 
-Returns the outlet `ind` of the node. If `ind` is out of range, an error will be thrown. 
+Returns the outlet `ind` of the node. If `ind` is out of range, an error will be thrown.
 
 #### BaseNode.i(ind)
 
@@ -301,7 +339,7 @@ Finally, run `npm run build` to build a new version of WebPd in `dist/webpd-late
 Instructions for running the tests
 ------------------------------------
 
-WebPd comes with two test suites. 
+WebPd comes with two test suites.
 
 ### Automated tests
 
@@ -310,7 +348,7 @@ The tests in `test/lib` run on **node.js** using [mocha](http://mochajs.org/). T
 
 ### Browser tests
 
-The tests in `test/browser` run in a web browser. 
+The tests in `test/browser` run in a web browser.
 
 To build them, first scaffold by running `node node_modules/waatest/bin/scaffold.js ./waatest`. This will create a folder `waatest` containing a test web page.
 
