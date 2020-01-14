@@ -1,3 +1,5 @@
+**NOTE** : Big changes coming !!! Check [HERE](https://github.com/sebpiq/WebPd/issues/113) for more info about the status of the project!
+
 [![Build Status](https://travis-ci.org/sebpiq/WebPd.png)](https://travis-ci.org/sebpiq/WebPd)
 [![Dependency status](https://david-dm.org/sebpiq/WebPd.svg)](https://david-dm.org/sebpiq/WebPd)
 
