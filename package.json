@@ -42,7 +42,7 @@
     "gulp-file": "0.2.x",
     "gulp-concat": "2.5.x",
     "browserify": "7.0.x",
-    "mustache": "2.0.x",
+    "mustache": "3.2.x",
     "run-sequence": "1.0.x",
     "vinyl-source-stream": "1.0.x",
     "async": "0.9.x",
