@@ -1,6 +1,6 @@
 # WebPd
 
-*[🤑 A crowdfunding campaign to help reaching the next milestone (WebPd 1.0) is in progress. Please contribute !!! 🤑](https://opencollective.com/webpd#category-CONTRIBUTE)*
+*[🤑 A crowdfunding campaign to help reaching the next milestone (WebPd 1.0) is in progress !!! 🤑](https://opencollective.com/webpd#category-CONTRIBUTE)*
 
 **WebPd** is a highly modular web audio programming toolkit inspired by **Pure Data**.
 
