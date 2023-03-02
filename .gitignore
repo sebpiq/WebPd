@@ -1,5 +1,2 @@
-*~
 node_modules
-coverage
-waatest
-build
+tmp/*

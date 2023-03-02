@@ -1,9 +1,0 @@
-#N canvas 284 310 762 387 10;
-#X obj 127 161 dac~;
-#X obj 131 40 r action;
-#X obj 392 43 r streamUrl;
-#X obj 131 104 audiostream~ ../assets/samples/breathing.wav;
-#X connect 1 0 3 0;
-#X connect 2 0 3 1;
-#X connect 3 0 0 0;
-#X connect 3 0 0 1;
