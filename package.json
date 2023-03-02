@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "@webpd/compiler-js": "file:../WebPd_compiler-js",
-    "@webpd/pd-parser": "file:../WebPd_pd-parser"
+    "@webpd/pd-parser": "file:../WebPd_pd-parser",
+    "wavefile": "^11.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",

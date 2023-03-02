@@ -9,7 +9,7 @@
  *
  */
 
-import { NodeBuilders } from '../types'
+import { NodeBuilders } from './types'
 import {
     resolveNodeType,
     resolvePatch,
@@ -20,7 +20,7 @@ import instantiateAbstractions, {
     AbstractionLoader,
     NodeTypes,
 } from './instantiate-abstractions'
-import { nodeBuilders as subpatchNodeBuilders } from '../nodes/subpatch'
+import { nodeBuilders as subpatchNodeBuilders } from './nodes/subpatch'
 import { DspGraph, dspGraph } from '@webpd/compiler-js'
 import { PdJson } from '@webpd/pd-parser'
 

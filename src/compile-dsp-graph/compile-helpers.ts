@@ -9,7 +9,7 @@
  *
  */
 
-import { NodeBuilder, NodeBuilders } from '../types'
+import { NodeBuilder, NodeBuilders } from './types'
 import { DspGraph } from '@webpd/compiler-js'
 import { PdJson } from '@webpd/pd-parser'
 

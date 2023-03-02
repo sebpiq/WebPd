@@ -5,7 +5,7 @@ import {
     resolvePatch,
     resolvePdNodeDollarArgs,
 } from './compile-helpers'
-import { NodeBuilders } from '../types'
+import { NodeBuilders } from './types'
 
 export type AbstractionLoader = (
     nodeType: PdJson.NodeType
