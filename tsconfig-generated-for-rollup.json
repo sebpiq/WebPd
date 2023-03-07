@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "ES2022",
+        "target": "ES2021",
+        "esModuleInterop": true,
+        "removeComments": false,
+        "noImplicitAny": true,
+        "preserveConstEnums": true,
+        "sourceMap": true,
+        "declaration": true,
+        "declarationDir": "/home/spiq/code/webpd/WebPd/dist/types"
+    },
+    "typeRoots": ["./node_modules/@types"],
+    "include": [
+        "index.ts",
+        "*.d.ts",
+        "src",
+        "@types/**/*.d.ts"
+    ]
+}

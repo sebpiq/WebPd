@@ -8,9 +8,9 @@ import {
     makeParseErrorMessages,
     stringifyArrayBuffer,
 } from './helpers'
-import { Artefacts, Format, Settings } from './types'
+import { Artefacts, BuildFormat, BUILD_FORMATS, Settings } from './types'
 
-type BuildTree = Array<Format | BuildTree>
+type BuildTree = Array<BuildFormat | BuildTree>
 export const BUILD_TREE: BuildTree = [
     'pd',
     'pdJson',
@@ -21,22 +21,25 @@ export const BUILD_TREE: BuildTree = [
     ],
 ]
 
-interface CompilationSuccess {
+interface BuildSuccess {
     status: 0
     warnings?: Array<string>
 }
 
-interface CompilationFailure {
+interface BuildFailure {
     status: 1
+    warnings?: Array<string>
     errors?: Array<string>
 }
 
-export type CompilationResult = CompilationSuccess | CompilationFailure
+export type BuildResult = BuildSuccess | BuildFailure
+
+export const createArtefacts = (): Artefacts => ({})
 
 export const preloadArtefact = (
     artefacts: Artefacts,
     inBuffer: ArrayBuffer,
-    inFormat: Format
+    inFormat: BuildFormat
 ): Artefacts => {
     switch (inFormat) {
         case 'pd':
@@ -57,32 +60,25 @@ export const preloadArtefact = (
             return { ...artefacts, compiledAsc: stringifyArrayBuffer(inBuffer) }
         case 'wasm':
             return { ...artefacts, wasm: inBuffer }
+        case 'wav':
+            return { ...artefacts, wav: new Uint8Array(inBuffer) }
 
         default:
             throw new Error(`Unexpected format ${inFormat}`)
     }
 }
 
-export const findBuildSteps = (inFormat: Format, outFormat: Format) => {
-    const path = _findBuildPaths(BUILD_TREE, outFormat, []).find((path) =>
-        path.includes(inFormat)
-    )
-    if (!path) {
-        return null
-    }
-    return path.slice(path.indexOf(inFormat))
-}
-
-export const buildArtefact = async (
+export const performBuildStep = async (
     artefacts: Artefacts,
-    buildStep: Format,
+    buildStep: BuildFormat,
     {
         nodeBuilders,
         nodeImplementations,
         audioSettings,
+        inletCallerSpecs,
         abstractionLoader,
     }: Settings
-): Promise<CompilationResult> => {
+): Promise<BuildResult> => {
     switch (buildStep) {
         case 'pdJson':
             const parseResult = parse(artefacts.pd!)
@@ -95,6 +91,7 @@ export const buildArtefact = async (
             } else {
                 return {
                     status: 1,
+                    warnings: makeParseErrorMessages(parseResult.warnings),
                     errors: makeParseErrorMessages(parseResult.errors),
                 }
             }
@@ -131,6 +128,7 @@ export const buildArtefact = async (
                             ? 'javascript'
                             : 'assemblyscript',
                     audioSettings,
+                    inletCallerSpecs,
                     arrays: artefacts.dspGraph!.arrays,
                 }
             )
@@ -172,6 +170,48 @@ export const buildArtefact = async (
     }
 }
 
+export const guessFormat = (filepath: string): BuildFormat | null => {
+    const formats = Object.entries(BUILD_FORMATS).filter(([_, specs]) => {
+        if (
+            specs.extensions.some((extension) => filepath.endsWith(extension))
+        ) {
+            return true
+        }
+        return false
+    })
+    if (formats.length === 0) {
+        return null
+    }
+    return formats[0][0] as BuildFormat
+}
+
+export const listBuildSteps = (
+    inFormat: BuildFormat,
+    outFormat: BuildFormat,
+    intermediateStep?: BuildFormat
+): Array<BuildFormat> => {
+    let paths = _findBuildPaths(BUILD_TREE, outFormat, [])
+        .filter((path) => path.includes(inFormat))
+        .map((path) => path.slice(path.indexOf(inFormat) + 1))
+
+    if (intermediateStep) {
+        paths = paths.filter((path) => path.includes(intermediateStep))
+    }
+
+    if (paths.length === 0) {
+        return null
+    }
+    return paths[0]
+}
+
+export const listOutputFormats = (inFormat: BuildFormat): Set<BuildFormat> =>
+    new Set(
+        _traverseBuildTree(BUILD_TREE, [])
+            .filter((path) => path.includes(inFormat))
+            .map((path) => path.slice(path.indexOf(inFormat) + 1))
+            .flat()
+    )
+
 const _makeUnknownNodeTypeMessage = (nodeTypeSet: Set<string>) => [
     `Unknown object types ${Array.from(nodeTypeSet)
         .map((nodeType) => `[${nodeType}]`)
@@ -180,20 +220,35 @@ const _makeUnknownNodeTypeMessage = (nodeTypeSet: Set<string>) => [
 
 export const _findBuildPaths = (
     branch: BuildTree,
-    target: Format,
-    parentPath: Array<Format>
-): Array<Array<Format>> => {
-    let path: Array<Format> = [...parentPath]
-    return branch
-        .flatMap((buildStep) => {
-            if (Array.isArray(buildStep)) {
-                return _findBuildPaths(buildStep, target, path)
-            }
-            path = [...path, buildStep]
-            if (buildStep === target) {
-                return [path]
-            }
-            return []
-        })
-        .filter((path) => path)
+    target: BuildFormat,
+    parentPath: Array<BuildFormat>
+): Array<Array<BuildFormat>> => {
+    let path: Array<BuildFormat> = [...parentPath]
+    return branch.flatMap((node) => {
+        if (Array.isArray(node)) {
+            return _findBuildPaths(node, target, path)
+        }
+        path = [...path, node]
+        if (node === target) {
+            return [path]
+        }
+        return []
+    })
+}
+
+export const _traverseBuildTree = (
+    branch: BuildTree,
+    parentPath: Array<BuildFormat>
+): Array<Array<BuildFormat>> => {
+    let path: Array<BuildFormat> = [...parentPath]
+    return branch.flatMap((node, i) => {
+        if (Array.isArray(node)) {
+            return _traverseBuildTree(node, path)
+        }
+        path = [...path, node]
+        if (i === branch.length - 1) {
+            return [path]
+        }
+        return []
+    })
 }

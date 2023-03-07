@@ -1,6 +1,6 @@
-import { Artefacts, Format } from "./types"
+import { Artefacts, BuildFormat } from "./types"
 
-export const getArtefact = <K extends Format>(
+export const getArtefact = <K extends BuildFormat>(
     artefacts: Artefacts,
     outFormat: K
 ) => {
