@@ -18,7 +18,8 @@ import {
 } from './compile-helpers'
 import instantiateAbstractions, {
     AbstractionLoader,
-    NodeTypes,
+    AbstractionsLoadingErrors,
+    AbstractionsLoadingWarnings,
 } from './instantiate-abstractions'
 import { nodeBuilders as subpatchNodeBuilders } from './nodes/subpatch'
 import { DspGraph, dspGraph } from '@webpd/compiler-js'
@@ -44,14 +45,16 @@ export type Compilation = {
 }
 
 interface CompilationSuccess {
-    status: 0
-    graph: DspGraph.Graph
-    arrays: DspGraph.Arrays
+    readonly status: 0
+    readonly graph: DspGraph.Graph
+    readonly arrays: DspGraph.Arrays
+    readonly abstractionsLoadingWarnings?: AbstractionsLoadingWarnings
 }
 
 interface CompilationFailure {
-    status: 1
-    unknownNodeTypes: NodeTypes
+    readonly status: 1
+    readonly abstractionsLoadingErrors: AbstractionsLoadingErrors
+    readonly abstractionsLoadingWarnings?: AbstractionsLoadingWarnings
 }
 
 type CompilationResult = CompilationSuccess | CompilationFailure
@@ -76,15 +79,24 @@ export default async (
     nodeBuilders: NodeBuilders,
     abstractionLoader: AbstractionLoader = async () => null
 ): Promise<CompilationResult> => {
-    const {
-        pd: pdWithResolvedAbstractions,
-        rootPatch,
-        unknownNodeTypes,
-    } = await instantiateAbstractions(pd, nodeBuilders, abstractionLoader)
-    if (unknownNodeTypes.size) {
-        return { status: 1, unknownNodeTypes }
+    const abstractionsResult = await instantiateAbstractions(
+        pd,
+        nodeBuilders,
+        abstractionLoader
+    )
+    const hasWarnings = Object.keys(abstractionsResult.warnings)
+
+    if (abstractionsResult.status === 1) {
+        return {
+            status: 1,
+            abstractionsLoadingErrors: abstractionsResult.errors,
+            abstractionsLoadingWarnings: hasWarnings
+                ? abstractionsResult.warnings
+                : undefined,
+        }
     }
 
+    const { pd: pdWithResolvedAbstractions, rootPatch } = abstractionsResult
     const compilation: Compilation = {
         pd: pdWithResolvedAbstractions,
         nodeBuilders,
@@ -105,7 +117,14 @@ export default async (
         return arrays
     }, {} as DspGraph.Arrays)
 
-    return { status: 0, graph: compilation.graph, arrays }
+    return {
+        status: 0,
+        graph: compilation.graph,
+        arrays,
+        abstractionsLoadingWarnings: hasWarnings
+            ? abstractionsResult.warnings
+            : undefined,
+    }
 }
 
 // ================================== NODES ================================== //

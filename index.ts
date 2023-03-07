@@ -7,6 +7,7 @@ import {
     listBuildSteps,
     guessFormat,
 } from './src/api/build'
+import { makeAbstractionLoader, UnknownNodeTypeError } from './src/api/helpers'
 export {
     NODE_BUILDERS,
     NODE_IMPLEMENTATIONS,
@@ -18,9 +19,12 @@ export const build = {
     listOutputFormats,
     listBuildSteps,
     guessFormat,
-    setAsc: setAsc,
+    setAsc,
+    makeAbstractionLoader,
+    UnknownNodeTypeError,
 }
 import { buildGraphNodeId } from './src/compile-dsp-graph/to-dsp-graph'
+export { AbstractionLoader } from './src/compile-dsp-graph/instantiate-abstractions'
 export const dspGraph = { buildGraphNodeId }
 export {
     BuildFormat,

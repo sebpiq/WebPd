@@ -68,9 +68,9 @@ const makeNodeImplementation = ({
         return (_hasSignalInput(context.node)
             ? declareSignal(context)
             : declareMessage(context)) + `
-                const ${state.funcSetPhase} = ${Func([
+                function ${state.funcSetPhase} ${Func([
                     Var('phase', 'Float')
-                ], 'void')} => {${state.phase} = phase % 1.0${coeff ? ` * ${coeff}`: ''}}
+                ], 'void')} {${state.phase} = phase % 1.0${coeff ? ` * ${coeff}`: ''}}
             `
     }
 
@@ -97,9 +97,9 @@ const makeNodeImplementation = ({
         let ${Var(state.frequency, 'Float')} = ${args.frequency}
         let ${Var(state.K, 'Float')} = 0
 
-        const ${state.funcSetFrequency} = ${Func([
+        function ${state.funcSetFrequency} ${Func([
             Var('frequency', 'Float')
-        ], 'void')} => {
+        ], 'void')} {
             ${state.frequency} = frequency
             ${state.K} = ${coeff ? `${coeff} * `: ''}${state.frequency} / ${globs.sampleRate}
         }

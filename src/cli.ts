@@ -4,17 +4,21 @@ import parse, { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
 import * as path from 'path'
 import fs from 'fs'
-import { Artefacts, Format, FORMATS, Settings } from './api/types'
+import { Artefacts, BuildFormat, Settings } from './api/types'
 import { setAsc } from './api/asc'
-import { analysePd } from './api/reports'
+// import { analysePd } from './api/reports'
 import {
-    buildArtefact,
-    findBuildSteps,
+    performBuildStep,
+    listBuildSteps,
     preloadArtefact,
-} from './api/artefacts'
-import { getArtefact, makeParseErrorMessages } from './api/helpers'
+    guessFormat,
+} from './api/build'
+import { getArtefact, makeAbstractionLoader, UnknownNodeTypeError } from './api/helpers'
 import { AbstractionLoader } from './compile-dsp-graph/instantiate-abstractions'
-import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from './compile-dsp-graph/nodes-index'
+import {
+    NODE_BUILDERS,
+    NODE_IMPLEMENTATIONS,
+} from './compile-dsp-graph/nodes-index'
 setAsc(asc)
 
 const BIT_DEPTH = 64
@@ -25,45 +29,45 @@ const WAV_PREVIEW_DURATION = 15
 
 interface Task {
     inFilepath: string
-    inFormat: Format
+    inFormat: BuildFormat
     outFilepath: string | null
-    outFormat: Format
+    outFormat: BuildFormat
     artefacts: Artefacts
 }
 
-const checkSupportPdJson = async (
-    pdJson: PdJson.Pd,
-    abstractionLoader: AbstractionLoader,
-    settings: Settings
-) => {
-    const { unimplementedObjectTypes } = await analysePd(
-        pdJson,
-        abstractionLoader,
-        settings
-    )
+// const checkSupportPdJson = async (
+//     pdJson: PdJson.Pd,
+//     abstractionLoader: AbstractionLoader,
+//     settings: Settings
+// ) => {
+//     const { unimplementedObjectTypes } = await analysePd(
+//         pdJson,
+//         abstractionLoader,
+//         settings
+//     )
 
-    let isSupported = true
-    console.log(`> Check support `)
-    if (unimplementedObjectTypes.size) {
-        console.log(
-            `\t ${
-                unimplementedObjectTypes.size
-            } object types not implemented : ${Array.from(
-                unimplementedObjectTypes
-            )
-                .map((type) => `[${type}]`)
-                .join(', ')}`
-        )
-        isSupported = false
-    }
+//     let isSupported = true
+//     console.log(`> Check support `)
+//     if (unimplementedObjectTypes.size) {
+//         console.log(
+//             `\t ${
+//                 unimplementedObjectTypes.size
+//             } object types not implemented : ${Array.from(
+//                 unimplementedObjectTypes
+//             )
+//                 .map((type) => `[${type}]`)
+//                 .join(', ')}`
+//         )
+//         isSupported = false
+//     }
 
-    if (isSupported) {
-        console.log(`\t Supported : YES`)
-    } else {
-        console.log(`\t Supported : NO`)
-    }
-    console.log('')
-}
+//     if (isSupported) {
+//         console.log(`\t Supported : YES`)
+//     } else {
+//         console.log(`\t Supported : NO`)
+//     }
+//     console.log('')
+// }
 
 const whatsImplemented = () => {
     console.log(`> What's implemented ?`)
@@ -77,35 +81,10 @@ const whatsImplemented = () => {
     console.log('')
 }
 
-const getExtension = (filepath: string) => {
-    let extension = path.extname(filepath)
-    const extensions: Array<string> = []
-    while (extension && filepath) {
-        extensions.unshift(extension)
-        filepath = path.basename(filepath, extension)
-        extension = path.extname(filepath)
-    }
-    return extensions.join('')
-}
-
-const guessFormat = (filepath: string): Format | null => {
-    const extension = getExtension(filepath)
-    const formats = Object.entries(FORMATS).filter(([_, specs]) => {
-        if (specs.extensions.includes(extension)) {
-            return true
-        }
-        return false
-    })
-    if (formats.length === 0) {
-        return null
-    }
-    return formats[0][0] as Format
-}
-
 const assertValidFormat = (
-    format: Format | null,
+    format: BuildFormat | null,
     filepath: string
-): format is Format => {
+): format is BuildFormat => {
     ifConditionThenExitError(
         format === null,
         `Unknown input file format for ${filepath}`
@@ -152,52 +131,44 @@ const writeOutFile = async (task: Task): Promise<Task> => {
     return task
 }
 
-const makeAbstractionLoader =
-    (rootDirPath: string) => async (nodeType: PdJson.NodeType) => {
+const makeCliAbstractionLoader = (rootDirPath: string): AbstractionLoader =>
+    makeAbstractionLoader(async (nodeType: PdJson.NodeType) => {
         const filepath = path.resolve(rootDirPath, `${nodeType}.pd`)
         let fileStats: fs.Stats | null = null
         try {
             fileStats = await fs.promises.stat(filepath)
         } catch (err: any) {
             if (err.code === 'ENOENT') {
-                return null
+                throw new UnknownNodeTypeError(nodeType)
             }
             throw err
         }
         if (!fileStats || !fileStats.isFile()) {
-            return null
+            throw new UnknownNodeTypeError(nodeType)
         }
-        const pd = (await fs.promises.readFile(filepath)).toString()
-        const parseResult = parse(pd)
-        if (parseResult.status === 0) {
-            return parseResult.pd
-        } else {
-            console.error(`failed to parse abstraction [${nodeType}] at ${filepath}`)
-            makeParseErrorMessages(parseResult.errors).forEach((message) =>
-                console.error(message)
-            )
-            return null
-        }
-    }
+        return (await fs.promises.readFile(filepath)).toString()
+    })
 
 const executeTask = async (task: Task, settings: Settings): Promise<Task> => {
     const { inFilepath, inFormat, outFormat } = task
     const inString = await fs.promises.readFile(inFilepath)
     const artefacts = preloadArtefact(task.artefacts, inString, inFormat)
-    const buildSteps = findBuildSteps(inFormat, outFormat)
+    const buildSteps = listBuildSteps(inFormat, outFormat)
     ifConditionThenExitError(
         buildSteps === null,
         `Not able to convert from ${inFormat} to ${outFormat}`
     )
     // Remove first step as it corresponds with the input file.
-    for (let buildStep of buildSteps!.slice(1)) {
-        const result = await buildArtefact(artefacts, buildStep, settings)
-        if (result.status === 0 && result.warnings) {
-            result.warnings.forEach((message) => console.warn(message))
-        } else if (result.status === 1) {
-            if (result.errors) {
-                result.errors.forEach((message) => console.warn(message))
-            }
+    for (let buildStep of buildSteps!) {
+        console.log(`\nBUILDING ${buildStep} ... `)
+        const result = await performBuildStep(artefacts, buildStep, settings)
+        result.warnings.forEach((message) =>
+            console.warn('\t WARNING : ' + message)
+        )
+        if (result.status === 1) {
+            result.errors.forEach((message) =>
+                console.error('\t ERROR : ' + message)
+            )
             process.exit(1)
         }
     }
@@ -244,7 +215,7 @@ const main = (): void => {
             return
         }
 
-        let outFormat: Format | null = null
+        let outFormat: BuildFormat | null = null
 
         if (outFilepath) {
             const guessedFormat = guessFormat(outFilepath)
@@ -277,7 +248,7 @@ const main = (): void => {
                 blockSize: BLOCK_SIZE,
                 previewDurationSeconds: WAV_PREVIEW_DURATION,
             },
-            abstractionLoader: makeAbstractionLoader(path.dirname(inFilepath)),
+            abstractionLoader: makeCliAbstractionLoader(path.dirname(inFilepath)),
         }
 
         const task: Task = {
@@ -292,11 +263,12 @@ const main = (): void => {
             .then((task) => writeOutFile(task))
             .then((task) => {
                 if (options.checkSupport && task.artefacts.pdJson) {
-                    return checkSupportPdJson(
-                        task.artefacts.pdJson,
-                        makeAbstractionLoader(path.dirname(inFilepath)),
-                        settings
-                    )
+                    throw new Error(`Broken ! FIX ME !`)
+                    // return checkSupportPdJson(
+                    //     task.artefacts.pdJson,
+                    //     makeAbstractionLoader(path.dirname(inFilepath)),
+                    //     settings
+                    // )
                 } else {
                     return null
                 }

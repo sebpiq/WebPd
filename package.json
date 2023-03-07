@@ -2,6 +2,8 @@
   "name": "webpd",
   "version": "1.0.0",
   "type": "module",
+  "main": "./dist/WebPd/index.js",
+  "types": "./dist/types/index.d.ts",
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "WebPd is a highly modular web audio programming toolkit inspired by Pure Data.",
   "license": "LGPL-3.0",
@@ -16,21 +18,23 @@
   ],
   "scripts": {
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runInBand --config node_modules/@webpd/dev/configs/jest.js",
-    "build:cli": "npx rollup --config configs/bin.rollup.config.js"
+    "build:cli": "npx rollup --config configs/bin.rollup.config.js",
+    "build:dist": "npx rollup --config node_modules/@webpd/dev/configs/rollup.mjs"
   },
   "dependencies": {
     "@webpd/compiler-js": "file:../WebPd_compiler-js",
     "@webpd/pd-parser": "file:../WebPd_pd-parser",
+    "@webpd/runtime": "file:../WebPd_runtime",
     "wavefile": "^11.0.0"
   },
   "devDependencies": {
+    "assemblyscript": "^0.25.0",
     "@rollup/plugin-commonjs": "^24.0.1",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-typescript": "^11.0.0",
     "@types/jest": "^29.4.0",
     "@types/node": "^18.14.4",
     "@webpd/dev": "file:../WebPd_dev",
-    "assemblyscript": "^0.27.0",
     "commander": "^10.0.0",
     "jest": "^29.4.3",
     "rollup": "^3.18.0",

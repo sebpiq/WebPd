@@ -3,11 +3,7 @@ import parse from '@webpd/pd-parser'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
 import { compileAsc } from './asc'
 import { renderWav } from './audio'
-import {
-    getArtefact,
-    makeParseErrorMessages,
-    stringifyArrayBuffer,
-} from './helpers'
+import { getArtefact, stringifyArrayBuffer } from './helpers'
 import { Artefacts, BuildFormat, BUILD_FORMATS, Settings } from './types'
 
 type BuildTree = Array<BuildFormat | BuildTree>
@@ -23,13 +19,13 @@ export const BUILD_TREE: BuildTree = [
 
 interface BuildSuccess {
     status: 0
-    warnings?: Array<string>
+    warnings: Array<string>
 }
 
 interface BuildFailure {
     status: 1
-    warnings?: Array<string>
-    errors?: Array<string>
+    warnings: Array<string>
+    errors: Array<string>
 }
 
 export type BuildResult = BuildSuccess | BuildFailure
@@ -79,6 +75,9 @@ export const performBuildStep = async (
         abstractionLoader,
     }: Settings
 ): Promise<BuildResult> => {
+    let warnings: Array<string> = []
+    let errors: Array<string> = []
+
     switch (buildStep) {
         case 'pdJson':
             const parseResult = parse(artefacts.pd!)
@@ -86,13 +85,13 @@ export const performBuildStep = async (
                 artefacts.pdJson = parseResult.pd
                 return {
                     status: 0,
-                    warnings: makeParseErrorMessages(parseResult.warnings),
+                    warnings: _makeParseErrorMessages(parseResult.warnings),
                 }
             } else {
                 return {
                     status: 1,
-                    warnings: makeParseErrorMessages(parseResult.warnings),
-                    errors: makeParseErrorMessages(parseResult.errors),
+                    warnings: _makeParseErrorMessages(parseResult.warnings),
+                    errors: _makeParseErrorMessages(parseResult.errors),
                 }
             }
 
@@ -102,18 +101,56 @@ export const performBuildStep = async (
                 nodeBuilders,
                 abstractionLoader
             )
+
+            if (toDspGraphResult.abstractionsLoadingWarnings) {
+                warnings = Object.entries(
+                    toDspGraphResult.abstractionsLoadingWarnings
+                )
+                .filter(([_, warnings]) => !!warnings.length)
+                .flatMap(([nodeType, warnings]) => [
+                    `Warnings when parsing abstraction ${nodeType} :`,
+                    ..._makeParseErrorMessages(warnings),
+                ])
+            }
+
             if (toDspGraphResult.status === 0) {
                 artefacts.dspGraph = {
                     graph: toDspGraphResult.graph,
                     arrays: toDspGraphResult.arrays,
                 }
-                return { status: 0 }
+                return { status: 0, warnings }
             } else {
+                const unknownNodeTypes = Object.values(
+                    toDspGraphResult.abstractionsLoadingErrors
+                )
+                    .filter((errors) => !!errors.unknownNodeType)
+                    .map((errors) => errors.unknownNodeType)
+
+                if (unknownNodeTypes.length) {
+                    errors = [
+                        ...errors,
+                        ..._makeUnknownNodeTypeMessage(
+                            new Set(unknownNodeTypes)
+                        ),
+                    ]
+                }
+
+                errors = [
+                    ...errors,
+                    ...Object.entries(
+                        toDspGraphResult.abstractionsLoadingErrors
+                    )
+                        .filter(([_, errors]) => !!errors.parsingErrors)
+                        .flatMap(([nodeType, errors]) => [
+                            `Failed to parse abstraction ${nodeType} :`,
+                            ..._makeParseErrorMessages(errors.parsingErrors),
+                        ]),
+                ]
+
                 return {
                     status: 1,
-                    errors: _makeUnknownNodeTypeMessage(
-                        toDspGraphResult.unknownNodeTypes
-                    ),
+                    errors,
+                    warnings,
                 }
             }
 
@@ -138,9 +175,9 @@ export const performBuildStep = async (
                 } else {
                     artefacts.compiledAsc = compileCodeResult.code
                 }
-                return { status: 0 }
+                return { status: 0, warnings: [] }
             } else {
-                return { status: 1 }
+                return { status: 1, warnings: [], errors: [] }
             }
 
         case 'wasm':
@@ -153,9 +190,10 @@ export const performBuildStep = async (
                 return {
                     status: 1,
                     errors: [err.message],
+                    warnings: [],
                 }
             }
-            return { status: 0 }
+            return { status: 0, warnings: [] }
 
         case 'wav':
             artefacts.wav = await renderWav(
@@ -163,7 +201,7 @@ export const performBuildStep = async (
                 artefacts,
                 audioSettings
             )
-            return { status: 0 }
+            return { status: 0, warnings: [] }
 
         default:
             throw new Error(`invalid build step ${buildStep}`)
@@ -214,9 +252,16 @@ export const listOutputFormats = (inFormat: BuildFormat): Set<BuildFormat> =>
 
 const _makeUnknownNodeTypeMessage = (nodeTypeSet: Set<string>) => [
     `Unknown object types ${Array.from(nodeTypeSet)
-        .map((nodeType) => `[${nodeType}]`)
-        .join(' ')}`,
+        .map((nodeType) => `${nodeType}`)
+        .join(', ')}`,
 ]
+
+const _makeParseErrorMessages = (
+    errorOrWarnings: Array<{ message: string; lineIndex: number }>
+) =>
+    errorOrWarnings.map(
+        ({ message, lineIndex }) => `line ${lineIndex} : ${message}`
+    )
 
 export const _findBuildPaths = (
     branch: BuildTree,

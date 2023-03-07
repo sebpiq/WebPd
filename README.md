@@ -12,7 +12,7 @@
 
 - [@webpd/compiler-js](https://github.com/sebpiq/WebPd_compiler-js) : Compiler for compiling a DSP graph into a single JavaScript function
 - [@webpd/dsp-graph](https://github.com/sebpiq/WebPd_dsp-graph) : Utilities for handling DSP graphs
-- [@webpd/audioworklets](https://github.com/sebpiq/WebPd_audioworklets) : AudioWorklets for running DSP engines compiled from @webpd/compiler-js.
+- [@webpd/runtime](https://github.com/sebpiq/WebPd_runtime) : AudioWorklets for running DSP engines compiled from @webpd/compiler-js.
 - [@webpd/shared](https://github.com/sebpiq/WebPd_shared) : Shared tools and types for the other packages
 - [@webpd/pd-parser](https://github.com/sebpiq/WebPd_pd-parser) : Parser for pd files
 - [@webpd/pd-renderer](https://github.com/sebpiq/WebPd_pd-renderer) : Renderer for pd files

@@ -88,24 +88,27 @@ describe('instantiateAbstractions', () => {
             },
         })
 
-        const {
-            pd: pdWithResolvedAbstractions,
-            rootPatch,
-            abstractions,
-        } = await instantiateAbstractions(
+        const results = await instantiateAbstractions(
             pd,
             NODE_BUILDERS,
             async (nodeType) => {
                 switch (nodeType) {
                     case 'abstract1':
-                        return abstract1
+                        return { status: 0, pd: abstract1 }
                     case 'abstract2':
-                        return abstract2
+                        return { status: 0, pd: abstract2 }
                     default:
-                        return null
+                        return { status: 1, unknownNodeType: nodeType }
                 }
             }
         )
+
+        assert.ok(results.status === 0)
+        const {
+            pd: pdWithResolvedAbstractions,
+            rootPatch,
+            abstractions,
+        } = results
 
         assert.deepStrictEqual(Object.keys(rootPatch.nodes).sort(), [
             'array1',
@@ -224,19 +227,21 @@ describe('instantiateAbstractions', () => {
             },
         })
 
-        const { pd: pdWithResolvedAbstractions } =
-            await instantiateAbstractions(
-                pd,
-                NODE_BUILDERS,
-                async (nodeType) => {
-                    switch (nodeType) {
-                        case 'abstract1':
-                            return abstract1
-                        default:
-                            return null
-                    }
+        const results = await instantiateAbstractions(
+            pd,
+            NODE_BUILDERS,
+            async (nodeType) => {
+                switch (nodeType) {
+                    case 'abstract1':
+                        return { status: 0, pd: abstract1 }
+                    default:
+                        return { status: 1, unknownNodeType: nodeType }
                 }
-            )
+            }
+        )
+
+        assert.ok(results.status === 0)
+        const { pd: pdWithResolvedAbstractions } = results
 
         assert.deepStrictEqual<PdJson.Pd>(
             pdWithResolvedAbstractions,
@@ -284,37 +289,6 @@ describe('instantiateAbstractions', () => {
         )
     })
 
-    it('should return node types that failed resolving', async () => {
-        const pd: PdJson.Pd = makePd({
-            patches: {
-                '0': {
-                    isRoot: true,
-                    nodes: {
-                        n1: { type: 'unknownNodeType1' },
-                        n2: { type: 'pd', nodeClass: 'subpatch', patchId: '1' },
-                    },
-                },
-                '1': {
-                    isRoot: false,
-                    nodes: {
-                        n1: { type: 'unknownNodeType2' },
-                    },
-                },
-            },
-        })
-
-        const { unknownNodeTypes } = await instantiateAbstractions(
-            pd,
-            NODE_BUILDERS,
-            async () => null
-        )
-
-        assert.deepStrictEqual(
-            unknownNodeTypes,
-            new Set(['unknownNodeType1', 'unknownNodeType2'])
-        )
-    })
-
     it('should resolve array name and size', async () => {
         const pd: PdJson.Pd = makePd({
             patches: {
@@ -347,19 +321,20 @@ describe('instantiateAbstractions', () => {
             },
         })
 
-        const { pd: pdWithResolvedAbstractions } =
-            await instantiateAbstractions(
-                pd,
-                NODE_BUILDERS,
-                async (nodeType) => {
-                    switch (nodeType) {
-                        case 'abstract1':
-                            return abstract1
-                        default:
-                            return null
-                    }
+        const results = await instantiateAbstractions(
+            pd,
+            NODE_BUILDERS,
+            async (nodeType) => {
+                switch (nodeType) {
+                    case 'abstract1':
+                        return { status: 0, pd: abstract1 }
+                    default:
+                        return { status: 1, unknownNodeType: nodeType }
                 }
-            )
+            }
+        )
+        assert.ok(results.status === 0)
+        const { pd: pdWithResolvedAbstractions } = results
 
         assert.deepStrictEqual<PdJson.Pd['arrays']>(
             pdWithResolvedAbstractions.arrays,
@@ -372,5 +347,186 @@ describe('instantiateAbstractions', () => {
                 },
             }
         )
+    })
+
+    it('should return node types that failed resolving', async () => {
+        const pd: PdJson.Pd = makePd({
+            patches: {
+                '0': {
+                    isRoot: true,
+                    nodes: {
+                        n1: { type: 'unknownNodeType1' },
+                        n2: { type: 'pd', nodeClass: 'subpatch', patchId: '1' },
+                    },
+                },
+                '1': {
+                    isRoot: false,
+                    nodes: {
+                        n1: { type: 'unknownNodeType2' },
+                    },
+                },
+            },
+        })
+
+        const results = await instantiateAbstractions(
+            pd,
+            NODE_BUILDERS,
+            async (nodeType) => ({ status: 1, unknownNodeType: nodeType })
+        )
+        assert.ok(results.status === 1)
+
+        assert.deepStrictEqual(results.errors, {
+            unknownNodeType1: {
+                unknownNodeType: 'unknownNodeType1',
+            },
+            unknownNodeType2: {
+                unknownNodeType: 'unknownNodeType2',
+            },
+        })
+    })
+
+    it('should return warnings even when resolution succeeded', async () => {
+        const pd: PdJson.Pd = makePd({
+            patches: {
+                '0': {
+                    isRoot: true,
+                    nodes: {
+                        n1: { type: 'nodeTypeWithWarnings1' },
+                        n2: { type: 'pd', nodeClass: 'subpatch', patchId: '1' },
+                    },
+                },
+                '1': {
+                    isRoot: false,
+                    nodes: {
+                        n1: { type: 'nodeTypeWithWarnings2' },
+                        n2: { type: 'nodeTypeWithWarnings2' },
+                    },
+                },
+            },
+        })
+
+        const results = await instantiateAbstractions(
+            pd,
+            NODE_BUILDERS,
+            async (nodeType) => ({
+                status: 0,
+                pd: makePd({
+                    patches: {
+                        '0': {
+                            isRoot: true,
+                        },
+                    },
+                }),
+                parsingWarnings: [
+                    {
+                        message: `parsing node ${nodeType} warning line 42`,
+                        lineIndex: 42,
+                    },
+                ],
+            })
+        )
+        assert.ok(results.status === 0)
+
+        assert.deepStrictEqual(results.warnings, {
+            nodeTypeWithWarnings1: [
+                {
+                    message: `parsing node nodeTypeWithWarnings1 warning line 42`,
+                    lineIndex: 42,
+                },
+            ],
+            nodeTypeWithWarnings2: [
+                {
+                    message: `parsing node nodeTypeWithWarnings2 warning line 42`,
+                    lineIndex: 42,
+                },
+            ],
+        })
+    })
+
+    it('should return parsing errors and warnings', async () => {
+        const pd: PdJson.Pd = makePd({
+            patches: {
+                '0': {
+                    isRoot: true,
+                    nodes: {
+                        n1: { type: 'nodeTypeWithErrors1' },
+                        n2: { type: 'pd', nodeClass: 'subpatch', patchId: '1' },
+                    },
+                },
+                '1': {
+                    isRoot: false,
+                    nodes: {
+                        n1: { type: 'nodeTypeWithErrors2' },
+                    },
+                },
+            },
+        })
+
+        const results = await instantiateAbstractions(
+            pd,
+            NODE_BUILDERS,
+            async (nodeType) => ({
+                status: 1,
+                parsingErrors: [
+                    {
+                        message: `parsing node ${nodeType} error line 1`,
+                        lineIndex: 1,
+                    },
+                    {
+                        message: `parsing node ${nodeType} error line 2`,
+                        lineIndex: 2,
+                    },
+                ],
+                parsingWarnings: [
+                    {
+                        message: `parsing node ${nodeType} warning line 42`,
+                        lineIndex: 42,
+                    },
+                ],
+            })
+        )
+        assert.ok(results.status === 1)
+
+        assert.deepStrictEqual(results.warnings, {
+            nodeTypeWithErrors1: [
+                {
+                    message: `parsing node nodeTypeWithErrors1 warning line 42`,
+                    lineIndex: 42,
+                },
+            ],
+            nodeTypeWithErrors2: [
+                {
+                    message: `parsing node nodeTypeWithErrors2 warning line 42`,
+                    lineIndex: 42,
+                },
+            ],
+        })
+
+        assert.deepStrictEqual(results.errors, {
+            nodeTypeWithErrors1: {
+                parsingErrors: [
+                    {
+                        message: `parsing node nodeTypeWithErrors1 error line 1`,
+                        lineIndex: 1,
+                    },
+                    {
+                        message: `parsing node nodeTypeWithErrors1 error line 2`,
+                        lineIndex: 2,
+                    },
+                ],
+            },
+            nodeTypeWithErrors2: {
+                parsingErrors: [
+                    {
+                        message: `parsing node nodeTypeWithErrors2 error line 1`,
+                        lineIndex: 1,
+                    },
+                    {
+                        message: `parsing node nodeTypeWithErrors2 error line 2`,
+                        lineIndex: 2,
+                    },
+                ],
+            },
+        })
     })
 })

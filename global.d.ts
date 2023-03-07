@@ -9,3 +9,5 @@ declare module '*.generated.js.txt' {
 }
 
 declare module 'assemblyscript/asc'
+
+declare module 'assemblyscript/dist/asc.js'

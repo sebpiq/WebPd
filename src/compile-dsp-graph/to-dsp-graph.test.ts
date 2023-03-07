@@ -11,7 +11,6 @@
 
 import assert from 'assert'
 import toDspGraph, {
-    MIXER_NODE_TYPE,
     Compilation,
     _buildNodes,
     _buildConnections,
@@ -31,6 +30,7 @@ import {
     pdJsonDefaults,
     makePd,
 } from '@webpd/pd-parser/src/test-helpers'
+import { AbstractionLoader } from './instantiate-abstractions'
 
 const DUMMY_NODE_TYPE = pdJsonNodeDefaults('').type
 
@@ -599,14 +599,16 @@ describe('toDspGraph', () => {
                 },
             })
 
-            const loadAbstraction = async (nodeType: PdJson.NodeType) => {
+            const loadAbstraction: AbstractionLoader = async (
+                nodeType: PdJson.NodeType
+            ) => {
                 switch (nodeType) {
                     case 'abstract1':
-                        return abstract1
+                        return { status: 0, pd: abstract1 }
                     case 'abstract2':
-                        return abstract2
+                        return { status: 0, pd: abstract2 }
                     default:
-                        return null
+                        return { status: 1, unknownNodeType: nodeType }
                 }
             }
 
@@ -673,12 +675,14 @@ describe('toDspGraph', () => {
                 },
             })
 
-            const loadAbstraction = async (nodeType: PdJson.NodeType) => {
+            const loadAbstraction: AbstractionLoader = async (
+                nodeType: PdJson.NodeType
+            ) => {
                 switch (nodeType) {
                     case 'abstract1':
-                        return abstract1
+                        return { status: 0, pd: abstract1 }
                     default:
-                        return null
+                        return { status: 1, unknownNodeType: nodeType }
                 }
             }
 
@@ -700,20 +704,34 @@ describe('toDspGraph', () => {
             )
         })
 
-        it('should return error if unknown abstractions', async () => {
+        it('should return errors from failed abstraction loading', async () => {
             const pd: PdJson.Pd = makePd({
                 patches: {
                     '0': {
                         isRoot: true,
                         nodes: {
-                            n1: { type: 'unknownNodeType1' },
-                            n2: { type: 'unknownNodeType2' },
+                            n1: { type: 'unknownNodeType' },
+                            n2: { type: 'typeWithParsingErrors' },
                         },
                     },
                 },
             })
 
-            const loadAbstraction = async (): Promise<null> => null
+            const loadAbstraction: AbstractionLoader = async (nodeType) => {
+                if (nodeType === 'unknownNodeType') {
+                    return { status: 1, unknownNodeType: nodeType }
+                } else {
+                    return {
+                        status: 1,
+                        parsingErrors: [
+                            { message: 'some error', lineIndex: 666 },
+                        ],
+                        parsingWarnings: [
+                            { message: 'some warning', lineIndex: 999 },
+                        ],
+                    }
+                }
+            }
 
             const compilationResult = await toDspGraph(
                 pd,
@@ -721,11 +739,24 @@ describe('toDspGraph', () => {
                 loadAbstraction
             )
             assert.ok(compilationResult.status === 1)
-            const { unknownNodeTypes } = compilationResult
-            assert.deepStrictEqual(
-                unknownNodeTypes,
-                new Set(['unknownNodeType1', 'unknownNodeType2'])
-            )
+
+            const { abstractionsLoadingErrors, abstractionsLoadingWarnings } = compilationResult
+            assert.deepStrictEqual(abstractionsLoadingErrors, {
+                unknownNodeType: {
+                    unknownNodeType: 'unknownNodeType',
+                },
+                typeWithParsingErrors: {
+                    parsingErrors: [
+                        { message: 'some error', lineIndex: 666 },
+                    ],
+                },
+            })
+
+            assert.deepStrictEqual(abstractionsLoadingWarnings, {
+                typeWithParsingErrors: [
+                    { message: 'some warning', lineIndex: 999 },
+                ]
+            })
         })
 
         it('should load arrays properly', async () => {
@@ -769,9 +800,9 @@ describe('toDspGraph', () => {
                 },
             })
 
-            const nodeBuilders: NodeBuilders = { 
+            const nodeBuilders: NodeBuilders = {
                 ...DEFAULT_NODE_BUILDERS,
-                array: { isNoop: true } 
+                array: { isNoop: true },
             }
 
             const compilationResult = await toDspGraph(pd, nodeBuilders)

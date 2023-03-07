@@ -1,4 +1,4 @@
-import { PdJson } from '@webpd/pd-parser'
+import { ParsingWarningOrError, PdJson } from '@webpd/pd-parser'
 import {
     resolveArrayDollarArgs,
     resolveNodeType,
@@ -7,9 +7,33 @@ import {
 } from './compile-helpers'
 import { NodeBuilders } from './types'
 
+interface AbstractionLoaderSuccess {
+    status: 0
+    pd: PdJson.Pd
+    parsingWarnings?: Array<ParsingWarningOrError>
+}
+
+interface AbstractionLoaderFailure {
+    status: 1
+    parsingWarnings?: Array<ParsingWarningOrError>
+    unknownNodeType?: PdJson.NodeType
+    parsingErrors?: Array<ParsingWarningOrError>
+}
+
+type AbstractionLoaderResult =
+    | AbstractionLoaderSuccess
+    | AbstractionLoaderFailure
+
+/**
+ * An aync function that is passed to the parser and has for role
+ * to fetch/load/... any node type that is not yet known to the parser.
+ * If fetching that new node type fails (because of a parsing error,
+ * or because the node is not known), the function can return `{status: 1}`
+ * with the appropriate error fields.
+ */
 export type AbstractionLoader = (
     nodeType: PdJson.NodeType
-) => Promise<PdJson.Pd | null>
+) => Promise<AbstractionLoaderResult>
 
 type AbstractionNamemapEntry = Map<PdJson.GlobalId, PdJson.GlobalId>
 interface AbstractionNamemap {
@@ -17,7 +41,17 @@ interface AbstractionNamemap {
     readonly arrays: AbstractionNamemapEntry
 }
 
-type Abstractions = { [url: string]: PdJson.Pd }
+type Abstractions = { [nodeType: string]: PdJson.Pd }
+export type AbstractionsLoadingErrors = {
+    [nodeType: string]: {
+        unknownNodeType?: PdJson.NodeType
+        parsingErrors?: Array<ParsingWarningOrError>
+    }
+}
+
+export type AbstractionsLoadingWarnings = {
+    [nodeType: string]: Array<ParsingWarningOrError>
+}
 
 export type NodeTypes = Set<PdJson.NodeType>
 
@@ -26,20 +60,30 @@ interface Compilation {
     readonly nodeBuilders: NodeBuilders
     readonly abstractionLoader: AbstractionLoader
     readonly abstractions: Abstractions
-    readonly unknownNodeTypes: NodeTypes
+    readonly errors: AbstractionsLoadingErrors
+    readonly warnings: AbstractionsLoadingWarnings
 }
 
-interface CompilationResult {
+interface CompilationSuccess {
+    readonly status: 0
     readonly pd: PdJson.Pd
     readonly rootPatch: PdJson.Patch
     readonly abstractions: Abstractions
-    readonly unknownNodeTypes: NodeTypes
+    readonly warnings: AbstractionsLoadingWarnings
 }
+
+interface CompilationFailure {
+    readonly status: 1
+    readonly errors: AbstractionsLoadingErrors
+    readonly warnings: AbstractionsLoadingWarnings
+}
+
+type CompilationResult = CompilationSuccess | CompilationFailure
 
 /**
  * Goes through a pd object, resolves and instantiates abstractions, turning
  * them into standard subpatches.
- * @returns A new {@link PdJson.Pd} object, which contains all patches and arrays
+ * @returns A new PdJson.Pd object, which contains all patches and arrays
  * from the resolved abstraction as well as those from the pd object passed as argument.
  * The second value returned is the main root patch to be used for further processing.
  */
@@ -57,7 +101,8 @@ export default async (
         pd,
         nodeBuilders,
         abstractions: {},
-        unknownNodeTypes: new Set(),
+        errors: {},
+        warnings: {},
         abstractionLoader,
     }
 
@@ -75,11 +120,22 @@ export default async (
         rootPatch,
         namemap
     )
-    return {
-        pd,
-        rootPatch: resolvePatch(pd, rootPatch.id),
-        abstractions: compilation.abstractions,
-        unknownNodeTypes: compilation.unknownNodeTypes,
+
+    const hasErrors = Object.keys(compilation.errors).length
+    if (hasErrors) {
+        return {
+            status: 1,
+            errors: compilation.errors,
+            warnings: compilation.warnings,
+        }
+    } else {
+        return {
+            status: 0,
+            pd,
+            rootPatch: resolvePatch(pd, rootPatch.id),
+            abstractions: compilation.abstractions,
+            warnings: compilation.warnings,
+        }
     }
 }
 
@@ -89,10 +145,10 @@ const _instantiateAbstractionsRecurs = async (
     patch: PdJson.Patch,
     namemap: AbstractionNamemap
 ): Promise<void> => {
-    const { pd, abstractionLoader, unknownNodeTypes } = compilation
+    const { pd, abstractionLoader, errors, warnings } = compilation
     patch.nodes = { ...patch.nodes }
     for (let pdNode of Object.values(patch.nodes)) {
-        if (unknownNodeTypes.has(pdNode.type)) {
+        if (errors.hasOwnProperty(pdNode.type)) {
             continue
         }
 
@@ -127,13 +183,18 @@ const _instantiateAbstractionsRecurs = async (
         }
 
         // 4. Otherwise, if node type could not be resolved, we load as an abstraction.
-        const abstraction = await _resolveAbstraction(
+        const resolutionResult = await _resolveAbstraction(
             compilation,
             pdNode.type,
             abstractionLoader
         )
-        if (abstraction === null) {
-            unknownNodeTypes.add(pdNode.type)
+        if (resolutionResult.parsingWarnings) {
+            warnings[pdNode.type] = resolutionResult.parsingWarnings
+        }
+        if (resolutionResult.status === 1) {
+            const { status, parsingWarnings, ...abstractionErrors } =
+                resolutionResult
+            errors[pdNode.type] = abstractionErrors
             continue
         }
 
@@ -142,7 +203,7 @@ const _instantiateAbstractionsRecurs = async (
         // in our `pd` object. Therefore, we need to reassign these ids.
         const [newNamemap, abstractionInstance] = _reassignUniquePdGlobalIds(
             pd,
-            abstraction
+            resolutionResult.pd
         )
         const newRootPatch = _resolveRootPatch(abstractionInstance)
 
@@ -191,7 +252,7 @@ const _resolveRootPatch = (pd: PdJson.Pd): PdJson.Patch => {
         (patch) => patch.isRoot
     )
     if (rootPatches.length !== 1) {
-        throw new Error(`Expected one root patch only`)
+        throw new Error(`Expected exactly one root patch`)
     }
     return rootPatches[0]!
 }
@@ -200,14 +261,18 @@ const _resolveAbstraction = async (
     compilation: Compilation,
     nodeType: PdJson.NodeType,
     abstractionLoader: AbstractionLoader
-): Promise<PdJson.Pd | null> => {
+): Promise<AbstractionLoaderResult> => {
     if (!compilation.abstractions[nodeType]) {
-        const abstraction = await abstractionLoader(nodeType)
-        if (abstraction) {
-            compilation.abstractions[nodeType] = abstraction
+        const result = await abstractionLoader(nodeType)
+        if (result.status === 0) {
+            compilation.abstractions[nodeType] = result.pd
         }
+        return result
     }
-    return compilation.abstractions[nodeType] || null
+    return {
+        status: 0,
+        pd: compilation.abstractions[nodeType],
+    }
 }
 
 const _resolveIdNamemap = (
