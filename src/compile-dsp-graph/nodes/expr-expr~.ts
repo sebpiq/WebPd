@@ -170,6 +170,8 @@ const messages: _NodeImplementation['messages'] = ({
 }
 
 // ------------------------------------------------------------------- //
+// NOTE: Normally we'd use named regexp capturing groups, but that causes problems with 
+// create-react-app which uses a babel plugin to remove them.
 export const TOKENIZE_REGEXP = /(?<f>\$f(?<id_f>[0-9]+))|(?<v>\$v(?<id_v>[0-9]+))|(?<i>\$i(?<id_i>[0-9]+))|(?<s>\$s(?<id_s>[0-9]+)\s*\[(?<sIndex>[^\[\]]*)\])/
 
 interface ExpressionTokenFloat {
@@ -226,39 +228,39 @@ export const tokenizeExpression = (expression: string) => {
             })
         }
 
-        if (match.groups['f']) {
+        if (match[1]) {
             tokens.push({
                 type: 'float',
-                id: parseInt(match.groups['id_f']) - 1,
+                id: parseInt(match[2]) - 1,
             })
 
-        } else if (match.groups['v']) {
+        } else if (match[3]) {
             tokens.push({
                 type: 'signal',
-                id: parseInt(match.groups['id_v']) - 1,
+                id: parseInt(match[4]) - 1,
             })
 
-        } else if (match.groups['i']) {
+        } else if (match[5]) {
             tokens.push({
                 type: 'int',
-                id: parseInt(match.groups['id_i']) - 1,
+                id: parseInt(match[6]) - 1,
             })
         
         // Symbols in an expr are used normally only to index an array.
         // Since we need to cast to an int to index an array, we need 
         // to wrap the indexing expression with a cast to int :
         // $s1[$i1 + 2] -> $s1[toInt($i1 + 2)]
-        } else if (match.groups['s']) {
+        } else if (match[7]) {
             tokens = [
                 ...tokens, 
                 {
                     type: 'string',
-                    id: parseInt(match.groups['id_s']) - 1,
+                    id: parseInt(match[8]) - 1,
                 },
                 {
                     type: 'indexing-start'
                 },
-                ...tokenizeExpression(match.groups['sIndex']),
+                ...tokenizeExpression(match[9]),
                 {
                     type: 'indexing-end'
                 },
