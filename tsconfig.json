@@ -1,6 +1,7 @@
 {
     "extends": "./node_modules/@webpd/dev/tsconfig.json",
     "include": [
+        "main.cli.ts",
         "index.ts",
         "src",
         "@types/**/*.d.ts",

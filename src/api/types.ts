@@ -31,6 +31,10 @@ export const BUILD_FORMATS = {
     wav: {
         extensions: ['.wav'],
         description: 'WAV audio',
+    },
+    appTemplate: {
+        extensions: ['.html'],
+        description: 'Full HTML app',
     }
 }
 
@@ -44,6 +48,7 @@ export interface Artefacts {
     compiledAsc?: string
     wasm?: ArrayBuffer
     wav?: Uint8Array
+    appTemplate?: {[filename: string]: string | ArrayBuffer}
 }
 
 export interface AudioSettings extends BaseAudioSettings {

@@ -1,26 +1,27 @@
 import colors from 'colors/safe'
-import packageInfo from '../package.json'
+import packageInfo from './package.json'
 import { fileURLToPath } from 'url'
 import asc from 'assemblyscript/dist/asc.js'
 import { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
 import * as path from 'path'
 import fs from 'fs'
-import { Artefacts, BuildFormat, Settings } from './api/types'
-import { setAsc } from './api/asc'
-import { analysePd } from './api/reports'
+import { Artefacts, BuildFormat, Settings } from './src/api/types'
+import { setAsc } from './src/api/asc'
+import { analysePd } from './src/api/reports'
 import {
     performBuildStep,
     listBuildSteps,
     preloadArtefact,
     guessFormat,
-} from './api/build'
-import { getArtefact, makeAbstractionLoader, UnknownNodeTypeError } from './api/helpers'
-import { AbstractionLoader } from './compile-dsp-graph/instantiate-abstractions'
+} from './src/api/build'
 import {
-    NODE_BUILDERS,
-    NODE_IMPLEMENTATIONS,
-} from './nodes/index'
+    getArtefact,
+    makeAbstractionLoader,
+    UnknownNodeTypeError,
+} from './src/api/helpers'
+import { AbstractionLoader } from './src/compile-dsp-graph/instantiate-abstractions'
+import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from './src/nodes/index'
 setAsc(asc)
 
 const BIT_DEPTH = 64
@@ -37,7 +38,8 @@ interface Task {
     artefacts: Artefacts
 }
 
-const consoleLogHeader = (message: string) => console.log('\n~~~ ' + colors.bold(message))
+const consoleLogHeader = (message: string) =>
+    console.log('\n~~~ ' + colors.bold(message))
 const consoleLogEm = (message: string) => console.log(colors.bold(message))
 
 const checkSupportPdJson = async (
@@ -96,7 +98,10 @@ const assertValidFormat = (
 }
 
 const writeOutFile = async (task: Task): Promise<Task> => {
+    consoleLogEm(`Generating output`)
     const { outFilepath, outFormat, artefacts } = task
+    const written: Array<string> = []
+    let outDir: string | null = null
     if (outFormat && outFilepath) {
         switch (outFormat) {
             case 'pdJson':
@@ -105,6 +110,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                     outFilepath!,
                     JSON.stringify(getArtefact(artefacts, outFormat), null, 2)
                 )
+                written.push(outFilepath)
                 break
 
             case 'compiledJs':
@@ -113,6 +119,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                     outFilepath!,
                     getArtefact(artefacts, outFormat)
                 )
+                written.push(outFilepath)
                 break
 
             case 'wasm':
@@ -120,6 +127,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                     outFilepath!,
                     Buffer.from(getArtefact(artefacts, outFormat))
                 )
+                written.push(outFilepath)
                 break
 
             case 'wav':
@@ -127,9 +135,28 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                     outFilepath!,
                     getArtefact(artefacts, outFormat)
                 )
+                written.push(outFilepath)
+                break
+
+            case 'appTemplate':
+                const appTemplate = getArtefact(artefacts, outFormat)
+                outDir = path.dirname(outFilepath)
+                for (let filename of Object.keys(appTemplate)) {
+                    const fileContents = appTemplate[filename]
+                    await fs.promises.writeFile(
+                        path.resolve(outDir, filename),
+                        typeof fileContents === 'string'
+                            ? fileContents
+                            : new Uint8Array(fileContents)
+                    )
+                    written.push(filename)
+                }
                 break
         }
-        consoleLogEm(`Output file written to ${outFilepath}`)
+        written.forEach(filename => {
+            console.log(`Created file ` + colors.bold(filename))
+        })
+        
     }
     return task
 }
@@ -196,6 +223,11 @@ const main = (): void => {
     console.log('')
     const cliHeader = `~ WebPd compiler ${packageInfo.version} ~`
     console.log((colors as any).brightMagenta.bold(cliHeader))
+    console.log((colors as any).brightMagenta.bold(
+        Array.from(cliHeader)
+            .map((_) => '~')
+            .join(''))
+    )
 
     program
         .version(packageInfo.version)
@@ -203,7 +235,7 @@ const main = (): void => {
         .option('-o, --output <filename>')
         .option('--check-support')
         .option('--whats-implemented')
-    program.showHelpAfterError('(add --help for additional information)');
+    program.showHelpAfterError('(add --help for additional information)')
 
     program.parse()
     const options = program.opts()
@@ -250,7 +282,9 @@ const main = (): void => {
             outFormat = outFormat || 'pdJson'
         }
 
-        const abstractionLoader = makeCliAbstractionLoader(path.dirname(inFilepath))
+        const abstractionLoader = makeCliAbstractionLoader(
+            path.dirname(inFilepath)
+        )
 
         const settings: Settings = {
             nodeBuilders: NODE_BUILDERS,
@@ -290,7 +324,14 @@ const main = (): void => {
                 console.error(err)
             })
             .finally(() => {
-                console.log((colors as any).brightMagenta.bold(`\n` + Array.from(cliHeader).map(_ => '~').join('')))
+                console.log('')
+                console.log(
+                    (colors as any).brightMagenta.bold(
+                        Array.from(cliHeader)
+                            .map((_) => '~')
+                            .join('')
+                    )
+                )
                 console.log('')
             })
     }

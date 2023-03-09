@@ -1,5 +1,6 @@
 import compile from '@webpd/compiler-js'
 import parse from '@webpd/pd-parser'
+import appGenerator from '../app-generator'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
 import { compileAsc } from './asc'
 import { renderWav } from './audio'
@@ -14,6 +15,8 @@ export const BUILD_TREE: BuildTree = [
     [
         ['compiledJs', 'wav'],
         ['compiledAsc', 'wasm', 'wav'],
+        ['compiledAsc', 'wasm', 'appTemplate'],
+        ['compiledJs', 'appTemplate'],
     ],
 ]
 
@@ -60,7 +63,7 @@ export const preloadArtefact = (
             return { ...artefacts, wav: new Uint8Array(inBuffer) }
 
         default:
-            throw new Error(`Unexpected format ${inFormat}`)
+            throw new Error(`Unexpected format for preloading ${inFormat}`)
     }
 }
 
@@ -201,6 +204,10 @@ export const performBuildStep = async (
                 artefacts,
                 audioSettings
             )
+            return { status: 0, warnings: [] }
+
+        case 'appTemplate':
+            artefacts.appTemplate = appGenerator('bare-bones', artefacts)
             return { status: 0, warnings: [] }
 
         default:
