@@ -1,6 +1,6 @@
 import compile from '@webpd/compiler-js'
 import parse from '@webpd/pd-parser'
-import appGenerator from '../app-generator'
+import appGenerator from '../app-generator/generate-app'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
 import { compileAsc } from './asc'
 import { renderWav } from './audio'

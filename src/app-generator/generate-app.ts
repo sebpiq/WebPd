@@ -1,6 +1,29 @@
-import { GeneratedApp, Settings, WEBPD_RUNTIME_FILENAME } from "./types"
+import { Artefacts } from '../api/types'
+import WEBPD_RUNTIME_CODE from './runtime.generated.js.txt'
+export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
-export default (settings: Settings) => {
+export interface Settings {
+    artefacts: Artefacts
+}
+
+export type GeneratedApp = { [filename: string]: string | ArrayBuffer }
+
+type Template = 'bare-bones' 
+
+export default (template: Template, artefacts: Artefacts): GeneratedApp => {
+    switch(template) {
+        case 'bare-bones':
+            const generated = bareBonesApp({ artefacts })
+            return {
+                ...generated,
+                [WEBPD_RUNTIME_FILENAME]: WEBPD_RUNTIME_CODE
+            }
+        default:
+            throw new Error(`Unknown template ${template}`)
+    }
+}
+
+const bareBonesApp = (settings: Settings) => {
     if (!settings.artefacts.compiledJs && !settings.artefacts.wasm) {
         throw new Error(`Needs at least compiledJs or wasm to run`)
     }

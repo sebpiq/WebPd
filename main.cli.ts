@@ -142,21 +142,31 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                 const appTemplate = getArtefact(artefacts, outFormat)
                 outDir = path.dirname(outFilepath)
                 for (let filename of Object.keys(appTemplate)) {
+                    const filepath = path.resolve(outDir, filename)
                     const fileContents = appTemplate[filename]
                     await fs.promises.writeFile(
-                        path.resolve(outDir, filename),
+                        filepath,
                         typeof fileContents === 'string'
                             ? fileContents
                             : new Uint8Array(fileContents)
                     )
-                    written.push(filename)
+                    written.push(filepath)
                 }
                 break
         }
-        written.forEach(filename => {
-            console.log(`Created file ` + colors.bold(filename))
+        written.forEach((filepath) => {
+            console.log(`Created file ` + colors.bold(filepath))
         })
-        
+
+        if (outFormat === 'appTemplate') {
+            console.log(
+                colors.grey(
+                    '\nWeb app compiled ! Start it by running :\n'
+                ) +
+                    colors.blue(`npx http-server ${outDir}\n`) +
+                    colors.grey('then go to http://localhost:8080\n')
+            )
+        }
     }
     return task
 }
@@ -223,18 +233,32 @@ const main = (): void => {
     console.log('')
     const cliHeader = `~ WebPd compiler ${packageInfo.version} ~`
     console.log((colors as any).brightMagenta.bold(cliHeader))
-    console.log((colors as any).brightMagenta.bold(
-        Array.from(cliHeader)
-            .map((_) => '~')
-            .join(''))
+    console.log(
+        (colors as any).brightMagenta.bold(
+            Array.from(cliHeader)
+                .map((_) => '~')
+                .join('')
+        )
     )
 
     program
         .version(packageInfo.version)
-        .option('-i, --input <filename>')
-        .option('-o, --output <filename>')
+        .option(
+            '-i, --input <filename>',
+            'Set the input file. Formats supported : ' +
+                '\n.pd - Pure Data text file.' +
+                '\n.wasm - Web Assembly module compiled with the WebPd compiler.\n|'
+        )
+        .option(
+            '-o, --output <filename>',
+            'Select an output. Available formats :' +
+                '\n.wasm - Web Assembly WebPd module.' +
+                '\n.js - JavaScript WebPd module.' +
+                '\n.html - Complete web app embedding your compiled WebPd patch.\n|'
+        )
         .option('--check-support')
         .option('--whats-implemented')
+
     program.showHelpAfterError('(add --help for additional information)')
 
     program.parse()
