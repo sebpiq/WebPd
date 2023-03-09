@@ -21,7 +21,7 @@ import instantiateAbstractions, {
     AbstractionsLoadingErrors,
     AbstractionsLoadingWarnings,
 } from './instantiate-abstractions'
-import { nodeBuilders as subpatchNodeBuilders } from './nodes/subpatch'
+import { nodeBuilders as subpatchNodeBuilders } from '../nodes/nodes/subpatch'
 import { DspGraph, dspGraph } from '@webpd/compiler-js'
 import { PdJson } from '@webpd/pd-parser'
 
@@ -110,7 +110,7 @@ export default async (
         }
     })
 
-    const arrays = Object.values(pd.arrays).reduce((arrays, array) => {
+    const arrays = Object.values(compilation.pd.arrays).reduce((arrays, array) => {
         arrays[array.args[0]] = array.data
             ? new Float32Array(array.data)
             : new Float32Array(array.args[1] as number)

@@ -11,7 +11,7 @@ import { makeAbstractionLoader, UnknownNodeTypeError } from './src/api/helpers'
 export {
     NODE_BUILDERS,
     NODE_IMPLEMENTATIONS,
-} from './src/compile-dsp-graph/nodes-index'
+} from './src/nodes/index'
 export const build = {
     createArtefacts,
     performBuildStep,

@@ -21,8 +21,8 @@ import {
     assertNodesEqual,
 } from '@webpd/compiler-js/src/dsp-graph/test-helpers'
 import { NodeBuilders } from './types'
-import { nodeBuilders as subpatchNodeBuilders } from './nodes/subpatch'
-import { builder as mixerNodeBuilder } from './nodes/mixer~'
+import { nodeBuilders as subpatchNodeBuilders } from '../nodes/nodes/subpatch'
+import { builder as mixerNodeBuilder } from '../nodes/nodes/mixer~'
 import { DspGraph } from '@webpd/compiler-js'
 import { PdJson } from '@webpd/pd-parser'
 import {

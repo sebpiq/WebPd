@@ -20,7 +20,7 @@ import { AbstractionLoader } from './compile-dsp-graph/instantiate-abstractions'
 import {
     NODE_BUILDERS,
     NODE_IMPLEMENTATIONS,
-} from './compile-dsp-graph/nodes-index'
+} from './nodes/index'
 setAsc(asc)
 
 const BIT_DEPTH = 64
