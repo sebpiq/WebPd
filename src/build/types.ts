@@ -1,4 +1,9 @@
-import { AudioSettings as BaseAudioSettings, CompilationSettings, DspGraph, NodeImplementations } from '@webpd/compiler-js'
+import {
+    AudioSettings as BaseAudioSettings,
+    CompilationSettings,
+    DspGraph,
+    NodeImplementations,
+} from '@webpd/compiler-js'
 import { PdJson } from '@webpd/pd-parser'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 import { NodeBuilders } from '../compile-dsp-graph/types'
@@ -35,7 +40,7 @@ export const BUILD_FORMATS = {
     appTemplate: {
         extensions: ['.html'],
         description: 'Full HTML app',
-    }
+    },
 }
 
 export type BuildFormat = keyof typeof BUILD_FORMATS
@@ -43,12 +48,16 @@ export type BuildFormat = keyof typeof BUILD_FORMATS
 export interface Artefacts {
     pd?: string
     pdJson?: PdJson.Pd
-    dspGraph?: { graph: DspGraph.Graph; arrays: DspGraph.Arrays }
+    dspGraph?: {
+        graph: DspGraph.Graph
+        arrays: DspGraph.Arrays
+        inletCallerSpecs?: CompilationSettings['inletCallerSpecs']
+    }
     compiledJs?: string
     compiledAsc?: string
     wasm?: ArrayBuffer
     wav?: Uint8Array
-    appTemplate?: {[filename: string]: string | ArrayBuffer}
+    appTemplate?: { [filename: string]: string | ArrayBuffer }
 }
 
 export interface AudioSettings extends BaseAudioSettings {

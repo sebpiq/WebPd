@@ -1,6 +1,10 @@
 import compile from '@webpd/compiler-js'
 import parse from '@webpd/pd-parser'
 import appGenerator from '../app-generator/generate-app'
+import {
+    collectGuiControlsInletCallerSpecs,
+    discoverGuiControls,
+} from '../app-generator/gui-controls'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
 import { compileAsc } from './asc'
 import { renderWav } from './audio'
@@ -109,11 +113,11 @@ export const performBuildStep = async (
                 warnings = Object.entries(
                     toDspGraphResult.abstractionsLoadingWarnings
                 )
-                .filter(([_, warnings]) => !!warnings.length)
-                .flatMap(([nodeType, warnings]) => [
-                    `Warnings when parsing abstraction ${nodeType} :`,
-                    ..._makeParseErrorMessages(warnings),
-                ])
+                    .filter(([_, warnings]) => !!warnings.length)
+                    .flatMap(([nodeType, warnings]) => [
+                        `Warnings when parsing abstraction ${nodeType} :`,
+                        ..._makeParseErrorMessages(warnings),
+                    ])
             }
 
             if (toDspGraphResult.status === 0) {
@@ -121,7 +125,25 @@ export const performBuildStep = async (
                     graph: toDspGraphResult.graph,
                     arrays: toDspGraphResult.arrays,
                 }
+
+                // If inletCallerSpecs are not defined, we infer them by 
+                // discovering UI controls and generating inlet callers for each one.
+                if (
+                    !inletCallerSpecs &&
+                    artefacts.pdJson &&
+                    artefacts.pdJson.patches['0']
+                ) {
+                    const { controls } = discoverGuiControls(
+                        artefacts.pdJson,
+                        artefacts.pdJson.patches['0']
+                    )
+                    artefacts.dspGraph.inletCallerSpecs = collectGuiControlsInletCallerSpecs(
+                        controls,
+                        artefacts.dspGraph!.graph
+                    )
+                }
                 return { status: 0, warnings }
+
             } else {
                 const unknownNodeTypes = Object.values(
                     toDspGraphResult.abstractionsLoadingErrors
@@ -168,7 +190,7 @@ export const performBuildStep = async (
                             ? 'javascript'
                             : 'assemblyscript',
                     audioSettings,
-                    inletCallerSpecs,
+                    inletCallerSpecs: inletCallerSpecs || artefacts.dspGraph.inletCallerSpecs,
                     arrays: artefacts.dspGraph!.arrays,
                 }
             )

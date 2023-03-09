@@ -163,8 +163,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                 colors.grey(
                     '\nWeb app compiled ! Start it by running :\n'
                 ) +
-                    colors.blue(`npx http-server ${outDir}\n`) +
-                    colors.grey('then go to http://localhost:8080\n')
+                    colors.blue(`\tnpx http-server ${outDir}\n`)
             )
         }
     }

@@ -8,15 +8,15 @@ export interface Settings {
 
 export type GeneratedApp = { [filename: string]: string | ArrayBuffer }
 
-type Template = 'bare-bones' 
+type Template = 'bare-bones'
 
 export default (template: Template, artefacts: Artefacts): GeneratedApp => {
-    switch(template) {
+    switch (template) {
         case 'bare-bones':
             const generated = bareBonesApp({ artefacts })
             return {
                 ...generated,
-                [WEBPD_RUNTIME_FILENAME]: WEBPD_RUNTIME_CODE
+                [WEBPD_RUNTIME_FILENAME]: WEBPD_RUNTIME_CODE,
             }
         default:
             throw new Error(`Unknown template ${template}`)
@@ -24,10 +24,13 @@ export default (template: Template, artefacts: Artefacts): GeneratedApp => {
 }
 
 const bareBonesApp = (settings: Settings) => {
-    if (!settings.artefacts.compiledJs && !settings.artefacts.wasm) {
+    const { artefacts } = settings
+    if (!artefacts.compiledJs && !artefacts.wasm) {
         throw new Error(`Needs at least compiledJs or wasm to run`)
     }
-    const compiledPatchFilename = settings.artefacts.compiledJs ? 'patch.js': 'patch.wasm'
+    const compiledPatchFilename = artefacts.compiledJs
+        ? 'patch.js'
+        : 'patch.wasm'
     // prettier-ignore
     const generatedApp: GeneratedApp = {
         'index.html': `
@@ -68,13 +71,42 @@ const bareBonesApp = (settings: Settings) => {
             let stream = null
             let webpdNode = null
 
-            const startWebPdNode = async () => {
+            const initApp = async () => {
+                // Register the worklet
+                await WebPdRuntime.registerWebPdWorkletNode(audioContext)
+
+                // Fetch the patch code
+                response = await fetch('${compiledPatchFilename}')
+                patch = await ${artefacts.compiledJs ? 
+                    'response.text()': 'response.arrayBuffer()'}
+
+                // Get audio input
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+                // Hide loading and show start button
+                loadingDiv.style.display = 'none'
+                startButton.style.display = 'block'
+            }
+
+            const startApp = async () => {
+                // AudioContext needs to be resumed on click to protects users 
+                // from being spammed with autoplay.
+                // See : https://github.com/WebAudio/web-audio-api/issues/345
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume()
+                }
+
+                // Setup web audio graph
                 const sourceNode = audioContext.createMediaStreamSource(stream)
                 webpdNode = new WebPdRuntime.WebPdWorkletNode(audioContext)
                 sourceNode.connect(webpdNode)
                 webpdNode.connect(audioContext.destination)
+
+                // Setup filesystem management
                 webpdNode.port.onmessage = (message) => WebPdRuntime.fs.web(webpdNode, message)
-                ${settings.artefacts.compiledJs ? `
+
+                // Send code to the worklet
+                ${artefacts.compiledJs ? `
                 webpdNode.port.postMessage({
                     type: 'code:JS',
                     payload: {
@@ -87,22 +119,9 @@ const bareBonesApp = (settings: Settings) => {
                         wasmBuffer: patch,
                     },
                 })`}
-            }
 
-            const initApp = async () => {
-                await WebPdRuntime.registerWebPdWorkletNode(audioContext)
-                response = await fetch('${compiledPatchFilename}')
-                patch = await ${settings.artefacts.compiledJs ? 
-                    'response.text()': 'response.arrayBuffer()'}
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-                loadingDiv.style.display = 'none'
-                startButton.style.display = 'block'
-            }
-
-            const startApp = async () => {
-                await startWebPdNode()
+                // Hide the start button
                 startButton.style.display = 'none'
-                startWebPdNode(audioContext, stream)
             }
 
             startButton.onclick = startApp
@@ -111,15 +130,37 @@ const bareBonesApp = (settings: Settings) => {
                 then(() => {
                     console.log('App initialized')
                 })
+
+            // You can then use this function to interact with your patch
+            // e.g. :
+            // sendMsgToWebPd('n_0_1', '0', ['bang'])
+            // sendMsgToWebPd('n_0_2', '0', [123])
+            const sendMsgToWebPd = (nodeId, portletId, message) => {
+                webpdNode.port.postMessage({
+                    type: 'inletCaller',
+                    payload: {
+                        nodeId,
+                        portletId,
+                        message,
+                    },
+                })
+            }
+            ${artefacts.dspGraph && artefacts.dspGraph.inletCallerSpecs ? `
+            // For info, compilation has opened the following ports in your patch.
+            // You can send messages to them :` 
+                + Object.entries(artefacts.dspGraph.inletCallerSpecs)
+                    .flatMap(([nodeId, portletIds]) => portletIds.map(portletId => `
+            //     - Node of type "${artefacts.dspGraph.graph[nodeId].type}", nodeId "${nodeId}", portletId "${portletId}"`)).join('')
+                : ''}
         </script>
     </body>
 </html>`
     }
 
-    if (settings.artefacts.compiledJs) {
-        generatedApp[compiledPatchFilename] = settings.artefacts.compiledJs
+    if (artefacts.compiledJs) {
+        generatedApp[compiledPatchFilename] = artefacts.compiledJs
     } else {
-        generatedApp[compiledPatchFilename] = settings.artefacts.wasm
+        generatedApp[compiledPatchFilename] = artefacts.wasm
     }
 
     return generatedApp
