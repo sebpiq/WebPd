@@ -1,4 +1,4 @@
-import { Artefacts } from '../api/types'
+import { Artefacts } from '../build/types'
 import WEBPD_RUNTIME_CODE from './runtime.generated.js.txt'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 

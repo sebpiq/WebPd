@@ -1,9 +1,9 @@
 // ================ Build
-import { setAsc as setAsc_ } from './src/api/asc'
+import { setAsc as setAsc_ } from './src/build/asc'
 import {
     makeAbstractionLoader as makeAbstractionLoader_,
     UnknownNodeTypeError as UnknownNodeTypeError_,
-} from './src/api/helpers'
+} from './src/build/helpers'
 import {
     createArtefacts as createArtefacts_,
     performBuildStep as performBuildStep_,
@@ -11,14 +11,14 @@ import {
     listOutputFormats as listOutputFormats_,
     listBuildSteps as listBuildSteps_,
     guessFormat as guessFormat_,
-} from './src/api/build'
+} from './src/build/build'
 import { AbstractionLoader as AbstractionLoader_ } from './src/compile-dsp-graph/instantiate-abstractions'
 import {
     BuildFormat as BuildFormat_,
     BUILD_FORMATS as BUILD_FORMATS_,
     Artefacts as Artefacts_,
     Settings as Settings_,
-} from './src/api/types'
+} from './src/build/types'
 import {
     NODE_BUILDERS as NODE_BUILDERS_,
     NODE_IMPLEMENTATIONS as NODE_IMPLEMENTATIONS_,

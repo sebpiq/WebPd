@@ -6,20 +6,20 @@ import { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
 import * as path from 'path'
 import fs from 'fs'
-import { Artefacts, BuildFormat, Settings } from './src/api/types'
-import { setAsc } from './src/api/asc'
-import { analysePd } from './src/api/reports'
+import { Artefacts, BuildFormat, Settings } from './src/build/types'
+import { setAsc } from './src/build/asc'
+import { analysePd } from './src/build/reports'
 import {
     performBuildStep,
     listBuildSteps,
     preloadArtefact,
     guessFormat,
-} from './src/api/build'
+} from './src/build/build'
 import {
     getArtefact,
     makeAbstractionLoader,
     UnknownNodeTypeError,
-} from './src/api/helpers'
+} from './src/build/helpers'
 import { AbstractionLoader } from './src/compile-dsp-graph/instantiate-abstractions'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from './src/nodes/index'
 setAsc(asc)
