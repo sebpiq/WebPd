@@ -1,12 +1,14 @@
+import colors from 'colors/safe'
+import packageInfo from '../package.json'
 import { fileURLToPath } from 'url'
 import asc from 'assemblyscript/dist/asc.js'
-import parse, { PdJson } from '@webpd/pd-parser'
+import { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
 import * as path from 'path'
 import fs from 'fs'
 import { Artefacts, BuildFormat, Settings } from './api/types'
 import { setAsc } from './api/asc'
-// import { analysePd } from './api/reports'
+import { analysePd } from './api/reports'
 import {
     performBuildStep,
     listBuildSteps,
@@ -35,50 +37,51 @@ interface Task {
     artefacts: Artefacts
 }
 
-// const checkSupportPdJson = async (
-//     pdJson: PdJson.Pd,
-//     abstractionLoader: AbstractionLoader,
-//     settings: Settings
-// ) => {
-//     const { unimplementedObjectTypes } = await analysePd(
-//         pdJson,
-//         abstractionLoader,
-//         settings
-//     )
+const consoleLogHeader = (message: string) => console.log('\n~~~ ' + colors.bold(message))
+const consoleLogEm = (message: string) => console.log(colors.bold(message))
 
-//     let isSupported = true
-//     console.log(`> Check support `)
-//     if (unimplementedObjectTypes.size) {
-//         console.log(
-//             `\t ${
-//                 unimplementedObjectTypes.size
-//             } object types not implemented : ${Array.from(
-//                 unimplementedObjectTypes
-//             )
-//                 .map((type) => `[${type}]`)
-//                 .join(', ')}`
-//         )
-//         isSupported = false
-//     }
+const checkSupportPdJson = async (
+    pdJson: PdJson.Pd,
+    abstractionLoader: AbstractionLoader,
+    settings: Settings
+) => {
+    const { unimplementedObjectTypes } = await analysePd(
+        pdJson,
+        abstractionLoader,
+        settings
+    )
 
-//     if (isSupported) {
-//         console.log(`\t Supported : YES`)
-//     } else {
-//         console.log(`\t Supported : NO`)
-//     }
-//     console.log('')
-// }
+    let isSupported = true
+    consoleLogHeader(`Check support `)
+    if (unimplementedObjectTypes) {
+        console.log(
+            `${
+                unimplementedObjectTypes.size
+            } object types not implemented : ${Array.from(
+                unimplementedObjectTypes
+            )
+                .map((type) => `[${type}]`)
+                .join(', ')}`
+        )
+        isSupported = false
+    }
+
+    if (isSupported) {
+        consoleLogEm(`OK`)
+    } else {
+        consoleLogEm(`NOT SUPPORTED`)
+    }
+}
 
 const whatsImplemented = () => {
-    console.log(`> What's implemented ?`)
+    consoleLogHeader(`What's implemented ?`)
     console.log(
-        `\t ${
+        `${
             Object.keys(NODE_BUILDERS).length
         } object implemented : ${Object.keys(NODE_BUILDERS)
             .map((type) => `[${type}]`)
             .join(', ')}`
     )
-    console.log('')
 }
 
 const assertValidFormat = (
@@ -126,8 +129,8 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                 )
                 break
         }
+        consoleLogEm(`Output file written to ${outFilepath}`)
     }
-    console.log(`output file written to ${outFilepath}`)
     return task
 }
 
@@ -160,16 +163,19 @@ const executeTask = async (task: Task, settings: Settings): Promise<Task> => {
     )
     // Remove first step as it corresponds with the input file.
     for (let buildStep of buildSteps!) {
-        console.log(`\nBUILDING ${buildStep} ... `)
+        consoleLogHeader(`Building ${buildStep}`)
         const result = await performBuildStep(artefacts, buildStep, settings)
         result.warnings.forEach((message) =>
-            console.warn('\t WARNING : ' + message)
+            console.warn('WARNING : ' + message)
         )
         if (result.status === 1) {
             result.errors.forEach((message) =>
-                console.error('\t ERROR : ' + message)
+                console.error('ERROR : ' + message)
             )
+            consoleLogEm(`FAILED`)
             process.exit(1)
+        } else {
+            consoleLogEm(`SUCCESS`)
         }
     }
     return { ...task, artefacts }
@@ -187,11 +193,17 @@ const exitError = (msg: string) => {
 }
 
 const main = (): void => {
+    console.log('')
+    const cliHeader = `~ WebPd compiler ${packageInfo.version} ~`
+    console.log((colors as any).brightMagenta.bold(cliHeader))
+
     program
+        .version(packageInfo.version)
         .option('-i, --input <filename>')
         .option('-o, --output <filename>')
         .option('--check-support')
         .option('--whats-implemented')
+    program.showHelpAfterError('(add --help for additional information)');
 
     program.parse()
     const options = program.opts()
@@ -238,6 +250,8 @@ const main = (): void => {
             outFormat = outFormat || 'pdJson'
         }
 
+        const abstractionLoader = makeCliAbstractionLoader(path.dirname(inFilepath))
+
         const settings: Settings = {
             nodeBuilders: NODE_BUILDERS,
             nodeImplementations: NODE_IMPLEMENTATIONS,
@@ -248,7 +262,7 @@ const main = (): void => {
                 blockSize: BLOCK_SIZE,
                 previewDurationSeconds: WAV_PREVIEW_DURATION,
             },
-            abstractionLoader: makeCliAbstractionLoader(path.dirname(inFilepath)),
+            abstractionLoader,
         }
 
         const task: Task = {
@@ -263,21 +277,21 @@ const main = (): void => {
             .then((task) => writeOutFile(task))
             .then((task) => {
                 if (options.checkSupport && task.artefacts.pdJson) {
-                    throw new Error(`Broken ! FIX ME !`)
-                    // return checkSupportPdJson(
-                    //     task.artefacts.pdJson,
-                    //     makeAbstractionLoader(path.dirname(inFilepath)),
-                    //     settings
-                    // )
+                    return checkSupportPdJson(
+                        task.artefacts.pdJson,
+                        abstractionLoader,
+                        settings
+                    )
                 } else {
                     return null
                 }
             })
-            .then(() => {
-                console.log('DONE !')
-            })
             .catch((err) => {
                 console.error(err)
+            })
+            .finally(() => {
+                console.log((colors as any).brightMagenta.bold(`\n` + Array.from(cliHeader).map(_ => '~').join('')))
+                console.log('')
             })
     }
 }

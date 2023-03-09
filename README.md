@@ -1,14 +1,12 @@
-# WebPd
+<!-- *[🤑 A crowdfunding campaign to help reaching the next milestone (WebPd 1.0) is in progress !!! 🤑](https://opencollective.com/webpd#category-CONTRIBUTE)* -->
 
-*[🤑 A crowdfunding campaign to help reaching the next milestone (WebPd 1.0) is in progress !!! 🤑](https://opencollective.com/webpd#category-CONTRIBUTE)*
-
-**WebPd** is a highly modular web audio programming toolkit inspired by **Pure Data**.
+**WebPd** is a highly modular web audio programming toolkit inspired by [Pure Data](puredata.info/).
 
 → **it allows artists to take their Pure Data patches and run these in web pages**, therefore enabling non-programmers (sound designers, musicians, etc ... ) to design live and interactive audio for the web.
 
 → **it provides experienced web programmers with a complete audio toolkit** that is production-ready, and enables efficient audio synthesis and processing in the browser.
 
-## Toolkit structure
+<!-- ## Toolkit structure
 
 - [@webpd/compiler-js](https://github.com/sebpiq/WebPd_compiler-js) : Compiler for compiling a DSP graph into a single JavaScript function
 - [@webpd/dsp-graph](https://github.com/sebpiq/WebPd_dsp-graph) : Utilities for handling DSP graphs
@@ -20,9 +18,9 @@
 
 ## Demos
 
-→ A rudimentary graphical interface for writing patches in the browser, [here](https://sebpiq.github.io/WebPd_demos/the-graph/www/)
+→ A rudimentary graphical interface for writing patches in the browser, [here](https://sebpiq.github.io/WebPd_demos/the-graph/www/) -->
 
-
+<!-- 
 ## Roadmap
 
 ### WebPd 1.0
@@ -39,4 +37,4 @@
     - Guides and starter templates for beginners
 - Building the community :
     - Finding where's the best way for asking questions, sharing demos, etc ...
-    - Write a contribution guide, setup CI auto-formatting, etc ..., get the first contributors started
+    - Write a contribution guide, setup CI auto-formatting, etc ..., get the first contributors started -->

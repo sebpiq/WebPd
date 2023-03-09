@@ -74,6 +74,7 @@ interface CompilationSuccess {
 
 interface CompilationFailure {
     readonly status: 1
+    readonly pd: PdJson.Pd
     readonly errors: AbstractionsLoadingErrors
     readonly warnings: AbstractionsLoadingWarnings
 }
@@ -98,7 +99,7 @@ export default async (
     )
 
     const compilation: Compilation = {
-        pd,
+        pd: pdWithReassignedIds,
         nodeBuilders,
         abstractions: {},
         errors: {},
@@ -106,11 +107,8 @@ export default async (
         abstractionLoader,
     }
 
-    pd.patches = pdWithReassignedIds.patches
-    pd.arrays = pdWithReassignedIds.arrays
-
-    const rootPatch = _resolveRootPatch(pd)
-    Object.values(pd.arrays).forEach(
+    const rootPatch = _resolveRootPatch(compilation.pd)
+    Object.values(compilation.pd.arrays).forEach(
         (array) => (array.args = resolveArrayDollarArgs(rootPatch, array.args))
     )
 
@@ -125,14 +123,15 @@ export default async (
     if (hasErrors) {
         return {
             status: 1,
+            pd: compilation.pd,
             errors: compilation.errors,
             warnings: compilation.warnings,
         }
     } else {
         return {
             status: 0,
-            pd,
-            rootPatch: resolvePatch(pd, rootPatch.id),
+            pd: compilation.pd,
+            rootPatch: resolvePatch(compilation.pd, rootPatch.id),
             abstractions: compilation.abstractions,
             warnings: compilation.warnings,
         }

@@ -383,6 +383,8 @@ describe('instantiateAbstractions', () => {
                 unknownNodeType: 'unknownNodeType2',
             },
         })
+
+        assert.deepStrictEqual(results.pd, pd)
     })
 
     it('should return warnings even when resolution succeeded', async () => {
