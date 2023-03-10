@@ -11,7 +11,7 @@
 
 **WebPd is highly modular and takes a white-box approach to audio programming**. It aims to enable people with different levels of expertise to use the environment they feel most confortable with to play music and sounds. The output of the compiler is plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). This means that you're free to take the generated code and work directly with it in your own web application without using WebPd or Pure Data ever again 🌈.
 
-**WebPd is not** an application with a graphical editor interface for performing audio like Pure Data is. It simply generates audio code for you. You choose *if* and *how* you want to add visuals and interactivity  [Three.js](https://threejs.org/), [p5.js](https://p5js.org/), good old JavaScript / HTML, etc. There are plenty of good options 😉.
+**WebPd is not** an application with a graphical editor interface for performing audio like Pure Data is. It simply generates audio code so you can choose *if* and *how* you want to add visuals and interactivity  [Three.js](https://threejs.org/), [p5.js](https://p5js.org/), good old JavaScript / HTML, etc. There are plenty of good options 😉.
 
 *(\*) AssemblyScript is a TypeScript-style language which compiles to WebAssembly.*
 
@@ -21,11 +21,11 @@
 
 ## Usage
 
-### The web compiler
+### The web compiler and player
 
-**The web compiler is live at the following address: https://sebpiq.github.io/WebPd_website**
+**The web compiler and a demo player are live at the following address: https://sebpiq.github.io/WebPd_website**
 
-Just upload or give a URL(*) of a patch, compile it just in time and generate an interface allowing to play that patch in realtime instantly in your browser. Once the compilation succeeds, you can copy and share the resulting URL from your browser with others(**). This URL contains all the modified parameters of the patch you have played with so that it is shared completely in its *current* state.
+Just upload or give a URL(*) of a patch, compile it just in time and generate an interface allowing to play that patch in realtime instantly in your browser. Once the compilation succeeds, you can copy and share the resulting URL from the player with others(**). This URL contains all the modified parameters of the patch you have played with so that it is shared completely in its *current* state.
 
 *(\*)You can use any public URL of a patch found in the wild (on github, Pure Data forums, etc.).*
 
