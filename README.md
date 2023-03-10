@@ -21,9 +21,9 @@
 
 ## Usage
 
-### The web compiler and player
+### Web compiler and player
 
-**The web compiler and a demo player are live at the following address: https://sebpiq.github.io/WebPd_website**
+**The web compiler and a patch player are live at the following address: https://sebpiq.github.io/WebPd_website**
 
 Just upload or give a URL(*) of a patch, compile it just in time and generate an interface allowing to play that patch in realtime instantly in your browser. Once the compilation succeeds, you can copy and share the resulting URL from the player with others(**). This URL contains all the modified parameters of the patch you have played with so that it is shared completely in its *current* state.
 
@@ -31,7 +31,7 @@ Just upload or give a URL(*) of a patch, compile it just in time and generate an
 
 *(\*\*)Sharing a compiled patch doesn't work if you used local files for compilation.*
 
-### The command line
+### Command line interface
 <span id="using-the-cli"><span>
 
 The command-line interface (CLI) offers more customization options, including the ability to generate a fully-functional (but bare bones) web page embedding your patch.
@@ -55,7 +55,7 @@ This should output help for the CLI and will hopefully get you started.
 
 If you feel stuck, there's [plenty of places](https://puredata.info/community) where you can ask for help. I recommend in particular [the discord server](https://discord.gg/AZ43djV) where you can get help quickly and find support from the community.
 
-If you feel you might have stumbled upon a bug, please reporting it following [these simple guidelines](reporting-a-bug).
+If you feel you might have stumbled upon a bug, please report it following [these simple guidelines](reporting-a-bug).
 
 ### You are using WebPd?
 
@@ -71,7 +71,7 @@ If you can afford it, you can also [donate](https://opencollective.com/webpd) to
 
 WebPd is currently under heavy development, but it is still a work in progress. A list of implemented objects, features and the roadmap are [here](https://github.com/sebpiq/WebPd/blob/main/ROADMAP.md).
 
-The project is currently in *alpha release state* which means that many of your patches will *not* work out of the box. Many objects and features are indeed still missing. If you feel there is a bug, thanks for reporting it following [these simple guidelines](#reporting-a-bug)! A list of the current implemented objects will be published soon.
+The project is currently in *alpha release state* which means that many of your patches will *not* work out of the box. Many objects and features are indeed still missing. If you feel there is a bug, thanks for reporting it following [these simple guidelines](#reporting-a-bug)!
 
 
 ### Reporting a bug
@@ -101,6 +101,11 @@ WebPd is free software: you can redistribute it and/or modify it under the terms
 
 WebPd is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU Lesser General Public License or read the [COPYING.LESSER](https://github.com/Ircam-WAM/WebPd/blob/main/COPYING.LESSER) file for more details.
+
+
+## Authors
+
+Sébastien Piquemal <sebpiq@protonmail.com>
 
 
 ## Acknowledgment and sponsors
