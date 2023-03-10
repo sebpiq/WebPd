@@ -96,7 +96,7 @@ Expected behavior -> Describe shortly how it should work instead
 
 One-time contributions or regular work on the library are more than welcome! Contribution guidelines are coming, meanwhile if you have time and would really like to get involved please get in touch on the issue tracker on GitHub. I would be pleased to help you getting started for contributing.
 
-In case you would start to develop a new object, here are some examples to start with:
+In case you would start to develop a new object, here are some good examples to start with:
 
 - [clip.ts](https://github.com/sebpiq/WebPd/blob/develop/src/nodes/nodes/clip.ts)
 - [clip~.ts](https://github.com/sebpiq/WebPd/blob/develop/src/nodes/nodes/clip~.ts)
