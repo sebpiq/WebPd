@@ -11,7 +11,7 @@
 
 **WebPd is highly modular and takes a white-box approach to audio programming**. It aims to enable people with different levels of expertise to use the environment they feel most confortable with to play music and sounds. The output of the compiler is plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). This means that you're free to take the generated code and work directly with it in your own web application without using WebPd or Pure Data ever again 🌈.
 
-**WebPd is not** an application with a graphical editor interface for performing audio like Pure Data is. It simply generates audio code so you can choose *if* and *how* you want to add visuals and interactivity  [Three.js](https://threejs.org/), [p5.js](https://p5js.org/), good old JavaScript / HTML, etc. There are plenty of good options 😉.
+WebPd simply generates audio code so you can choose *if* and *how* you want to add visuals and interactivity. There are plenty of good options to interact with the objects like  [Three.js](https://threejs.org/), [p5.js](https://p5js.org/), good old JavaScript / HTML, etc. An example of a patch player has recently been [published](#using-the-web-compiler). As a result, WebPd is **not** a new web editor for building patch as Pure Data does natively or a simple executor like libpd but a cutting edge engine to provide interactions with you patch through the web.
 
 *(\*) AssemblyScript is a TypeScript-style language which compiles to WebAssembly.*
 
@@ -22,6 +22,7 @@
 ## Usage
 
 ### Web compiler and player
+<span id="using-the-web-compiler"><span>
 
 **The web compiler and a patch player are live at the following address: https://sebpiq.github.io/WebPd_website**
 
@@ -71,7 +72,7 @@ If you can afford it, you can also [donate](https://opencollective.com/webpd) to
 
 WebPd is currently under heavy development, but it is still a work in progress. A list of implemented objects, features and the roadmap are [here](https://github.com/sebpiq/WebPd/blob/main/ROADMAP.md).
 
-The project is currently in *alpha release state* which means that many of your patches will *not* work out of the box. Many objects and features are indeed still missing. If you feel there is a bug, thanks for reporting it following [these simple guidelines](#reporting-a-bug)!
+The project is currently in *alpha release state* which means that many of your patches will *not* work out of the box. Many objects and features are indeed still missing. If you feel there is a bug, thanks for reporting it following [these simple guidelines](#reporting-a-bug). If you feel you could develop an object that is missing in WebPd to play a specific patch, see [contributing](#contributing).
 
 
 ### Reporting a bug
@@ -91,8 +92,14 @@ Expected behavior -> Describe shortly how it should work instead
 ```
 
 ### Contributing
+<span id="contributing"><span>
 
 One-time contributions or regular work on the library are more than welcome! Contribution guidelines are coming, meanwhile if you have time and would really like to get involved please get in touch on the issue tracker on GitHub. I would be pleased to help you getting started for contributing.
+
+In case you would start to develop a new object, here are some examples to start with:
+
+- [clip.ts](https://github.com/sebpiq/WebPd/blob/develop/src/nodes/nodes/clip.ts)
+- [clip~.ts](https://github.com/sebpiq/WebPd/blob/develop/src/nodes/nodes/clip~.ts)
 
 
 ## License
@@ -105,7 +112,13 @@ GNU Lesser General Public License or read the [COPYING.LESSER](https://github.co
 
 ## Authors
 
-Sébastien Piquemal <sebpiq@protonmail.com>
+- Sébastien Piquemal <sebpiq@protonmail.com>
+- Chris McCormick
+- Brandon James
+- mgsx-dev
+- Atul Varma
+- Ulric Wilfred
+- Paul Money
 
 
 ## Acknowledgment and sponsors
