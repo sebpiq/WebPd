@@ -75,6 +75,26 @@ describe('funcs', () => {
             )
         })
 
+        describe('sqrt', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should apply the expected function %s',
+                async ({ target, bitDepth }) => {
+                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['sqrt'], 'sqrt', {}),
+                            nodeImplementation: nodeImplementations['sqrt'],
+                        },
+                        [
+                            { ins: { '0': [[9], [-0.9], [0], [4]] } },
+                            { outs: { '0': [[3], [0], [0], [2]] } },
+                        ]
+                    )
+                }
+            )
+        })
+
         describe('mtof', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should apply the expected function %s',

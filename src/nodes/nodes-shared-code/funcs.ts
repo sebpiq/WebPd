@@ -21,3 +21,13 @@ export const ftom: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
         return value <= 0 ? -1500: 12 * Math.log(value / 440) / Math.LN2 + 69
     }
 `
+
+// TODO : tests (see in binop)
+export const pow: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
+    function pow ${Func([
+        Var('leftOp', 'Float'),
+        Var('rightOp', 'Float'),
+    ], 'Float')} {
+        return leftOp > 0 || (Math.round(rightOp) === rightOp) ? Math.pow(leftOp, rightOp): 0
+    }
+`

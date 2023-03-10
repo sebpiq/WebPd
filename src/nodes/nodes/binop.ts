@@ -13,11 +13,13 @@ import {
     Code,
     NodeImplementation,
     NodeImplementations,
+    SharedCodeGenerator,
 } from '@webpd/compiler-js/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../nodes-shared-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
+import { pow } from '../nodes-shared-code/funcs'
 
 interface NodeArguments {
     value: number
@@ -54,12 +56,14 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 
 const makeNodeImplementation = ({
     generateOperation,
+    sharedCode = [],
     prepareLeftOp = 'value',
     prepareRightOp = 'value',
 }: {
     generateOperation: (
         state: Parameters<_NodeImplementation['messages']>[0]['state']
     ) => Code
+    sharedCode?: Array<SharedCodeGenerator>,
     prepareLeftOp?: Code
     prepareRightOp?: Code
 }): _NodeImplementation => {
@@ -115,7 +119,7 @@ const makeNodeImplementation = ({
         declare,
         messages,
         stateVariables,
-        sharedCode: [bangUtils],
+        sharedCode: [bangUtils, ...sharedCode],
     }
 }
 
@@ -134,6 +138,12 @@ const nodeImplementations: NodeImplementations = {
         generateOperation: (state) =>
             `${state.rightOp} !== 0 ? ${state.leftOp} / ${state.rightOp}: 0`,
     }),
+    'max': makeNodeImplementation({
+        generateOperation: (state) => `Math.max(${state.leftOp}, ${state.rightOp})`,
+    }),
+    'min': makeNodeImplementation({
+        generateOperation: (state) => `Math.min(${state.leftOp}, ${state.rightOp})`,
+    }),
     mod: makeNodeImplementation({
         prepareLeftOp: `value > 0 ? Math.floor(value): Math.ceil(value)`,
         prepareRightOp: `Math.floor(Math.abs(value))`,
@@ -143,9 +153,13 @@ const nodeImplementations: NodeImplementations = {
         generateOperation: (state) =>
             `${state.rightOp} !== 0 ? (${state.rightOp} + (${state.leftOp} % ${state.rightOp})) % ${state.rightOp}: 0`,
     }),
+    // Legacy modulo
+    '%': makeNodeImplementation({
+        generateOperation: (state) => `${state.leftOp} % ${state.rightOp}`,
+    }),
     pow: makeNodeImplementation({
-        generateOperation: (state) =>
-            `${state.leftOp} > 0 || (Math.round(${state.rightOp}) === ${state.rightOp}) ? Math.pow(${state.leftOp}, ${state.rightOp}): 0`,
+        generateOperation: (state) => `pow(${state.leftOp}, ${state.rightOp})`,
+        sharedCode: [pow],
     }),
     '||': makeNodeImplementation({
         prepareLeftOp: `Math.floor(Math.abs(value))`,
@@ -190,7 +204,10 @@ const builders = {
     '-': makeBuilder(0),
     '*': makeBuilder(1),
     '/': makeBuilder(1),
+    'max': makeBuilder(0),
+    'min': makeBuilder(1),
     mod: makeBuilder(0),
+    '%': makeBuilder(0),
     pow: makeBuilder(0),
     '||': makeBuilder(0),
     '&&': makeBuilder(0),

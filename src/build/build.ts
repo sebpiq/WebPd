@@ -289,7 +289,7 @@ const _makeParseErrorMessages = (
     errorOrWarnings: Array<{ message: string; lineIndex: number }>
 ) =>
     errorOrWarnings.map(
-        ({ message, lineIndex }) => `line ${lineIndex} : ${message}`
+        ({ message, lineIndex }) => `line ${lineIndex + 1} : ${message}`
     )
 
 export const _findBuildPaths = (

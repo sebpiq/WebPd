@@ -64,24 +64,29 @@ const nodeImplementations: NodeImplementations = {
     'abs': makeNodeImplementation({ operationCode: `Math.abs(value)` }),
     'wrap': makeNodeImplementation({ operationCode: `(1 + (value % 1)) % 1` }),
     'cos': makeNodeImplementation({ operationCode: `Math.cos(value)` }),
+    'sqrt': makeNodeImplementation({ operationCode: `value >= 0 ? Math.pow(value, 0.5): 0` }),
     'mtof': makeNodeImplementation({ operationCode: `mtof(value)`, sharedCode: [mtof] }),
     'ftom': makeNodeImplementation({ operationCode: `ftom(value)`, sharedCode: [ftom] }),
     'rmstodb': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : 20 * Math.log(value) / Math.LN10 + 100` }),
     'dbtorms': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : Math.exp(Math.LN10 * (value - 100) / 20)` }),
     'powtodb': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : 10 * Math.log(value) / Math.LN10 + 100` }),
     'dbtopow': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : Math.exp(Math.LN10 * (value - 100) / 10)` }),
+    // Implement vu as a noop
+    'vu': makeNodeImplementation({ operationCode: `value` }),
 }
 
 const builders = {
     'abs': builder,
     'cos': builder,
     'wrap': builder,
+    'sqrt': builder,
     'mtof': builder,
     'ftom': builder,
     'rmstodb': builder,
     'dbtorms': builder,
     'powtodb': builder,
     'dbtopow': builder,
+    'vu': builder,
 }
 
 export { builders, nodeImplementations, NodeArguments }

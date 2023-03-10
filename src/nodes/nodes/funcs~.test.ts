@@ -60,6 +60,38 @@ describe('func~', () => {
         )
     })
 
+    describe('implementation sqrt~', () => {
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should apply the expected function %s',
+            async ({ target, bitDepth }) => {
+                await nodeImplementationsTestHelpers.assertNodeOutput(
+                    {
+                        target,
+                        bitDepth,
+                        node: buildNode(builders['sqrt~'], 'sqrt~', {}),
+                        nodeImplementation: nodeImplementations['sqrt~'],
+                    },
+                    [
+                        { ins: { '0': 9 } },
+                        { outs: { '0': 3 } },
+                    ],
+                    [
+                        { ins: { '0': -0.9 } },
+                        { outs: { '0': 0 } },
+                    ],
+                    [
+                        { ins: { '0': 0 } },
+                        { outs: { '0': 0 } },
+                    ],
+                    [
+                        { ins: { '0': 4 } },
+                        { outs: { '0': 2 } },
+                    ]
+                )
+            }
+        )
+    })
+
     describe('implementation wrap~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should apply the expected function %s',

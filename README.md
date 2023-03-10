@@ -1,40 +1,84 @@
-<!-- *[🤑 A crowdfunding campaign to help reaching the next milestone (WebPd 1.0) is in progress !!! 🤑](https://opencollective.com/webpd#category-CONTRIBUTE)* -->
+**WebPd** is a compiler for [Pure Data](puredata.info/) allowing to run **.pd** patches on web pages. Patches can be compiled directly [online](https://sebpiq.github.io/WebPd_website/) or [with the command line tool](#using-the-cli).
 
-**WebPd** is a highly modular web audio programming toolkit inspired by [Pure Data](puredata.info/).
+**WebPd is highly modular and takes a white-box approach to audio programming**. It aims to enable people with different levels of expertise to use the environment they feel most confortable with. The output of the compiler is plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). This means that you're free to take the generated code and work directly with it in your own application without using WebPd or Pure Data ever again 🌈.
 
-→ **it allows artists to take their Pure Data patches and run these in web pages**, therefore enabling non-programmers (sound designers, musicians, etc ... ) to design live and interactive audio for the web.
+**WebPd is not** an application with a graphical interface for performing audio like Pure Data is. It simply generates audio code for you. You choose *if* and *how* you want to add visuals and interactivity  [Three.js](https://threejs.org/), [p5.js](https://p5js.org/), good old JavaScript / HTML, etc, etc ... there are plenty of good options 😉.
 
-→ **it provides experienced web programmers with a complete audio toolkit** that is production-ready, and enables efficient audio synthesis and processing in the browser.
+*(\*) AssemblyScript is a TypeScript-style language which compiles to WebAssembly.*
 
-<!-- ## Toolkit structure
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23ed00d9)](https://github.com/sponsors/sebpiq)
 
-- [@webpd/compiler-js](https://github.com/sebpiq/WebPd_compiler-js) : Compiler for compiling a DSP graph into a single JavaScript function
-- [@webpd/dsp-graph](https://github.com/sebpiq/WebPd_dsp-graph) : Utilities for handling DSP graphs
-- [@webpd/runtime](https://github.com/sebpiq/WebPd_runtime) : AudioWorklets for running DSP engines compiled from @webpd/compiler-js.
-- [@webpd/shared](https://github.com/sebpiq/WebPd_shared) : Shared tools and types for the other packages
-- [@webpd/pd-parser](https://github.com/sebpiq/WebPd_pd-parser) : Parser for pd files
-- [@webpd/pd-renderer](https://github.com/sebpiq/WebPd_pd-renderer) : Renderer for pd files
-- [@webpd/pd-to-dsp-graph](https://github.com/sebpiq/WebPd_pd-to-dsp-graph) : Compiler for transforming pd patches into DSP graphs
+# Using WebPd
 
-## Demos
+## Through the online compiler
 
-→ A rudimentary graphical interface for writing patches in the browser, [here](https://sebpiq.github.io/WebPd_demos/the-graph/www/) -->
+**The online compiler is live at the following address: https://sebpiq.github.io/WebPd_website**
 
-<!-- 
-## Roadmap
+With it you can compile a patch and generate an interface allowing to play that patch online. Once the compilation succeeds, you can copy and share the url with others (*). You can also try it with any patch that you found in the wild (on github, or on any of the Pure Data forums).
 
-### WebPd 1.0
+*(\*) Sharing a compiled patch doesn't work if you used local files for compilation.*
 
-- Porting all objects from the current version of WebPd (https://raw.githubusercontent.com/sebpiq/WebPd/master/OBJECTLIST.md)
-- Implementation of the WebPd toolkit consisting in several independant packages which developers can re-use :
-    - Full documentation for all the packages of the WebPd toolkit
-    - Compilation of Pure Data patches to WebAssembly and/or JavaScript (https://github.com/sebpiq/WebPd_engine-live-eval)
-    - AudioWorklets to run WebAssembly and/or compiled JavaScript code (https://github.com/sebpiq/WebPd_compiler-js)
-    - Pd files parsing and rendering (https://github.com/sebpiq/WebPd_pd-parser, https://github.com/sebpiq/WebPd_pd-renderer)
-- WebPd library as a front door packaging the whole toolkit  :
-    - Full documentation available (https://github.com/sebpiq/WebPd)
-    - Demos (https://github.com/sebpiq/WebPd_demos)
-    - Guides and starter templates for beginners
-- Building the community :
-    - Finding where's the best way for asking questions, sharing demos, etc ...
-    - Write a contribution guide, setup CI auto-formatting, etc ..., get the first contributors started -->
+
+## Through the command line
+<span id="using-the-cli"><span>
+
+Once you're ready to go further, you can install the WebPd command-line interface (CLI). It offers more customization options, including the ability to generate a fully-functional (but bare bones) web page embedding your patch.
+
+Open a terminal, and install the CLI with [node / npm](https://nodejs.org/) by running the following command : 
+
+```
+npm install -g webpd
+```
+
+You can then verify that installation worked by running :
+
+```
+webpd --help
+```
+
+This should output help for the CLI and will hopefully get you started.
+
+
+## Getting help
+
+If you feel stuck, there's [plenty of places](https://puredata.info/community) where you can ask for help. I recommend in particular [the discord server](https://discord.gg/AZ43djV) where you can get help quickly and find support and community for your work.
+
+If you feel you might have stumbled upon a bug, thank you for reporting it followning [these simple guidelines](reporting-a-bug).
+
+## You are using WebPd ?
+
+Great 🌱 ! It helps a lot with motivation to hear that people are using it. Don't hesitate to let me know by pinging me on twitter [@sebpiq](https://twitter.com/sebpiq), or [writing me directly by email](https://second-hander.com/).
+
+
+If you can afford it, you can also [donate](https://opencollective.com/webpd) to help move development forward.
+
+
+# Development
+
+## Status & roadmap
+
+WebPd is currently under heavy development, but it is still a work in progress. You can find a list of implemented objects and features [here](https://github.com/sebpiq/WebPd/blob/main/ROADMAP.md), along with a roadmap of what's left to implement.
+
+It is currently in alpha release which means that many of your patches will not work out of the box, because many objects and features are still missing. If you feel there is a bug, thanks for reporting it following [these simple guidelines](#reporting-a-bug) !
+
+
+## Reporting a bug
+<span id="reporting-a-bug"><span>
+
+If you wish to report a bug, here is how you can do to make fixing it easier :
+
+- First narrow it down. Remove all objects in your patch that are not related with the bug. Try to find the simplest patch with which this bug can be reproduced.
+- Then submit a bug report [in github](https://github.com/sebpiq/WebPd/issues) with the following template :
+
+```
+Patch and description -> Upload your minimal patch
+
+Current behavior -> Describe shortly how it is working at the moment
+
+Expected behavior -> Describe shortly how it should work instead
+```
+
+
+## Contributing
+
+One-time contributions or regular work on the library are more than welcome ! Contribution guidelines are coming, meanwhile if you have time and would really like to get involved you can get in touch on the issue tracker on github and I can help you getting started.

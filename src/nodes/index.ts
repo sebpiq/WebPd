@@ -16,6 +16,7 @@ import * as sampleRateTilde from './nodes/samplerate~'
 import * as oscPhasorTilde from './nodes/osc~-phasor~'
 import * as clipTilde from './nodes/clip~'
 import * as sigTilde from './nodes/sig~'
+import * as sampholdTilde from './nodes/samphold~'
 import * as snapshotTilde from './nodes/snapshot~'
 import * as vlineTilde from './nodes/vline~'
 import * as lineTilde from './nodes/line~'
@@ -78,6 +79,7 @@ const NODE_BUILDERS: NodeBuilders = {
     'noise~': noiseTilde.builder,
     'snapshot~': snapshotTilde.builder,
     'sig~': sigTilde.builder,
+    'samphold~': sampholdTilde.builder,
     'clip~': clipTilde.builder,
     'vline~': vlineTilde.builder,
     'line~': lineTilde.builder,
@@ -140,6 +142,7 @@ const NODE_BUILDERS: NodeBuilders = {
     text: { isNoop: true },
     cnv: { isNoop: true },
     'block~': { isNoop: true },
+    openpanel: { isNoop: true },
 }
 
 const NODE_IMPLEMENTATIONS: NodeImplementations = {
@@ -152,6 +155,7 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     'noise~': noiseTilde.nodeImplementation,
     'snapshot~': snapshotTilde.nodeImplementation,
     'sig~': sigTilde.nodeImplementation,
+    'samphold~': sampholdTilde.nodeImplementation,
     'clip~': clipTilde.nodeImplementation,
     'vline~': vlineTilde.nodeImplementation,
     'line~': lineTilde.nodeImplementation,

@@ -177,6 +177,40 @@ describe('binop', () => {
             )
         })
 
+        describe('max', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should work with different values in both inlets %s',
+                async ({ target, bitDepth }) => {
+                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['max'], 'max', { value: 1.5 }),
+                            nodeImplementation: nodeImplementations['max'],
+                        },
+                        [{ ins: { '0': [[2], [3], [-1.12], [0]] } }, { outs: { '0': [[2], [3], [1.5], [1.5]] } }],
+                    )
+                }
+            )
+        })
+
+        describe('min', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should work with different values in both inlets %s',
+                async ({ target, bitDepth }) => {
+                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['min'], 'min', { value: 6.7 }),
+                            nodeImplementation: nodeImplementations['min'],
+                        },
+                        [{ ins: { '0': [[2], [3], [12.8], [100]] } }, { outs: { '0': [[2], [3], [6.7], [6.7]] } }],
+                    )
+                }
+            )
+        })
+
         describe('mod', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should work with different values in both inlets %s',
@@ -302,6 +336,23 @@ describe('binop', () => {
                                 },
                             },
                         ]
+                    )
+                }
+            )
+        })
+
+        describe('%', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should work with different values in both inlets %s',
+                async ({ target, bitDepth }) => {
+                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['%'], '%', { value: 3 }),
+                            nodeImplementation: nodeImplementations['%'],
+                        },
+                        [{ ins: { '0': [[-1], [3], [-5]] } }, { outs: { '0': [[-1], [0], [-2]] } }],
                     )
                 }
             )

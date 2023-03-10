@@ -38,6 +38,7 @@ type _NodeImplementation = NodeImplementation<
 >
 
 // TODO : Implement if (`if(<test>, <then>, <else>)`)
+// TODO : [expr random(0, 10000)] fails (no inlet), and random function doesn't exist
 // ------------------------------- node builder ------------------------------ //
 const builderExpr: NodeBuilder<NodeArguments> = {
     translateArgs: ({ args }) => ({

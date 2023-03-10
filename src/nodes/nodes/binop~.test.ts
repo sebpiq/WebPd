@@ -85,6 +85,26 @@ describe('binop~', () => {
             )
         })
 
+        describe('pow~', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should work with signal as inlet 1 %s',
+                async ({ target, bitDepth }) => {
+                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['pow~'], 'pow~', { value: 0 }),
+                            nodeImplementation: nodeImplementations['pow~'],
+                        },
+                        [
+                            { ins: { '0': 2, '1': 4 } },
+                            { outs: { '0': 16 } },
+                        ],
+                    )
+                }
+            )
+        })
+
         describe('-~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should work with signal as inlet 1 %s',

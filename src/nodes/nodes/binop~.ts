@@ -14,11 +14,13 @@ import {
     CodeVariableName,
     NodeImplementation,
     NodeImplementations,
+    SharedCodeGenerator,
 } from '@webpd/compiler-js/src/types'
 import { DspGraph, functional } from '@webpd/compiler-js'
 import { coldFloatInlet } from '../standard-message-receivers'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
+import { pow } from '../nodes-shared-code/funcs'
 
 interface NodeArguments { value: number }
 const stateVariables = {
@@ -59,7 +61,9 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 
 const makeNodeImplementation = ({
     generateOperation,
+    sharedCode = [],
 }: {
+    sharedCode?: Array<SharedCodeGenerator>,
     generateOperation: (leftOp: CodeVariableName, rightOp: CodeVariableName) => Code,
 }): _NodeImplementation => {
     // ------------------------------ declare ------------------------------ //
@@ -105,7 +109,7 @@ const makeNodeImplementation = ({
         ),
     })
 
-    return { declare, loop, messages, stateVariables }
+    return { declare, loop, messages, stateVariables, sharedCode }
 }
 
 // ------------------------------------------------------------------- //
@@ -122,6 +126,7 @@ const nodeImplementations: NodeImplementations = {
     '/~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${rightOp} !== 0 ? ${leftOp} / ${rightOp} : 0` }),
     'min~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `Math.min(${leftOp}, ${rightOp})` }),
     'max~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `Math.max(${leftOp}, ${rightOp})` }),
+    'pow~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `pow(${leftOp}, ${rightOp})`, sharedCode: [pow] }),
 }
 
 const builders = {
@@ -131,6 +136,7 @@ const builders = {
     '/~': makeBuilder(0),
     'min~': makeBuilder(0),
     'max~': makeBuilder(0),
+    'pow~': makeBuilder(0),
 }
 
 export { 

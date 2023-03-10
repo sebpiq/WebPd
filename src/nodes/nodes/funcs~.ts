@@ -50,6 +50,7 @@ const nodeImplementations: NodeImplementations = {
     'abs~': makeNodeImplementation({ generateOperation: (input) => `Math.abs(${input})` }),
     'cos~': makeNodeImplementation({ generateOperation: (input) => `Math.cos(${input} * 2 * Math.PI)` }),
     'wrap~': makeNodeImplementation({ generateOperation: (input) => `(1 + (${input} % 1)) % 1` }),
+    'sqrt~': makeNodeImplementation({ generateOperation: (input) => `${input} >= 0 ? Math.pow(${input}, 0.5): 0` }),
     'mtof~': makeNodeImplementation({ generateOperation: (input) => `mtof(${input})`, sharedCode: [mtof] }),
     'ftom~': makeNodeImplementation({ generateOperation: (input) => `ftom(${input})`, sharedCode: [ftom] }),
 }
@@ -58,6 +59,7 @@ const builders = {
     'abs~': builder,
     'cos~': builder,
     'wrap~': builder,
+    'sqrt~': builder,
     'mtof~': builder,
     'ftom~': builder,
 }
