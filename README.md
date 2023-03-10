@@ -28,7 +28,8 @@
 Just upload or give a URL(*) of a patch, compile it just in time and generate an interface allowing to play that patch in realtime instantly in your browser. Once the compilation succeeds, you can copy and share the resulting URL from your browser with others(**). This URL contains all the modified parameters of the patch you have played with so that it is shared completely in its *current* state.
 
 *(\*)You can use any public URL of a patch found in the wild (on github, Pure Data forums, etc.).*
-*(\**)Sharing a compiled patch doesn't work if you used local files for compilation.*
+
+*(\*\*)Sharing a compiled patch doesn't work if you used local files for compilation.*
 
 ### The command line
 <span id="using-the-cli"><span>
