@@ -143,18 +143,14 @@ export const performBuildStep = async (
                 artefacts.dspGraph = {
                     graph: toDspGraphResult.graph,
                     arrays: toDspGraphResult.arrays,
+                    pd: toDspGraphResult.pd,
                 }
 
                 // If inletCallerSpecs are not defined, we infer them by 
                 // discovering UI controls and generating inlet callers for each one.
-                if (
-                    !inletCallerSpecs &&
-                    artefacts.pdJson &&
-                    artefacts.pdJson.patches['0']
-                ) {
+                if (!inletCallerSpecs) {
                     const { controls } = discoverGuiControls(
                         artefacts.pdJson,
-                        artefacts.pdJson.patches['0']
                     )
                     artefacts.dspGraph.inletCallerSpecs = collectGuiControlsInletCallerSpecs(
                         controls,

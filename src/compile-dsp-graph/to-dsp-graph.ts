@@ -57,6 +57,8 @@ interface CompilationSuccess {
     readonly status: 0
     readonly graph: DspGraph.Graph
     readonly arrays: DspGraph.Arrays
+    /** PdJson.Pd with all abstractions resolved. */
+    readonly pd: PdJson.Pd
     readonly abstractionsLoadingWarnings?: AbstractionsLoadingWarnings
 }
 
@@ -105,12 +107,13 @@ export default async (
         }
     }
 
-    const { pd: pdWithResolvedAbstractions, rootPatch } = abstractionsResult
+    const { pd: pdWithResolvedAbstractions } = abstractionsResult
     const compilation: Compilation = {
         pd: pdWithResolvedAbstractions,
         nodeBuilders,
         graph: {},
     }
+    const rootPatch = _resolveRootPatch(pdWithResolvedAbstractions)
     _traversePatches(compilation, [rootPatch], _buildNodes)
     _buildConnections(compilation, [rootPatch])
     Object.values(compilation.graph).forEach((node) => {
@@ -129,6 +132,7 @@ export default async (
     return {
         status: 0,
         graph: compilation.graph,
+        pd: compilation.pd,
         arrays,
         abstractionsLoadingWarnings: hasWarnings
             ? abstractionsResult.warnings
@@ -517,6 +521,14 @@ const _rootPatch = (patchPath: PatchPath) => {
         throw new Error(`Could not resolve root patch from path`)
     }
     return firstRootPatch
+}
+
+const _resolveRootPatch = (pd: PdJson.Pd): PdJson.Patch => {
+    const rootPatch = pd.patches[pd.rootPatchId]
+    if (!rootPatch) {
+        throw new Error(`Could not resolve root patch`)
+    }
+    return rootPatch
 }
 
 const _resolveSubpatchPortletNode = (

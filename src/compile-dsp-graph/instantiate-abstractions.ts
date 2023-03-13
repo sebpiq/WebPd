@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -86,7 +86,6 @@ interface Compilation {
 interface CompilationSuccess {
     readonly status: 0
     readonly pd: PdJson.Pd
-    readonly rootPatch: PdJson.Patch
     readonly abstractions: Abstractions
     readonly warnings: AbstractionsLoadingWarnings
 }
@@ -113,7 +112,7 @@ export default async (
     abstractionLoader: AbstractionLoader
 ): Promise<CompilationResult> => {
     const [namemap, pdWithReassignedIds] = _reassignUniquePdGlobalIds(
-        { patches: {}, arrays: {} },
+        { patches: {}, arrays: {}, rootPatchId: pd.rootPatchId },
         pd
     )
 
@@ -150,7 +149,6 @@ export default async (
         return {
             status: 0,
             pd: compilation.pd,
-            rootPatch: resolvePatch(compilation.pd, rootPatch.id),
             abstractions: compilation.abstractions,
             warnings: compilation.warnings,
         }
@@ -266,13 +264,11 @@ const _instantiateAbstractionsRecurs = async (
 }
 
 const _resolveRootPatch = (pd: PdJson.Pd): PdJson.Patch => {
-    const rootPatches = Object.values(pd.patches).filter(
-        (patch) => patch.isRoot
-    )
-    if (rootPatches.length !== 1) {
-        throw new Error(`Expected exactly one root patch`)
+    const rootPatch = pd.patches[pd.rootPatchId]
+    if (!rootPatch) {
+        throw new Error(`Could not resolve root patch`)
     }
-    return rootPatches[0]!
+    return rootPatch
 }
 
 const _resolveAbstraction = async (
@@ -305,20 +301,21 @@ const _resolveIdNamemap = (
 }
 
 const _reassignUniquePdGlobalIds = (
-    pd: PdJson.Pd,
+    pdToMergeInto: PdJson.Pd,
     pdToReassign: PdJson.Pd
 ): [AbstractionNamemap, PdJson.Pd] => {
     const pdWithReassignedIds: PdJson.Pd = {
         patches: {},
         arrays: {},
+        rootPatchId: pdToMergeInto.rootPatchId,
     }
     const namemap: AbstractionNamemap = {
         patches: new Map(),
         arrays: new Map(),
     }
-    let patchesIds = Object.keys(pd.patches)
+    let patchesIds = Object.keys(pdToMergeInto.patches)
     patchesIds = patchesIds.length ? patchesIds : ['-1']
-    let arraysIds = Object.keys(pd.arrays)
+    let arraysIds = Object.keys(pdToMergeInto.arrays)
     arraysIds = arraysIds.length ? arraysIds : ['-1']
     let patchesIdCounter = Math.max(...patchesIds.map((id) => parseInt(id))) + 1
     let arraysIdCounter = Math.max(...arraysIds.map((id) => parseInt(id))) + 1
@@ -339,5 +336,10 @@ const _reassignUniquePdGlobalIds = (
             id: newId,
         }
     })
+
+    pdWithReassignedIds.rootPatchId = _resolveIdNamemap(
+        namemap.patches,
+        pdWithReassignedIds.rootPatchId
+    )
     return [namemap, pdWithReassignedIds]
 }

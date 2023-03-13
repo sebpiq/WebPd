@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -58,23 +58,23 @@ export const getPdNode = (
     [patchId, nodeId]: [PdJson.GlobalId, PdJson.LocalId]
 ) => pdJson.patches[patchId].nodes[nodeId]
 
-export const discoverGuiControls = (
-    pdJson: PdJson.Pd,
-    rootPatch: PdJson.Patch
-) => ({
-    controls: _discoverGuiControlsRecursive(pdJson, rootPatch),
-    comments: Object.values(rootPatch.nodes)
-        .filter((node) => node.type === 'text')
-        .map((node) => {
-            const comment: Comment = {
-                type: 'comment',
-                patch: rootPatch,
-                node,
-                text: node.args[0]!.toString(),
-            }
-            return comment
-        }),
-})
+export const discoverGuiControls = (pdJson: PdJson.Pd) => {
+    const rootPatch = pdJson.patches[pdJson.rootPatchId]
+    return {
+        controls: _discoverGuiControlsRecursive(pdJson, rootPatch),
+        comments: Object.values(pdJson.patches[pdJson.rootPatchId].nodes)
+            .filter((node) => node.type === 'text')
+            .map((node) => {
+                const comment: Comment = {
+                    type: 'comment',
+                    patch: rootPatch,
+                    node,
+                    text: node.args[0]!.toString(),
+                }
+                return comment
+            }),
+    }
+}
 
 export const _discoverGuiControlsRecursive = (
     pdJson: PdJson.Pd,
@@ -175,29 +175,26 @@ export const _discoverGuiControlsRecursive = (
     return controls
 }
 
-export const traverseGuiControls = (controls: Array<ControlTree>, func: (control: Control) => void) => {
+export const traverseGuiControls = (
+    controls: Array<ControlTree>,
+    func: (control: Control) => void
+) => {
     controls.forEach((control) => {
         if (control.type === 'container') {
-            traverseGuiControls(
-                control.children,
-                func
-            )
+            traverseGuiControls(control.children, func)
         } else if (control.type === 'control') {
             func(control)
         }
-    })    
+    })
 }
 
 export const collectGuiControlsInletCallerSpecs = (
     controls: Array<ControlTree>,
-    graph: DspGraph.Graph,
+    graph: DspGraph.Graph
 ) => {
     const inletCallerSpecs: CompilationSettings['inletCallerSpecs'] = {}
     traverseGuiControls(controls, (control) => {
-        const nodeId = buildGraphNodeId(
-            control.patch.id,
-            control.node.id
-        )
+        const nodeId = buildGraphNodeId(control.patch.id, control.node.id)
         const portletId = '0'
         // Important because some nodes are deleted at dsp-graph compilation.
         // and if we declare inletCallerSpec for them it will cause error.

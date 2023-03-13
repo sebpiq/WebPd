@@ -6,15 +6,15 @@
 
 **WebPd** is a compiler for audio programming language [Pure Data](puredata.info/) allowing to run **.pd** patches on web pages. 
 
-**WebPd is highly modular and takes a white-box approach to audio programming**. It aims to enable people with different levels of expertise to use the environment they feel most confortable with to program music and sounds. The output of the compiler is plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). This means that you're free to take the generated code and work directly with it in your own web application without using WebPd or Pure Data ever again 🌈.
+**WebPd is highly modular and takes a white-box approach to audio programming**. It aims to enable people with different levels of expertise to use the programming environment they feel most confortable with. The output of the compiler is plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). This means that you're free to take the generated code and work directly with it in your own web application without using WebPd or Pure Data ever again 🌈.
+
+<!-- intro end -->
 
 WebPd simply generates audio code so adding visuals and interactivity is up to you. Indeed, there are plenty of good JavaScript libraries to build interactive visual interfaces such as [Three.js](https://threejs.org/), [p5.js](https://p5js.org/), good old JavaScript / HTML / CSS, etc. Integrating them with a WebPd patch should be fairly easy. An example of such integration is the *patch player* demo, available through [the web compiler](#using-the-web-compiler). As a result, WebPd is **not**, in itself, a complete editor and a live performance platform as Pure Data is. The Pure Data graphical interface, as well as GEM, are out of the scope of WebPd. WebPd isn't either a simple executor like libpd. It is rather a lean audio compiler, which generates high-performance, human-readable and easily integrable audio code with no bloat.
 
 *(\*) AssemblyScript is a TypeScript-style language which compiles to WebAssembly.*
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23ed00d9)](https://github.com/sponsors/sebpiq)
-
-<!-- intro end -->
 
 ## Usage
 

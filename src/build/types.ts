@@ -70,6 +70,7 @@ export interface Artefacts {
     dspGraph?: {
         graph: DspGraph.Graph
         arrays: DspGraph.Arrays
+        pd: PdJson.Pd
         inletCallerSpecs?: CompilationSettings['inletCallerSpecs']
     }
     compiledJs?: string

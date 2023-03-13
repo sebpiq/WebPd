@@ -115,9 +115,9 @@ describe('instantiateAbstractions', () => {
         assert.ok(results.status === 0)
         const {
             pd: pdWithResolvedAbstractions,
-            rootPatch,
             abstractions,
         } = results
+        const rootPatch = pdWithResolvedAbstractions.patches[pdWithResolvedAbstractions.rootPatchId]
 
         assert.deepStrictEqual(Object.keys(rootPatch.nodes).sort(), [
             'array1',
@@ -291,6 +291,68 @@ describe('instantiateAbstractions', () => {
                         args: [],
                         nodes: {
                             n5: {},
+                        },
+                    },
+                },
+            })
+        )
+    })
+
+    it('should reassign correctly rootPatchId', async () => {
+        const pd: PdJson.Pd = makePd({
+            rootPatchId: '11',
+            patches: {
+                '10': {
+                    isRoot: false,
+                    nodes: {
+                        n1: {},
+                    },
+                },
+                '11': {
+                    isRoot: true,
+                    nodes: {
+                        n2: {},
+                    },
+                },
+                '12': {
+                    isRoot: false,
+                    nodes: {
+                        n3: {},
+                    },
+                },
+            },
+        })
+
+        const results = await instantiateAbstractions(
+            pd,
+            NODE_BUILDERS,
+            async (nodeType) => ({ status: 1, unknownNodeType: nodeType })
+        )
+
+        assert.ok(results.status === 0)
+        const { pd: pdWithResolvedAbstractions } = results
+
+        assert.deepStrictEqual<PdJson.Pd>(
+            pdWithResolvedAbstractions,
+            makePd({
+                rootPatchId: '1',
+                patches: {
+                    '0': {
+                        isRoot: false,
+                        nodes: {
+                            n1: {},
+                        },
+                    },
+                    '1': {
+                        isRoot: true,
+                        nodes: {
+                            n2: {},
+                        },
+                    },
+                    '2': {
+                        isRoot: false,
+                        nodes: {
+                            n3: {},
                         },
                     },
                 },
