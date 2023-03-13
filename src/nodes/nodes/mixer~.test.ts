@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { nodeImplementation, builder } from './mixer~'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeBuild } from '../test-helpers'
 

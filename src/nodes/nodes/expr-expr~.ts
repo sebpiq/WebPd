@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, functional } from '@webpd/compiler-js'
+import { Code, functional } from '@webpd/compiler'
 import {
     NodeImplementation,
     NodeImplementations,
     NodeVariableNames,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../nodes-shared-code/core'

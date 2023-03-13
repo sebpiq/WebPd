@@ -45,7 +45,7 @@ export module Build {
 }
 
 // ================ DspGraph
-export { DspGraph, Message } from '@webpd/compiler-js'
+export { DspGraph, Message } from '@webpd/compiler'
 export { PdJson, CONTROL_TYPE } from '@webpd/pd-parser'
 
 // ================ Runtime

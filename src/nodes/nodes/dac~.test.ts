@@ -23,9 +23,9 @@ import {
     AudioSettings,
     CompilerTarget,
     NodeImplementations,
-} from '@webpd/compiler-js/src/types'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
-import { createEngine } from '@webpd/compiler-js/src/test-helpers'
+} from '@webpd/compiler/src/types'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import { createEngine } from '@webpd/compiler/src/test-helpers'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeBuild,
@@ -34,8 +34,8 @@ import {
     TEST_PATCH,
 } from '../test-helpers'
 import { nodeImplementation, builder } from './dac~'
-import { executeCompilation, functional } from '@webpd/compiler-js'
-import { makeGraph } from '@webpd/compiler-js/src/dsp-graph/test-helpers'
+import { executeCompilation, functional } from '@webpd/compiler'
+import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { PartialNode } from '../../compile-dsp-graph/types'
 
 describe('dac~', () => {

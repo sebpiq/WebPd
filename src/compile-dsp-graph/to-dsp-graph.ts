@@ -31,7 +31,7 @@ import instantiateAbstractions, {
     AbstractionsLoadingWarnings,
 } from './instantiate-abstractions'
 import { nodeBuilders as subpatchNodeBuilders } from '../nodes/nodes/subpatch'
-import { DspGraph, dspGraph } from '@webpd/compiler-js'
+import { DspGraph, dspGraph } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 
 export const MIXER_NODE_TYPE = 'mixer~'

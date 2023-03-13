@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph } from '@webpd/compiler-js'
+import { DspGraph } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 
 // Patch translation PdJson -> DspGraph

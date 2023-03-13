@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation, NodeImplementations, SharedCodeGenerator } from '@webpd/compiler-js/src/types'
+import { Code, NodeImplementation, NodeImplementations, SharedCodeGenerator } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../nodes-shared-code/funcs'
 

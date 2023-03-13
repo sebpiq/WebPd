@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph } from '@webpd/compiler-js'
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler-js/src/types'
+import { DspGraph } from '@webpd/compiler'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../nodes-shared-code/delay-buffers'

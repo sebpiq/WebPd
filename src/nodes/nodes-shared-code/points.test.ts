@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { getMacros } from '@webpd/compiler-js/src/compile'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
+import { getMacros } from '@webpd/compiler/src/compile'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import assert from 'assert'
 import { interpolateLin } from './points'
 import { NODE_IMPLEMENTATION_TEST_PARAMETERS } from '../test-helpers'

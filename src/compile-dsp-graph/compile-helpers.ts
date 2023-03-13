@@ -19,7 +19,7 @@
  */
 
 import { NodeBuilder, NodeBuilders } from './types'
-import { DspGraph } from '@webpd/compiler-js'
+import { DspGraph } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 
 /** Regular expressions to deal with dollar-args */

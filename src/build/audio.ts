@@ -23,7 +23,7 @@ import {
     Engine,
     FloatArray,
     getFloatArrayType,
-} from '@webpd/compiler-js'
+} from '@webpd/compiler'
 import * as wavefile from 'wavefile'
 import { getArtefact } from './helpers'
 import { Artefacts, AudioSettings } from './types'

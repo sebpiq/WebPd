@@ -92,3 +92,8 @@ Expected behavior -> Describe shortly how it should work instead
 ### Contributing
 
 One-time contributions or regular work on the library are more than welcome ! Contribution guidelines are coming, meanwhile if you have time and would really like to get involved you can get in touch on the issue tracker on github and I can help you getting started.
+
+WebPd is built in several sub-packages in addition to this one which rules them all : 
+- Pd file parser : https://github.com/sebpiq/WebPd_pd-parser
+- WebPd compiler : https://github.com/sebpiq/WebPd_compiler
+- WebPd runtime : https://github.com/sebpiq/WebPd_runtime

@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph, functional } from '@webpd/compiler-js'
-import { NodeImplementation } from '@webpd/compiler-js/src/types'
+import { DspGraph, functional } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils, msgUtils } from '../nodes-shared-code/core'
 

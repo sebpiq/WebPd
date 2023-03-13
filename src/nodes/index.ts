@@ -74,7 +74,7 @@ import * as pack from './nodes/pack'
 import * as unpack from './nodes/unpack'
 import * as expr from './nodes/expr-expr~'
 import * as binop from './nodes/binop'
-import { NodeImplementations } from '@webpd/compiler-js'
+import { NodeImplementations } from '@webpd/compiler'
 import { NodeBuilders } from '../compile-dsp-graph/types'
 
 const NODE_BUILDERS: NodeBuilders = {

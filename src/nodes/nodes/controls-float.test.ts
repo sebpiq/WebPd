@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -27,7 +27,7 @@ import {
     testParametersCombine,
 } from '../test-helpers'
 import { nodeImplementations, builders, NodeArguments } from './controls-float'
-import { createEngine } from '@webpd/compiler-js/src/test-helpers'
+import { createEngine } from '@webpd/compiler/src/test-helpers'
 import {
     nodeImplementation as nodeImplementationSend,
     builder as builderSend,
@@ -41,9 +41,9 @@ import {
     AudioSettings,
     NodeImplementations,
     Message,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import assert from 'assert'
-import { makeGraph } from '@webpd/compiler-js/src/dsp-graph/test-helpers'
+import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 
 const NODE_TYPES_NUMBERS = [
     'hsl',

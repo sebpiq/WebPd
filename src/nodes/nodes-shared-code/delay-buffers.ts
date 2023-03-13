@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler-js/src/types"
+import { SharedCodeGenerator } from "@webpd/compiler/src/types"
 
 // TODO : how to safely declare a global variable without clashing
 export const delayBuffers: SharedCodeGenerator = ({ macros: { Var, Func } }) => `

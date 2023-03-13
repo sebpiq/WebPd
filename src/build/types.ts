@@ -22,7 +22,7 @@ import {
     CompilationSettings,
     DspGraph,
     NodeImplementations,
-} from '@webpd/compiler-js'
+} from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 import { NodeBuilders } from '../compile-dsp-graph/types'
@@ -42,7 +42,7 @@ export const BUILD_FORMATS = {
     },
     compiledJs: {
         extensions: ['.js'],
-        description: 'JavaScript DSP code',
+        description: 'JavaScript WebPd module',
     },
     compiledAsc: {
         extensions: ['.asc'],
@@ -50,15 +50,15 @@ export const BUILD_FORMATS = {
     },
     wasm: {
         extensions: ['.wasm'],
-        description: 'Web Assembly DSP module',
+        description: 'Web Assembly WebPd module',
     },
     wav: {
         extensions: ['.wav'],
-        description: 'WAV audio',
+        description: 'An audio preview of your patch',
     },
     appTemplate: {
-        extensions: ['.html'],
-        description: 'Full HTML app',
+        extensions: [] as Array<string>,
+        description: 'Complete web app embedding your compiled WebPd patch',
     },
 }
 

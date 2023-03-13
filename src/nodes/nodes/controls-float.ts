@@ -17,12 +17,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { functional } from '@webpd/compiler-js'
+import { functional } from '@webpd/compiler'
 import {
     Code,
     NodeImplementation,
     NodeImplementations,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber, assertOptionalString } from '../validation'

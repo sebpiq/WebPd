@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import {
     AudioSettings,
     CompilerTarget,
     NodeImplementations,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import {
     nodeImplementations as nodeImplementationsDelRead,
     builders as buildersDelRead,
@@ -43,10 +43,10 @@ import {
     testNodeTranslateArgs,
     testParametersCombine,
 } from '../test-helpers'
-import { createEngine } from '@webpd/compiler-js/src/test-helpers'
+import { createEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import { executeCompilation } from '@webpd/compiler-js'
-import { makeGraph } from '@webpd/compiler-js/src/dsp-graph/test-helpers'
+import { executeCompilation } from '@webpd/compiler'
+import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 
 const SAMPLE_RATE = nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS.sampleRate
 const DELREAD_NODE_TYPES = ['delread~', 'delread4~'] as const

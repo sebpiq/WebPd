@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import {
     AudioSettings,
     CompilerTarget,
     NodeImplementations,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import {
     nodeImplementation as nodeImplementationThrow,
     builder as builderThrow,
@@ -42,10 +42,10 @@ import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
-import { createEngine } from '@webpd/compiler-js/src/test-helpers'
+import { createEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import { executeCompilation } from '@webpd/compiler-js'
-import { makeGraph } from '@webpd/compiler-js/src/dsp-graph/test-helpers'
+import { executeCompilation } from '@webpd/compiler'
+import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 
 describe('throw~ / catch~', () => {
     describe('builder [throw~]', () => {

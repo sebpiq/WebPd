@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code } from '@webpd/compiler-js'
+import { Code } from '@webpd/compiler'
 import {
     NodeImplementation,
     NodeImplementations,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../nodes-shared-code/core'

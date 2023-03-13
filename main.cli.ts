@@ -6,7 +6,12 @@ import { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
 import * as path from 'path'
 import fs from 'fs'
-import { Artefacts, BuildFormat, Settings } from './src/build/types'
+import {
+    Artefacts,
+    BuildFormat,
+    BUILD_FORMATS,
+    Settings,
+} from './src/build/types'
 import { setAsc } from './src/build/asc'
 import { analysePd } from './src/build/reports'
 import {
@@ -39,8 +44,10 @@ interface Task {
 }
 
 const consoleLogHeader = (message: string) =>
-    console.log('\n~~~ ' + colors.bold(message))
-const consoleLogEm = (message: string) => console.log(colors.bold(message))
+    process.stdout.write('\n~~~ ' + colors.bold(message))
+
+const consoleLogEm = (message: string) =>
+    process.stdout.write(colors.bold(message))
 
 const checkSupportPdJson = async (
     pdJson: PdJson.Pd,
@@ -56,8 +63,8 @@ const checkSupportPdJson = async (
     let isSupported = true
     consoleLogHeader(`Check support `)
     if (unimplementedObjectTypes) {
-        console.log(
-            `${
+        process.stdout.write(
+            `\n${
                 unimplementedObjectTypes.size
             } object types not implemented : ${Array.from(
                 unimplementedObjectTypes
@@ -77,8 +84,8 @@ const checkSupportPdJson = async (
 
 const whatsImplemented = () => {
     consoleLogHeader(`What's implemented ?`)
-    console.log(
-        `${
+    process.stdout.write(
+        `\n${
             Object.keys(NODE_BUILDERS).length
         } object implemented : ${Object.keys(NODE_BUILDERS)
             .map((type) => `[${type}]`)
@@ -98,10 +105,9 @@ const assertValidFormat = (
 }
 
 const writeOutFile = async (task: Task): Promise<Task> => {
-    consoleLogEm(`Generating output`)
+    consoleLogEm(`\nGenerating output`)
     const { outFilepath, outFormat, artefacts } = task
     const written: Array<string> = []
-    let outDir: string | null = null
     if (outFormat && outFilepath) {
         switch (outFormat) {
             case 'pdJson':
@@ -140,9 +146,8 @@ const writeOutFile = async (task: Task): Promise<Task> => {
 
             case 'appTemplate':
                 const appTemplate = getArtefact(artefacts, outFormat)
-                outDir = path.dirname(outFilepath)
                 for (let filename of Object.keys(appTemplate)) {
-                    const filepath = path.resolve(outDir, filename)
+                    const filepath = path.resolve(outFilepath, filename)
                     const fileContents = appTemplate[filename]
                     await fs.promises.writeFile(
                         filepath,
@@ -155,15 +160,13 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                 break
         }
         written.forEach((filepath) => {
-            console.log(`Created file ` + colors.bold(filepath))
+            process.stdout.write(`\nCreated file ` + colors.bold(filepath))
         })
 
         if (outFormat === 'appTemplate') {
-            console.log(
-                colors.grey(
-                    '\nWeb app compiled ! Start it by running :\n'
-                ) +
-                    colors.blue(`\tnpx http-server ${outDir}\n`)
+            process.stdout.write(
+                colors.grey('\n\nWeb app compiled ! Start it by running :\n') +
+                    colors.blue(`\tnpx http-server ${outFilepath}\n`)
             )
         }
     }
@@ -173,16 +176,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
 const makeCliAbstractionLoader = (rootDirPath: string): AbstractionLoader =>
     makeAbstractionLoader(async (nodeType: PdJson.NodeType) => {
         const filepath = path.resolve(rootDirPath, `${nodeType}.pd`)
-        let fileStats: fs.Stats | null = null
-        try {
-            fileStats = await fs.promises.stat(filepath)
-        } catch (err: any) {
-            if (err.code === 'ENOENT') {
-                throw new UnknownNodeTypeError(nodeType)
-            }
-            throw err
-        }
-        if (!fileStats || !fileStats.isFile()) {
+        if (!isFileSync(filepath)) {
             throw new UnknownNodeTypeError(nodeType)
         }
         return (await fs.promises.readFile(filepath)).toString()
@@ -199,19 +193,23 @@ const executeTask = async (task: Task, settings: Settings): Promise<Task> => {
     )
     // Remove first step as it corresponds with the input file.
     for (let buildStep of buildSteps!) {
-        consoleLogHeader(`Building ${buildStep}`)
+        consoleLogHeader(`Building ${buildStep} `)
         const result = await performBuildStep(artefacts, buildStep, settings)
+        if (result.status === 0) {
+            process.stdout.write(colors.green(`✓`))
+        } else {
+            process.stdout.write(colors.red(`✘ (failed)`))
+        }
+
         result.warnings.forEach((message) =>
-            console.warn('WARNING : ' + message)
+            process.stdout.write(colors.grey('\nWARNING : ' + message))
         )
         if (result.status === 1) {
             result.errors.forEach((message) =>
-                console.error('ERROR : ' + message)
+                process.stderr.write('\n' + colors.red('ERROR : ' + message))
             )
-            consoleLogEm(`FAILED`)
+            process.stdout.write(`\n`)
             process.exit(1)
-        } else {
-            consoleLogEm(`SUCCESS`)
         }
     }
     return { ...task, artefacts }
@@ -224,40 +222,85 @@ const ifConditionThenExitError = (test: boolean, msg: string) => {
 }
 
 const exitError = (msg: string) => {
-    console.error(msg)
+    process.stderr.write('\n' + msg + '\n')
     process.exit(1)
 }
 
+const pathStatsSync = (filepath: string) => {
+    try {
+        return fs.statSync(filepath)
+    } catch (err: any) {
+        if (err.code === 'ENOENT') {
+            return null
+        }
+        throw err
+    }
+}
+
+const isDirectorySync = (filepath: string) => {
+    let fileStats: fs.Stats | null = pathStatsSync(filepath)
+    if (!fileStats) {
+        return false
+    } else {
+        return fileStats.isDirectory()
+    }
+}
+
+const isFileSync = (filepath: string) => {
+    let fileStats: fs.Stats | null = pathStatsSync(filepath)
+    if (!fileStats) {
+        return false
+    } else {
+        return fileStats.isFile()
+    }
+}
+
 const main = (): void => {
-    console.log('')
-    const cliHeader = `~ WebPd compiler ${packageInfo.version} ~`
-    console.log((colors as any).brightMagenta.bold(cliHeader))
-    console.log(
-        (colors as any).brightMagenta.bold(
-            Array.from(cliHeader)
-                .map((_) => '~')
-                .join('')
-        )
+    process.stdout.write(
+        (colors as any).brightMagenta.bold(`~ WebPd ${packageInfo.version} ~`)
     )
+    process.stdout.write(colors.grey('\nLicensed under LGPL V3\n'))
 
     program
         .version(packageInfo.version)
         .option(
             '-i, --input <filename>',
-            'Set the input file. Formats supported : ' +
-                '\n.pd - Pure Data text file.' +
-                '\n.wasm - Web Assembly module compiled with the WebPd compiler.\n|'
+            'Set the input file. Extensions supported : ' +
+                (['pd', 'wasm'] as Array<BuildFormat>).map(
+                    (format) =>
+                        `\n${BUILD_FORMATS[format].extensions.join(', ')} - ${BUILD_FORMATS[format].description}`
+                ).join('')
         )
         .option(
-            '-o, --output <filename>',
-            'Select an output. Available formats :' +
-                '\n.wasm - Web Assembly WebPd module.' +
-                '\n.js - JavaScript WebPd module.' +
-                '\n.html - Complete web app embedding your compiled WebPd patch.\n|'
+            '-o, --output <path>',
+            'Select a file path or directory for output.'
+        )
+        .option(
+            '-f, --output-format <format>',
+            'Select an output format. If not provided, the format will be inferred from output filename. Available formats :' +
+                (
+                    [
+                        'wasm',
+                        'compiledJs',
+                        'appTemplate',
+                        'wav',
+                    ] as Array<BuildFormat>
+                ).map(
+                    (format) =>
+                        `\n${format} - ${BUILD_FORMATS[format].description}`
+                ).join('')
         )
         .option('--check-support')
         .option('--whats-implemented')
 
+    program.addHelpText(
+        'after',
+        (colors as any).brightMagenta('\n~ Usage examples ~') +
+            '\nGenerating a web page embedding myPatch.pd in path/to/folder : ' +
+            colors.blue('\nwebpd -i myPatch.pd -o path/to/folder -f appTemplate') +
+            '\nGenerating a wav preview of myPatch.pd : ' +
+            colors.blue('\nwebpd -i myPatch.pd -o myPatch.wav')
+    )
     program.showHelpAfterError('(add --help for additional information)')
 
     program.parse()
@@ -265,6 +308,7 @@ const main = (): void => {
 
     const inFilepath: string | null = options.input || null
     const outFilepath: string | null = options.output || null
+    let outFormat: BuildFormat | null = options.outputFormat || null
     const artefacts: Artefacts = {}
 
     ifConditionThenExitError(
@@ -282,20 +326,25 @@ const main = (): void => {
             return
         }
 
-        let outFormat: BuildFormat | null = null
-
-        if (outFilepath) {
+        if (!outFormat && outFilepath) {
             const guessedFormat = guessFormat(outFilepath)
             if (guessedFormat === null) {
-                return exitError(`Couldn't guess format for ${outFilepath}`)
+                return exitError(
+                    `Unknown or unsupported format for ${outFilepath} consider using the --output-format option`
+                )
             }
             outFormat = guessedFormat
             assertValidFormat(outFormat, outFilepath)
         }
 
+        ifConditionThenExitError(
+            outFormat === 'appTemplate' && !isDirectorySync(outFilepath),
+            `Generating an app requires output path to be a directory`
+        )
+
         if (options.checkSupport) {
             ifConditionThenExitError(
-                !!outFilepath,
+                !!outFilepath || !!outFormat,
                 `Option --output is incompatible with --check-support`
             )
             ifConditionThenExitError(
@@ -344,18 +393,12 @@ const main = (): void => {
                 }
             })
             .catch((err) => {
-                console.error(err)
+                process.stderr.write('\n' + err)
             })
             .finally(() => {
-                console.log('')
-                console.log(
-                    (colors as any).brightMagenta.bold(
-                        Array.from(cliHeader)
-                            .map((_) => '~')
-                            .join('')
-                    )
+                process.stdout.write(
+                    (colors as any).brightMagenta.bold('\n~ done ~\n')
                 )
-                console.log('')
             })
     }
 }

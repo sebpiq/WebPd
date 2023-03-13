@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FS_OPERATION_SUCCESS } from '@webpd/compiler-js'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
+import { FS_OPERATION_SUCCESS } from '@webpd/compiler'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { nodeImplementation, builder } from './readsf~'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeBuild, testNodeTranslateArgs } from '../test-helpers'
 

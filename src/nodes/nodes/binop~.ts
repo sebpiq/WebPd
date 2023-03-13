@@ -24,8 +24,8 @@ import {
     NodeImplementation,
     NodeImplementations,
     SharedCodeGenerator,
-} from '@webpd/compiler-js/src/types'
-import { DspGraph, functional } from '@webpd/compiler-js'
+} from '@webpd/compiler/src/types'
+import { DspGraph, functional } from '@webpd/compiler'
 import { coldFloatInlet } from '../standard-message-receivers'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'

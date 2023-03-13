@@ -23,7 +23,7 @@ import {
     NodeImplementation,
     NodeImplementations,
     SharedCodeGenerator,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../nodes-shared-code/core'

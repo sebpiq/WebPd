@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler-js/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { stringMsgUtils } from '../nodes-shared-code/core'
 import { linesUtils } from '../nodes-shared-code/lines'

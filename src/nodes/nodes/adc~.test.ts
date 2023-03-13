@@ -19,9 +19,9 @@
  */
 
 import assert from 'assert'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler-js/src/test-helpers-node-implementations'
-import { createEngine } from '@webpd/compiler-js/src/test-helpers'
-import { AudioSettings, CompilerTarget } from '@webpd/compiler-js/src/types'
+import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/types'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeBuild,
@@ -31,8 +31,8 @@ import {
 } from '../test-helpers'
 import { builder, nodeImplementation as nodeImplementationAdc } from './adc~'
 import { nodeImplementation as nodeImplementationDac } from './dac~'
-import { executeCompilation, functional } from '@webpd/compiler-js'
-import { makeGraph } from '@webpd/compiler-js/src/dsp-graph/test-helpers'
+import { executeCompilation, functional } from '@webpd/compiler'
+import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { PartialNode } from '../../compile-dsp-graph/types'
 
 const nodeImplementations = {

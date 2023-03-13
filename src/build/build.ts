@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import compile from '@webpd/compiler-js'
+import compile from '@webpd/compiler'
 import parse from '@webpd/pd-parser'
 import appGenerator from '../app-generator/generate-app'
 import {

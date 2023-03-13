@@ -22,7 +22,7 @@ import {
     NodeImplementation,
     NodeImplementations,
     SharedCodeGenerator,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../nodes-shared-code/funcs'
 

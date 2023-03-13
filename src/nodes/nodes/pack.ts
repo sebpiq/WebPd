@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { functional } from '@webpd/compiler-js'
-import { NodeImplementation } from '@webpd/compiler-js/src/types'
+import { functional } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../nodes-shared-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'

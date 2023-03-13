@@ -19,7 +19,7 @@
  */
 import {
     CodeVariableName, SharedCodeGenerator,
-} from '@webpd/compiler-js/src/types'
+} from '@webpd/compiler/src/types'
 import { ValidationError } from './validation'
 
 export type TypeArgument = 'float' | 'bang' | 'symbol' | 'list' | 'anything'

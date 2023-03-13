@@ -18,9 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph } from '@webpd/compiler-js'
-import { nodeDefaults } from '@webpd/compiler-js/src/dsp-graph/test-helpers'
-import { AudioSettings, CompilerTarget } from '@webpd/compiler-js/src/types'
+import { DspGraph } from '@webpd/compiler'
+import { nodeDefaults } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/types'
 import { PdJson } from '@webpd/pd-parser'
 import {
     makePd,

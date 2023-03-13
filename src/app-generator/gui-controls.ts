@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { CompilationSettings, DspGraph } from '@webpd/compiler-js'
+import { CompilationSettings, DspGraph } from '@webpd/compiler'
 import { CONTROL_TYPE, PdJson } from '@webpd/pd-parser'
 import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 

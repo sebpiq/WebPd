@@ -23,7 +23,7 @@
     "build:runtime": "npx rollup --config configs/runtime.rollup.config.js"
   },
   "dependencies": {
-    "@webpd/compiler-js": "file:../WebPd_compiler-js",
+    "@webpd/compiler": "file:../WebPd_compiler",
     "@webpd/pd-parser": "file:../WebPd_pd-parser",
     "@webpd/runtime": "file:../WebPd_runtime",
     "wavefile": "^11.0.0"
