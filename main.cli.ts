@@ -1,6 +1,5 @@
 import colors from 'colors/safe'
 import packageInfo from './package.json'
-import { fileURLToPath } from 'url'
 import asc from 'assemblyscript/dist/asc.js'
 import { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
@@ -222,7 +221,8 @@ const ifConditionThenExitError = (test: boolean, msg: string) => {
 }
 
 const exitError = (msg: string) => {
-    process.stderr.write('\n' + msg + '\n')
+    process.stderr.write('\n' + msg + '\n\n')
+    program.outputHelp({ error: true })
     process.exit(1)
 }
 
@@ -303,6 +303,11 @@ const main = (): void => {
     )
     program.showHelpAfterError('(add --help for additional information)')
 
+    if (process.argv.length < 3) {
+        program.outputHelp()
+        process.exit(0)
+    }
+
     program.parse()
     const options = program.opts()
 
@@ -352,6 +357,9 @@ const main = (): void => {
                 `Option --check-support requires .pd input`
             )
             outFormat = outFormat || 'pdJson'
+
+        } else if (!outFilepath) {
+            exitError('Please specify an ouput using -o option.')
         }
 
         const abstractionLoader = makeCliAbstractionLoader(
@@ -403,6 +411,6 @@ const main = (): void => {
     }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    main()
-}
+// NOTE : if (process.argv[1] === fileURLToPath(import.meta.url))
+// not working apparently when installing executable with npm.
+main()

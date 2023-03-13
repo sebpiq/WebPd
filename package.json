@@ -4,6 +4,12 @@
   "type": "module",
   "main": "./dist/WebPd/index.js",
   "types": "./dist/types/index.d.ts",
+  "bin": {
+    "webpd": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin/cli.mjs"
+  ],
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "WebPd is a compiler for audio programming language Pure Data allowing to run .pd patches on web pages.",
   "license": "LGPL-3.0",
@@ -22,12 +28,6 @@
     "build:dist": "npx rollup --config configs/dist.rollup.config.js",
     "build:runtime": "npx rollup --config configs/runtime.rollup.config.js"
   },
-  "dependencies": {
-    "@webpd/compiler": "file:../WebPd_compiler",
-    "@webpd/pd-parser": "file:../WebPd_pd-parser",
-    "@webpd/runtime": "file:../WebPd_runtime",
-    "wavefile": "^11.0.0"
-  },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.0.1",
     "@rollup/plugin-json": "^6.0.0",
@@ -35,7 +35,10 @@
     "@rollup/plugin-typescript": "^11.0.0",
     "@types/jest": "^29.4.0",
     "@types/node": "^18.14.4",
+    "@webpd/compiler": "file:../WebPd_compiler",
     "@webpd/dev": "file:../WebPd_dev",
+    "@webpd/pd-parser": "file:../WebPd_pd-parser",
+    "@webpd/runtime": "file:../WebPd_runtime",
     "assemblyscript": "^0.25.0",
     "colors": "^1.4.0",
     "commander": "^10.0.0",
@@ -45,6 +48,7 @@
     "rollup-plugin-string": "^3.0.0",
     "rollup-plugin-visualizer": "^5.9.0",
     "ts-jest": "^29.0.5",
-    "tslib": "^2.5.0"
+    "tslib": "^2.5.0",
+    "wavefile": "^11.0.0"
   }
 }

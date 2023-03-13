@@ -5,19 +5,22 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import { string } from 'rollup-plugin-string'
 import commonjs from '@rollup/plugin-commonjs'
 
-// rollup.config.js
 export default {
     input: 'main.cli.ts',
     output: {
-        file: 'bin/cli.js',
+        file: 'bin/cli.mjs',
         format: 'es',
-        sourcemap: true,
+        banner: '#!/usr/bin/env node',
     },
     plugins: [
         string({
             include: ['./src/app-generator/runtime.generated.js.txt'],
         }),
-        typescript(),
+        typescript({
+            compilerOptions: {
+                declaration: false,
+            },
+        }),
         nodeResolve(),
         commonjs(),
         visualizer({
