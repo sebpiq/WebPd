@@ -5,7 +5,7 @@
   "main": "./dist/WebPd/index.js",
   "types": "./dist/types/index.d.ts",
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
-  "description": "WebPd is a highly modular web audio programming toolkit inspired by Pure Data.",
+  "description": "WebPd is a compiler for audio programming language Pure Data allowing to run .pd patches on web pages.",
   "license": "LGPL-3.0",
   "repository": {
     "type": "git",
