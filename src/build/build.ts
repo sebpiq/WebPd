@@ -150,7 +150,7 @@ export const performBuildStep = async (
                 // discovering UI controls and generating inlet callers for each one.
                 if (!inletCallerSpecs) {
                     const { controls } = discoverGuiControls(
-                        artefacts.pdJson,
+                        artefacts.dspGraph.pd,
                     )
                     artefacts.dspGraph.inletCallerSpecs = collectGuiControlsInletCallerSpecs(
                         controls,
