@@ -307,7 +307,7 @@ const _reassignUniquePdGlobalIds = (
     const pdWithReassignedIds: PdJson.Pd = {
         patches: {},
         arrays: {},
-        rootPatchId: pdToMergeInto.rootPatchId,
+        rootPatchId: pdToReassign.rootPatchId,
     }
     const namemap: AbstractionNamemap = {
         patches: new Map(),

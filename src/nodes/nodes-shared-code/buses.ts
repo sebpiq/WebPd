@@ -36,6 +36,16 @@ export const signalBuses: SharedCodeGenerator = ({ macros: { Var, Func }}) => `
         return newValue
     }
 
+    function setSignalBus ${Func([
+        Var('busName', 'string'), 
+        Var('value', 'Float'),
+    ], 'Float')} {
+        SIGNAL_BUSES.set(
+            busName,
+            value,
+        )
+    }
+
     function resetSignalBus ${Func([
         Var('busName', 'string')
     ], 'void')} {

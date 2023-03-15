@@ -4,7 +4,7 @@
 
 <!-- intro start -->
 
-**WebPd** is a compiler for audio programming language [Pure Data](puredata.info/) allowing to run **.pd** patches on web pages. 
+**WebPd** is a compiler for audio programming language [Pure Data](https://puredata.info/) allowing to run **.pd** patches on web pages. 
 
 **WebPd is highly modular and takes a white-box approach to audio programming**. It aims to enable people with different levels of expertise to use the programming environment they feel most confortable with. The output of the compiler is plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). This means that you're free to take the generated code and work directly with it in your own web application without using WebPd or Pure Data ever again 🌈.
 
