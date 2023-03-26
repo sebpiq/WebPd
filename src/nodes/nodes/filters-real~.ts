@@ -150,7 +150,6 @@ const builders = {
     'rpole~': builder,
     'rzero~': builder,
     'rzero_rev~': builder,
-    'lop~': builder,
 }
 
 const nodeImplementations: NodeImplementations = {
@@ -162,10 +161,6 @@ const nodeImplementations: NodeImplementations = {
     }),
     'rzero_rev~': makeNodeImplementation({
         generateOperation: (input, coeff, _, lastInput) => `${lastInput} - ${coeff} * ${input}`
-    }),
-    'lop~': makeNodeImplementation({
-        generateOperation: (input, coeff, lastOutput) => `${lastOutput} + ${coeff} * (${input} - ${lastOutput})`,
-        computeCoeff: (sampleRate) => `Math.min(1, Math.max(0, Math.max(0, value) * 2 * Math.PI / ${sampleRate}))`
     }),
 }
 

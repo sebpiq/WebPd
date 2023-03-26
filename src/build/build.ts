@@ -197,7 +197,7 @@ export const performBuildStep = async (
         case 'compiledJs':
         case 'compiledAsc':
             const compileCodeResult = compile(
-                artefacts.dspGraph!.graph,
+                artefacts.dspGraph.graph,
                 nodeImplementations,
                 {
                     target:

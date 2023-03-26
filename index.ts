@@ -53,11 +53,13 @@ import {
     WebPdWorkletNode as WebPdWorkletNode_,
     registerWebPdWorkletNode as registerWebPdWorkletNode_,
     fsWeb,
+    urlDirName as patchUrlToRootUrl_,
 } from '@webpd/runtime'
 export module Runtime {
     export const WebPdWorkletNode = WebPdWorkletNode_
     export const registerWebPdWorkletNode = registerWebPdWorkletNode_
     export const fs = { web: fsWeb }
+    export const urlDirName = patchUrlToRootUrl_
 }
 
 // ================ AppGenerator

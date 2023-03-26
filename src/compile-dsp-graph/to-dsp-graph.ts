@@ -88,7 +88,10 @@ export const buildMixerNodeId = (
 export default async (
     pd: PdJson.Pd,
     nodeBuilders: NodeBuilders,
-    abstractionLoader: AbstractionLoader = async () => null
+    abstractionLoader: AbstractionLoader = async (nodeType) => ({
+        status: 1,
+        unknownNodeType: nodeType,
+    })
 ): Promise<CompilationResult> => {
     const abstractionsResult = await instantiateAbstractions(
         pd,

@@ -62,19 +62,24 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- messages ------------------------------ //
 const messages: _NodeImplementation['messages'] = ({ snds, globs, node: { args } }) => ({
-    '0': `
-    if (msg_isMatching(${globs.m}, [${
-        args.typeArguments.map(t => t === 'float' ? 'MSG_FLOAT_TOKEN': 'MSG_STRING_TOKEN').join(',')}])
-    ) {
-        ${args.typeArguments.reverse().map((t, i) => {
-            const reversedI = args.typeArguments.length - i - 1
-            return functional.renderSwitch(
-                [t === 'float', `${snds[reversedI]}(msg_floats([msg_readFloatToken(${globs.m}, ${reversedI})]))`],
-                [t === 'symbol', `${snds[reversedI]}(msg_strings([msg_readStringToken(${globs.m}, ${reversedI})]))`],
-            )
-        })}
-        return
-    }
+    '0': functional.renderCode`
+    ${args.typeArguments.map((t, i) => [t, i] as [TypeArgument, number]).reverse().map(([t, reversedI]) =>
+        `
+            if (
+                msg_getLength(${globs.m}) >= ${reversedI + 1}
+            ) {
+                if (msg_getTokenType(${globs.m}, ${reversedI}) === ${t === 'float' ? 'MSG_FLOAT_TOKEN': 'MSG_STRING_TOKEN'}) {
+                    ${functional.renderSwitch(
+                        [t === 'float', `${snds[reversedI]}(msg_floats([msg_readFloatToken(${globs.m}, ${reversedI})]))`],
+                        [t === 'symbol', `${snds[reversedI]}(msg_strings([msg_readStringToken(${globs.m}, ${reversedI})]))`],
+                    )}
+                } else {
+                    console.log('unpack : invalid token type index ${reversedI}')
+                }
+            }
+        `
+    )}
+    return
     `,
 })
 
