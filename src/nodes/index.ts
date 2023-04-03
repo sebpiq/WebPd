@@ -36,7 +36,7 @@ import * as tabwrite from './nodes/tabwrite'
 import * as tabplayTilde from './nodes/tabplay~'
 import * as readsfTilde from './nodes/readsf~'
 import * as writesfTilde from './nodes/writesf~'
-import * as bpTilde from './nodes/bp~'
+import * as bpTilde from './nodes/filters-bp~'
 import * as throwTilde from './nodes/throw~'
 import * as catchTilde from './nodes/catch~'
 import * as sendTilde from './nodes/send~'
@@ -58,6 +58,8 @@ import * as delwriteTilde from './nodes/delwrite~'
 import * as filtersRealTilde from './nodes/filters-real~'
 import * as filtersComplexTilde from './nodes/filters-complex~'
 import * as filtersHipTilde from './nodes/filters-hip~'
+import * as filtersLopTilde from './nodes/filters-lop~'
+import * as filtersVcfTilde from './nodes/filters-vcf~'
 import * as msg from './nodes/msg'
 import * as list from './nodes/list'
 import * as send from './nodes/send'
@@ -105,6 +107,8 @@ const NODE_BUILDERS: NodeBuilders = {
     'vd~': { aliasTo: 'delread4~' },
     'bp~': bpTilde.builder,
     'hip~': filtersHipTilde.builder,
+    'lop~': filtersLopTilde.builder,
+    'vcf~': filtersVcfTilde.builder,
     'delwrite~': delwriteTilde.builder,
     'throw~': throwTilde.builder,
     'catch~': catchTilde.builder,
@@ -186,6 +190,8 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     'delwrite~': delwriteTilde.nodeImplementation,
     'bp~': bpTilde.nodeImplementation,
     'hip~': filtersHipTilde.nodeImplementation,
+    'lop~': filtersLopTilde.nodeImplementation,
+    'vcf~': filtersVcfTilde.nodeImplementation,
     'throw~': throwTilde.nodeImplementation,
     'catch~': catchTilde.nodeImplementation,
     'send~': sendTilde.nodeImplementation,

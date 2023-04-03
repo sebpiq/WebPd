@@ -18,8 +18,9 @@ WebPd simply generates audio code so adding visuals and interactivity is up to y
 
 ## Usage
 
-### Web compiler and player
 <span id="using-the-web-compiler"><span>
+
+### Web compiler and player
 
 **The web compiler and a patch player are live at the following address: https://sebpiq.github.io/WebPd_website**
 
@@ -29,8 +30,9 @@ Just upload or give a URL(*) of a patch, compile it just in time and generate an
 
 *(\*\*)Sharing a compiled patch doesn't work if you used local files for compilation.*
 
-### Command line interface
 <span id="using-the-cli"><span>
+
+### Command line interface
 
 The command-line interface (CLI) offers more customization options, including the ability to generate a fully-functional (but bare bones) web page embedding your patch.
 
@@ -71,9 +73,9 @@ WebPd is currently under heavy development, but it is still a work in progress. 
 
 The project is currently in *alpha release state* which means that many of your patches will *not* work out of the box. Many objects and features are indeed still missing. If you feel there is a bug, thanks for reporting it following [these simple guidelines](#reporting-a-bug). If you feel you could develop an object that is missing in WebPd to play a specific patch, see [contributing](#contributing).
 
+<span id="reporting-a-bug"><span>
 
 ### Reporting a bug
-<span id="reporting-a-bug"><span>
 
 If you wish to report a bug:
 
@@ -88,8 +90,9 @@ Current behavior -> Describe shortly how it is working at the moment
 Expected behavior -> Describe shortly how it should work instead
 ```
 
-### Contributing
 <span id="contributing"><span>
+
+### Contributing
 
 
 One-time contributions or regular work on the library are more than welcome! Contribution guidelines are coming, meanwhile if you have time and would really like to get involved please get in touch on the issue tracker on GitHub. I would be pleased to help you getting started for contributing.

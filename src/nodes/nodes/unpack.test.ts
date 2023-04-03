@@ -42,7 +42,7 @@ describe('unpack', () => {
 
     describe('implementation', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should unpacked values %s',
+            'should unpack values %s',
             async ({ target, bitDepth }) => {
                 await nodeImplementationsTestHelpers.assertNodeOutput(
                     {
@@ -59,6 +59,29 @@ describe('unpack', () => {
                             [888, 'poi'],
                         ] } },
                         { outs: { '0': [[123], [888]], '1': [['hello'], ['poi']] } },
+                    ]
+                )
+            }
+        )
+
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should unpack values even if message shorter than object args %s',
+            async ({ target, bitDepth }) => {
+                await nodeImplementationsTestHelpers.assertNodeOutput(
+                    {
+                        target,
+                        bitDepth,
+                        node: buildNode(builder, 'unpack', {
+                            typeArguments: ['float', 'symbol', 'float']
+                        }),
+                        nodeImplementation,
+                    },
+                    [
+                        { ins: { '0': [
+                            [666, 'hello'],
+                            [888],
+                        ] } },
+                        { outs: { '0': [[666], [888]], '1': [['hello']], '2': [] } },
                     ]
                 )
             }
