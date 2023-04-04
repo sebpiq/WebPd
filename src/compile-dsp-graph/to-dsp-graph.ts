@@ -88,7 +88,10 @@ export const buildMixerNodeId = (
 export default async (
     pd: PdJson.Pd,
     nodeBuilders: NodeBuilders,
-    abstractionLoader: AbstractionLoader = async () => null
+    abstractionLoader: AbstractionLoader = async (nodeType) => ({
+        status: 1,
+        unknownNodeType: nodeType,
+    })
 ): Promise<CompilationResult> => {
     const abstractionsResult = await instantiateAbstractions(
         pd,
@@ -510,7 +513,12 @@ const _currentPatch = (patchPath: PatchPath) => {
     return patch
 }
 
-const _parentPatch = (patchPath: PatchPath) => patchPath.slice(-2)[0]
+const _parentPatch = (patchPath: PatchPath): PdJson.Patch | null => {
+    if (patchPath.length < 2) {
+        return null
+    }
+    return patchPath.slice(-2)[0]
+}
 
 const _rootPatch = (patchPath: PatchPath) => {
     const firstRootPatch = patchPath
@@ -559,7 +567,7 @@ const _resolveSubpatchNode = (
             pdNode.nodeClass === 'subpatch' && pdNode.patchId === patchId
     )
     if (subpatchNode === undefined) {
-        throw new Error(`could not resolve subpatch node`)
+        throw new Error(`could not find subpatch node with patchId=${patchId} inside patch ${patch.id}`)
     }
     return subpatchNode
 }

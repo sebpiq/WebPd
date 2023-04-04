@@ -36,9 +36,11 @@ import * as tabwrite from './nodes/tabwrite'
 import * as tabplayTilde from './nodes/tabplay~'
 import * as readsfTilde from './nodes/readsf~'
 import * as writesfTilde from './nodes/writesf~'
-import * as bpTilde from './nodes/bp~'
+import * as bpTilde from './nodes/filters-bp~'
 import * as throwTilde from './nodes/throw~'
 import * as catchTilde from './nodes/catch~'
+import * as sendTilde from './nodes/send~'
+import * as receiveTilde from './nodes/receive~'
 import * as metro from './nodes/metro'
 import * as timer from './nodes/timer'
 import * as delay from './nodes/delay'
@@ -55,6 +57,9 @@ import * as delreadTilde from './nodes/delread~-delread4~'
 import * as delwriteTilde from './nodes/delwrite~'
 import * as filtersRealTilde from './nodes/filters-real~'
 import * as filtersComplexTilde from './nodes/filters-complex~'
+import * as filtersHipTilde from './nodes/filters-hip~'
+import * as filtersLopTilde from './nodes/filters-lop~'
+import * as filtersVcfTilde from './nodes/filters-vcf~'
 import * as msg from './nodes/msg'
 import * as list from './nodes/list'
 import * as send from './nodes/send'
@@ -101,9 +106,16 @@ const NODE_BUILDERS: NodeBuilders = {
     'mixer~': mixerTilde.builder,
     'vd~': { aliasTo: 'delread4~' },
     'bp~': bpTilde.builder,
+    'hip~': filtersHipTilde.builder,
+    'lop~': filtersLopTilde.builder,
+    'vcf~': filtersVcfTilde.builder,
     'delwrite~': delwriteTilde.builder,
     'throw~': throwTilde.builder,
     'catch~': catchTilde.builder,
+    'send~': sendTilde.builder,
+    's~': { aliasTo: 'send~' },
+    'receive~': receiveTilde.builder,
+    'r~': { aliasTo: 'receive~' },
     ...controlsFloat.builders,
     ...controlsAtoms.builders,
     ...binop.builders,
@@ -177,8 +189,13 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     'writesf~': writesfTilde.nodeImplementation,
     'delwrite~': delwriteTilde.nodeImplementation,
     'bp~': bpTilde.nodeImplementation,
+    'hip~': filtersHipTilde.nodeImplementation,
+    'lop~': filtersLopTilde.nodeImplementation,
+    'vcf~': filtersVcfTilde.nodeImplementation,
     'throw~': throwTilde.nodeImplementation,
     'catch~': catchTilde.nodeImplementation,
+    'send~': sendTilde.nodeImplementation,
+    'receive~': receiveTilde.nodeImplementation,
     ...controlsFloat.nodeImplementations,
     ...controlsAtoms.nodeImplementations,
     ...binop.nodeImplementations,

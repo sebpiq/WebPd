@@ -144,7 +144,7 @@ const messages: _NodeImplementation['messages'] = ({
             for (let ${Var('i', 'Int')} = 0; i < ${state.messageTransferFunctions}.length; i++) {
                 ${snds.$0}(${state.messageTransferFunctions}[i](${globs.m}))
             }
-            return    
+            return
         }
     `,
     }

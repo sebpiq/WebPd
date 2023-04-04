@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -568,6 +568,7 @@ describe('toDspGraph', () => {
                         ],
                     },
                 },
+                rootPatchId: '0',
             })
 
             const abstract1: PdJson.Pd = makePd({
@@ -627,7 +628,7 @@ describe('toDspGraph', () => {
                 loadAbstraction
             )
             assert.ok(compilationResult.status === 0)
-            const { graph } = compilationResult
+            const { graph, pd: pdWithResolvedAbstractions } = compilationResult
 
             assertGraphsEqual(
                 graph,
@@ -642,6 +643,8 @@ describe('toDspGraph', () => {
                 },
                 true
             )
+
+            assert.strictEqual(pdWithResolvedAbstractions.rootPatchId, '0')
 
             assertGraphConnections(graph, [
                 ['n_0_n1', '0', 'n_2_n1', '0'],
@@ -749,22 +752,21 @@ describe('toDspGraph', () => {
             )
             assert.ok(compilationResult.status === 1)
 
-            const { abstractionsLoadingErrors, abstractionsLoadingWarnings } = compilationResult
+            const { abstractionsLoadingErrors, abstractionsLoadingWarnings } =
+                compilationResult
             assert.deepStrictEqual(abstractionsLoadingErrors, {
                 unknownNodeType: {
                     unknownNodeType: 'unknownNodeType',
                 },
                 typeWithParsingErrors: {
-                    parsingErrors: [
-                        { message: 'some error', lineIndex: 666 },
-                    ],
+                    parsingErrors: [{ message: 'some error', lineIndex: 666 }],
                 },
             })
 
             assert.deepStrictEqual(abstractionsLoadingWarnings, {
                 typeWithParsingErrors: [
                     { message: 'some warning', lineIndex: 999 },
-                ]
+                ],
             })
         })
 
@@ -822,6 +824,42 @@ describe('toDspGraph', () => {
                 '0': new Float32Array([11, 22, 33, 44, 55, 66, 77, 88]),
                 'bla-0': new Float32Array([0, 0, 0, 0]),
             })
+        })
+
+        it('should not fail when patch is itself an abstraction', async () => {
+            const pd = makePd({
+                rootPatchId: '0',
+                patches: {
+                    '0': {
+                        isRoot: true,
+                        nodes: {
+                            '0': {
+                                type: 'inlet~',
+                            },
+                            '1': {
+                                type: 'osc~',
+                                args: [220],
+                            },
+                            '2': {
+                                type: 'outlet~',
+                            },
+                        },
+                        connections: [
+                            ['0', 0, '1', 0],
+                            ['1', 0, '2', 0],
+                        ],
+                    },
+                },
+            })
+
+            const compilationResult = await toDspGraph(pd, NODE_BUILDERS)
+            assert.ok(compilationResult.status === 0)
+            const { graph } = compilationResult
+
+            assertGraphsEqual(graph, {
+                'n_0_1': {type: 'osc~'},
+            }, true)
+            assertGraphConnections(graph, [])
         })
     })
 

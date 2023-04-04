@@ -170,6 +170,9 @@ const nodeImplementations: NodeImplementations = {
         generateOperation: (state) => `pow(${state.leftOp}, ${state.rightOp})`,
         sharedCode: [pow],
     }),
+    log: makeNodeImplementation({
+        generateOperation: (state) => `Math.log(${state.leftOp}) / Math.log(${state.rightOp})`,
+    }),
     '||': makeNodeImplementation({
         prepareLeftOp: `Math.floor(Math.abs(value))`,
         prepareRightOp: `Math.floor(Math.abs(value))`,
@@ -218,6 +221,7 @@ const builders = {
     mod: makeBuilder(0),
     '%': makeBuilder(0),
     pow: makeBuilder(0),
+    log: makeBuilder(Math.E),
     '||': makeBuilder(0),
     '&&': makeBuilder(0),
     '>': makeBuilder(0),

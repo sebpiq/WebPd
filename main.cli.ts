@@ -75,9 +75,9 @@ const checkSupportPdJson = async (
     }
 
     if (isSupported) {
-        consoleLogEm(`OK`)
+        process.stdout.write(colors.green(`\n✓ (supported)`))
     } else {
-        consoleLogEm(`NOT SUPPORTED`)
+        process.stdout.write(colors.red(`\n✘ (not supported)`))
     }
 }
 
@@ -104,10 +104,10 @@ const assertValidFormat = (
 }
 
 const writeOutFile = async (task: Task): Promise<Task> => {
-    consoleLogEm(`\nGenerating output`)
     const { outFilepath, outFormat, artefacts } = task
     const written: Array<string> = []
     if (outFormat && outFilepath) {
+        consoleLogEm(`\nGenerating output`)
         switch (outFormat) {
             case 'pdJson':
             case 'dspGraph':
@@ -222,7 +222,6 @@ const ifConditionThenExitError = (test: boolean, msg: string) => {
 
 const exitError = (msg: string) => {
     process.stderr.write('\n' + msg + '\n\n')
-    program.outputHelp({ error: true })
     process.exit(1)
 }
 
@@ -401,6 +400,7 @@ const main = (): void => {
                 }
             })
             .catch((err) => {
+                throw err
                 process.stderr.write('\n' + err)
             })
             .finally(() => {
