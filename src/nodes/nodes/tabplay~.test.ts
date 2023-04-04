@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,11 @@
 
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { nodeImplementation, builder } from './tabplay~'
-import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeTranslateArgs } from '../test-helpers'
+import {
+    buildNode,
+    NODE_IMPLEMENTATION_TEST_PARAMETERS,
+    testNodeTranslateArgs,
+} from '../test-helpers'
 
 describe('tabplay~', () => {
     describe('builder', () => {
@@ -32,30 +36,33 @@ describe('tabplay~', () => {
             })
         })
     })
-    
+
     describe('implementation', () => {
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should change array when sent set %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
-                {
-                    target,
-                    bitDepth,
-                    node: buildNode(builder, 'tabplay~', {
-                        arrayName: 'UNKNOWN_ARRAY',
-                    }),
-                    nodeImplementation,
-                    arrays: {
-                        myArray: [1, 2, 3],
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should change array when sent set %s',
+            async ({ target, bitDepth }) => {
+                await nodeImplementationsTestHelpers.assertNodeOutput(
+                    {
+                        target,
+                        bitDepth,
+                        node: buildNode(builder, 'tabplay~', {
+                            arrayName: 'UNKNOWN_ARRAY',
+                        }),
+                        nodeImplementation,
+                        arrays: {
+                            myArray: [1, 2, 3],
+                        },
                     },
-                },
-                [{ ins: {} }, { outs: { '0': 0, '1': [] } }],
-                [{ ins: {} }, { outs: { '0': 0, '1': [] } }],
-                [
-                    { ins: { '0': [['set', 'myArray'], ['bang']] } },
-                    { outs: { '0': 1, '1': [] } },
-                ],
-                [{ ins: {} }, { outs: { '0': 2, '1': [] } }]
-            )
-        })
+                    [{ ins: {} }, { outs: { '0': 0, '1': [] } }],
+                    [{ ins: {} }, { outs: { '0': 0, '1': [] } }],
+                    [
+                        { ins: { '0': [['set', 'myArray'], ['bang']] } },
+                        { outs: { '0': 1, '1': [] } },
+                    ],
+                    [{ ins: {} }, { outs: { '0': 2, '1': [] } }]
+                )
+            }
+        )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read from beginning to end when receiving bang %s',
@@ -79,6 +86,35 @@ describe('tabplay~', () => {
                     ],
                     [{ ins: {} }, { outs: { '0': 22, '1': [] } }],
                     [{ ins: {} }, { outs: { '0': 33, '1': [['bang']] } }],
+                    [{ ins: {} }, { outs: { '0': 0, '1': [] } }]
+                )
+            }
+        )
+
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should stop reading when receiving stop %s',
+            async ({ target, bitDepth }) => {
+                await nodeImplementationsTestHelpers.assertNodeOutput(
+                    {
+                        target,
+                        bitDepth,
+                        node: buildNode(builder, 'tabplay~', {
+                            arrayName: 'myArray',
+                        }),
+                        nodeImplementation,
+                        arrays: {
+                            myArray: [11, 22, 33],
+                        },
+                    },
+                    [{ ins: {} }, { outs: { '0': 0, '1': [] } }],
+                    [
+                        { ins: { '0': [['bang']] } },
+                        { outs: { '0': 11, '1': [] } },
+                    ],
+                    [
+                        { ins: { '0': [['stop']] } },
+                        { outs: { '0': 0, '1': [] } },
+                    ],
                     [{ ins: {} }, { outs: { '0': 0, '1': [] } }]
                 )
             }
@@ -109,27 +145,33 @@ describe('tabplay~', () => {
             }
         )
 
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should update array when new array set %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
-                {
-                    target,
-                    bitDepth,
-                    node: buildNode(builder, 'tabplay~', {
-                        arrayName: 'myArray',
-                    }),
-                    nodeImplementation,
-                    arrays: {},
-                },
-                [{}, { outs: { '0': 0, '1': [] } }],
-                [
-                    { commons: { setArray: { myArray: [11, 22] } } },
-                    { outs: { '0': 0, '1': [] } },
-                ],
-                [{ ins: { '0': [['bang']] } }, { outs: { '0': 11, '1': [] } }],
-                [{}, { outs: { '0': 22, '1': [['bang']] } }],
-                [{}, { outs: { '0': 0, '1': [] } }]
-            )
-        })
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should update array when new array set %s',
+            async ({ target, bitDepth }) => {
+                await nodeImplementationsTestHelpers.assertNodeOutput(
+                    {
+                        target,
+                        bitDepth,
+                        node: buildNode(builder, 'tabplay~', {
+                            arrayName: 'myArray',
+                        }),
+                        nodeImplementation,
+                        arrays: {},
+                    },
+                    [{}, { outs: { '0': 0, '1': [] } }],
+                    [
+                        { commons: { setArray: { myArray: [11, 22] } } },
+                        { outs: { '0': 0, '1': [] } },
+                    ],
+                    [
+                        { ins: { '0': [['bang']] } },
+                        { outs: { '0': 11, '1': [] } },
+                    ],
+                    [{}, { outs: { '0': 22, '1': [['bang']] } }],
+                    [{}, { outs: { '0': 0, '1': [] } }]
+                )
+            }
+        )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read from sample to sample when receiving 2 floats %s',
@@ -149,6 +191,32 @@ describe('tabplay~', () => {
                     [{ ins: {} }, { outs: { '0': 0, '1': [] } }],
                     [
                         { ins: { '0': [[3, 2]] } },
+                        { outs: { '0': 0.4, '1': [] } },
+                    ],
+                    [{ ins: {} }, { outs: { '0': 0.5, '1': [['bang']] } }],
+                    [{ ins: {} }, { outs: { '0': 0, '1': [] } }]
+                )
+            }
+        )
+
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should stop at array length even if received bigger read end number %s',
+            async ({ target, bitDepth }) => {
+                await nodeImplementationsTestHelpers.assertNodeOutput(
+                    {
+                        target,
+                        bitDepth,
+                        node: buildNode(builder, 'tabplay~', {
+                            arrayName: 'myArray',
+                        }),
+                        nodeImplementation,
+                        arrays: {
+                            myArray: [0.1, 0.2, 0.3, 0.4, 0.5],
+                        },
+                    },
+                    [{ ins: {} }, { outs: { '0': 0, '1': [] } }],
+                    [
+                        { ins: { '0': [[3, 42]] } },
                         { outs: { '0': 0.4, '1': [] } },
                     ],
                     [{ ins: {} }, { outs: { '0': 0.5, '1': [['bang']] } }],

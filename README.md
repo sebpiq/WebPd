@@ -2,10 +2,13 @@
   <img src="webpd.png" />
 </p>
 
+<!-- intro start -->
+
 **WebPd** is a compiler for the [Pure Data](https://puredata.info/) audio programming language allowing to run **.pd** patches in web pages.
 
 **WebPd is highly modular and takes a white-box approach to audio programming**. It converts the audio graph and processing objects from a patch into plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). The pure audio generated code can be then integrated directly in any web application without using WebPd or Pure Data ever again 🌈.
 
+<!-- intro end -->
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23ed00d9)](https://github.com/sponsors/sebpiq)
 
