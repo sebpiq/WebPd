@@ -1,6 +1,6 @@
 {
   "name": "webpd",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "type": "module",
   "main": "./dist/WebPd/index.js",
   "types": "./dist/types/index.d.ts",
