@@ -15,7 +15,7 @@
 
 - Publish generative musical works on the web
 - Execute, tweak and share patches collectively on any machine
-- Filter and playback sound and music daa in realtime from web based applications and games
+- Produce, filter and playback sound and music data in realtime from web based applications and games
 
 ## Integration and scope
 
