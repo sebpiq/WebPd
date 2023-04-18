@@ -44,6 +44,8 @@ Just upload or give a URL(*) of a patch, compile it just in time and generate an
 
 ### Command line interface
 
+*NOTE : Running the CLI requires node.js version 18 or higher.*
+
 The command-line interface (CLI) offers more customization options, including the ability to generate a fully-functional (but bare bones) web page embedding your patch.
 
 Open a terminal and install the CLI with [node / npm](https://nodejs.org/) by running the following command:
