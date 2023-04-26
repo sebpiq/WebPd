@@ -71,6 +71,9 @@ const bareBonesApp = (settings: Settings) => {
             #loading {
                 width: 100%;
                 height: 100%;
+                position: fixed;
+                top: 50%;
+                transform: translateY(-50%);
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -78,10 +81,19 @@ const bareBonesApp = (settings: Settings) => {
         </style>
     </head>
     <body>
+        <h1>My Web Page</h1>
+        <div>For more info about usage (how to interact with the patch), you can open this HTML file in a code editor.</div>
         <button id="start"> Start </button>
         <div id="loading"> Loading ... </div>
         <script src="${WEBPD_RUNTIME_FILENAME}"></script>
         <script>
+            // SUMMARY
+            // 1. WEB PAGE INITIALIZATION
+            // 2. SENDING MESSAGES FROM JAVASCRIPT TO THE PATCH
+            // 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT (coming soon ...)
+
+
+            // ------------- 1. WEB PAGE INITIALIZATION
             const loadingDiv = document.querySelector('#loading')
             const startButton = document.querySelector('#start')
             const audioContext = new AudioContext()
@@ -150,10 +162,24 @@ const bareBonesApp = (settings: Settings) => {
                     console.log('App initialized')
                 })
 
-            // You can then use this function to interact with your patch
-            // e.g. :
-            // sendMsgToWebPd('n_0_1', '0', ['bang'])
-            // sendMsgToWebPd('n_0_2', '0', [123])
+            
+            // ------------- 2. SENDING MESSAGES FROM JAVASCRIPT TO THE PATCH
+            // Use the function sendMsgToWebPd to send a message from JavaScript to an object inside your patch.
+            // 
+            // Parameters : 
+            // - nodeId: the ID of the object you want to send a message to. 
+            //          This ID is a string that has been assigned by WebPd at compilation.
+            //          You can find below the list of available IDs with hints to help you 
+            //          identify the object you want to interact with.
+            // - portletId : the ID of the object portlet to which the message should be sent. 
+            // - message : the message to send. This must be a list of strings and / or numbers.
+            // 
+            // Examples :
+            // - sending a message to a bang node of ID 'n_0_1' :
+            //          sendMsgToWebPd('n_0_1', '0', ['bang'])
+            // - sending a message to a number object of ID 'n_0_2' :
+            //          sendMsgToWebPd('n_0_2', '0', [123])
+            // 
             const sendMsgToWebPd = (nodeId, portletId, message) => {
                 webpdNode.port.postMessage({
                     type: 'inletCaller',
@@ -164,13 +190,19 @@ const bareBonesApp = (settings: Settings) => {
                     },
                 })
             }
-            ${artefacts.dspGraph && artefacts.dspGraph.inletCallerSpecs ? `
-            // For info, compilation has opened the following ports in your patch.
-            // You can send messages to them :` 
-                + Object.entries(artefacts.dspGraph.inletCallerSpecs)
+            
+            // Here is the list of objects IDs to which you can send messages.
+            // Note that by default only GUI objects (bangs, sliders, etc ...) are available.
+            ${artefacts.dspGraph && artefacts.dspGraph.inletCallerSpecs && Object.keys(artefacts.dspGraph.inletCallerSpecs).length ? 
+                Object.entries(artefacts.dspGraph.inletCallerSpecs)
                     .flatMap(([nodeId, portletIds]) => portletIds.map(portletId => `
             //     - Node of type "${artefacts.dspGraph.graph[nodeId].type}", nodeId "${nodeId}", portletId "${portletId}"`)).join('')
-                : ''}
+                : '// EMPTY (did you place a GUI object in your patch ?)'}
+
+
+            // ------------- 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT
+            // Coming soon ... 
+
         </script>
     </body>
 </html>`
