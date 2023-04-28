@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+import { PdJson } from '@webpd/pd-parser'
 import { Artefacts } from '../build/types'
 import WEBPD_RUNTIME_CODE from './runtime.generated.js.txt'
+import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {
@@ -191,13 +193,27 @@ const bareBonesApp = (settings: Settings) => {
                 })
             }
             
-            // Here is the list of objects IDs to which you can send messages.
-            // Note that by default only GUI objects (bangs, sliders, etc ...) are available.
-            ${artefacts.dspGraph && artefacts.dspGraph.inletCallerSpecs && Object.keys(artefacts.dspGraph.inletCallerSpecs).length ? 
-                Object.entries(artefacts.dspGraph.inletCallerSpecs)
-                    .flatMap(([nodeId, portletIds]) => portletIds.map(portletId => `
-            //     - Node of type "${artefacts.dspGraph.graph[nodeId].type}", nodeId "${nodeId}", portletId "${portletId}"`)).join('')
-                : '// EMPTY (did you place a GUI object in your patch ?)'}
+            // Here is an index of objects IDs to which you can send messages, with hints so you can find the right ID.
+            // Note that by default only GUI objects (bangs, sliders, etc ...) are available.${
+                artefacts.dspGraph 
+                && artefacts.dspGraph.inletCallerSpecs 
+                && Object.keys(artefacts.dspGraph.inletCallerSpecs).length ? 
+                    Object.entries(artefacts.dspGraph.inletCallerSpecs)
+                        .flatMap(([nodeId, portletIds]) => portletIds.map(portletId => {
+                            const pdNode = resolvePdNodeFromGraphNodeId(artefacts.pdJson!, nodeId)
+                            if (!pdNode) {
+                                throw new Error(`Failed to resolve pd node`)
+                            }
+                            return `
+            //  - nodeId "${nodeId}" portletId "${portletId}"
+            //      * type "${pdNode.type}"
+            //      * args ${JSON.stringify(pdNode.args)}`
+            + ((pdNode.layout as any).label ? `
+            //      * label "${(pdNode.layout as any).label}"` : '')
+                        })).join('')
+                : `
+            // EMPTY (did you place a GUI object in your patch ?)
+`}
 
 
             // ------------- 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT
@@ -215,4 +231,18 @@ const bareBonesApp = (settings: Settings) => {
     }
 
     return generatedApp
+}
+
+const resolvePdNodeFromGraphNodeId = (
+    pd: PdJson.Pd,
+    graphNodeId: PdJson.LocalId
+): PdJson.Node | null => {
+    let node: PdJson.Node = null
+    Object.entries(pd.patches).some(([patchId, patch]) => {
+        node = Object.values(patch.nodes).find(
+            (node) => buildGraphNodeId(patchId, node.id) === graphNodeId
+        )
+        return !!node
+    })
+    return node
 }

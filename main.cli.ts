@@ -194,7 +194,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
             process.stdout.write(
                 colors.grey('\n\nWeb app compiled ! Start it by running :\n') +
                     colors.blue(`\tnpx http-server ${outFilepath}\n`) + 
-                    colors.grey('For documentation, open the index.html file in a code editor.\n')
+                    colors.grey(`For documentation, open ${path.resolve(outFilepath, 'index.html')} in a code editor.\n`)
             )
         }
     }
