@@ -85,7 +85,7 @@ const declare: _NodeImplementation['declare'] = ({
         ${state.buffer} = buf_create(
             toInt(computeUnitInSamples(
                 ${globs.sampleRate}, 
-                toFloat(${args.maxDurationMsec}), 
+                ${args.maxDurationMsec},
                 "msec"
             ))
         )

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -58,16 +58,23 @@ const DELREAD_TEST_PARAMETERS = testParametersCombine<{
 describe('delread~ / delwrite~', () => {
     describe('builder [delread~]', () => {
         describe('translateArgs', () => {
-            it.each(DELREAD_NODE_TYPES)('should handle args as expected', (nodeType) => {
-                testNodeTranslateArgs(buildersDelRead[nodeType], [], {
-                    delayName: '',
-                    initDelayMsec: 0,
-                })
-                testNodeTranslateArgs(buildersDelRead[nodeType], ['DEL1', 1111], {
-                    delayName: 'DEL1',
-                    initDelayMsec: 1111,
-                })
-            })
+            it.each(DELREAD_NODE_TYPES)(
+                'should handle args as expected',
+                (nodeType) => {
+                    testNodeTranslateArgs(buildersDelRead[nodeType], [], {
+                        delayName: '',
+                        initDelayMsec: 0,
+                    })
+                    testNodeTranslateArgs(
+                        buildersDelRead[nodeType],
+                        ['DEL1', 1111],
+                        {
+                            delayName: 'DEL1',
+                            initDelayMsec: 1111,
+                        }
+                    )
+                }
+            )
         })
     })
 
@@ -139,7 +146,7 @@ describe('delread~ / delwrite~', () => {
                 nodeImplementations,
                 inletCallerSpecs: {
                     delayR: ['0_message'],
-                    delayW: ['0_message']
+                    delayW: ['0_message'],
                 },
                 audioSettings: {
                     channelCount,
@@ -147,8 +154,7 @@ describe('delread~ / delwrite~', () => {
                 },
             })
 
-            const code =
-                executeCompilation(compilation)
+            const code = executeCompilation(compilation)
 
             return await createEngine(compilation.target, bitDepth, code)
         }
@@ -170,22 +176,20 @@ describe('delread~ / delwrite~', () => {
                     }
                 )
 
-                assert.deepStrictEqual(nodeImplementationsTestHelpers.generateFrames(engine, 4), [
-                    [0],
-                    [1],
-                    [2],
-                    [3],
-                ])
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[0], [1], [2], [3]]
+                )
 
                 // Change the delay 2 samples
-                engine.inletCallers['delayR']['0_message']([(2 * 1000) / SAMPLE_RATE])
-
-                assert.deepStrictEqual(nodeImplementationsTestHelpers.generateFrames(engine, 4), [
-                    [2],
-                    [3],
-                    [4],
-                    [5],
+                engine.inletCallers['delayR']['0_message']([
+                    (2 * 1000) / SAMPLE_RATE,
                 ])
+
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[2], [3], [4], [5]]
+                )
             }
         )
 
@@ -206,23 +210,45 @@ describe('delread~ / delwrite~', () => {
                     }
                 )
 
-                assert.deepStrictEqual(nodeImplementationsTestHelpers.generateFrames(engine, 4), [
-                    [0],
-                    [1],
-                    [2],
-                    [3],
-                ])
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[0], [1], [2], [3]]
+                )
 
                 // Change the delay 2 samples
-                engine.inletCallers['delayR']['0_message']([(3 * 1000) / SAMPLE_RATE])
+                engine.inletCallers['delayR']['0_message']([
+                    (3 * 1000) / SAMPLE_RATE,
+                ])
                 engine.inletCallers['delayW']['0_message'](['clear'])
 
-                assert.deepStrictEqual(nodeImplementationsTestHelpers.generateFrames(engine, 4), [
-                    [0],
-                    [0],
-                    [0],
-                    [4],
-                ])
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[0], [0], [0], [4]]
+                )
+            }
+        )
+
+        it.each(DELREAD_TEST_PARAMETERS)(
+            'should work with decimal numbers as parameters %s',
+            async ({ target, bitDepth, nodeType }) => {
+                const engine = await createTestEngine(
+                    target,
+                    nodeType,
+                    bitDepth,
+                    {
+                        maxDurationMsec: 10.5,
+                        delayName: 'DEL1',
+                    },
+                    {
+                        initDelayMsec: 0.5,
+                        delayName: 'DEL1',
+                    }
+                )
+
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[0], [0], [0], [0]]
+                )
             }
         )
     })
@@ -250,11 +276,10 @@ describe('delread~ / delwrite~', () => {
                         '0': `
                         ${state.value} = msg_readFloatToken(${globs.m}, 0)
                         return
-                        `
+                        `,
                     }),
-                    loop: ({ state, outs }) =>
-                        `${outs.$0} = ${state.value}`,
-                    stateVariables: {value: 1},
+                    loop: ({ state, outs }) => `${outs.$0} = ${state.value}`,
+                    stateVariables: { value: 1 },
                 },
             }
 
@@ -310,8 +335,7 @@ describe('delread~ / delwrite~', () => {
                 },
             })
 
-            const code =
-                executeCompilation(compilation)
+            const code = executeCompilation(compilation)
 
             return await createEngine(compilation.target, bitDepth, code)
         }
@@ -332,22 +356,20 @@ describe('delread~ / delwrite~', () => {
                     }
                 )
 
-                assert.deepStrictEqual(nodeImplementationsTestHelpers.generateFrames(engine, 4), [
-                    [0],
-                    [1],
-                    [2],
-                    [3],
-                ])
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[0], [1], [2], [3]]
+                )
 
                 // Change the delay 2 samples
-                engine.inletCallers['delayControl']['0']([(2 * 1000) / SAMPLE_RATE])
-
-                assert.deepStrictEqual(nodeImplementationsTestHelpers.generateFrames(engine, 4), [
-                    [2],
-                    [3],
-                    [4],
-                    [5],
+                engine.inletCallers['delayControl']['0']([
+                    (2 * 1000) / SAMPLE_RATE,
                 ])
+
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[2], [3], [4], [5]]
+                )
             }
         )
     })
