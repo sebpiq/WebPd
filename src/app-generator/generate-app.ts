@@ -136,7 +136,10 @@ const bareBonesApp = (settings: Settings) => {
                 webpdNode.connect(audioContext.destination)
 
                 // Setup filesystem management
-                webpdNode.port.onmessage = (message) => WebPdRuntime.fsWeb(webpdNode, message)
+                webpdNode.port.onmessage = (message) => 
+                    WebPdRuntime.fsWeb(webpdNode, message, { 
+                        rootUrl: WebPdRuntime.urlDirName(location.pathname) 
+                    })
 
                 // Send code to the worklet
                 ${artefacts.compiledJs ? `

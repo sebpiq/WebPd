@@ -1,1 +1,1 @@
-export { WebPdWorkletNode, fsWeb, registerWebPdWorkletNode } from '@webpd/runtime'
+export { WebPdWorkletNode, fsWeb, registerWebPdWorkletNode, urlDirName } from '@webpd/runtime'
