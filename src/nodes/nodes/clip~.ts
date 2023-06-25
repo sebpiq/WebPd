@@ -18,7 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
@@ -31,7 +30,6 @@ interface NodeArguments {
 const stateVariables = {
     minValue: 1,
     maxValue: 1,
-    inputValue: 1,
 }
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
@@ -44,45 +42,33 @@ const builder: NodeBuilder<NodeArguments> = {
     build: () => ({
         inlets: {
             '0': { type: 'signal', id: '0' },
-            '0_message': { type: 'message', id: '0_message' },
             '1': { type: 'message', id: '1' },
             '2': { type: 'message', id: '2' },
         },
         outlets: {
             '0': { type: 'signal', id: '0' },
         },
-    }),
-    rerouteMessageConnection: (inletId) => {
-        if (inletId === '0') {
-            return '0_message'
-        }
-        return undefined
-    },
+    })
 }
 
 // ------------------------------- declare ------------------------------ //
 const declare: _NodeImplementation['declare'] = ({ node: { args }, state, macros: { Var }}) => `
-    let ${Var(state.inputValue, 'Float')} = 0
     let ${Var(state.minValue, 'Float')} = ${args.minValue}
     let ${Var(state.maxValue, 'Float')} = ${args.maxValue}
 `
 
 // ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, outs, state, node }) => `
-    ${outs.$0} = Math.max(Math.min(${state.maxValue}, ${_hasSignalInput(node) ? ins.$0: state.inputValue}), ${state.minValue})
+const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => `
+    ${outs.$0} = Math.max(Math.min(${state.maxValue}, ${ins.$0}), ${state.minValue})
 `
 
 // ------------------------------- messages ------------------------------ //
 const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
-    '0_message': coldFloatInlet(globs.m, state.inputValue),
     '1': coldFloatInlet(globs.m, state.minValue),
     '2': coldFloatInlet(globs.m, state.maxValue),
 })
 
 // ------------------------------------------------------------------- //
-const _hasSignalInput = (node: DspGraph.Node<NodeArguments>) =>
-    node.sources['0'] && node.sources['0'].length
-
 const nodeImplementation: _NodeImplementation = {
     loop,
     stateVariables,

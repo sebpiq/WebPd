@@ -41,9 +41,9 @@ const builder: NodeBuilder<NodeArguments> = {
             '0': { type: 'signal', id: '0' },
         },
     }),
-    rerouteMessageConnection: (inletId) => {
+    configureMessageToSignalConnection: (inletId) => {
         if (inletId === '0') {
-            return '0_message'
+            return { reroutedMessageInletId: '0_message' }
         }
         return undefined
     },

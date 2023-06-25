@@ -51,9 +51,9 @@ const builder: NodeBuilder<NodeArguments> = {
         outlets: {},
         isPullingSignal: true,
     }),
-    rerouteMessageConnection: (inletId) => {
+    configureMessageToSignalConnection: (inletId) => {
         if (inletId === '0') {
-            return '0_message'
+            return { reroutedMessageInletId: '0_message' }
         }
         return undefined
     },
@@ -83,11 +83,11 @@ const declare: _NodeImplementation['declare'] = ({
 
     commons_waitEngineConfigure(() => {
         ${state.buffer} = buf_create(
-            toInt(computeUnitInSamples(
+            toInt(Math.ceil(computeUnitInSamples(
                 ${globs.sampleRate}, 
                 ${args.maxDurationMsec},
                 "msec"
-            ))
+            )))
         )
         if ("${args.delayName}".length) {
             ${state.funcSetDelayName}("${args.delayName}")

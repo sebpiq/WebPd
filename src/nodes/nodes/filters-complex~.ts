@@ -18,22 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph } from '@webpd/compiler'
 import { Code, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import {
-    coldFloatInlet,
-} from '../standard-message-receivers'
 
 interface NodeArguments {
     initCoeffRe: number
     initCoeffIm: number
 }
 const stateVariables = {
-    inputIm: 1,
-    coeffRe: 1,
-    coeffIm: 1,
     lastInputRe: 1,
     lastInputIm: 1,
     lastOutputRe: 1,
@@ -55,31 +48,27 @@ const builder: NodeBuilder<NodeArguments> = {
     build: () => ({
         inlets: {
             '0': { type: 'signal', id: '0' },
-            '0_message': { type: 'message', id: '0_message' },
             '1': { type: 'signal', id: '1' },
-            '1_message': { type: 'message', id: '1_message' },
             '2': { type: 'signal', id: '2' },
-            '2_message': { type: 'message', id: '2_message' },
             '3': { type: 'signal', id: '3' },
-            '3_message': { type: 'message', id: '3_message' },
         },
         outlets: {
             '0': { type: 'signal', id: '0' },
             '1': { type: 'signal', id: '1' },
         },
     }),
-    rerouteMessageConnection: (inletId) => {
+    configureMessageToSignalConnection: (inletId, { initCoeffIm, initCoeffRe }) => {
         if (inletId === '0') {
-            return '0_message'
+            return { initialSignalValue: 0 }
         }
         if (inletId === '1') {
-            return '1_message'
+            return { initialSignalValue: 0 }
         }
         if (inletId === '2') {
-            return '2_message'
+            return { initialSignalValue: initCoeffRe }
         }
         if (inletId === '3') {
-            return '3_message'
+            return { initialSignalValue: initCoeffIm }
         }
         return undefined
     },
@@ -114,12 +103,8 @@ const makeNodeImplementation = ({
     // ------------------------------- declare ------------------------------ //
     const declare: _NodeImplementation['declare'] = ({
         state,
-        node: { args },
         macros: { Var },
     }) => `
-        let ${Var(state.inputIm, 'Float')} = 0
-        let ${Var(state.coeffRe, 'Float')} = ${args.initCoeffRe}
-        let ${Var(state.coeffIm, 'Float')} = ${args.initCoeffIm}
         let ${Var(state.lastOutputRe, 'Float')} = 0
         let ${Var(state.lastOutputIm, 'Float')} = 0
         let ${Var(state.lastInputRe, 'Float')} = 0
@@ -127,12 +112,12 @@ const makeNodeImplementation = ({
     `
 
     // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ node, ins, state, outs }) => `
+    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => `
         ${outs.$0} = ${generateOperationRe(
             ins.$0, 
-            _hasSignalInput('1', node) ? ins.$1: state.inputIm, 
-            _hasSignalInput('2', node) ? ins.$2: state.coeffRe,
-            _hasSignalInput('3', node) ? ins.$3: state.coeffIm,
+            ins.$1, 
+            ins.$2,
+            ins.$3,
             state.lastOutputRe, 
             state.lastOutputIm, 
             state.lastInputRe, 
@@ -140,9 +125,9 @@ const makeNodeImplementation = ({
         )}
         ${state.lastOutputIm} = ${outs.$1} = ${generateOperationIm(
             ins.$0, 
-            _hasSignalInput('1', node) ? ins.$1: state.inputIm, 
-            _hasSignalInput('2', node) ? ins.$2: state.coeffRe,
-            _hasSignalInput('3', node) ? ins.$3: state.coeffIm,
+            ins.$1,
+            ins.$2,
+            ins.$3,
             state.lastOutputRe, 
             state.lastOutputIm, 
             state.lastInputRe, 
@@ -150,28 +135,17 @@ const makeNodeImplementation = ({
         )}
         ${state.lastOutputRe} = ${outs.$0}
         ${state.lastInputRe} = ${ins.$0}
-        ${state.lastInputIm} = ${_hasSignalInput('1', node) ? ins.$1: state.inputIm}
+        ${state.lastInputIm} = ${ins.$1}
     `
-
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = ({ globs, state }) => ({
-        '1_message': coldFloatInlet(globs.m, state.inputIm),
-        '2_message': coldFloatInlet(globs.m, state.coeffRe),
-        '3_message': coldFloatInlet(globs.m, state.coeffIm),
-    })
 
     return {
         loop,
         stateVariables,
-        messages,
         declare,
     }
 }
 
 // ------------------------------------------------------------------- //
-const _hasSignalInput = (inletId: DspGraph.PortletId, node: DspGraph.Node<NodeArguments>) =>
-    node.sources[inletId] && node.sources[inletId].length
-
 const builders = {
     'cpole~': builder,
     'czero~': builder,

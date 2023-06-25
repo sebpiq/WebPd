@@ -21,12 +21,17 @@
 import { DspGraph } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 
-// Patch translation PdJson -> DspGraph
+/** Partial info for node translation from PdJson.Node to DspGraph.Node */
 export interface PartialNode {
     inlets: DspGraph.Node['inlets']
     outlets: DspGraph.Node['outlets']
     isPullingSignal?: DspGraph.Node['isPullingSignal']
     isPushingMessages?: DspGraph.Node['isPushingMessages']
+}
+
+interface MessageToSignalConfig {
+    initialSignalValue?: number,
+    reroutedMessageInletId?: DspGraph.PortletId
 }
 
 export interface NodeBuilder<NodeArgsType> {
@@ -53,9 +58,10 @@ export interface NodeBuilder<NodeArgsType> {
      * therefore this hook is provided to reroute incoming message connections to a node
      * to a different inlet.
      */
-    rerouteMessageConnection?: (
-        inletId: DspGraph.PortletId
-    ) => DspGraph.PortletId | undefined
+    configureMessageToSignalConnection?: (
+        inletId: DspGraph.PortletId,
+        nodeArgs: NodeArgsType
+    ) => MessageToSignalConfig | undefined
 
     skipDollarArgsResolution?: true
     aliasTo?: undefined

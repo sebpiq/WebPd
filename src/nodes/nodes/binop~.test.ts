@@ -39,32 +39,6 @@ describe('binop~', () => {
     })
 
     describe('implementation', () => {
-        describe('shared tests', () => {
-            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-                'should work with message to inlet 1 %s',
-                async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
-                        {
-                            target,
-                            bitDepth,
-                            node: buildNode(builders['+~'], '+~', { value: 10 }),
-                            nodeImplementation: nodeImplementations['+~'],
-                        },
-                        [{ ins: { '0': 1 } }, { outs: { '0': 11 } }],
-                        [
-                            { ins: { '0': 2, '1_message': [[0.1]] } },
-                            { outs: { '0': 2.1 } },
-                        ],
-                        [{ ins: { '0': 3 } }, { outs: { '0': 3.1 } }],
-                        [
-                            { ins: { '0': 4, '1_message': [[0.2]] } },
-                            { outs: { '0': 4.2 } },
-                        ],
-                        [{ ins: { '0': 5 } }, { outs: { '0': 5.2 } }]
-                    )
-                }
-            )            
-        })
 
         describe('+~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(

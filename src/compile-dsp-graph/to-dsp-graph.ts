@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,11 +34,16 @@ import { nodeBuilders as subpatchNodeBuilders } from '../nodes/nodes/subpatch'
 import { DspGraph, dspGraph } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 
-export const MIXER_NODE_TYPE = 'mixer~'
+const IMPLICIT_NODE_TYPES = {
+    MIXER: '_mixer~',
+    ROUTE_MSG: '_routemsg',
+    CONSTANT_SIGNAL: 'sig~',
+}
 
 enum IdNamespaces {
     PD = 'n',
-    MIXER = 'm',
+    /** Node added for enabling translation from pd to dp graph  */
+    IMPLICIT_NODE = 'm',
 }
 
 type PatchPath = Array<PdJson.Patch>
@@ -77,11 +82,14 @@ export const buildGraphNodeId = (
     return `${IdNamespaces.PD}_${patchId}_${nodeLocalId}`
 }
 
-export const buildMixerNodeId = (
-    sinkId: DspGraph.NodeId,
-    inletId: DspGraph.PortletId
+/** Node id for nodes added while converting from PdJson */
+export const buildImplicitGraphNodeId = (
+    nodeId: DspGraph.NodeId,
+    inletId: DspGraph.PortletId,
+    nodeType: DspGraph.NodeType
 ): DspGraph.NodeId => {
-    return `${IdNamespaces.MIXER}_${sinkId}_${inletId}`
+    nodeType = nodeType.replaceAll(/[^a-zA-Z0-9_]/g, '')
+    return `${IdNamespaces.IMPLICIT_NODE}_${nodeId}_${inletId}_${nodeType}`
 }
 
 // ================================== MAIN ================================== //
@@ -125,12 +133,15 @@ export default async (
         }
     })
 
-    const arrays = Object.values(compilation.pd.arrays).reduce((arrays, array) => {
-        arrays[array.args[0]] = array.data
-            ? new Float32Array(array.data)
-            : new Float32Array(array.args[1] as number)
-        return arrays
-    }, {} as DspGraph.Arrays)
+    const arrays = Object.values(compilation.pd.arrays).reduce(
+        (arrays, array) => {
+            arrays[array.args[0]] = array.data
+                ? new Float32Array(array.data)
+                : new Float32Array(array.args[1] as number)
+            return arrays
+        },
+        {} as DspGraph.Arrays
+    )
 
     return {
         status: 0,
@@ -143,7 +154,7 @@ export default async (
     }
 }
 
-// ================================== NODES ================================== //
+// ================================== DSP GRAPH NODES ================================== //
 export const _buildNodes = (
     compilation: Compilation,
     patchPath: PatchPath
@@ -195,38 +206,90 @@ const _buildNode = (
     })
 }
 
-// ================================== CONNECTIONS ================================== //
+// ==================================  DSP GRAPH CONNECTIONS ================================== //
 export const _buildConnections = (
     compilation: Compilation,
     rootPatchPath: PatchPath
 ) => {
+    const { graph } = compilation
     let pdConnections: Array<PdGlobConnection> = []
+
     // 1. Get recursively through the patches and collect all pd connections
     // in one single array. In the process, we also resolve subpatch's portlets.
     _traversePatches(compilation, rootPatchPath, (compilation, patchPath) => {
         _collectPdConnections(compilation, patchPath, pdConnections)
     })
 
-    // 2. In Pd, several signal sources are summed when connected to the same inlet.
-    // `_buildConnection` is making that behavior explicit, therefore we can't create
-    // all connections one by one, and need to batch all connections to the same sink.
-    while (pdConnections.length) {
-        const [_, pdGlobSink] = pdConnections[0]!
-        let pdGlobSources: Array<PdGlobEndpoint> = []
-        let remainingConnections: typeof pdConnections = []
-        pdConnections.forEach((connection) => {
-            const [pdGlobSource, otherPdGlobSink] = connection
-            if (_arePdGlobEndpointsEqual(pdGlobSink, otherPdGlobSink)) {
-                pdGlobSources.push(pdGlobSource)
-            } else {
-                remainingConnections.push(connection)
+    _traversePatches(compilation, rootPatchPath, (compilation, patchPath) => {
+        const patch = _currentPatch(patchPath)
+        Object.values(patch.nodes).forEach((pdNode) => {
+            const sinkNodeId = buildGraphNodeId(patch.id, pdNode.id)
+            const sinkNode = graph[sinkNodeId]
+            // Node was removed because it was `isNoop`
+            if (!sinkNode) {
+                return
             }
+            Object.values(sinkNode.inlets).forEach((inlet) => {
+                // TODO : functions for pd inlet -> grpah inlet and reverse
+                const pdInletId = Number(inlet.id)
+                if (isNaN(pdInletId)) {
+                    return
+                }
+
+                const pdGlobSink: PdGlobEndpoint = [
+                    patchPath,
+                    { nodeId: pdNode.id, portletId: pdInletId },
+                ]
+                let pdGlobSources: Array<PdGlobEndpoint> = []
+                pdConnections.forEach((connection) => {
+                    const [pdGlobSource, otherPdGlobSink] = connection
+                    if (_arePdGlobEndpointsEqual(pdGlobSink, otherPdGlobSink)) {
+                        pdGlobSources.push(pdGlobSource)
+                    }
+                })
+                _buildConnection(compilation, pdGlobSources, pdGlobSink)
+            })
         })
-        pdConnections = remainingConnections
-        _buildConnection(compilation, pdGlobSources, pdGlobSink)
-    }
+    })
 }
 
+/**
+ * Implicit Pd behavior made explicit by this compilation :
+ * - Multiple DSP inputs mixed into one
+ * 
+ * ```
+ * [ signal1~ ]   [ signal2~ ]
+ *           \      /
+ *         [ _mixer~ ]
+ *           |
+ *         [ someNode~ ]
+ * 
+ * ```
+ * 
+ * - When messages to DSP input, automatically turned into a signal
+ * 
+ * ```
+ *    [ sig~ ]
+ *      |
+ *    [  someNode~ ]
+ * ```
+ * 
+ * - Re-route messages from signal inlet to a message inlet
+ * 
+ *  * ```
+ *    [ message1 ]
+ *      |
+ *    [ _routemsg ]     ( on the left inlet float messages, on the the right inlet, the rest. )
+ *      |       \
+ *    [ sig~ ]   |
+ *      |        |
+ *    [  someNode~ ]
+ * ```
+ * 
+ * - Initial value of DSP input
+ * 
+ * 
+ */
 const _buildConnection = (
     compilation: Compilation,
     pdSources: Array<PdGlobEndpoint>,
@@ -239,17 +302,20 @@ const _buildConnection = (
         nodeId: buildGraphNodeId(sinkPatch.id, pdSink.nodeId),
         portletId: pdSink.portletId.toString(10),
     }
+    const sinkNode = dspGraph.getters.getNode(graph, graphSink.nodeId)
+    const sinkInlet = dspGraph.getters.getInlet(sinkNode, graphSink.portletId)
     const { nodeBuilder: sinkNodeBuilder } = resolveNodeType(
         compilation.nodeBuilders,
         resolvePdNode(sinkPatch, pdSink.nodeId).type
     )!
+
     const connections: Array<
         [DspGraph.ConnectionEndpoint, DspGraph.ConnectionEndpoint]
     > = []
 
     // 1. We separate signal sources from message sources
-    const signalSources: Array<DspGraph.ConnectionEndpoint> = []
-    const messageSources: Array<DspGraph.ConnectionEndpoint> = []
+    const graphSignalSources: Array<DspGraph.ConnectionEndpoint> = []
+    const graphMessageSources: Array<DspGraph.ConnectionEndpoint> = []
     pdSources.forEach(([sourcePatchPath, pdSource]) => {
         const sourcePatch = _currentPatch(sourcePatchPath)
         const graphSource = {
@@ -262,62 +328,158 @@ const _buildConnection = (
             graphSource.portletId
         )
         if (outlet.type === 'signal') {
-            signalSources.push(graphSource)
+            graphSignalSources.push(graphSource)
         } else {
-            messageSources.push(graphSource)
+            graphMessageSources.push(graphSource)
         }
     })
 
-    // 2. If several signal sources, we place a mixer node in between
-    // to make sure we really always have ONE signal inlet = ONE connection.
-    if (signalSources.length > 1) {
-        const mixerNode = _buildNode(
-            compilation,
-            sinkRootPatch,
-            sinkPatch,
-            {
-                id: 'dummy',
-                type: MIXER_NODE_TYPE,
-                args: [signalSources.length],
-                nodeClass: 'generic',
-            },
-            buildMixerNodeId(graphSink.nodeId, graphSink.portletId)
-        )!
+    // 2. SIGNAL SINK
+    if (sinkInlet.type === 'signal') {
+        let implicitSigNode: DspGraph.Node | null = null
+        let implicitMsgSortNode: DspGraph.Node | null = null
+        let implicitMixerNode: DspGraph.Node | null = null
+        const messageToSignalConfig =
+            sinkNodeBuilder.configureMessageToSignalConnection
+                ? sinkNodeBuilder.configureMessageToSignalConnection(
+                      graphSink.portletId,
+                      sinkNode
+                  )
+                : undefined
 
-        dspGraph.mutation.connect(
-            graph,
-            {
-                nodeId: mixerNode.id,
-                portletId: '0',
-            },
-            graphSink
-        )
-        signalSources.forEach((source, i) => {
+        // 2.1. if single signal source, we just put a normal connection
+        if (graphSignalSources.length === 1) {
+            connections.push([graphSignalSources[0], graphSink])
+
+            // 2.2. if several signal sources, we put a mixer node in between.
+        } else if (graphSignalSources.length > 1) {
+            implicitMixerNode = _buildNode(
+                compilation,
+                sinkRootPatch,
+                sinkPatch,
+                {
+                    id: 'dummy',
+                    type: IMPLICIT_NODE_TYPES.MIXER,
+                    args: [graphSignalSources.length],
+                    nodeClass: 'generic',
+                },
+                buildImplicitGraphNodeId(
+                    graphSink.nodeId,
+                    graphSink.portletId,
+                    IMPLICIT_NODE_TYPES.MIXER
+                )
+            )!
             connections.push([
-                source,
-                { nodeId: mixerNode.id, portletId: i.toString() },
+                {
+                    nodeId: implicitMixerNode.id,
+                    portletId: '0',
+                },
+                graphSink,
             ])
-        })
-    } else {
-        signalSources.forEach((source) => connections.push([source, graphSink]))
-    }
+            graphSignalSources.forEach((source, i) => {
+                connections.push([
+                    source,
+                    { nodeId: implicitMixerNode.id, portletId: i.toString() },
+                ])
+            })
 
-    // 3. We re-route message connections if re-routing is declared on the node builder.
-    messageSources.forEach((source) => {
-        let reroutedSink: DspGraph.ConnectionEndpoint = graphSink
-        if (sinkNodeBuilder.rerouteMessageConnection) {
-            const newInletId = sinkNodeBuilder.rerouteMessageConnection(
-                graphSink.portletId
+            // 2.3. if no signal source, we need to simulate one by plugging a sig node to the inlet
+        } else {
+            implicitSigNode = _buildNode(
+                compilation,
+                sinkRootPatch,
+                sinkPatch,
+                {
+                    id: 'dummy',
+                    type: IMPLICIT_NODE_TYPES.CONSTANT_SIGNAL,
+                    args: [
+                        messageToSignalConfig
+                            ? messageToSignalConfig.initialSignalValue
+                            : 0,
+                    ],
+                    nodeClass: 'generic',
+                },
+                buildImplicitGraphNodeId(
+                    graphSink.nodeId,
+                    graphSink.portletId,
+                    IMPLICIT_NODE_TYPES.CONSTANT_SIGNAL
+                )
             )
-            if (newInletId !== undefined) {
-                reroutedSink = {
-                    nodeId: graphSink.nodeId,
-                    portletId: newInletId,
-                }
+
+            // Converts incoming float messages to a signal on outlet '0'
+            connections.push([
+                {
+                    nodeId: implicitSigNode.id,
+                    portletId: '0',
+                },
+                graphSink,
+            ])
+        }
+
+        // 2.4. Handling message sources
+        if (graphMessageSources.length) {
+            implicitMsgSortNode = _buildNode(
+                compilation,
+                sinkRootPatch,
+                sinkPatch,
+                {
+                    id: 'dummy',
+                    type: IMPLICIT_NODE_TYPES.ROUTE_MSG,
+                    args: [],
+                    nodeClass: 'generic',
+                },
+                buildImplicitGraphNodeId(
+                    graphSink.nodeId,
+                    graphSink.portletId,
+                    IMPLICIT_NODE_TYPES.ROUTE_MSG
+                )
+            )
+            let isMsgSortNodeConnected = false
+
+            if (implicitSigNode) {
+                connections.push([
+                    { nodeId: implicitMsgSortNode.id, portletId: '0' },
+                    { nodeId: implicitSigNode.id, portletId: '0' },
+                ])
+                isMsgSortNodeConnected = true
+            }
+
+            if (
+                messageToSignalConfig &&
+                messageToSignalConfig.reroutedMessageInletId !== undefined
+            ) {
+                connections.push([
+                    { nodeId: implicitMsgSortNode.id, portletId: '1' },
+                    {
+                        nodeId: graphSink.nodeId,
+                        portletId: messageToSignalConfig.reroutedMessageInletId,
+                    },
+                ])
+                isMsgSortNodeConnected = true
+            }
+
+            if (isMsgSortNodeConnected) {
+                graphMessageSources.forEach((graphMessageSource) => {
+                    connections.push([
+                        graphMessageSource,
+                        { nodeId: implicitMsgSortNode.id, portletId: '0' },
+                    ])
+                })
             }
         }
-        connections.push([source, reroutedSink])
-    })
+
+        // 3. MESSAGE SINK
+    } else {
+        if (graphSignalSources.length !== 0) {
+            throw new Error(
+                `Unexpected signal connection to node id ${graphSink.nodeId}, inlet ${graphSink.portletId}`
+            )
+        }
+
+        graphMessageSources.forEach((graphMessageSource) => {
+            connections.push([graphMessageSource, graphSink])
+        })
+    }
 
     // Finally, we connect
     connections.forEach(([source, sink]) => {
@@ -567,7 +729,9 @@ const _resolveSubpatchNode = (
             pdNode.nodeClass === 'subpatch' && pdNode.patchId === patchId
     )
     if (subpatchNode === undefined) {
-        throw new Error(`could not find subpatch node with patchId=${patchId} inside patch ${patch.id}`)
+        throw new Error(
+            `could not find subpatch node with patchId=${patchId} inside patch ${patch.id}`
+        )
     }
     return subpatchNode
 }

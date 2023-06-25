@@ -84,6 +84,7 @@ const builder: NodeBuilder<NodeArguments> = {
             args.typeArguments, 
             (_, i) => [`${i}`, { type: 'message', id: `${i}` }],
         ),
+        isPullingSignal: true,
     }),
 }
 

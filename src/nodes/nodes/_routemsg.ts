@@ -20,53 +20,41 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { assertOptionalNumber } from '../validation'
-import { coldFloatInlet } from '../standard-message-receivers'
 
-interface NodeArguments {
-    initValue: number,
-}
-const stateVariables = {
-    currentValue: 1,
-}
+interface NodeArguments {}
+const stateVariables = {}
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
-    translateArgs: ({ args }) => ({
-        initValue: assertOptionalNumber(args[0]) || 0,
-    }),
+    translateArgs: () => ({}),
     build: () => ({
         inlets: {
             '0': { type: 'message', id: '0' },
         },
         outlets: {
-            '0': { type: 'signal', id: '0' },
+            '0': { type: 'message', id: '0' },
+            '1': { type: 'message', id: '1' },
         },
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ node: { args }, state, macros: { Var }}) => `
-    let ${Var(state.currentValue, 'Float')} = ${args.initValue}
-`
-
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ outs, state }) => `
-    ${outs.$0} = ${state.currentValue}
-`
-
 // ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
-    '0': coldFloatInlet(globs.m, state.currentValue),
+const messages: _NodeImplementation['messages'] = ({ globs, snds }) => ({
+    '0': `
+    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
+        ${snds.$0}(m)
+        return
+    } else {
+        ${snds.$1}(m)
+        return
+    }`,
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
     stateVariables,
     messages,
-    declare,
 }
 
 export { builder, nodeImplementation, NodeArguments }
