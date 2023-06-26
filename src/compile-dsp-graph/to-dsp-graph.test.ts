@@ -49,7 +49,7 @@ const DUMMY_NODE_TYPE = pdJsonNodeDefaults('').type
 const DEFAULT_NODE_BUILDERS: NodeBuilders = {
     ...subpatchNodeBuilders,
     '_mixer~': mixerNodeBuilder,
-    '_routemsg': routeMsgBuilder,
+    _routemsg: routeMsgBuilder,
     'sig~': sigNodeBuilder,
     [DUMMY_NODE_TYPE]: {
         translateArgs: () => ({}),
@@ -331,8 +331,8 @@ describe('toDspGraph', () => {
                 {
                     n_0_msg: {},
                     n_1_tabread: {},
-                    "m_n_1_tabread_0__routemsg": {},
-                    "m_n_1_tabread_0_sig": {},
+                    m_n_1_tabread_0__routemsg: {},
+                    m_n_1_tabread_0_sig: {},
                 },
                 true
             )
@@ -379,8 +379,8 @@ describe('toDspGraph', () => {
                 {
                     n_1_msg: {},
                     n_0_tabread: {},
-                    "m_n_0_tabread_0__routemsg": {},
-                    "m_n_0_tabread_0_sig": {},
+                    m_n_0_tabread_0__routemsg: {},
+                    m_n_0_tabread_0_sig: {},
                 },
                 true
             )
@@ -895,17 +895,25 @@ describe('toDspGraph', () => {
                 graph,
                 {
                     n_0_1: { type: 'tabread~' },
-                    'm_n_0_1_0_sig': { type: 'sig~' }
+                    m_n_0_1_0_sig: { type: 'sig~' },
                 },
                 true
             )
-            assertGraphConnections(graph, [['m_n_0_1_0_sig', '0', 'n_0_1', '0']])
+            assertGraphConnections(graph, [
+                ['m_n_0_1_0_sig', '0', 'n_0_1', '0'],
+            ])
         })
     })
 
     describe('buildImplicitGraphNodeId', () => {
         it('should remove special chars', () => {
-            assert.strictEqual(buildImplicitGraphNodeId('nodeId', 'inletId', 'sig~'), 'm_nodeId_inletId_sig')
+            assert.strictEqual(
+                buildImplicitGraphNodeId(
+                    { nodeId: 'nodeId', portletId: 'inletId' },
+                    'sig~'
+                ),
+                'm_nodeId_inletId_sig'
+            )
         })
     })
 
@@ -1198,7 +1206,10 @@ describe('toDspGraph', () => {
             messageSinkType: {
                 translateArgs: () => ({}),
                 build: () => ({
-                    inlets: { '0': { type: 'message', id: '0' } },
+                    inlets: { 
+                        '0': { type: 'message', id: '0' },
+                        '1': { type: 'message', id: '1' },
+                    },
                     outlets: {},
                 }),
             },
@@ -1384,13 +1395,15 @@ describe('toDspGraph', () => {
                     '0': {
                         nodes: {
                             nodeMessageSource: {
-                                type: 'messageSourceType'
+                                type: 'messageSourceType',
                             },
                             nodeSignalSink: {
                                 type: 'signalSinkType',
                             },
                         },
-                        connections: [['nodeMessageSource', 0, 'nodeSignalSink', 0]],
+                        connections: [
+                            ['nodeMessageSource', 0, 'nodeSignalSink', 0],
+                        ],
                     },
                 },
             })
@@ -1416,8 +1429,18 @@ describe('toDspGraph', () => {
 
             assertGraphConnections(compilation.graph, [
                 ['m_n_0_nodeSignalSink_0_sig', '0', 'n_0_nodeSignalSink', '0'],
-                ['n_0_nodeMessageSource', '0', 'm_n_0_nodeSignalSink_0__routemsg', '0'],
-                ['m_n_0_nodeSignalSink_0__routemsg', '0', 'm_n_0_nodeSignalSink_0_sig', '0'],
+                [
+                    'n_0_nodeMessageSource',
+                    '0',
+                    'm_n_0_nodeSignalSink_0__routemsg',
+                    '0',
+                ],
+                [
+                    'm_n_0_nodeSignalSink_0__routemsg',
+                    '0',
+                    'm_n_0_nodeSignalSink_0_sig',
+                    '0',
+                ],
             ])
 
             assertNodesEqual(
@@ -1436,7 +1459,7 @@ describe('toDspGraph', () => {
                     '0': {
                         nodes: {
                             nodeMessageSource: {
-                                type: 'messageSourceType'
+                                type: 'messageSourceType',
                             },
                             nodeSignalSource: {
                                 type: 'signalSourceType',
@@ -1458,7 +1481,7 @@ describe('toDspGraph', () => {
                 signalSinkTypeWithMessageRerouting: {
                     translateArgs: () => ({}),
                     build: () => ({
-                        inlets: { 
+                        inlets: {
                             '0': { type: 'signal', id: '0' },
                             '0_message': { type: 'message', id: '0_message' },
                         },
@@ -1466,7 +1489,7 @@ describe('toDspGraph', () => {
                     }),
                     configureMessageToSignalConnection() {
                         return {
-                            reroutedMessageInletId: '0_message'
+                            reroutedMessageInletId: '0_message',
                         }
                     },
                 },
@@ -1493,8 +1516,18 @@ describe('toDspGraph', () => {
 
             assertGraphConnections(compilation.graph, [
                 ['n_0_nodeSignalSource', '0', 'n_0_nodeSignalSink', '0'],
-                ['n_0_nodeMessageSource', '0', 'm_n_0_nodeSignalSink_0__routemsg', '0'],
-                ['m_n_0_nodeSignalSink_0__routemsg', '1', 'n_0_nodeSignalSink', '0_message'],
+                [
+                    'n_0_nodeMessageSource',
+                    '0',
+                    'm_n_0_nodeSignalSink_0__routemsg',
+                    '0',
+                ],
+                [
+                    'm_n_0_nodeSignalSink_0__routemsg',
+                    '1',
+                    'n_0_nodeSignalSink',
+                    '0_message',
+                ],
             ])
 
             assertNodesEqual(
@@ -1524,7 +1557,7 @@ describe('toDspGraph', () => {
                         },
                         connections: [
                             ['nodeSource1', 0, 'nodeSink', 0],
-                            ['nodeSource2', 0, 'nodeSink', 0],
+                            ['nodeSource2', 0, 'nodeSink', 1],
                         ],
                     },
                 },
@@ -1544,12 +1577,15 @@ describe('toDspGraph', () => {
                 'n_0_nodeSource1',
                 'n_0_nodeSource2',
             ])
+            
             assertNodesEqual(
                 compilation.graph['n_0_nodeSink']!,
                 {
                     sources: {
                         0: [
                             { nodeId: 'n_0_nodeSource1', portletId: '0' },
+                        ],
+                        1: [
                             { nodeId: 'n_0_nodeSource2', portletId: '0' },
                         ],
                     },

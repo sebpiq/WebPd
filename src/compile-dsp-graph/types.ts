@@ -29,7 +29,7 @@ export interface PartialNode {
     isPushingMessages?: DspGraph.Node['isPushingMessages']
 }
 
-interface MessageToSignalConfig {
+export interface MessageToSignalConfig {
     initialSignalValue?: number,
     reroutedMessageInletId?: DspGraph.PortletId
 }
