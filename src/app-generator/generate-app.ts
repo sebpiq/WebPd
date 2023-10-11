@@ -116,6 +116,12 @@ const bareBonesApp = (settings: Settings) => {
                 // Get audio input
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
+		// Comment the line above and uncomment the lines below if you
+		// don't want to use the microphone.
+
+		// var node = audioContext.createMediaStreamDestination()
+		// stream = node.stream
+
                 // Hide loading and show start button
                 loadingDiv.style.display = 'none'
                 startButton.style.display = 'block'
