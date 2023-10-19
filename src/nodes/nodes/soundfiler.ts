@@ -20,7 +20,8 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { parseSoundFileOpenOpts } from '../nodes-shared-code/fs'
+import { parseSoundFileOpenOpts } from '../global-code/fs'
+import { coreCode } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -316,10 +317,15 @@ const messages: _NodeImplementation['messages'] = ({ state, globs, snds, macros:
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare, 
-    messages, 
+    declare,
+    messages,
     stateVariables,
-    sharedCode: [ parseSoundFileOpenOpts ],
+    globalCode: [
+        parseSoundFileOpenOpts,
+        coreCode.commonsArrays,
+        coreCode.fsReadSoundFile,
+        coreCode.fsWriteSoundFile,
+    ],
 }
 
 export { 

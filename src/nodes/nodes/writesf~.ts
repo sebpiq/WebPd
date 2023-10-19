@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { functional } from '@webpd/compiler'
+import { coreCode, functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { stringMsgUtils } from '../nodes-shared-code/core'
-import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../nodes-shared-code/fs'
+import { stringMsgUtils } from '../global-code/core'
+import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
 
 const BLOCK_SIZE = 44100 * 5
 
@@ -165,10 +165,11 @@ const nodeImplementation: _NodeImplementation = {
     messages, 
     loop, 
     stateVariables,
-    sharedCode: [
+    globalCode: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,
         stringMsgUtils,
+        coreCode.fsWriteSoundStream,
     ],
 }
 

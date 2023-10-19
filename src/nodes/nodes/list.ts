@@ -22,7 +22,7 @@ import { Code, DspGraph, functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
-import { bangUtils, msgUtils } from '../nodes-shared-code/core'
+import { bangUtils, msgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 
 interface NodeArguments {
@@ -242,7 +242,7 @@ const nodeImplementation: _NodeImplementation = {
     messages,
     stateVariables,
     declare,
-    sharedCode: [bangUtils, msgUtils]
+    globalCode: [bangUtils, msgUtils]
 }
 
 export { builder, nodeImplementation, NodeArguments }

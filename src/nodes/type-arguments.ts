@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import {
-    CodeVariableName, SharedCodeGenerator,
+    CodeVariableName, GlobalCodeGenerator,
 } from '@webpd/compiler/src/types'
 import { ValidationError } from './validation'
 
@@ -84,7 +84,7 @@ export const renderMessageTransfer = (
     }
 }
 
-export const messageTokenToFloat: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
+export const messageTokenToFloat: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
     function messageTokenToFloat ${Func([
         Var('m', 'Message'), 
         Var('i', 'Int')
@@ -97,7 +97,7 @@ export const messageTokenToFloat: SharedCodeGenerator = ({ macros: { Func, Var }
     }
 `
 
-export const messageTokenToString: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
+export const messageTokenToString: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
     function messageTokenToString ${Func([
         Var('m', 'Message'), 
         Var('i', 'Int')

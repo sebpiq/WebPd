@@ -42,7 +42,7 @@ import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
 import { executeCompilation } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
@@ -69,7 +69,7 @@ describe('throw~ / catch~', () => {
     })
 
     describe('implementation', () => {
-        const createTestEngine = async (
+        const createTestThrowCatchEngine = async (
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
             throwArgs: NodeArgumentsThrow,
@@ -139,13 +139,13 @@ describe('throw~ / catch~', () => {
 
             const code = executeCompilation(compilation)
 
-            return await createEngine(compilation.target, bitDepth, code)
+            return await createTestEngine(compilation.target, bitDepth, code)
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read the mix of all throw inputs %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestThrowCatchEngine(
                     target,
                     bitDepth,
                     {
@@ -166,7 +166,7 @@ describe('throw~ / catch~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should set the throw address %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestThrowCatchEngine(
                     target,
                     bitDepth,
                     {

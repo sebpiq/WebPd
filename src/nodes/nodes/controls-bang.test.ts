@@ -26,7 +26,7 @@ import {
     testNodeTranslateArgs,
 } from '../test-helpers'
 import { nodeImplementation, builder, NodeArguments } from './controls-bang'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
     nodeImplementation as nodeImplementationSend,
     builder as builderSend,
@@ -152,7 +152,7 @@ describe('controls-bang', () => {
             outputOnLoad: false,
         }
 
-        const createTestEngine = async (
+        const createTestSndRcvEngine = async (
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
             bangArgs: NodeArguments
@@ -201,7 +201,7 @@ describe('controls-bang', () => {
 
             const code =
                 nodeImplementationsTestHelpers.executeCompilation(compilation)
-            const engine = await createEngine(
+            const engine = await createTestEngine(
                 compilation.target,
                 bitDepth,
                 code
@@ -213,7 +213,7 @@ describe('controls-bang', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send / receive messages to specified buses %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(target, bitDepth, {
+                const engine = await createTestSndRcvEngine(target, bitDepth, {
                     ...BANG_ARGS_DEFAULT,
                     receiveBusName: 'BUS_TO_BANG',
                     sendBusName: 'BUS_FROM_BANG',
@@ -236,7 +236,7 @@ describe('controls-bang', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should set send / receive buses with send / receive message to bang %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(target, bitDepth, {
+                const engine = await createTestSndRcvEngine(target, bitDepth, {
                     ...BANG_ARGS_DEFAULT,
                     receiveBusName: 'empty',
                     sendBusName: 'empty',

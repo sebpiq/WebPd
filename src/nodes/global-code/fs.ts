@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,16 +17,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler/src/types"
+import { coreCode } from '@webpd/compiler'
+import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/types'
 
 // TODO : support for -raw (see soundfiler help)
 // TODO : find a better way to factorize this code
 // TODO : unit testing
-export const parseSoundFileOpenOpts: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
-    function parseSoundFileOpenOpts ${Func([
-        Var('m', 'Message'),
-        Var('soundInfo', 'fs_SoundInfo'),
-    ], 'Set<Int>')} {
+export const parseSoundFileOpenOpts: GlobalCodeGeneratorWithSettings = {
+    codeGenerator: ({ macros: { Func, Var } }) => `
+    function parseSoundFileOpenOpts ${Func(
+        [Var('m', 'Message'), Var('soundInfo', 'fs_SoundInfo')],
+        'Set<Int>'
+    )} {
         const ${Var('unhandled', 'Set<Int>')} = new Set()
         let ${Var('i', 'Int')} = 0
         while (i < msg_getLength(m)) {
@@ -72,15 +74,21 @@ export const parseSoundFileOpenOpts: SharedCodeGenerator = ({ macros: { Func, Va
         }
         return unhandled
     }
-`
+`,
+    dependencies: [coreCode.msg, coreCode.fsCore],
+}
 
 // TODO : unit testing
-export const parseReadWriteFsOpts: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
-    function parseReadWriteFsOpts ${Func([
-        Var('m', 'Message'),
-        Var('soundInfo', 'fs_SoundInfo'),
-        Var('unhandledOptions', 'Set<Int>'),
-    ], 'string')} {
+export const parseReadWriteFsOpts: GlobalCodeGeneratorWithSettings = {
+    codeGenerator: ({ macros: { Func, Var } }) => `
+    function parseReadWriteFsOpts ${Func(
+        [
+            Var('m', 'Message'),
+            Var('soundInfo', 'fs_SoundInfo'),
+            Var('unhandledOptions', 'Set<Int>'),
+        ],
+        'string'
+    )} {
         // Remove the "open" token
         unhandledOptions.delete(0)
 
@@ -110,4 +118,6 @@ export const parseReadWriteFsOpts: SharedCodeGenerator = ({ macros: { Func, Var 
         }
         return url
     }
-`
+`,
+    dependencies: [coreCode.msg, coreCode.fsCore],
+}

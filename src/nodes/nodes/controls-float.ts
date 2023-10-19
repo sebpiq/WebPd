@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { functional } from '@webpd/compiler'
+import { coreCode, functional } from '@webpd/compiler'
 import {
     Code,
     NodeImplementation,
@@ -27,8 +27,8 @@ import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber, assertOptionalString } from '../validation'
 import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
-import { messageBuses } from '../nodes-shared-code/buses'
-import { bangUtils } from '../nodes-shared-code/core'
+import { messageBuses } from '../global-code/buses'
+import { bangUtils } from '../global-code/core'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     minValue: number
@@ -172,7 +172,12 @@ const makeNodeImplementation = ({
         messages,
         declare,
         stateVariables,
-        sharedCode: [bangUtils, messageBuses],
+        globalCode: [
+            bangUtils,
+            messageBuses,
+            coreCode.commonsWaitEngineConfigure,
+            coreCode.commonsWaitFrame,
+        ],
     }
 }
 // ------------------------------------------------------------------- //

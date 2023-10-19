@@ -26,7 +26,7 @@ import {
     testParametersCombine,
 } from '../test-helpers'
 import { nodeImplementations, builders, NodeArguments } from './controls-atoms'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
     nodeImplementation as nodeImplementationSend,
     builder as builderSend,
@@ -90,7 +90,7 @@ describe('controls-atoms', () => {
                 outputOnLoad: false,
             }
 
-            const createTestEngine = async (
+            const createTestSndRvcEngine = async (
                 target: CompilerTarget,
                 bitDepth: AudioSettings['bitDepth'],
                 controlType: keyof typeof builders,
@@ -143,7 +143,7 @@ describe('controls-atoms', () => {
                     nodeImplementationsTestHelpers.executeCompilation(
                         compilation
                     )
-                const engine = await createEngine(
+                const engine = await createTestEngine(
                     compilation.target,
                     bitDepth,
                     code
@@ -155,7 +155,7 @@ describe('controls-atoms', () => {
             it.each(CONTROLS_TEST_PARAMETERS)(
                 'should send / receive messages to specified buses %s',
                 async ({ target, bitDepth, nodeType }) => {
-                    const engine = await createTestEngine(
+                    const engine = await createTestSndRvcEngine(
                         target,
                         bitDepth,
                         nodeType,
@@ -191,7 +191,7 @@ describe('controls-atoms', () => {
                 async ({ target, bitDepth, nodeType }) => {
                     const args = { ...CONTROL_ARGS_DEFAULT }
 
-                    const engine = await createTestEngine(
+                    const engine = await createTestSndRvcEngine(
                         target,
                         bitDepth,
                         nodeType,
@@ -228,7 +228,7 @@ describe('controls-atoms', () => {
             it.each(CONTROLS_TEST_PARAMETERS)(
                 'should set send / receive buses with send / receive message to control %s',
                 async ({ target, bitDepth, nodeType }) => {
-                    const engine = await createTestEngine(
+                    const engine = await createTestSndRvcEngine(
                         target,
                         bitDepth,
                         nodeType,

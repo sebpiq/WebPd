@@ -19,7 +19,7 @@
  */
 
 import { DspGraph } from '@webpd/compiler'
-import { Code, CodeVariableName, NodeImplementation, NodeImplementations, SharedCodeGenerator } from '@webpd/compiler/src/types'
+import { Code, CodeVariableName, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import {

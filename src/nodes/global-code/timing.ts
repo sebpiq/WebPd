@@ -17,12 +17,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler/src/types"
+import { GlobalCodeGenerator } from "@webpd/compiler/src/types"
 
 // TODO : unit testing
 // TODO : amount = 0 ?
 // TODO : missing persec and all per...
-export const computeUnitInSamples: SharedCodeGenerator = ({ macros: { Func, Var } }) => `
+export const computeUnitInSamples: GlobalCodeGenerator = ({ macros: { Func, Var } }) => `
     function computeUnitInSamples ${Func([
         Var('sampleRate', 'Float'),
         Var('amount', 'Float'),

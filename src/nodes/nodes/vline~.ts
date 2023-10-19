@@ -20,10 +20,10 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { stringMsgUtils } from '../nodes-shared-code/core'
-import { linesUtils } from '../nodes-shared-code/lines'
+import { stringMsgUtils } from '../global-code/core'
+import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { computeUnitInSamples } from '../nodes-shared-code/timing'
+import { computeUnitInSamples } from '../global-code/timing'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -152,7 +152,7 @@ const nodeImplementation: _NodeImplementation = {
     stateVariables,
     messages,
     declare,
-    sharedCode: [...linesUtils, computeUnitInSamples, stringMsgUtils]
+    globalCode: [linesUtils, computeUnitInSamples, stringMsgUtils]
 }
 
 export { builder, nodeImplementation, NodeArguments }

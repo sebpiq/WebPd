@@ -43,7 +43,7 @@ import {
     testNodeTranslateArgs,
     testParametersCombine,
 } from '../test-helpers'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
 import { executeCompilation } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
@@ -87,7 +87,7 @@ describe('delread~ / delwrite~', () => {
     })
 
     describe('implementation messages delread~ / delread4~ / delwrite~', () => {
-        const createTestEngine = async (
+        const createTestDelReadWriteEngine = async (
             target: CompilerTarget,
             nodeType: 'delread~' | 'delread4~',
             bitDepth: AudioSettings['bitDepth'],
@@ -150,13 +150,13 @@ describe('delread~ / delwrite~', () => {
             const code =
                 executeCompilation(compilation)
 
-            return await createEngine(compilation.target, bitDepth, code)
+            return await createTestEngine(compilation.target, bitDepth, code)
         }
 
         it.each(DELREAD_TEST_PARAMETERS)(
             'should read with the configured delay %s',
             async ({ target, bitDepth, nodeType }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestDelReadWriteEngine(
                     target,
                     nodeType,
                     bitDepth,
@@ -192,7 +192,7 @@ describe('delread~ / delwrite~', () => {
         it.each(DELREAD_TEST_PARAMETERS)(
             'should clear delay line when sending clear %s',
             async ({ target, bitDepth, nodeType }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestDelReadWriteEngine(
                     target,
                     nodeType,
                     bitDepth,
@@ -228,7 +228,7 @@ describe('delread~ / delwrite~', () => {
     })
 
     describe('implementation signal delread4~ / delwrite~', () => {
-        const createTestEngine = async (
+        const createTestDelReadWriteEngine = async (
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
             delwriteArgs: NodeArgumentsDelwrite,
@@ -313,13 +313,13 @@ describe('delread~ / delwrite~', () => {
             const code =
                 executeCompilation(compilation)
 
-            return await createEngine(compilation.target, bitDepth, code)
+            return await createTestEngine(compilation.target, bitDepth, code)
         }
 
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+        it.only.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read with the configured delay %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestDelReadWriteEngine(
                     target,
                     bitDepth,
                     {

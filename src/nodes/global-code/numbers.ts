@@ -17,21 +17,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler/src/types";
+import { GlobalCodeGenerator } from "@webpd/compiler/src/types"
 
-export const point: SharedCodeGenerator = ({ macros: { Var }}) => `
-    class Point {
-        ${Var('x', 'Float')}
-        ${Var('y', 'Float')}
+export const roundFloatAsPdInt: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
+    function roundFloatAsPdInt ${Func([
+        Var('value', 'Float'),
+    ], 'Float')} {
+        return value > 0 ? Math.floor(value): Math.ceil(value)
     }
 `
-
-export const interpolateLin: Array<SharedCodeGenerator> = [point, ({ macros: { Var, Func }}) => `
-    function interpolateLin ${Func([
-        Var('x', 'Float'),
-        Var('p0', 'Point'),
-        Var('p1', 'Point'),
-    ], 'Float')} {
-        return p0.y + (x - p0.x) * (p1.y - p0.y) / (p1.x - p0.x)
-    }
-`]

@@ -18,13 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph } from '@webpd/compiler'
+import { DspGraph, coreCode } from '@webpd/compiler'
 import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
-import { delayBuffers } from '../nodes-shared-code/delay-buffers'
+import { delayBuffers } from '../global-code/delay-buffers'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { computeUnitInSamples } from '../nodes-shared-code/timing'
+import { computeUnitInSamples } from '../global-code/timing'
 
 interface NodeArguments {
     delayName: string,
@@ -142,7 +142,12 @@ const makeNodeImplementation = (): _NodeImplementation => {
         stateVariables,
         messages,
         declare,
-        sharedCode: [ computeUnitInSamples, delayBuffers ]
+        globalCode: [
+            computeUnitInSamples,
+            delayBuffers,
+            coreCode.commonsWaitEngineConfigure,
+            coreCode.bufWriteRead,
+        ],
     }
 
 }

@@ -21,9 +21,9 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
-import { stringMsgUtils } from '../nodes-shared-code/core'
-import { delayBuffers } from '../nodes-shared-code/delay-buffers'
-import { computeUnitInSamples } from '../nodes-shared-code/timing'
+import { stringMsgUtils } from '../global-code/core'
+import { delayBuffers } from '../global-code/delay-buffers'
+import { computeUnitInSamples } from '../global-code/timing'
 
 interface NodeArguments {
     delayName: string,
@@ -116,7 +116,7 @@ const nodeImplementation: _NodeImplementation = {
     stateVariables,
     messages,
     declare,
-    sharedCode: [ computeUnitInSamples, delayBuffers, stringMsgUtils ]
+    globalCode: [ computeUnitInSamples, delayBuffers, stringMsgUtils ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

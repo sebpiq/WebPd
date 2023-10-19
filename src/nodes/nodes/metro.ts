@@ -21,9 +21,10 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
-import { bangUtils, stringMsgUtils } from '../nodes-shared-code/core'
+import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { computeUnitInSamples } from '../nodes-shared-code/timing'
+import { computeUnitInSamples } from '../global-code/timing'
+import { coreCode } from '@webpd/compiler'
 
 interface NodeArguments {
     rate: number
@@ -135,7 +136,13 @@ const nodeImplementation: _NodeImplementation = {
     declare,
     messages,
     stateVariables,
-    sharedCode: [ computeUnitInSamples, bangUtils, stringMsgUtils ],
+    globalCode: [
+        computeUnitInSamples,
+        bangUtils,
+        stringMsgUtils,
+        coreCode.commonsWaitEngineConfigure,
+        coreCode.commonsWaitFrame,
+    ],
 }
 
 export { builder, nodeImplementation, NodeArguments }

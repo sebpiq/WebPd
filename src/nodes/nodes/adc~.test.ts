@@ -20,7 +20,7 @@
 
 import assert from 'assert'
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/types'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -94,7 +94,7 @@ describe('adc~', () => {
     describe('implementation', () => {
         const channelCount = { out: 3, in: 8 }
 
-        const createTestEngine = async (
+        const createTestAdcEngine = async (
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
             args: any
@@ -134,13 +134,13 @@ describe('adc~', () => {
             })
 
             const code = executeCompilation(compilation)
-            return await createEngine(compilation.target, bitDepth, code)
+            return await createTestEngine(compilation.target, bitDepth, code)
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should route the channels according to arguments %s',
             async ({ target, bitDepth, floatArrayType }) => {
-                const engine = await createTestEngine(target, bitDepth, {
+                const engine = await createTestAdcEngine(target, bitDepth, {
                     channelMapping: [6, 3, 0],
                 })
                 const engineInput = functional
@@ -165,7 +165,7 @@ describe('adc~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should ignore channels that are out of bounds %s',
             async ({ target, bitDepth, floatArrayType }) => {
-                const engine = await createTestEngine(target, bitDepth, {
+                const engine = await createTestAdcEngine(target, bitDepth, {
                     channelMapping: [-2, 13, 2],
                 })
                 const engineInput = functional

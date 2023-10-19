@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, functional } from '@webpd/compiler'
+import { Code, coreCode, functional } from '@webpd/compiler'
 import {
     NodeImplementation,
     NodeImplementations,
@@ -26,8 +26,8 @@ import {
 } from '@webpd/compiler/src/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { bangUtils } from '../nodes-shared-code/core'
-import { roundFloatAsPdInt } from '../nodes-shared-code/numbers'
+import { bangUtils } from '../global-code/core'
+import { roundFloatAsPdInt } from '../global-code/numbers'
 import {
     messageTokenToFloat,
     messageTokenToString,
@@ -378,11 +378,12 @@ const nodeImplementations: NodeImplementations = {
         messages,
         stateVariables,
         declare,
-        sharedCode: [
+        globalCode: [
             messageTokenToString,
             messageTokenToFloat,
             roundFloatAsPdInt,
             bangUtils,
+            coreCode.commonsArrays,
         ],
     },
     'expr~': {
@@ -390,11 +391,12 @@ const nodeImplementations: NodeImplementations = {
         stateVariables,
         declare,
         loop: loopExprTilde,
-        sharedCode: [
+        globalCode: [
             messageTokenToString,
             messageTokenToFloat,
             roundFloatAsPdInt,
             bangUtils,
+            coreCode.commonsArrays,
         ],
     },
 }

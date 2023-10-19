@@ -25,8 +25,9 @@ import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
 } from '../test-helpers'
 
+const SAMPLE_RATE = 10000
 const SAMP_RATIO =
-    1000 / nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS.sampleRate
+    1000 / SAMPLE_RATE
 
 describe('vline~', () => {
     describe('implementation', () => {
@@ -37,6 +38,7 @@ describe('vline~', () => {
                     {
                         target,
                         bitDepth,
+                        sampleRate: SAMPLE_RATE,
                         node: buildNode(builder, 'vline~', {}),
                         nodeImplementation,
                     },
@@ -63,12 +65,13 @@ describe('vline~', () => {
         )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should schedule an instant change at later time %s',
+            'should schedule an instant change and ramp at later time %s',
             async ({ target, bitDepth }) => {
                 await nodeImplementationsTestHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
+                        sampleRate: 10000,
                         node: buildNode(builder, 'vline~', {}),
                         nodeImplementation,
                     },
@@ -97,6 +100,7 @@ describe('vline~', () => {
                     {
                         target,
                         bitDepth,
+                        sampleRate: SAMPLE_RATE,
                         node: buildNode(builder, 'vline~', {}),
                         nodeImplementation,
                     },
@@ -127,6 +131,7 @@ describe('vline~', () => {
                     {
                         target,
                         bitDepth,
+                        sampleRate: SAMPLE_RATE,
                         node: buildNode(builder, 'vline~', {}),
                         nodeImplementation,
                     },
@@ -153,6 +158,7 @@ describe('vline~', () => {
                     {
                         target,
                         bitDepth,
+                        sampleRate: SAMPLE_RATE,
                         node: buildNode(builder, 'vline~', {}),
                         nodeImplementation,
                     },

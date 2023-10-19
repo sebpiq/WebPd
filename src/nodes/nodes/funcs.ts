@@ -21,10 +21,10 @@ import {
     Code,
     NodeImplementation,
     NodeImplementations,
-    SharedCodeGenerator,
+    GlobalCodeGenerator,
 } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { ftom, mtof } from '../nodes-shared-code/funcs'
+import { ftom, mtof } from '../global-code/funcs'
 
 interface NodeArguments {}
 const stateVariables = {}
@@ -48,10 +48,10 @@ const builder: NodeBuilder<NodeArguments> = {
 
 const makeNodeImplementation = ({
     operationCode,
-    sharedCode = [],
+    globalCode = [],
 }: {
     operationCode: Code,
-    sharedCode?: Array<SharedCodeGenerator>
+    globalCode?: Array<GlobalCodeGenerator>
 }): _NodeImplementation => {
 
     // ------------------------------- messages ------------------------------ //
@@ -65,7 +65,7 @@ const makeNodeImplementation = ({
         `
     })
 
-    return { messages, stateVariables, sharedCode }
+    return { messages, stateVariables, globalCode }
 }
 
 // ------------------------------------------------------------------- //
@@ -74,8 +74,8 @@ const nodeImplementations: NodeImplementations = {
     'wrap': makeNodeImplementation({ operationCode: `(1 + (value % 1)) % 1` }),
     'cos': makeNodeImplementation({ operationCode: `Math.cos(value)` }),
     'sqrt': makeNodeImplementation({ operationCode: `value >= 0 ? Math.pow(value, 0.5): 0` }),
-    'mtof': makeNodeImplementation({ operationCode: `mtof(value)`, sharedCode: [mtof] }),
-    'ftom': makeNodeImplementation({ operationCode: `ftom(value)`, sharedCode: [ftom] }),
+    'mtof': makeNodeImplementation({ operationCode: `mtof(value)`, globalCode: [mtof] }),
+    'ftom': makeNodeImplementation({ operationCode: `ftom(value)`, globalCode: [ftom] }),
     'rmstodb': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : 20 * Math.log(value) / Math.LN10 + 100` }),
     'dbtorms': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : Math.exp(Math.LN10 * (value - 100) / 20)` }),
     'powtodb': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : 10 * Math.log(value) / Math.LN10 + 100` }),

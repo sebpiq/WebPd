@@ -21,10 +21,10 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { stringMsgUtils } from '../nodes-shared-code/core'
-import { linesUtils } from '../nodes-shared-code/lines'
+import { stringMsgUtils } from '../global-code/core'
+import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { computeUnitInSamples } from '../nodes-shared-code/timing'
+import { computeUnitInSamples } from '../global-code/timing'
 
 interface NodeArguments {
     initValue: number
@@ -158,7 +158,7 @@ const nodeImplementation: _NodeImplementation = {
     messages,
     loop,
     stateVariables,
-    sharedCode: [stringMsgUtils, computeUnitInSamples, ...linesUtils]
+    globalCode: [stringMsgUtils, computeUnitInSamples, linesUtils]
 }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -22,13 +22,13 @@ import {
     Code,
     NodeImplementation,
     NodeImplementations,
-    SharedCodeGenerator,
+    GlobalCodeGenerator,
 } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { bangUtils } from '../nodes-shared-code/core'
+import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { pow } from '../nodes-shared-code/funcs'
+import { pow } from '../global-code/funcs'
 
 interface NodeArguments {
     value: number
@@ -65,14 +65,14 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 
 const makeNodeImplementation = ({
     generateOperation,
-    sharedCode = [],
+    globalCode = [],
     prepareLeftOp = 'value',
     prepareRightOp = 'value',
 }: {
     generateOperation: (
         state: Parameters<_NodeImplementation['messages']>[0]['state']
     ) => Code
-    sharedCode?: Array<SharedCodeGenerator>,
+    globalCode?: Array<GlobalCodeGenerator>,
     prepareLeftOp?: Code
     prepareRightOp?: Code
 }): _NodeImplementation => {
@@ -128,7 +128,7 @@ const makeNodeImplementation = ({
         declare,
         messages,
         stateVariables,
-        sharedCode: [bangUtils, ...sharedCode],
+        globalCode: [bangUtils, ...globalCode],
     }
 }
 
@@ -168,7 +168,7 @@ const nodeImplementations: NodeImplementations = {
     }),
     pow: makeNodeImplementation({
         generateOperation: (state) => `pow(${state.leftOp}, ${state.rightOp})`,
-        sharedCode: [pow],
+        globalCode: [pow],
     }),
     log: makeNodeImplementation({
         generateOperation: (state) => `Math.log(${state.leftOp}) / Math.log(${state.rightOp})`,

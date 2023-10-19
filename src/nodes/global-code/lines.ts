@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler/src/types";
-import { interpolateLin } from "./points";
+import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/types'
+import { interpolateLin } from './points'
 
-export const linesUtils: Array<SharedCodeGenerator> = [...interpolateLin, ({ macros: { Var, Func }}) => `
+export const linesUtils: GlobalCodeGeneratorWithSettings = {
+    codeGenerator: ({ macros: { Var, Func } }) => `
 
     class LineSegment {
         ${Var('p0', 'Point')}
@@ -29,17 +30,17 @@ export const linesUtils: Array<SharedCodeGenerator> = [...interpolateLin, ({ mac
         ${Var('dy', 'Float')}
     }
 
-    function computeSlope ${Func([
-        Var('p0', 'Point'),
-        Var('p1', 'Point'),
-    ], 'Float')} {
+    function computeSlope ${Func(
+        [Var('p0', 'Point'), Var('p1', 'Point')],
+        'Float'
+    )} {
         return p1.x !== p0.x ? (p1.y - p0.y) / (p1.x - p0.x) : 0
     }
 
-    function removePointsBeforeFrame ${Func([
-        Var('points', 'Array<Point>'),
-        Var('frame', 'Float'),
-    ], 'Array<Point>')} {
+    function removePointsBeforeFrame ${Func(
+        [Var('points', 'Array<Point>'), Var('frame', 'Float')],
+        'Array<Point>'
+    )} {
         const ${Var('newPoints', 'Array<Point>')} = []
         let ${Var('i', 'Int')} = 0
         while (i < points.length) {
@@ -51,11 +52,10 @@ export const linesUtils: Array<SharedCodeGenerator> = [...interpolateLin, ({ mac
         return newPoints
     }
 
-    function insertNewLinePoints ${Func([
-        Var('points', 'Array<Point>'),
-        Var('p0', 'Point'),
-        Var('p1', 'Point'),
-    ], 'Array<Point>')} {
+    function insertNewLinePoints ${Func(
+        [Var('points', 'Array<Point>'), Var('p0', 'Point'), Var('p1', 'Point')],
+        'Array<Point>'
+    )} {
         const ${Var('newPoints', 'Array<Point>')} = []
         let ${Var('i', 'Int')} = 0
         
@@ -103,9 +103,10 @@ export const linesUtils: Array<SharedCodeGenerator> = [...interpolateLin, ({ mac
         return newPoints
     }
 
-    function computeFrameAjustedPoints ${Func([
-        Var('points', 'Array<Point>'),
-    ], 'Array<Point>')} {
+    function computeFrameAjustedPoints ${Func(
+        [Var('points', 'Array<Point>')],
+        'Array<Point>'
+    )} {
         if (points.length < 2) {
             throw new Error('invalid length for points')
         }
@@ -201,9 +202,10 @@ export const linesUtils: Array<SharedCodeGenerator> = [...interpolateLin, ({ mac
         return newPoints
     }
 
-    function computeLineSegments ${Func([
-        Var('points', 'Array<Point>'),
-    ], 'Array<LineSegment>')} {
+    function computeLineSegments ${Func(
+        [Var('points', 'Array<Point>')],
+        'Array<LineSegment>'
+    )} {
         const ${Var('lineSegments', 'Array<LineSegment>')} = []
         let ${Var('i', 'Int')} = 0
         let ${Var('p0', 'Point')}
@@ -222,4 +224,6 @@ export const linesUtils: Array<SharedCodeGenerator> = [...interpolateLin, ({ mac
         return lineSegments
     }
 
-`]
+`,
+    dependencies: [interpolateLin],
+}

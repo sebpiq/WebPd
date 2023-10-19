@@ -17,12 +17,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler/src/types"
+import { GlobalCodeGenerator } from "@webpd/compiler/src/types"
 
 const MAX_MIDI_FREQ = Math.pow(2, (1499 - 69) / 12) * 440
 
 // Also possible to use optimized version, but gives approximate results : 8.17579891564 * Math.exp(0.0577622650 * value)
-export const mtof: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
+export const mtof: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
     function mtof ${Func([
         Var('value', 'Float'),
     ], 'Float')} {
@@ -33,7 +33,7 @@ export const mtof: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
 // optimized version of formula : 12 * Math.log(freq / 440) / Math.LN2 + 69
 // which is the same as : Math.log(freq / mtof(0)) * (12 / Math.LN2) 
 // which is the same as : Math.log(freq / 8.1757989156) * (12 / Math.LN2) 
-export const ftom: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
+export const ftom: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
     function ftom ${Func([
         Var('value', 'Float'),
     ], 'Float')} {
@@ -42,7 +42,7 @@ export const ftom: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
 `
 
 // TODO : tests (see in binop)
-export const pow: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
+export const pow: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
     function pow ${Func([
         Var('leftOp', 'Float'),
         Var('rightOp', 'Float'),

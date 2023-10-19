@@ -21,7 +21,8 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { bangUtils } from '../nodes-shared-code/core'
+import { bangUtils } from '../global-code/core'
+import { coreCode } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = {
@@ -138,7 +139,7 @@ const nodeImplementation: _NodeImplementation = {
     messages,
     loop,
     stateVariables,
-    sharedCode: [ bangUtils ],
+    globalCode: [ bangUtils, coreCode.commonsWaitEngineConfigure, coreCode.commonsArrays ],
 }
 
 export { 

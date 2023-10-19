@@ -21,7 +21,7 @@
 import { DspGraph, functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { bangUtils, msgUtils } from '../nodes-shared-code/core'
+import { bangUtils, msgUtils } from '../global-code/core'
 
 interface NodeArguments {
     filters: Array<number | string>
@@ -186,7 +186,7 @@ const nodeImplementation: _NodeImplementation = {
     messages, 
     stateVariables, 
     declare,
-    sharedCode: [ bangUtils, msgUtils ]
+    globalCode: [ bangUtils, msgUtils ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -37,7 +37,7 @@ import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
 import { executeCompilation } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
@@ -64,7 +64,7 @@ describe('send / receive', () => {
     })
 
     describe('implementation', () => {
-        const createTestEngine = async (
+        const createTestSndRcvEngine = async (
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
         ) => {
@@ -121,7 +121,7 @@ describe('send / receive', () => {
             })
 
             const code = executeCompilation(compilation)
-            const engine = await createEngine(compilation.target, bitDepth, code)
+            const engine = await createTestEngine(compilation.target, bitDepth, code)
             engine.configure(44100, 1)
             return engine
         }
@@ -129,7 +129,7 @@ describe('send / receive', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send / receive messages as expected %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestSndRcvEngine(
                     target,
                     bitDepth,
                 )
@@ -163,7 +163,7 @@ describe('send / receive', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change the bus when settings new bus name %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestSndRcvEngine(
                     target,
                     bitDepth,
                 )
@@ -191,7 +191,7 @@ describe('send / receive', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send message to all receivers %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(
+                const engine = await createTestSndRcvEngine(
                     target,
                     bitDepth,
                 )

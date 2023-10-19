@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,17 +17,21 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler/src/types";
+import {
+    GlobalCodeGenerator,
+    GlobalCodeGeneratorWithSettings,
+} from '@webpd/compiler/src/types'
+import { coreCode } from '@webpd/compiler'
 
 // TODO : unit tests
-export const signalBuses: SharedCodeGenerator = ({ macros: { Var, Func }}) => `
+export const signalBuses: GlobalCodeGenerator = ({ macros: { Var, Func } }) => `
     const ${Var('SIGNAL_BUSES', 'Map<string, Float>')} = new Map()
     SIGNAL_BUSES.set('', 0)
 
-    function addAssignSignalBus ${Func([
-        Var('busName', 'string'), 
-        Var('value', 'Float'),
-    ], 'Float')} {
+    function addAssignSignalBus ${Func(
+        [Var('busName', 'string'), Var('value', 'Float')],
+        'Float'
+    )} {
         const ${Var('newValue', 'Float')} = SIGNAL_BUSES.get(busName) + value
         SIGNAL_BUSES.set(
             busName,
@@ -52,49 +56,59 @@ export const signalBuses: SharedCodeGenerator = ({ macros: { Var, Func }}) => `
         SIGNAL_BUSES.set(busName, 0)
     }
 
-    function readSignalBus ${Func([
-        Var('busName', 'string')
-    ], 'Float')} {
+    function readSignalBus ${Func([Var('busName', 'string')], 'Float')} {
         return SIGNAL_BUSES.get(busName)
     }
 `
 
 // TODO : unit tests
-export const messageBuses: SharedCodeGenerator = ({ macros: { Var, Func }}) => `
-    const ${Var('MSG_BUSES', 'Map<string, Array<(m: Message) => void>>')} = new Map()
+export const messageBuses: GlobalCodeGeneratorWithSettings = {
+    codeGenerator: ({ macros: { Var, Func } }) => `
+    const ${Var(
+        'MSG_BUSES',
+        'Map<string, Array<(m: Message) => void>>'
+    )} = new Map()
 
-    function msgBusPublish ${Func([
-        Var('busName', 'string'),
-        Var('message', 'Message'),
-    ], 'void')} {
+    function msgBusPublish ${Func(
+        [Var('busName', 'string'), Var('message', 'Message')],
+        'void'
+    )} {
         let ${Var('i', 'Int')} = 0
-        const ${Var('callbacks', 'Array<(m: Message) => void>')} = MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []
+        const ${Var(
+            'callbacks',
+            'Array<(m: Message) => void>'
+        )} = MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []
         for (i = 0; i < callbacks.length; i++) {
             callbacks[i](message)
         }
     }
 
-    function msgBusSubscribe ${Func([
-        Var('busName', 'string'), 
-        Var('callback', '(m: Message) => void'),
-    ], 'void')} {
+    function msgBusSubscribe ${Func(
+        [Var('busName', 'string'), Var('callback', '(m: Message) => void')],
+        'void'
+    )} {
         if (!MSG_BUSES.has(busName)) {
             MSG_BUSES.set(busName, [])
         }
         MSG_BUSES.get(busName).push(callback)
     }
 
-    function msgBusUnsubscribe ${Func([
-        Var('busName', 'string'), 
-        Var('callback', '(m: Message) => void'),
-    ], 'void')} {
+    function msgBusUnsubscribe ${Func(
+        [Var('busName', 'string'), Var('callback', '(m: Message) => void')],
+        'void'
+    )} {
         if (!MSG_BUSES.has(busName)) {
             return
         }
-        const ${Var('callbacks', 'Array<(m: Message) => void>')} = MSG_BUSES.get(busName)
+        const ${Var(
+            'callbacks',
+            'Array<(m: Message) => void>'
+        )} = MSG_BUSES.get(busName)
         const ${Var('found', 'Int')} = callbacks.indexOf(callback) !== -1
         if (found !== -1) {
             callbacks.splice(found, 1)
         }
     }
-`
+`,
+    dependencies: [coreCode.msg],
+}

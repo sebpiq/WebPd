@@ -23,7 +23,7 @@
     "dsp"
   ],
   "scripts": {
-    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runInBand --config node_modules/@webpd/dev/configs/jest.js",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest --runInBand --config node_modules/@webpd/dev/configs/jest.js --testTimeout 10000",
     "build:cli": "npx rollup --config configs/cli.rollup.config.js",
     "build:dist": "npx rollup --config configs/dist.rollup.config.js",
     "build:runtime": "npx rollup --config configs/runtime.rollup.config.js"

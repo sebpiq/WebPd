@@ -21,7 +21,7 @@
 import { functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { bangUtils } from '../nodes-shared-code/core'
+import { bangUtils } from '../global-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
 
 interface NodeArguments {
@@ -139,7 +139,7 @@ const nodeImplementation: _NodeImplementation = {
     messages, 
     stateVariables, 
     declare,
-    sharedCode: [ messageTokenToString, messageTokenToFloat, bangUtils ]
+    globalCode: [ messageTokenToString, messageTokenToFloat, bangUtils ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

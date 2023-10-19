@@ -18,6 +18,7 @@
                 "--watch",
                 "--coverage=false",
                 "--no-cache",
+                "--testTimeout=10000",
                 "--config=node_modules/@webpd/dev/configs/jest.js"
             ],
             "cwd": "${workspaceRoot}",

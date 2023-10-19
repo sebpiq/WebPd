@@ -21,6 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
+import { coreCode } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = stateVariablesTabBase
@@ -66,6 +67,7 @@ const nodeImplementation: _NodeImplementation = {
     declare,
     messages,
     stateVariables,
+    globalCode: [coreCode.commonsWaitEngineConfigure, coreCode.commonsArrays]
 }
 
 export { 

@@ -22,7 +22,7 @@ import { functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertString } from '../validation'
-import { bangUtils } from '../nodes-shared-code/core'
+import { bangUtils } from '../global-code/core'
 import {
     messageTokenToFloat,
     messageTokenToString,
@@ -76,7 +76,7 @@ const messages: _NodeImplementation['messages'] = ({ snds, globs, node: { args: 
 const nodeImplementation: _NodeImplementation = { 
     messages, 
     stateVariables, 
-    sharedCode: [ 
+    globalCode: [ 
         messageTokenToFloat, 
         messageTokenToString,
         bangUtils,

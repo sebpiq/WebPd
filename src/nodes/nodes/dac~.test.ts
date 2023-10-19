@@ -25,7 +25,7 @@ import {
     NodeImplementations,
 } from '@webpd/compiler/src/types'
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeBuild,
@@ -89,7 +89,7 @@ describe('dac~', () => {
     })
 
     describe('implementation', () => {
-        const createTestEngine = async (
+        const createTestDacEngine = async (
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
             args: any
@@ -140,7 +140,7 @@ describe('dac~', () => {
             const code =
                 executeCompilation(compilation)
 
-            return await createEngine(
+            return await createTestEngine(
                 compilation.target,
                 bitDepth,
                 code
@@ -150,7 +150,7 @@ describe('dac~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should route the channels according to arguments %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(target, bitDepth, {
+                const engine = await createTestDacEngine(target, bitDepth, {
                         channelMapping: [0, 3],
                     })
                 assert.deepStrictEqual(
@@ -173,7 +173,7 @@ describe('dac~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should ignore channels that are out of bounds %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestEngine(target, bitDepth, {
+                const engine = await createTestDacEngine(target, bitDepth, {
                     channelMapping: [-1, 2, 10],
                 })
                 assert.deepStrictEqual(

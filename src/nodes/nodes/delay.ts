@@ -21,9 +21,10 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
-import { bangUtils } from '../nodes-shared-code/core'
+import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { computeUnitInSamples } from '../nodes-shared-code/timing'
+import { computeUnitInSamples } from '../global-code/timing'
+import { coreCode } from '@webpd/compiler'
 
 interface NodeArguments { 
     delay: number,
@@ -40,7 +41,6 @@ const stateVariables = {
 }
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
-// TODO : alias [del]
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
     translateArgs: (pdNode) => ({
@@ -61,15 +61,16 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ declare ------------------------------ //
 const declare: _NodeImplementation['declare'] = ({ 
-    state, 
-    globs, 
+    state,
+    snds, 
+    globs,
     node: { args }, 
     macros: { Func, Var } 
 }) => 
     `
         let ${Var(state.delay, 'Float')} = 0
         let ${Var(state.sampleRatio, 'Float')} = 1
-        let ${Var(state.scheduledBang, 'Int')} = -1
+        let ${Var(state.scheduledBang, 'SkedId')} = SKED_ID_NULL
 
         const ${state.funcSetDelay} = ${Func([
             Var('delay', 'Float')
@@ -78,12 +79,19 @@ const declare: _NodeImplementation['declare'] = ({
         }
 
         const ${state.funcScheduleDelay} = ${Func([], 'void')} => {
-            ${state.scheduledBang} = toInt(Math.round(
-                toFloat(${globs.frame}) + ${state.delay} * ${state.sampleRatio}))
+            if (${state.scheduledBang} !== SKED_ID_NULL) {
+                ${state.funcStopDelay}()
+            }
+            ${state.scheduledBang} = commons_waitFrame(toInt(
+                Math.round(
+                    toFloat(${globs.frame}) + ${state.delay} * ${state.sampleRatio})),
+                () => ${snds.$0}(msg_bang())
+            )
         }
 
         const ${state.funcStopDelay} = ${Func([], 'void')} => {
-            ${state.scheduledBang} = -1
+            commons_cancelWaitFrame(${state.scheduledBang})
+            ${state.scheduledBang} = SKED_ID_NULL
         }
 
         commons_waitEngineConfigure(() => {
@@ -92,19 +100,8 @@ const declare: _NodeImplementation['declare'] = ({
         })
     `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({state, snds, globs}) => `
-    if (
-        ${state.scheduledBang} > -1 
-        && ${state.scheduledBang} <= ${globs.frame}
-    ) {
-        ${snds.$0}(msg_bang())
-        ${state.scheduledBang} = -1
-    }
-`
-
 // ------------------------------ messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({node, state, globs, macros: { Var }}) => ({
+const messages: _NodeImplementation['messages'] = ({state, globs, macros: { Var }}) => ({
     '0': `
         if (msg_getLength(${globs.m}) === 1) {
             if (msg_isStringToken(${globs.m}, 0)) {
@@ -141,11 +138,15 @@ const messages: _NodeImplementation['messages'] = ({node, state, globs, macros: 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare, 
-    messages, 
-    loop, 
-    stateVariables, 
-    sharedCode: [ computeUnitInSamples, bangUtils ]
+    declare,
+    messages,
+    stateVariables,
+    globalCode: [
+        computeUnitInSamples,
+        bangUtils,
+        coreCode.commonsWaitEngineConfigure,
+        coreCode.commonsWaitFrame,
+    ],
 }
 
 export { 

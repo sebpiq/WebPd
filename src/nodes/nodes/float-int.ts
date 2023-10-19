@@ -25,8 +25,8 @@ import {
 } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { bangUtils } from '../nodes-shared-code/core'
-import { roundFloatAsPdInt } from '../nodes-shared-code/numbers'
+import { bangUtils } from '../global-code/core'
+import { roundFloatAsPdInt } from '../global-code/numbers'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 
 interface NodeArguments {
@@ -109,13 +109,13 @@ const nodeImplementations: NodeImplementations = {
         declare: makeDeclare(),
         messages,
         stateVariables,
-        sharedCode: [bangUtils],
+        globalCode: [bangUtils],
     },
     int: {
         declare: makeDeclare('roundFloatAsPdInt(value)'),
         messages,
         stateVariables,
-        sharedCode: [roundFloatAsPdInt, bangUtils],
+        globalCode: [roundFloatAsPdInt, bangUtils],
     },
 }
 

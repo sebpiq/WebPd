@@ -18,9 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation, NodeImplementations, SharedCodeGenerator } from '@webpd/compiler/src/types'
+import { Code, NodeImplementation, NodeImplementations, GlobalCodeGenerator } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { ftom, mtof } from '../nodes-shared-code/funcs'
+import { ftom, mtof } from '../global-code/funcs'
 
 interface NodeArguments {}
 const stateVariables = {}
@@ -42,16 +42,16 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- loop ------------------------------ //
 const makeNodeImplementation = ({
     generateOperation,
-    sharedCode = [],
+    globalCode = [],
 }: {
     generateOperation: (input: Code) => Code,
-    sharedCode?: Array<SharedCodeGenerator>
+    globalCode?: Array<GlobalCodeGenerator>
 }): _NodeImplementation => {
     const loop: _NodeImplementation['loop'] = ({ ins, outs }) => `
         ${outs.$0} = ${generateOperation(ins.$0)}
     `
 
-    return { loop, stateVariables, sharedCode }
+    return { loop, stateVariables, globalCode }
 }
 
 // ------------------------------------------------------------------- //
@@ -60,8 +60,8 @@ const nodeImplementations: NodeImplementations = {
     'cos~': makeNodeImplementation({ generateOperation: (input) => `Math.cos(${input} * 2 * Math.PI)` }),
     'wrap~': makeNodeImplementation({ generateOperation: (input) => `(1 + (${input} % 1)) % 1` }),
     'sqrt~': makeNodeImplementation({ generateOperation: (input) => `${input} >= 0 ? Math.pow(${input}, 0.5): 0` }),
-    'mtof~': makeNodeImplementation({ generateOperation: (input) => `mtof(${input})`, sharedCode: [mtof] }),
-    'ftom~': makeNodeImplementation({ generateOperation: (input) => `ftom(${input})`, sharedCode: [ftom] }),
+    'mtof~': makeNodeImplementation({ generateOperation: (input) => `mtof(${input})`, globalCode: [mtof] }),
+    'ftom~': makeNodeImplementation({ generateOperation: (input) => `ftom(${input})`, globalCode: [ftom] }),
 }
 
 const builders = {

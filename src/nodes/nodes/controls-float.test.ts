@@ -27,7 +27,7 @@ import {
     testParametersCombine,
 } from '../test-helpers'
 import { nodeImplementations, builders, NodeArguments } from './controls-float'
-import { createEngine } from '@webpd/compiler/src/test-helpers'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
     nodeImplementation as nodeImplementationSend,
     builder as builderSend,
@@ -182,7 +182,7 @@ describe('controls-float', () => {
                 outputOnLoad: false,
             }
 
-            const createTestEngine = async (
+            const createTestSndRcvEngine = async (
                 target: CompilerTarget,
                 bitDepth: AudioSettings['bitDepth'],
                 controlType: keyof typeof builders,
@@ -235,7 +235,7 @@ describe('controls-float', () => {
                     nodeImplementationsTestHelpers.executeCompilation(
                         compilation
                     )
-                const engine = await createEngine(
+                const engine = await createTestEngine(
                     compilation.target,
                     bitDepth,
                     code
@@ -247,7 +247,7 @@ describe('controls-float', () => {
             it.each(CONTROLS_TEST_PARAMETERS_ALL)(
                 'should send / receive messages to specified buses %s',
                 async ({ target, bitDepth, nodeType }) => {
-                    const engine = await createTestEngine(
+                    const engine = await createTestSndRcvEngine(
                         target,
                         bitDepth,
                         nodeType,
@@ -280,7 +280,7 @@ describe('controls-float', () => {
                         args['initValue'] = 0
                     }
 
-                    const engine = await createTestEngine(
+                    const engine = await createTestSndRcvEngine(
                         target,
                         bitDepth,
                         nodeType,
@@ -308,7 +308,7 @@ describe('controls-float', () => {
             it.each(CONTROLS_TEST_PARAMETERS_ALL)(
                 'should set send / receive buses with send / receive message to control %s',
                 async ({ target, bitDepth, nodeType }) => {
-                    const engine = await createTestEngine(
+                    const engine = await createTestSndRcvEngine(
                         target,
                         bitDepth,
                         nodeType,

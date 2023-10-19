@@ -20,7 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { bangUtils } from '../nodes-shared-code/core'
+import { bangUtils } from '../global-code/core'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -87,7 +87,7 @@ const nodeImplementation: _NodeImplementation = {
     messages,
     stateVariables,
     declare,
-    sharedCode: [bangUtils],
+    globalCode: [bangUtils],
 }
 
 export { builder, nodeImplementation, NodeArguments }

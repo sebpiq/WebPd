@@ -21,7 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { signalBuses } from '../nodes-shared-code/buses'
+import { signalBuses } from '../global-code/buses'
 
 interface NodeArguments {
     busName: string,
@@ -97,7 +97,7 @@ const nodeImplementation: _NodeImplementation = {
     messages,
     stateVariables,
     declare,
-    sharedCode: [ signalBuses ]
+    globalCode: [ signalBuses ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

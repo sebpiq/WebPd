@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,26 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { SharedCodeGenerator } from "@webpd/compiler/src/types"
+import {
+    GlobalCodeGenerator,
+    GlobalCodeGeneratorWithSettings,
+} from '@webpd/compiler/src/types'
 
-export const roundFloatAsPdInt: SharedCodeGenerator = ({ macros: { Func, Var }}) => `
-    function roundFloatAsPdInt ${Func([
-        Var('value', 'Float'),
-    ], 'Float')} {
-        return value > 0 ? Math.floor(value): Math.ceil(value)
+export const point: GlobalCodeGenerator = ({ macros: { Var } }) => `
+    class Point {
+        ${Var('x', 'Float')}
+        ${Var('y', 'Float')}
     }
 `
+
+export const interpolateLin: GlobalCodeGeneratorWithSettings = {
+    codeGenerator: ({ macros: { Var, Func } }) => `
+    function interpolateLin ${Func(
+        [Var('x', 'Float'), Var('p0', 'Point'), Var('p1', 'Point')],
+        'Float'
+    )} {
+        return p0.y + (x - p0.x) * (p1.y - p0.y) / (p1.x - p0.x)
+    }
+`,
+    dependencies: [point],
+}

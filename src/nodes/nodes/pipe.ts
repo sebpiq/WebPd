@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { coreCode, functional } from '@webpd/compiler'
+import { NodeImplementation, GlobalCodeDefinition } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
-import { bangUtils, stringMsgUtils } from '../nodes-shared-code/core'
+import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import {
     messageTokenToFloat,
@@ -40,10 +40,12 @@ interface NodeArguments {
 const stateVariables = {
     delay: 1,
     scheduledMessages: 1,
-    scheduledFrames: 1,
-    lastReceived: 1,
+    outputMessages: 1,
     funcScheduleMessage: 1,
     funcSetDelay: 1,
+    funcSendMessages: 1,
+    funcWaitFrameCallback: 1,
+    funcClear: 1,
 }
 type _NodeImplementation = NodeImplementation<
     NodeArguments,
@@ -87,58 +89,127 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
+// ------------------------------- globalCode ------------------------------ //
+const pipeGlobalCode: GlobalCodeDefinition = ({ macros: { Var }}) => `
+    class pipe_ScheduledMessage {
+        ${Var('message', 'Message')}
+        ${Var('frame', 'Int')}
+        ${Var('skedId', 'SkedId')}
+    }
+`
+
 // ------------------------------- declare ------------------------------ //
-// !!! Array.splice insertion is not supported by assemblyscript, so : 
-// 1. We grow arrays to their post-insertion size by using `push`
-// 2. We use `copyWithin` to move old elements to their final position.
-// 3. We insert the new elements at their place.
 const declare: _NodeImplementation['declare'] = ({
     state,
     globs,
+    snds,
     node: { args },
     macros: { Var, Func },
 }) => functional.renderCode`
     let ${state.delay} = 0
-    let ${Var(state.scheduledMessages, 'Array<Message>')} = []
-    let ${Var(state.scheduledFrames, 'Array<Int>')} = []
-    const ${Var(state.lastReceived, 'Array<Message>')} = [${
+    const ${Var(state.outputMessages, 'Array<Message>')} = [${
         args.typeArguments
             .map(([_, value]) => typeof value === 'number' ? 
                 `msg_floats([${value}])`
                 : `msg_strings(["${value}"])`).join(',')
     }]
+    let ${Var(state.scheduledMessages, 'Array<pipe_ScheduledMessage>')} = []
 
     const ${state.funcScheduleMessage} = ${Func([
         Var('inMessage', 'Message')
     ], 'void')} => {
         let ${Var('insertIndex', 'Int')} = 0
         let ${Var('frame', 'Int')} = ${globs.frame} + ${state.delay}
-        let ${Var('outMessage', 'Message')} = msg_create([])
+        let ${Var('skedId', 'SkedId')} = SKED_ID_NULL
+        let ${Var('scheduledMessage', 'pipe_ScheduledMessage')} = {
+            message: msg_create([]),
+            frame: frame,
+            skedId: SKED_ID_NULL,
+        }
 
+        ${''
+        // !!! Array.splice insertion is not supported by assemblyscript, so : 
+        // 1. We grow arrays to their post-insertion size by using `push`
+        // 2. We use `copyWithin` to move old elements to their final position.
+        }
         while (
-            insertIndex < ${state.scheduledFrames}.length 
-            && ${state.scheduledFrames}[insertIndex] <= frame
-        ) {insertIndex++}
+            insertIndex < ${state.scheduledMessages}.length 
+            && ${state.scheduledMessages}[insertIndex].frame <= frame
+        ) {
+            insertIndex++
+        }
 
-        
         ${functional.countTo(args.typeArguments.length).map(_ => 
-            `${state.scheduledMessages}.push(msg_create([]))`)}
-        ${state.scheduledMessages}.copyWithin((insertIndex + 1) * ${args.typeArguments.length}, insertIndex * ${args.typeArguments.length})
-        ${state.scheduledFrames}.push(0)
-        ${state.scheduledFrames}.copyWithin(insertIndex + 1, insertIndex)
+            `${state.scheduledMessages}.push(scheduledMessage)`
+        )}
+        ${state.scheduledMessages}.copyWithin(
+            (insertIndex + 1) * ${args.typeArguments.length}, 
+            insertIndex * ${args.typeArguments.length}
+        )
 
+        ${''
+        // If there was not yet a callback scheduled for that frame, we schedule it.
+        }
+        if (
+            insertIndex === 0 || 
+            (
+                insertIndex > 0 
+                && ${state.scheduledMessages}[insertIndex - 1].frame !== frame
+            )
+        ) {
+            skedId = commons_waitFrame(frame, ${state.funcWaitFrameCallback})
+        }
+
+        ${''
+        // Finally, schedule a message for each outlet
+        }
         ${args.typeArguments.reverse()
             .map<[number, TypeArgument]>(([typeArg], i) => [args.typeArguments.length - i - 1, typeArg])
-            .map(([iReverse, typeArg], i) => `
-                if (msg_getLength(inMessage) > ${iReverse}) {
-                    outMessage = ${renderMessageTransfer(typeArg, 'inMessage', iReverse)}
-                    ${state.lastReceived}[${iReverse}] = outMessage
-                } else {
-                    outMessage = ${state.lastReceived}[${iReverse}]
-                }
-                ${state.scheduledMessages}[insertIndex * ${args.typeArguments.length} + ${i}] = outMessage
-            `)}
-        ${state.scheduledFrames}[insertIndex] = frame
+            .map(([iReverse, typeArg], i) => 
+                `
+                    scheduledMessage = ${state.scheduledMessages}[insertIndex + ${i}] = {
+                        message: msg_create([]),
+                        frame: frame,
+                        skedId: skedId,
+                    }
+                    if (msg_getLength(inMessage) > ${iReverse}) {
+                        scheduledMessage.message = ${renderMessageTransfer(typeArg, 'inMessage', iReverse)}
+                        ${state.outputMessages}[${iReverse}] = scheduledMessage.message
+                    } else {
+                        scheduledMessage.message = ${state.outputMessages}[${iReverse}]
+                    }
+                `
+            )
+        }
+    }
+
+    const ${state.funcSendMessages} = ${Func([Var('toFrame', 'Int')], 'void')} => {
+        while (
+            ${state.scheduledMessages}.length 
+            && ${state.scheduledMessages}[0].frame <= toFrame
+        ) {
+            ${functional.countTo(args.typeArguments.length)
+                .reverse()
+                .map((i) => 
+                    `${snds[i]}(${state.scheduledMessages}.shift().message)`
+                )
+            }
+        }
+    }
+
+    const ${state.funcWaitFrameCallback} = ${Func([
+        Var('event', 'SkedEvent')
+    ], 'void')} => {
+        ${state.funcSendMessages}(${globs.frame})
+    }
+
+    const ${state.funcClear} = ${Func([], 'void')} => {
+        let ${Var('i', 'Int')} = 0
+        const ${Var('length', 'Int')} = ${state.scheduledMessages}.length
+        for (i; i < length; i++) {
+            commons_cancelWaitFrame(${state.scheduledMessages}[i].skedId)
+        }
+        ${state.scheduledMessages} = []
     }
 
     const ${state.funcSetDelay} = ${Func([
@@ -152,37 +223,20 @@ const declare: _NodeImplementation['declare'] = ({
     })
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({
-    node,
-    state,
-    globs,
-    snds,
-}) => `
-    while (${state.scheduledFrames}.length && ${state.scheduledFrames}[0] <= ${globs.frame}) {
-        ${state.scheduledFrames}.shift()
-        ${functional.countTo(node.args.typeArguments.length).reverse()
-            .map((i) => `${snds[i]}(${state.scheduledMessages}.shift())`)}
-    }
-`
-
 // ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ node, snds, globs, state, macros: { Var } }) => ({
+const messages: _NodeImplementation['messages'] = ({ node, snds, globs, state }) => ({
     '0': functional.renderCode`
     if (msg_isBang(${globs.m})) {
         ${state.funcScheduleMessage}(msg_create([]))
         return
 
     } else if (msg_isAction(${globs.m}, 'clear')) {
-            ${state.scheduledMessages} = []
-            ${state.scheduledFrames} = []
-            return 
+        ${state.funcClear}()
+        return 
 
     } else if (msg_isAction(${globs.m}, 'flush')) {
-        ${state.scheduledFrames} = []
-        while (${state.scheduledMessages}.length) {
-            ${functional.countTo(node.args.typeArguments.length).reverse()
-                .map((i) => `${snds[i]}(${state.scheduledMessages}.shift())`)}
+        if (${state.scheduledMessages}.length) {
+            ${state.funcSendMessages}(${state.scheduledMessages}[${state.scheduledMessages}.length - 1].frame)
         }
         return
 
@@ -196,7 +250,7 @@ const messages: _NodeImplementation['messages'] = ({ node, snds, globs, state, m
         node.args.typeArguments.slice(1), 
         ([typeArg], i) => [
             `${i + 1}`, 
-            `${state.lastReceived}[${i + 1}] = ${renderMessageTransfer(typeArg, globs.m, 0)}
+            `${state.outputMessages}[${i + 1}] = ${renderMessageTransfer(typeArg, globs.m, 0)}
             return`
         ]
     ),
@@ -205,16 +259,18 @@ const messages: _NodeImplementation['messages'] = ({ node, snds, globs, state, m
 })
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { 
-    loop,
+const nodeImplementation: _NodeImplementation = {
     messages, 
     stateVariables, 
     declare,
-    sharedCode: [ 
+    globalCode: [
+        pipeGlobalCode,
         messageTokenToFloat, 
         messageTokenToString,
         bangUtils,
         stringMsgUtils,
+        coreCode.commonsWaitEngineConfigure,
+        coreCode.commonsWaitFrame,
     ],
 }
 

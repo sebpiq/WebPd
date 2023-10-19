@@ -21,8 +21,9 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { messageBuses } from '../nodes-shared-code/buses'
+import { messageBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
+import { coreCode } from '@webpd/compiler'
 
 interface NodeArguments {
     busName: string
@@ -76,7 +77,7 @@ const nodeImplementation: _NodeImplementation = {
     stateVariables,
     declare,
     messages,
-    sharedCode: [messageBuses],
+    globalCode: [messageBuses, coreCode.commonsWaitEngineConfigure],
 }
 
 export { builder, nodeImplementation, NodeArguments }
