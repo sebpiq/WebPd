@@ -56,6 +56,7 @@ const builder: NodeBuilder<NodeArguments> = {
         outlets: {
             '0': { type: 'message', id: '0' },
         },
+        isPushingMessages: true
     }),
 }
 

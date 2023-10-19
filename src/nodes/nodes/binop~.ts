@@ -25,8 +25,6 @@ import {
     NodeImplementations,
     GlobalCodeGenerator,
 } from '@webpd/compiler/src/types'
-import { DspGraph, functional } from '@webpd/compiler'
-import { coldFloatInlet } from '../standard-message-receivers'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { pow } from '../global-code/funcs'
@@ -48,21 +46,19 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
     },
     build: () => ({
         inlets: {
-            '0_message': { type: 'message', id: '0_message' },
             '0': { type: 'signal', id: '0' },
-            '1_message': { type: 'message', id: '1_message' },
             '1': { type: 'signal', id: '1' },
         },
         outlets: {
             '0': { type: 'signal', id: '0' },
         },
     }),
-    rerouteMessageConnection: (inletId) => {
+    configureMessageToSignalConnection(inletId, nodeArgs) {
         if (inletId === '0') {
-            return '0_message'
+            return { initialSignalValue: 0 }
         }
         if (inletId === '1') {
-            return '1_message'
+            return { initialSignalValue: nodeArgs.value }
         }
         return undefined
     },
@@ -75,59 +71,12 @@ const makeNodeImplementation = ({
     globalCode?: Array<GlobalCodeGenerator>,
     generateOperation: (leftOp: CodeVariableName, rightOp: CodeVariableName) => Code,
 }): _NodeImplementation => {
-    // ------------------------------ declare ------------------------------ //
-    const declare: _NodeImplementation['declare'] = ({
-        node,
-        state,
-        macros: { Var },
-    }) => `
-        ${functional.renderIf(
-            _hasMessageLeftInlet(node),
-            `
-                let ${Var(state.leftOp, 'Float')} = 0
-            `
-        )}
-        ${functional.renderIf(
-            _hasMessageRightInlet(node),
-            `
-                let ${Var(state.rightOp, 'Float')} = ${node.args.value}
-            `
-        )}
-    `
-
-    // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ node, ins, outs, state }) =>
-        `${outs.$0} = ${generateOperation(
-            _hasMessageLeftInlet(node) ? state.leftOp : ins.$0,
-            _hasMessageRightInlet(node) ? state.rightOp : ins.$1
-        )}`
-
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = ({
-        node,
-        state,
-        globs,
-    }) => ({
-        '0_message': functional.renderIf(
-            _hasMessageLeftInlet(node),
-            coldFloatInlet(globs.m, state.leftOp)
-        ),
-        '1_message': functional.renderIf(
-            _hasMessageRightInlet(node),
-            coldFloatInlet(globs.m, state.rightOp)
-        ),
-    })
-
-    return { declare, loop, messages, stateVariables, globalCode }
+    const loop: _NodeImplementation['loop'] = ({ ins, outs }) =>
+        `${outs.$0} = ${generateOperation(ins.$0, ins.$1)}`
+    return { loop, stateVariables, globalCode }
 }
 
 // ------------------------------------------------------------------- //
-const _hasMessageLeftInlet = (node: DspGraph.Node<NodeArguments>) =>
-    !node.sources['0'] || !node.sources['0'].length
-
-const _hasMessageRightInlet = (node: DspGraph.Node<NodeArguments>) =>
-    !node.sources['1'] || !node.sources['1'].length
-
 const nodeImplementations: NodeImplementations = {
     '+~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${leftOp} + ${rightOp}` }),
     '-~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${leftOp} - ${rightOp}` }),

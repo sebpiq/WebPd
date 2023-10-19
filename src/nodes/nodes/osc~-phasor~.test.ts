@@ -33,7 +33,7 @@ describe('osc~', () => {
     })
 
     describe('implementation', () => {
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should work with signal frequency %s', async ({ target, bitDepth }) => {
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should oscillate at the given frequency %s', async ({ target, bitDepth }) => {
             const { sampleRate } =
                 nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
             const frequency1 = 100
@@ -77,7 +77,7 @@ describe('osc~', () => {
         })
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should work with signal frequency settings phase %s',
+            'should reset phase with second inlet %s',
             async ({ target, bitDepth }) => {
                 const { sampleRate } =
                     nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
@@ -114,70 +114,10 @@ describe('osc~', () => {
                 )
             }
         )
-
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should work with message frequency %s', async ({ target, bitDepth }) => {
-            const { sampleRate } =
-                nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
-            const frequency1 = 100
-            const frequency2 = 300
-            const J = (2 * Math.PI * frequency1) / sampleRate
-
-            await nodeImplementationsTestHelpers.assertNodeOutput(
-                {
-                    target,
-                    bitDepth,
-                    node: buildNode(builders['osc~'], 'osc~', {
-                        frequency: frequency1,
-                    }),
-                    nodeImplementation: nodeImplementations['osc~'],
-                },
-                [{ ins: { '0_message': [] } }, { outs: { '0': Math.cos(0) } }],
-                [
-                    { ins: { '0_message': [] } },
-                    { outs: { '0': Math.cos(1 * J) } },
-                ],
-                [
-                    { ins: { '0_message': [[frequency2]] } },
-                    { outs: { '0': Math.cos(2 * J) } },
-                ],
-                [
-                    { ins: { '0_message': [] } },
-                    { outs: { '0': Math.cos(5 * J) } },
-                ],
-                [
-                    { ins: { '0_message': [] } },
-                    { outs: { '0': Math.cos(8 * J) } },
-                ]
-            )
-        })
-
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should work with message frequency settings phase %s',
-            async ({ target, bitDepth }) => {
-                const { sampleRate } =
-                    nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
-                const frequency = 100
-                const J = (2 * Math.PI * frequency) / sampleRate
-
-                await nodeImplementationsTestHelpers.assertNodeOutput(
-                    {
-                        target,
-                        bitDepth,
-                        node: buildNode(builders['osc~'], 'osc~', { frequency }),
-                        nodeImplementation: nodeImplementations['osc~'],
-                    },
-                    [{ ins: { '1': [] } }, { outs: { '0': Math.cos(0) } }],
-                    [{ ins: { '1': [] } }, { outs: { '0': Math.cos(1 * J) } }],
-                    [{ ins: { '1': [[0]] } }, { outs: { '0': 1.0 } }],
-                    [{ ins: { '1': [[0.25]] } }, { outs: { '0': 0.0 } }],
-                    [{ ins: { '1': [[-2.5]] } }, { outs: { '0': -1.0 } }]
-                )
-            }
-        )
     })
 
     describe('phasor~ implementation', () => {
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should work with message frequency %s', async ({ target, bitDepth }) => {
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should have the expected signal output %s', async ({ target, bitDepth }) => {
             const { sampleRate } =
                 nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
             const frequency1 = 100
@@ -193,21 +133,21 @@ describe('osc~', () => {
                     }),
                     nodeImplementation: nodeImplementations['phasor~'],
                 },
-                [{ ins: { '0_message': [] } }, { outs: { '0': 0 } }],
+                [{ ins: { '0': frequency1 } }, { outs: { '0': 0 } }],
                 [
-                    { ins: { '0_message': [] } },
+                    { ins: { '0': frequency1 } },
                     { outs: { '0': 1 * J } },
                 ],
                 [
-                    { ins: { '0_message': [[frequency2]] } },
+                    { ins: { '0': frequency2 } },
                     { outs: { '0': 2 * J } },
                 ],
                 [
-                    { ins: { '0_message': [] } },
+                    { ins: { '0': frequency2 } },
                     { outs: { '0': 5 * J } },
                 ],
                 [
-                    { ins: { '0_message': [] } },
+                    { ins: { '0': frequency2 } },
                     { outs: { '0': 8 * J } },
                 ]
             )

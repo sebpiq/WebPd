@@ -39,7 +39,7 @@ type _NodeImplementation = NodeImplementation<
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
     translateArgs: ({ args }) => ({
-        typeArguments: (args.length ? args : ['float']).map(resolveTypeArgumentAlias)
+        typeArguments: (args.length ? args : ['float', 'float']).map(resolveTypeArgumentAlias)
             // Not sure why but 'bang' is supported as a creation argument, 
             // but turned into a float.
             .map(typeArg => {

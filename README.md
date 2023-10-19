@@ -2,10 +2,13 @@
   <img src="webpd.png" />
 </p>
 
+<!-- intro start -->
+
 **WebPd** is a compiler for the [Pure Data](https://puredata.info/) audio programming language allowing to run **.pd** patches in web pages.
 
 **WebPd is highly modular and takes a white-box approach to audio programming**. It converts the audio graph and processing objects from a patch into plain human-readable JavaScript or [AssemblyScript](https://www.assemblyscript.org/) (*). The pure audio generated code can be then integrated directly in any web application without using WebPd or Pure Data ever again 🌈.
 
+<!-- intro end -->
 
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23ed00d9)](https://github.com/sponsors/sebpiq)
 
@@ -40,6 +43,8 @@ Just upload or give a URL(*) of a patch, compile it just in time and generate an
 <span id="using-the-cli"><span>
 
 ### Command line interface
+
+*NOTE : Running the CLI requires node.js version 18 or higher.*
 
 The command-line interface (CLI) offers more customization options, including the ability to generate a fully-functional (but bare bones) web page embedding your patch.
 

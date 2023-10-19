@@ -19,10 +19,10 @@
  */
 
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
-import { nodeImplementation, builder } from './mixer~'
+import { nodeImplementation, builder } from './_mixer~'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeBuild } from '../test-helpers'
 
-describe('mixer~', () => {
+describe('_mixer~', () => {
     describe('builder', () => {
         describe('build', () => {
             it('should create inlets for channelCount', () => {
@@ -49,7 +49,7 @@ describe('mixer~', () => {
                 {
                     target,
                     bitDepth,
-                    node: buildNode(builder, 'mixer~', {
+                    node: buildNode(builder, '_mixer~', {
                         channelCount: 3,
                     }),
                     nodeImplementation,

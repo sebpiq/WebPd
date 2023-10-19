@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+import { PdJson } from '@webpd/pd-parser'
 import { Artefacts } from '../build/types'
 import WEBPD_RUNTIME_CODE from './runtime.generated.js.txt'
+import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {
@@ -71,6 +73,9 @@ const bareBonesApp = (settings: Settings) => {
             #loading {
                 width: 100%;
                 height: 100%;
+                position: fixed;
+                top: 50%;
+                transform: translateY(-50%);
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -78,10 +83,19 @@ const bareBonesApp = (settings: Settings) => {
         </style>
     </head>
     <body>
+        <h1>My Web Page</h1>
+        <div>For more info about usage (how to interact with the patch), you can open this HTML file in a code editor.</div>
         <button id="start"> Start </button>
         <div id="loading"> Loading ... </div>
         <script src="${WEBPD_RUNTIME_FILENAME}"></script>
         <script>
+            // SUMMARY
+            // 1. WEB PAGE INITIALIZATION
+            // 2. SENDING MESSAGES FROM JAVASCRIPT TO THE PATCH
+            // 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT (coming soon ...)
+
+
+            // ------------- 1. WEB PAGE INITIALIZATION
             const loadingDiv = document.querySelector('#loading')
             const startButton = document.querySelector('#start')
             const audioContext = new AudioContext()
@@ -122,7 +136,10 @@ const bareBonesApp = (settings: Settings) => {
                 webpdNode.connect(audioContext.destination)
 
                 // Setup filesystem management
-                webpdNode.port.onmessage = (message) => WebPdRuntime.fs.web(webpdNode, message)
+                webpdNode.port.onmessage = (message) => 
+                    WebPdRuntime.fsWeb(webpdNode, message, { 
+                        rootUrl: WebPdRuntime.urlDirName(location.pathname) 
+                    })
 
                 // Send code to the worklet
                 ${artefacts.compiledJs ? `
@@ -150,10 +167,24 @@ const bareBonesApp = (settings: Settings) => {
                     console.log('App initialized')
                 })
 
-            // You can then use this function to interact with your patch
-            // e.g. :
-            // sendMsgToWebPd('n_0_1', '0', ['bang'])
-            // sendMsgToWebPd('n_0_2', '0', [123])
+            
+            // ------------- 2. SENDING MESSAGES FROM JAVASCRIPT TO THE PATCH
+            // Use the function sendMsgToWebPd to send a message from JavaScript to an object inside your patch.
+            // 
+            // Parameters : 
+            // - nodeId: the ID of the object you want to send a message to. 
+            //          This ID is a string that has been assigned by WebPd at compilation.
+            //          You can find below the list of available IDs with hints to help you 
+            //          identify the object you want to interact with.
+            // - portletId : the ID of the object portlet to which the message should be sent. 
+            // - message : the message to send. This must be a list of strings and / or numbers.
+            // 
+            // Examples :
+            // - sending a message to a bang node of ID 'n_0_1' :
+            //          sendMsgToWebPd('n_0_1', '0', ['bang'])
+            // - sending a message to a number object of ID 'n_0_2' :
+            //          sendMsgToWebPd('n_0_2', '0', [123])
+            // 
             const sendMsgToWebPd = (nodeId, portletId, message) => {
                 webpdNode.port.postMessage({
                     type: 'inletCaller',
@@ -164,13 +195,33 @@ const bareBonesApp = (settings: Settings) => {
                     },
                 })
             }
-            ${artefacts.dspGraph && artefacts.dspGraph.inletCallerSpecs ? `
-            // For info, compilation has opened the following ports in your patch.
-            // You can send messages to them :` 
-                + Object.entries(artefacts.dspGraph.inletCallerSpecs)
-                    .flatMap(([nodeId, portletIds]) => portletIds.map(portletId => `
-            //     - Node of type "${artefacts.dspGraph.graph[nodeId].type}", nodeId "${nodeId}", portletId "${portletId}"`)).join('')
-                : ''}
+            
+            // Here is an index of objects IDs to which you can send messages, with hints so you can find the right ID.
+            // Note that by default only GUI objects (bangs, sliders, etc ...) are available.${
+                artefacts.dspGraph 
+                && artefacts.dspGraph.inletCallerSpecs 
+                && Object.keys(artefacts.dspGraph.inletCallerSpecs).length ? 
+                    Object.entries(artefacts.dspGraph.inletCallerSpecs)
+                        .flatMap(([nodeId, portletIds]) => portletIds.map(portletId => {
+                            const pdNode = resolvePdNodeFromGraphNodeId(artefacts.pdJson!, nodeId)
+                            if (!pdNode) {
+                                throw new Error(`Failed to resolve pd node`)
+                            }
+                            return `
+            //  - nodeId "${nodeId}" portletId "${portletId}"
+            //      * type "${pdNode.type}"
+            //      * args ${JSON.stringify(pdNode.args)}`
+            + ((pdNode.layout as any).label ? `
+            //      * label "${(pdNode.layout as any).label}"` : '')
+                        })).join('')
+                : `
+            // EMPTY (did you place a GUI object in your patch ?)
+`}
+
+
+            // ------------- 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT
+            // Coming soon ... 
+
         </script>
     </body>
 </html>`
@@ -183,4 +234,18 @@ const bareBonesApp = (settings: Settings) => {
     }
 
     return generatedApp
+}
+
+const resolvePdNodeFromGraphNodeId = (
+    pd: PdJson.Pd,
+    graphNodeId: PdJson.LocalId
+): PdJson.Node | null => {
+    let node: PdJson.Node = null
+    Object.entries(pd.patches).some(([patchId, patch]) => {
+        node = Object.values(patch.nodes).find(
+            (node) => buildGraphNodeId(patchId, node.id) === graphNodeId
+        )
+        return !!node
+    })
+    return node
 }

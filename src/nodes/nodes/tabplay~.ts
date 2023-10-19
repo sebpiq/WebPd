@@ -21,7 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { bangUtils } from '../global-code/core'
+import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { coreCode } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
@@ -32,6 +32,7 @@ const stateVariables = {
     readPosition: 1,
     readUntil: 1,
     funcSetArrayName: 1,
+    funcStop: 1,
     funcPlay: 1,
 }
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
@@ -63,21 +64,36 @@ const declare: _NodeImplementation['declare'] = (
     let ${Var(state.readPosition, 'Int')} = 0
     let ${Var(state.readUntil, 'Int')} = 0
 
-    const ${state.funcSetArrayName} = ${Func([
+    function ${state.funcSetArrayName} ${Func([
         Var('arrayName', 'string')
-    ], 'void')} => {
+    ], 'void')} {
         if (${state.arrayChangesSubscription} != SKED_ID_NULL) {
             commons_cancelArrayChangesSubscription(${state.arrayChangesSubscription})
         }
         ${state.arrayName} = arrayName
         ${state.array} = createFloatArray(0)
-        ${state.readPosition} = 0
-        ${state.readUntil} = 0        
+        ${state.funcStop}()
         commons_subscribeArrayChanges(arrayName, () => {
             ${state.array} = commons_getArray(${state.arrayName})
             ${state.readPosition} = ${state.array}.length
             ${state.readUntil} = ${state.array}.length
         })
+    }
+
+    function ${state.funcPlay} ${Func([
+        Var('playFrom', 'Int'),
+        Var('playTo', 'Int'),
+    ], 'void')} {
+        ${state.readPosition} = playFrom
+        ${state.readUntil} = toInt(Math.min(
+            toFloat(playTo), 
+            toFloat(${state.array}.length),
+        ))
+    }
+
+    function ${state.funcStop} ${Func([], 'void')} {
+        ${state.readPosition} = 0
+        ${state.readUntil} = 0
     }
 
     commons_waitEngineConfigure(() => {
@@ -103,13 +119,16 @@ const loop: _NodeImplementation['loop'] = (
 `
 
 // ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
+const messages: _NodeImplementation['messages'] = ({ state, globs, macros: { Var } }) => ({
     '0': `
     if (msg_isBang(${globs.m})) {
-        ${state.readPosition} = 0
-        ${state.readUntil} = ${state.array}.length
+        ${state.funcPlay}(0, ${state.array}.length)
         return 
         
+    } else if (msg_isAction(${globs.m}, 'stop')) {
+        ${state.funcStop}()
+        return 
+
     } else if (
         msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
         && msg_readStringToken(${globs.m}, 0) === 'set'
@@ -118,16 +137,18 @@ const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
         return
 
     } else if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        ${state.readPosition} = toInt(msg_readFloatToken(${globs.m}, 0))
-        ${state.readUntil} = ${state.array}.length
+        ${state.funcPlay}(
+            toInt(msg_readFloatToken(${globs.m}, 0)), 
+            ${state.array}.length
+        )
         return 
 
     } else if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
-        ${state.readPosition} = toInt(msg_readFloatToken(${globs.m}, 0))
-        ${state.readUntil} = toInt(Math.min(
-            toFloat(${state.readPosition}) + msg_readFloatToken(${globs.m}, 1), 
-            toFloat(${state.array}.length)
-        ))
+        const ${Var('fromSample', 'Int')} = toInt(msg_readFloatToken(${globs.m}, 0))
+        ${state.funcPlay}(
+            fromSample,
+            fromSample + toInt(msg_readFloatToken(${globs.m}, 1)),
+        )
         return
     }
     `,
@@ -139,7 +160,12 @@ const nodeImplementation: _NodeImplementation = {
     messages,
     loop,
     stateVariables,
-    globalCode: [ bangUtils, coreCode.commonsWaitEngineConfigure, coreCode.commonsArrays ],
+    globalCode: [
+        bangUtils,
+        coreCode.commonsWaitEngineConfigure,
+        coreCode.commonsArrays,
+        stringMsgUtils,
+    ],
 }
 
 export { 

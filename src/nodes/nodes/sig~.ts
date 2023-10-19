@@ -52,7 +52,7 @@ const declare: _NodeImplementation['declare'] = ({ node: { args }, state, macros
 `
 
 // ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => `
+const loop: _NodeImplementation['loop'] = ({ outs, state }) => `
     ${outs.$0} = ${state.currentValue}
 `
 

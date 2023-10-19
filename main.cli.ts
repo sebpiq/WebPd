@@ -103,6 +103,34 @@ const assertValidFormat = (
     return true
 }
 
+const readInFile = async (inFilepath: string) => {
+    ifConditionThenExitError(
+        !isFileSync(inFilepath),
+        `Unknown input file ${inFilepath}`
+    )
+    return await fs.promises.readFile(inFilepath)
+}
+
+const assertValidOutFilepath = async (
+    outFilepath: string,
+    outFormat: BuildFormat
+) => {
+    switch (outFormat) {
+        case 'appTemplate':
+            ifConditionThenExitError(
+                !isDirectorySync(outFilepath),
+                `Format ${outFormat} requires a directory as output path`
+            )
+            return
+        default:
+            ifConditionThenExitError(
+                outFilepath.endsWith('/') || isDirectorySync(outFilepath),
+                `Invalid filepath ${outFilepath} for format ${outFormat}`
+            )
+            return
+    }
+}
+
 const writeOutFile = async (task: Task): Promise<Task> => {
     const { outFilepath, outFormat, artefacts } = task
     const written: Array<string> = []
@@ -165,7 +193,8 @@ const writeOutFile = async (task: Task): Promise<Task> => {
         if (outFormat === 'appTemplate') {
             process.stdout.write(
                 colors.grey('\n\nWeb app compiled ! Start it by running :\n') +
-                    colors.blue(`\tnpx http-server ${outFilepath}\n`)
+                    colors.blue(`\tnpx http-server ${outFilepath}\n`) + 
+                    colors.grey(`For documentation, open ${path.resolve(outFilepath, 'index.html')} in a code editor.\n`)
             )
         }
     }
@@ -183,7 +212,7 @@ const makeCliAbstractionLoader = (rootDirPath: string): AbstractionLoader =>
 
 const executeTask = async (task: Task, settings: Settings): Promise<Task> => {
     const { inFilepath, inFormat, outFormat } = task
-    const inString = await fs.promises.readFile(inFilepath)
+    const inString = await readInFile(inFilepath)
     const artefacts = preloadArtefact(task.artefacts, inString, inFormat)
     const buildSteps = listBuildSteps(inFormat, outFormat)
     ifConditionThenExitError(
@@ -265,10 +294,14 @@ const main = (): void => {
         .option(
             '-i, --input <filename>',
             'Set the input file. Extensions supported : ' +
-                (['pd', 'wasm'] as Array<BuildFormat>).map(
-                    (format) =>
-                        `\n${BUILD_FORMATS[format].extensions.join(', ')} - ${BUILD_FORMATS[format].description}`
-                ).join('')
+                (['pd', 'wasm'] as Array<BuildFormat>)
+                    .map(
+                        (format) =>
+                            `\n${BUILD_FORMATS[format].extensions.join(
+                                ', '
+                            )} - ${BUILD_FORMATS[format].description}`
+                    )
+                    .join('')
         )
         .option(
             '-o, --output <path>',
@@ -284,10 +317,12 @@ const main = (): void => {
                         'appTemplate',
                         'wav',
                     ] as Array<BuildFormat>
-                ).map(
-                    (format) =>
-                        `\n${format} - ${BUILD_FORMATS[format].description}`
-                ).join('')
+                )
+                    .map(
+                        (format) =>
+                            `\n${format} - ${BUILD_FORMATS[format].description}`
+                    )
+                    .join('')
         )
         .option('--check-support')
         .option('--whats-implemented')
@@ -296,7 +331,9 @@ const main = (): void => {
         'after',
         (colors as any).brightMagenta('\n~ Usage examples ~') +
             '\nGenerating a web page embedding myPatch.pd in path/to/folder : ' +
-            colors.blue('\nwebpd -i myPatch.pd -o path/to/folder -f appTemplate') +
+            colors.blue(
+                '\nwebpd -i myPatch.pd -o path/to/folder -f appTemplate'
+            ) +
             '\nGenerating a wav preview of myPatch.pd : ' +
             colors.blue('\nwebpd -i myPatch.pd -o myPatch.wav')
     )
@@ -356,10 +393,11 @@ const main = (): void => {
                 `Option --check-support requires .pd input`
             )
             outFormat = outFormat || 'pdJson'
-
         } else if (!outFilepath) {
             exitError('Please specify an ouput using -o option.')
         }
+
+        assertValidOutFilepath(outFilepath, outFormat)
 
         const abstractionLoader = makeCliAbstractionLoader(
             path.dirname(inFilepath)
@@ -401,7 +439,6 @@ const main = (): void => {
             })
             .catch((err) => {
                 throw err
-                process.stderr.write('\n' + err)
             })
             .finally(() => {
                 process.stdout.write(

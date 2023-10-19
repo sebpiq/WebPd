@@ -59,9 +59,9 @@ const builder: NodeBuilder<NodeArguments> = {
         outlets: {},
         isPullingSignal: true,
     }),
-    rerouteMessageConnection: (inletId) => {
+    configureMessageToSignalConnection: (inletId) => {
         if (inletId === '0') {
-            return '0_message'
+            return { reroutedMessageInletId: '0_message'}
         }
         return undefined
     },

@@ -51,7 +51,6 @@ import * as loadbang from './nodes/loadbang'
 import * as floatAndInt from './nodes/float-int'
 import * as funcs from './nodes/funcs'
 import * as binopTilde from './nodes/binop~'
-import * as mixerTilde from './nodes/mixer~'
 import * as noiseTilde from './nodes/noise~'
 import * as delreadTilde from './nodes/delread~-delread4~'
 import * as delwriteTilde from './nodes/delwrite~'
@@ -79,6 +78,8 @@ import * as pack from './nodes/pack'
 import * as unpack from './nodes/unpack'
 import * as expr from './nodes/expr-expr~'
 import * as binop from './nodes/binop'
+import * as _implicitMsgSort from './nodes/_routemsg'
+import * as _implicitMixerTilde from './nodes/_mixer~'
 import { NodeImplementations } from '@webpd/compiler'
 import { NodeBuilders } from '../compile-dsp-graph/types'
 
@@ -103,7 +104,6 @@ const NODE_BUILDERS: NodeBuilders = {
     'tabplay~': tabplayTilde.builder,
     'readsf~': readsfTilde.builder,
     'writesf~': writesfTilde.builder,
-    'mixer~': mixerTilde.builder,
     'vd~': { aliasTo: 'delread4~' },
     'bp~': bpTilde.builder,
     'hip~': filtersHipTilde.builder,
@@ -155,6 +155,10 @@ const NODE_BUILDERS: NodeBuilders = {
     soundfiler: soundfiler.builder,
     tabread: tabread.builder,
     tabwrite: tabwrite.builder,
+    // The following are internal nodes used by the compiler
+    // to help reproduce Pd's behavior
+    '_mixer~': _implicitMixerTilde.builder,
+    '_routemsg': _implicitMsgSort.builder,
     // The following don't need implementations as they will never
     // show up in the graph traversal.
     graph: { isNoop: true },
@@ -180,7 +184,6 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     'clip~': clipTilde.nodeImplementation,
     'vline~': vlineTilde.nodeImplementation,
     'line~': lineTilde.nodeImplementation,
-    'mixer~': mixerTilde.nodeImplementation,
     'dac~': dacTilde.nodeImplementation,
     'adc~': adcTilde.nodeImplementation,
     'samplerate~': sampleRateTilde.nodeImplementation,
@@ -227,6 +230,9 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     tabread: tabread.nodeImplementation,
     tabwrite: tabwrite.nodeImplementation,
     soundfiler: soundfiler.nodeImplementation,
+    // Internal nodes
+    '_mixer~': _implicitMixerTilde.nodeImplementation,
+    '_routemsg': _implicitMsgSort.nodeImplementation,
 }
 
 export { NODE_IMPLEMENTATIONS, NODE_BUILDERS }

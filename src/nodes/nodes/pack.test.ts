@@ -32,7 +32,7 @@ describe('pack', () => {
         describe('translateArgs', () => {
             it('should handle args as expected', () => {
                 testNodeTranslateArgs(builder, [], {
-                    typeArguments: [['float', 0]],
+                    typeArguments: [['float', 0], ['float', 0]],
                 })
                 testNodeTranslateArgs(builder, [10, 'f', 's'], {
                     typeArguments: [

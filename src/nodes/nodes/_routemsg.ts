@@ -20,78 +20,41 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { assertOptionalString } from '../validation'
-import { signalBuses } from '../global-code/buses'
 
-interface NodeArguments {
-    busName: string,
-}
-const stateVariables = {
-    busName: 1,
-    funcSetBusName: 1,
-}
+interface NodeArguments {}
+const stateVariables = {}
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
-    translateArgs: (pdNode) => ({
-        busName: assertOptionalString(pdNode.args[0]) || '',
-    }),
+    translateArgs: () => ({}),
     build: () => ({
         inlets: {
             '0': { type: 'message', id: '0' },
         },
         outlets: {
-            '0': { type: 'signal', id: '0' },
+            '0': { type: 'message', id: '0' },
+            '1': { type: 'message', id: '1' },
         },
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ 
-    state, 
-    node: { args }, 
-    macros: { Var, Func }
-}) => `
-    let ${Var(state.busName, 'string')} = ""
-
-    const ${state.funcSetBusName} = ${Func([
-        Var('busName', 'string')
-    ], 'void')} => {
-        if (busName.length) {
-            ${state.busName} = busName
-            resetSignalBus(${state.busName})
-        }
-    }
-
-    ${state.funcSetBusName}("${args.busName}")
-`
-
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ outs, state }) => `
-    ${outs.$0} = readSignalBus(${state.busName})
-`
-
 // ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
+const messages: _NodeImplementation['messages'] = ({ globs, snds }) => ({
     '0': `
-    if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'set'
-    ) {
-        ${state.funcSetBusName}(msg_readStringToken(${globs.m}, 1))
+    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
+        ${snds.$0}(m)
         return
-    }
-    `
+    } else {
+        ${snds.$1}(m)
+        return
+    }`,
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
-    messages,
     stateVariables,
-    declare,
-    globalCode: [ signalBuses ]
+    messages,
 }
 
 export { builder, nodeImplementation, NodeArguments }

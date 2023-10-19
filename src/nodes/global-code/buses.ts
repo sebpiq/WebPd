@@ -43,7 +43,7 @@ export const signalBuses: GlobalCodeGenerator = ({ macros: { Var, Func } }) => `
     function setSignalBus ${Func([
         Var('busName', 'string'), 
         Var('value', 'Float'),
-    ], 'Float')} {
+    ], 'void')} {
         SIGNAL_BUSES.set(
             busName,
             value,

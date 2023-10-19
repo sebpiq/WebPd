@@ -44,7 +44,7 @@ describe('clip~', () => {
 
     describe('implementation', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should sum incoming signals together %s',
+            'should clip signal to [min, max] %s',
             async ({ target, bitDepth }) => {
                 await nodeImplementationsTestHelpers.assertNodeOutput(
                     {
@@ -60,25 +60,6 @@ describe('clip~', () => {
                     [{ ins: { '0': -1.5 } }, { outs: { '0': -1.5 } }],
                     [{ ins: { '0': -2 } }, { outs: { '0': -1.5 } }],
                     [{ ins: { '0': 2.6 } }, { outs: { '0': 2.5 } }]
-                )
-            }
-        )
-
-        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should take incoming message on input %s',
-            async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
-                    {
-                        target,
-                        bitDepth,
-                        node: buildNode(builder, 'clip~', {
-                            minValue: -1.5,
-                            maxValue: 2.5,
-                        }),
-                        nodeImplementation,
-                    },
-                    [{ ins: { '0_message': [[1.2]] } }, { outs: { '0': 1.2 } }],
-                    [{ ins: { '0_message': [[2.6]] } }, { outs: { '0': 2.5 } }]
                 )
             }
         )

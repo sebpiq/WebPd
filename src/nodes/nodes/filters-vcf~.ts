@@ -21,15 +21,13 @@
 import { NodeImplementation } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { coldFloatInlet, coldFloatInletWithSetter } from '../standard-message-receivers'
-import { DspGraph, functional } from '@webpd/compiler'
+import { coldFloatInletWithSetter } from '../standard-message-receivers'
 
 interface NodeArguments {
     frequency: number,
     Q: number,
 }
 const stateVariables = {
-    inputValue: 1,
     frequency: 1,
     Q: 1,
     // Output value Y[n]
@@ -44,7 +42,6 @@ const stateVariables = {
     funcSetQ: 1,
     funcSetFrequency: 1,
     funcUpdateCoefs: 1,
-    funcClear: 1,
 }
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
@@ -59,9 +56,7 @@ const builder: NodeBuilder<NodeArguments> = {
     build: () => ({
         inlets: {
             '0': { type: 'signal', id: '0' },
-            '0_message': { type: 'message', id: '0_message' },
             '1': { type: 'signal', id: '1' },
-            '1_message': { type: 'message', id: '1_message' },
             '2': { type: 'message', id: '2' },
         },
         outlets: {
@@ -69,15 +64,6 @@ const builder: NodeBuilder<NodeArguments> = {
             '1': { type: 'signal', id: '1' },
         },
     }),
-    rerouteMessageConnection: (inletId) => {
-        if (inletId === '0') {
-            return '0_message'
-        }
-        if (inletId === '1') {
-            return '1_message'
-        }
-        return undefined
-    },
 }
 
 // ------------------------------- declare ------------------------------ //
@@ -86,7 +72,6 @@ const declare: _NodeImplementation['declare'] = ({
     globs,
     node: { args }, 
     macros: { Var, Func }}) => `
-    let ${Var(state.inputValue, 'Float')} = 0
     let ${Var(state.frequency, 'Float')} = ${args.frequency}
     let ${Var(state.Q, 'Float')} = ${args.Q}
     let ${Var(state.coef1, 'Float')} = 0
@@ -97,7 +82,7 @@ const declare: _NodeImplementation['declare'] = ({
     let ${Var(state.ym2, 'Float')} = 0
 
     function ${state.funcUpdateCoefs} ${Func([], 'void')} {
-        let ${Var('omega', 'Float')} = ${state.frequency} * (2.0 * Math.PI) / ${globs.sampleRate};
+        let ${Var('omega', 'Float')} = ${state.frequency} * (2.0 * Math.PI) / ${globs.sampleRate}
         let ${Var('oneminusr', 'Float')} = ${state.Q} < 0.001 ? 1.0 : Math.min(omega / ${state.Q}, 1)
         let ${Var('r', 'Float')} = 1.0 - oneminusr
         let ${Var('sigbp_qcos', 'Float')} = (omega >= -(0.5 * Math.PI) && omega <= 0.5 * Math.PI) ? 
@@ -122,24 +107,12 @@ const declare: _NodeImplementation['declare'] = ({
         ${state.Q} = Math.max(Q, 0)
         ${state.funcUpdateCoefs}()
     }
-
-    function ${state.funcClear} ${Func([], 'void')} {
-        ${state.ym1} = 0
-        ${state.ym2} = 0
-    }
-
-    commons_waitEngineConfigure(() => {
-        ${state.funcUpdateCoefs}()
-    })
 `
 
 // ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ node, ins, outs, state }) => `
-    ${functional.renderIf(
-        _hasSignalInput1(node), 
-        `${state.funcSetFrequency}(${ins.$1})`
-    )}
-    ${state.y} = ${_hasSignalInput0(node) ? ins.$0 : state.inputValue} + ${state.coef1} * ${state.ym1} + ${state.coef2} * ${state.ym2}
+const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => `
+    ${state.funcSetFrequency}(${ins.$1})
+    ${state.y} = ${ins.$0} + ${state.coef1} * ${state.ym1} + ${state.coef2} * ${state.ym2}
     ${outs.$1} = ${outs.$0} = ${state.gain} * ${state.y}
     ${state.ym2} = ${state.ym1}
     ${state.ym1} = ${state.y}
@@ -147,18 +120,10 @@ const loop: _NodeImplementation['loop'] = ({ node, ins, outs, state }) => `
 
 // ------------------------------- messages ------------------------------ //
 const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
-    '0_message': coldFloatInlet(globs.m, state.inputValue),
-    '1_message': coldFloatInletWithSetter(globs.m, state.funcSetFrequency),
     '2': coldFloatInletWithSetter(globs.m, state.funcSetQ),
 })
 
 // ------------------------------------------------------------------- //
-const _hasSignalInput0 = (node: DspGraph.Node<NodeArguments>) =>
-    node.sources['0'] && node.sources['0'].length
-
-const _hasSignalInput1 = (node: DspGraph.Node<NodeArguments>) =>
-    node.sources['1'] && node.sources['1'].length
-
 const nodeImplementation: _NodeImplementation = {
     loop,
     stateVariables,

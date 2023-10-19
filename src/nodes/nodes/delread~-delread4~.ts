@@ -18,12 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph, coreCode } from '@webpd/compiler'
+import { coreCode } from '@webpd/compiler'
 import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
-import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 
 interface NodeArguments {
@@ -33,10 +32,7 @@ interface NodeArguments {
 const stateVariables = {
     delayName: 1,
     buffer: 1,
-    delaySamp: 1,
-    delayMsec: 1,
     funcSetDelayName: 1,
-    funcSetDelayMsec: 1,
 }
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
@@ -50,15 +46,14 @@ const builder: NodeBuilder<NodeArguments> = {
     build: () => ({
         inlets: {
             '0': { type: 'signal', id: '0' },
-            '0_message': { type: 'message', id: '0_message' },
         },
         outlets: {
             '0': { type: 'signal', id: '0' },
         },
     }),
-    rerouteMessageConnection: (inletId) => {
+    configureMessageToSignalConnection: (inletId, { initDelayMsec }) => {
         if (inletId === '0') {
-            return '0_message'
+            return  { initialSignalValue: initDelayMsec }
         }
         return undefined
     },
@@ -68,26 +63,11 @@ const makeNodeImplementation = (): _NodeImplementation => {
     // ------------------------------- declare ------------------------------ //
     const declare: _NodeImplementation['declare'] = ({ 
         state, 
-        globs,
         node: { args }, 
         macros: { Var, Func }
     }) => `
         let ${Var(state.delayName, 'string')} = ""
         let ${Var(state.buffer, 'buf_SoundBuffer')} = DELAY_BUFFERS_NULL
-        let ${Var(state.delaySamp, 'Int')} = 0
-        let ${Var(state.delayMsec, 'Float')} = 0
-
-        const ${state.funcSetDelayMsec} = ${Func([
-            Var('delayMsec', 'Float')
-        ], 'void')} => {
-            ${state.delayMsec} = delayMsec
-            ${state.delaySamp} = toInt(Math.round(
-                Math.min(
-                    Math.max(computeUnitInSamples(${globs.sampleRate}, delayMsec, "msec"), 0), 
-                    toFloat(${state.buffer}.length - 1)
-                )
-            ))
-        }
 
         const ${state.funcSetDelayName} = ${Func([
             Var('delayName', 'string')
@@ -99,7 +79,6 @@ const makeNodeImplementation = (): _NodeImplementation => {
             if (${state.delayName}.length) {
                 DELAY_BUFFERS_get(${state.delayName}, () => { 
                     ${state.buffer} = DELAY_BUFFERS.get(${state.delayName})
-                    ${state.funcSetDelayMsec}(${state.delayMsec})
                 })
             }
         }
@@ -108,21 +87,11 @@ const makeNodeImplementation = (): _NodeImplementation => {
             if ("${args.delayName}".length) {
                 ${state.funcSetDelayName}("${args.delayName}")
             }
-            ${state.funcSetDelayMsec}(${args.initDelayMsec})
         })
     `
 
     // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = (context) =>
-        _hasSignalInput(context.node)
-            ? loopSignal(context)
-            : loopMessage(context)
-
-    const loopMessage: _NodeImplementation['loop'] = ({ outs, state }) => `
-        ${outs.$0} = buf_readSample(${state.buffer}, ${state.delaySamp})
-    `
-
-    const loopSignal: _NodeImplementation['loop'] = ({ globs, outs, ins, state }) => `
+    const loop: _NodeImplementation['loop'] = ({ globs, outs, ins, state }) => `
         ${outs.$0} = buf_readSample(${state.buffer}, toInt(Math.round(
             Math.min(
                 Math.max(computeUnitInSamples(${globs.sampleRate}, ${ins.$0}, "msec"), 0), 
@@ -131,16 +100,10 @@ const makeNodeImplementation = (): _NodeImplementation => {
         )))
     `
 
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
-        '0_message': coldFloatInletWithSetter(globs.m, state.funcSetDelayMsec)
-    })
-
     // ------------------------------------------------------------------- //
     return {
         loop,
         stateVariables,
-        messages,
         declare,
         globalCode: [
             computeUnitInSamples,
@@ -151,9 +114,6 @@ const makeNodeImplementation = (): _NodeImplementation => {
     }
 
 }
-
-const _hasSignalInput = (node: DspGraph.Node<NodeArguments>) =>
-    node.sources['0'] && node.sources['0'].length
 
 const builders = {
     'delread~': builder,

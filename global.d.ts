@@ -3,7 +3,7 @@ declare module '*.asc' {
     export default content
 }
 
-declare module '*.generated.js.txt' {
+declare module '*.js.txt' {
     const content: string
     export default content
 }

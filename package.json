@@ -1,6 +1,6 @@
 {
   "name": "webpd",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.3",
   "type": "module",
   "main": "./dist/WebPd/index.js",
   "types": "./dist/types/index.d.ts",
@@ -13,6 +13,9 @@
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "WebPd is a compiler for audio programming language Pure Data allowing to run .pd patches on web pages.",
   "license": "LGPL-3.0",
+  "engines" : { 
+    "node" : ">=18.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/sebpiq/WebPd"
