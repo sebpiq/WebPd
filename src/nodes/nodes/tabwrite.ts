@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = {
@@ -44,8 +44,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = (context) => {
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
     const { state, macros: { Var, Func }} = context
     return `
         let ${Var(state.index, 'Int')} = 0
@@ -59,8 +59,8 @@ const declare: _NodeImplementation['declare'] = (context) => {
     `
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = (context) => {
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
     const { state, globs } = context
     return {
         '0': `
@@ -83,10 +83,10 @@ const messages: _NodeImplementation['messages'] = (context) => {
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
+    generateDeclarations,
+    generateMessageReceivers,
     stateVariables,
-    globalCode: [coreCode.commonsWaitEngineConfigure, coreCode.commonsArrays]
+    dependencies: [stdlib.commonsWaitEngineConfigure, stdlib.commonsArrays]
 }
 
 export { 

@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, coreCode } from '@webpd/compiler'
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
+import { Code, stdlib } from '@webpd/compiler'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
@@ -67,8 +67,8 @@ const makeNodeImplementation = ({
     generateOperation: (phase: Code) => Code,
 }): _NodeImplementation => {
 
-    // ------------------------------ declare ------------------------------ //
-    const declare: _NodeImplementation['declare'] = ({
+    // ------------------------------ generateDeclarations ------------------------------ //
+    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         state,
         globs,
         macros: { Var, Func },
@@ -85,23 +85,23 @@ const makeNodeImplementation = ({
         })
     `
 
-    // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => `
+    // ------------------------------- generateLoop ------------------------------ //
+    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => `
         ${outs.$0} = ${generateOperation(state.phase)}
         ${state.phase} += (${state.J} * ${ins.$0})
     `
 
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = ({ globs, state }) => ({
+    // ------------------------------- generateMessageReceivers ------------------------------ //
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
         '1': coldFloatInletWithSetter(globs.m, state.funcSetPhase),
     })
 
     return {
-        declare,
-        messages,
-        loop,
+        generateDeclarations,
+        generateMessageReceivers,
+        generateLoop,
         stateVariables,
-        globalCode: [coreCode.commonsWaitEngineConfigure]
+        dependencies: [stdlib.commonsWaitEngineConfigure]
     }
 }
 

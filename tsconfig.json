@@ -5,7 +5,7 @@
         "index.ts",
         "src",
         "@types/**/*.d.ts",
-        "*.d.ts"
+        "*.d.ts",
     ],
     "compilerOptions": {
         "resolveJsonModule": true

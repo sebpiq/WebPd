@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 
 interface NodeArguments {}
@@ -41,13 +41,13 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ outs }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ outs }) => `
     ${outs.$0} = Math.random() * 2 - 1
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ globs }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs }) => ({
     '0': `
     if (
         msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
@@ -60,7 +60,7 @@ const messages: _NodeImplementation['messages'] = ({ globs }) => ({
 })
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { loop, messages, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateLoop, generateMessageReceivers, stateVariables }
 
 export { 
     builder,

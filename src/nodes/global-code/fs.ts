@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { coreCode } from '@webpd/compiler'
-import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/types'
+import { stdlib } from '@webpd/compiler'
+import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
 
 // TODO : support for -raw (see soundfiler help)
 // TODO : find a better way to factorize this code
@@ -75,7 +75,7 @@ export const parseSoundFileOpenOpts: GlobalCodeGeneratorWithSettings = {
         return unhandled
     }
 `,
-    dependencies: [coreCode.msg, coreCode.fsCore],
+    dependencies: [stdlib.msg, stdlib.fsCore],
 }
 
 // TODO : unit testing
@@ -119,5 +119,5 @@ export const parseReadWriteFsOpts: GlobalCodeGeneratorWithSettings = {
         return url
     }
 `,
-    dependencies: [coreCode.msg, coreCode.fsCore],
+    dependencies: [stdlib.msg, stdlib.fsCore],
 }

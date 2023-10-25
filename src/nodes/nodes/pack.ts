@@ -19,7 +19,7 @@
  */
 
 import { functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
@@ -76,8 +76,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node: { args },
     state,
     macros: { Var },
@@ -90,8 +90,8 @@ const declare: _NodeImplementation['declare'] = ({
             `${typeArg === 'symbol' ? `"${defaultValue}"`: '""'}`).join(',')}]
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ snds, globs, state, node, macros: { Var } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state, node, macros: { Var } }) => ({
     '0': functional.renderCode`
     if (!msg_isBang(${globs.m})) {
         for (let ${Var('i', 'Int')} = 0; i < msg_getLength(${globs.m}); i++) {
@@ -136,10 +136,10 @@ const messages: _NodeImplementation['messages'] = ({ snds, globs, state, node, m
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    messages, 
+    generateMessageReceivers, 
     stateVariables, 
-    declare,
-    globalCode: [ messageTokenToString, messageTokenToFloat, bangUtils ]
+    generateDeclarations,
+    dependencies: [ messageTokenToString, messageTokenToFloat, bangUtils ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

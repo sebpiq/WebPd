@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 
@@ -39,8 +39,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ globs, snds }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, snds }) => ({
     '0': `
     if (msg_isBang(${globs.m})) { 
         ${snds.$0}(msg_floats([${globs.sampleRate}])) 
@@ -51,8 +51,8 @@ const messages: _NodeImplementation['messages'] = ({ globs, snds }) => ({
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     stateVariables,
-    messages,
-    globalCode: [bangUtils]
+    generateMessageReceivers,
+    dependencies: [bangUtils]
 }
 
 export { builder, nodeImplementation, NodeArguments }

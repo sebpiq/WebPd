@@ -19,7 +19,7 @@
  */
 
 import { functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
 
@@ -60,8 +60,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ snds, globs, node: { args } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, node: { args } }) => ({
     '0': functional.renderCode`
     ${args.typeArguments.map((t, i) => [t, i] as [TypeArgument, number]).reverse().map(([t, reversedI]) =>
         `
@@ -85,7 +85,7 @@ const messages: _NodeImplementation['messages'] = ({ snds, globs, node: { args }
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messages,
+    generateMessageReceivers,
     stateVariables,
 }
 

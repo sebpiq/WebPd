@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
@@ -54,8 +54,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node,
     state,
     macros: { Var },
@@ -64,8 +64,8 @@ const declare: _NodeImplementation['declare'] = ({
     let ${Var(state.maxValue, 'Float')} = ${node.args.maxValue}
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ snds, globs, state }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
     '0': `
     if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
         ${snds[0]}(msg_floats([
@@ -81,9 +81,9 @@ const messages: _NodeImplementation['messages'] = ({ snds, globs, state }) => ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messages,
+    generateMessageReceivers,
     stateVariables,
-    declare,
+    generateDeclarations,
 }
 
 export { builder, nodeImplementation, NodeArguments }

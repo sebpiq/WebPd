@@ -20,7 +20,7 @@
 
 import { linesUtils } from './lines'
 import { runTestSuite } from '@webpd/compiler/src/test-helpers'
-import { core } from '@webpd/compiler/src/core-code'
+import { stdlib } from '@webpd/compiler'
 
 describe('global-code.lines', () => {
     runTestSuite(
@@ -331,7 +331,7 @@ describe('global-code.lines', () => {
             },
 
         ],
-        [core, linesUtils,
+        [stdlib.core, linesUtils,
             ({ macros: { Var, Func } }) => `
                 function round ${Func(
                     [Var('val', 'Float'), Var('decimal', 'Float')],

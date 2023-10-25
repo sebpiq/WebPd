@@ -22,9 +22,11 @@ import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helper
 import {
     AudioSettings,
     CompilerTarget,
-    Message,
     NodeImplementations,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
+import {
+    Message,
+} from '@webpd/compiler/src/run/types'
 import {
     nodeImplementation as nodeImplementationSend,
     builder as builderSend,

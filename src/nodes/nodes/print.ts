@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 
 interface NodeArguments {
@@ -49,8 +49,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ globs, node: { args } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, node: { args } }) => ({
     '0': `
         console.log("${args.prefix} " + msg_display(${globs.m}))
         return
@@ -58,6 +58,6 @@ const messages: _NodeImplementation['messages'] = ({ globs, node: { args } }) =>
 })
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { messages, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateMessageReceivers, stateVariables }
 
 export { builder, nodeImplementation, NodeArguments }

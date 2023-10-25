@@ -23,7 +23,7 @@ import {
     AudioSettings,
     CompilerTarget,
     NodeImplementations,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import {
     nodeImplementation as nodeImplementationSend,
     builder as builderSend,
@@ -80,7 +80,7 @@ describe('send~ / receive~', () => {
                 'receive~': nodeImplementationReceive,
                 'dac~': nodeImplementationDac,
                 counter: {
-                    loop: ({ globs, outs }) =>
+                    generateLoop: ({ globs, outs }) =>
                         `${outs.$0} = toFloat(${globs.frame})`,
                 },
             }

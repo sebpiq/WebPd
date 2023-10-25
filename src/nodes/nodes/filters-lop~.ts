@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import {
@@ -49,50 +49,45 @@ const builder: NodeBuilder<NodeArguments> = {
     build: () => ({
         inlets: {
             '0': { type: 'signal', id: '0' },
-            '1': { type: 'message', id: '1' },
+            '1': { type: 'signal', id: '1' },
         },
         outlets: {
             '0': { type: 'signal', id: '0' },
         },
     }),
+    configureMessageToSignalConnection: (inletId, nodeArgs) => {
+        if (inletId === '1') {
+            return { initialSignalValue: nodeArgs.frequency }
+        }
+        return undefined
+    },
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
-    globs,
-    node: { args },
-    macros: { Var, Func },
+    macros: { Var },
 }) => `
     let ${Var(state.previous, 'Float')} = 0
     let ${Var(state.coeff, 'Float')} = 0
-
-    function ${state.funcSetFreq} ${Func([
-        Var('freq', 'Float')
-    ], 'void')} {
-        ${state.coeff} = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
-    }
-
-    commons_waitEngineConfigure(() => {
-        ${state.funcSetFreq}(${args.frequency})
-    })
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => `
+    ${state.coeff} = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
     ${state.previous} = ${outs.$0} = ${state.coeff} * ${ins.$0} + (1 - ${state.coeff}) * ${state.previous}
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ globs, state }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
     '1': coldFloatInletWithSetter(globs.m, state.funcSetFreq),
 })
 
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    messages,
-    declare,
+    generateMessageReceivers,
+    generateDeclarations,
 }
 
 // ------------------------------------------------------------------- //

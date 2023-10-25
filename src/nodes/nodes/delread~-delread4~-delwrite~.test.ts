@@ -23,7 +23,7 @@ import {
     AudioSettings,
     CompilerTarget,
     NodeImplementations,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import {
     nodeImplementations as nodeImplementationsDelRead,
     builders as buildersDelRead,
@@ -111,7 +111,7 @@ describe('delread~ / delwrite~', () => {
                 'dac~': nodeImplementationDac,
                 'sig~': nodeImplementationSig,
                 counter: {
-                    loop: ({ globs, outs }) => `${outs.$0} = toFloat(${globs.frame})`,
+                    generateLoop: ({ globs, outs }) => `${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
 

@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
@@ -66,8 +66,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ 
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state, 
     globs,
     node: { args }, 
@@ -109,8 +109,8 @@ const declare: _NodeImplementation['declare'] = ({
     }
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => `
     ${state.funcSetFrequency}(${ins.$1})
     ${state.y} = ${ins.$0} + ${state.coef1} * ${state.ym1} + ${state.coef2} * ${state.ym2}
     ${outs.$1} = ${outs.$0} = ${state.gain} * ${state.y}
@@ -118,17 +118,17 @@ const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => `
     ${state.ym1} = ${state.y}
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
     '2': coldFloatInletWithSetter(globs.m, state.funcSetQ),
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    messages,
-    declare,
+    generateMessageReceivers,
+    generateDeclarations,
 }
 
 export { builder, nodeImplementation, NodeArguments }

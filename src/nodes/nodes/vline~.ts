@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { stringMsgUtils } from '../global-code/core'
 import { linesUtils } from '../global-code/lines'
@@ -53,8 +53,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ globs, state, macros: { Var, Func }}) => `
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ globs, state, macros: { Var, Func }}) => `
     let ${Var(state.points, 'Array<Point>')} = []
     let ${Var(state.lineSegments, 'Array<LineSegment>')} = []
     let ${Var(state.currentValue, 'Float')} = 0
@@ -96,8 +96,8 @@ const declare: _NodeImplementation['declare'] = ({ globs, state, macros: { Var, 
     }
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ outs, state, globs }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => `
     if (${state.lineSegments}.length) {
         if (toFloat(${globs.frame}) < ${state.lineSegments}[0].p0.x) {
 
@@ -117,8 +117,8 @@ const loop: _NodeImplementation['loop'] = ({ outs, state, globs }) => `
     ${outs.$0} = ${state.currentValue}
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
     '0': `
     if (
         msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])
@@ -148,11 +148,11 @@ const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    messages,
-    declare,
-    globalCode: [linesUtils, computeUnitInSamples, stringMsgUtils]
+    generateMessageReceivers,
+    generateDeclarations,
+    dependencies: [linesUtils, computeUnitInSamples, stringMsgUtils]
 }
 
 export { builder, nodeImplementation, NodeArguments }

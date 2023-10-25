@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
@@ -59,8 +59,8 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ 
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state, 
     globs,
     node: { args },
@@ -95,13 +95,13 @@ const declare: _NodeImplementation['declare'] = ({
     })
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, state }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => `
     buf_writeSample(${state.buffer}, ${ins.$0})
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
     '0_message': `
         if (msg_isAction(${globs.m}, 'clear')) {
             buf_clear(${state.buffer})
@@ -112,11 +112,11 @@ const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    messages,
-    declare,
-    globalCode: [ computeUnitInSamples, delayBuffers, stringMsgUtils ]
+    generateMessageReceivers,
+    generateDeclarations,
+    dependencies: [ computeUnitInSamples, delayBuffers, stringMsgUtils ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

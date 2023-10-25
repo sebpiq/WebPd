@@ -21,7 +21,7 @@
 import assert from 'assert'
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
-import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/types'
+import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/compile/types'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeBuild,

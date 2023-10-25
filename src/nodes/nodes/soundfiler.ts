@@ -18,10 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { parseSoundFileOpenOpts } from '../global-code/fs'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -46,8 +46,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ state, macros: { Func, Var } }) => `
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, macros: { Func, Var } }) => `
     class SfOperation {
         ${Var('url', 'string')}
         ${Var('arrayNames', 'Array<string>')}
@@ -79,8 +79,8 @@ const declare: _NodeImplementation['declare'] = ({ state, macros: { Func, Var } 
     }
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs, snds, macros: { Func, Var } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds, macros: { Func, Var } }) => ({
     '0': `
     if (
         msg_getLength(${globs.m}) >= 3 
@@ -317,14 +317,14 @@ const messages: _NodeImplementation['messages'] = ({ state, globs, snds, macros:
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
+    generateDeclarations,
+    generateMessageReceivers,
     stateVariables,
-    globalCode: [
+    dependencies: [
         parseSoundFileOpenOpts,
-        coreCode.commonsArrays,
-        coreCode.fsReadSoundFile,
-        coreCode.fsWriteSoundFile,
+        stdlib.commonsArrays,
+        stdlib.fsReadSoundFile,
+        stdlib.fsWriteSoundFile,
     ],
 }
 

@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, NodeImplementation } from "@webpd/compiler/src/types"
+import { Code, NodeImplementation } from "@webpd/compiler/src/compile/types"
 import { NodeBuilder } from "../../compile-dsp-graph/types"
 
 export const EMPTY_BUS_NAME = 'empty'
@@ -49,7 +49,7 @@ export const build: NodeBuilder<any>['build'] = () => ({
     isPushingMessages: true
 })
 
-export const declareControlSendReceive: NodeImplementation<any>['declare'] = ({ 
+export const declareControlSendReceive: NodeImplementation<any>['generateDeclarations'] = ({ 
     node, 
     state, 
     node: { args }, 
@@ -76,7 +76,7 @@ export const declareControlSendReceive: NodeImplementation<any>['declare'] = ({
 `
 
 export const messageSetSendReceive: (
-    context: Parameters<NodeImplementation<any>['declare']>[0]
+    context: Parameters<NodeImplementation<any>['generateDeclarations']>[0]
 ) => Code = ({ globs, state }) => `
     if (
         msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])

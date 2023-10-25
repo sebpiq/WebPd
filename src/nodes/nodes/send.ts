@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { messageBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments {
     busName: string
@@ -50,8 +50,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
     macros: { Var },
     node: { args },
@@ -59,8 +59,8 @@ const declare: _NodeImplementation['declare'] = ({
     let ${Var(state.busName, 'string')} = "${args.busName}"
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     state,
     globs,
 }) => ({
@@ -75,9 +75,9 @@ const messages: _NodeImplementation['messages'] = ({
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     stateVariables,
-    declare,
-    messages,
-    globalCode: [messageBuses, coreCode.commonsWaitEngineConfigure],
+    generateDeclarations,
+    generateMessageReceivers,
+    dependencies: [messageBuses, stdlib.commonsWaitEngineConfigure],
 }
 
 export { builder, nodeImplementation, NodeArguments }

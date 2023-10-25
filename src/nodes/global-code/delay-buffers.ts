@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { coreCode } from '@webpd/compiler'
-import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/types'
+import { stdlib } from '@webpd/compiler'
+import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
 
 // TODO : how to safely declare a global variable without clashing
 export const delayBuffers: GlobalCodeGeneratorWithSettings = {
@@ -52,5 +52,5 @@ export const delayBuffers: GlobalCodeGeneratorWithSettings = {
         DELAY_BUFFERS.delete(delayName)
     }
 `,
-    dependencies: [coreCode.bufCore, coreCode.sked],
+    dependencies: [stdlib.bufCore, stdlib.sked],
 }

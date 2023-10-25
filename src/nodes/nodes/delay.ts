@@ -18,13 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments { 
     delay: number,
@@ -60,8 +60,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ 
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state,
     snds, 
     globs,
@@ -101,8 +101,8 @@ const declare: _NodeImplementation['declare'] = ({
         })
     `
 
-// ------------------------------ messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({state, globs, macros: { Var }}) => ({
+// ------------------------------ generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({state, globs, macros: { Var }}) => ({
     '0': `
         if (msg_getLength(${globs.m}) === 1) {
             if (msg_isStringToken(${globs.m}, 0)) {
@@ -139,14 +139,14 @@ const messages: _NodeImplementation['messages'] = ({state, globs, macros: { Var 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
+    generateDeclarations,
+    generateMessageReceivers,
     stateVariables,
-    globalCode: [
+    dependencies: [
         computeUnitInSamples,
         bangUtils,
-        coreCode.commonsWaitEngineConfigure,
-        coreCode.commonsWaitFrame,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

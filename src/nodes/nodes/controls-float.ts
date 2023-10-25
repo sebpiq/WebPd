@@ -17,12 +17,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { coreCode, functional } from '@webpd/compiler'
+import { stdlib, functional } from '@webpd/compiler'
 import {
     Code,
     NodeImplementation,
     NodeImplementations,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber, assertOptionalString } from '../validation'
@@ -81,8 +81,8 @@ const makeNodeImplementation = ({
     prepareStoreValueBang?: (args: NodeArguments) => Code
 }): _NodeImplementation => {
 
-    // ------------------------------- declare ------------------------------ //
-    const declare: _NodeImplementation['declare'] = (context) => {
+    // ------------------------------- generateDeclarations ------------------------------ //
+    const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
         const { 
             node, 
             state,
@@ -157,8 +157,8 @@ const makeNodeImplementation = ({
         `
     }
 
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = (context) => {
+    // ------------------------------- generateMessageReceivers ------------------------------ //
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
         const { globs, state } = context
         return {
             '0': `
@@ -169,14 +169,14 @@ const makeNodeImplementation = ({
     }
 
     return {
-        messages,
-        declare,
+        generateMessageReceivers,
+        generateDeclarations,
         stateVariables,
-        globalCode: [
+        dependencies: [
             bangUtils,
             messageBuses,
-            coreCode.commonsWaitEngineConfigure,
-            coreCode.commonsWaitFrame,
+            stdlib.commonsWaitEngineConfigure,
+            stdlib.commonsWaitFrame,
         ],
     }
 }

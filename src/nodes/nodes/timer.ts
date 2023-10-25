@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { computeUnitInSamples } from '../global-code/timing'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments {
     unitAmount: number
@@ -55,8 +55,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
     globs,
     node: { args },
@@ -70,8 +70,8 @@ const declare: _NodeImplementation['declare'] = ({
     })
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
     globs,
     state,
@@ -105,9 +105,9 @@ const messages: _NodeImplementation['messages'] = ({
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     stateVariables,
-    declare,
-    messages,
-    globalCode: [ computeUnitInSamples, bangUtils, coreCode.commonsWaitEngineConfigure ]
+    generateDeclarations,
+    generateMessageReceivers,
+    dependencies: [ computeUnitInSamples, bangUtils, stdlib.commonsWaitEngineConfigure ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

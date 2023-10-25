@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, coreCode, functional } from '@webpd/compiler'
+import { Code, stdlib, functional } from '@webpd/compiler'
 import {
     NodeImplementation,
     NodeImplementations,
     NodeVariableNames,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
@@ -88,8 +88,8 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node: { args, type },
     state,
     macros: { Var },
@@ -110,8 +110,8 @@ const declare: _NodeImplementation['declare'] = ({
     `
 }
 
-// ------------------------------- loop ------------------------------ //
-const loopExprTilde: _NodeImplementation['loop'] = ({
+// ------------------------------- generateLoop ------------------------------ //
+const loopExprTilde: _NodeImplementation['generateLoop'] = ({
     node: { args },
     state,
     outs, 
@@ -121,8 +121,8 @@ const loopExprTilde: _NodeImplementation['loop'] = ({
         `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)}
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ 
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
     snds, 
     globs, 
     state, 
@@ -375,28 +375,28 @@ const preprocessExpression = (args: PdJson.NodeArgs): Array<string> => {
 
 const nodeImplementations: NodeImplementations = {
     'expr': {
-        messages,
+        generateMessageReceivers,
         stateVariables,
-        declare,
-        globalCode: [
+        generateDeclarations,
+        dependencies: [
             messageTokenToString,
             messageTokenToFloat,
             roundFloatAsPdInt,
             bangUtils,
-            coreCode.commonsArrays,
+            stdlib.commonsArrays,
         ],
     },
     'expr~': {
-        messages,
+        generateMessageReceivers,
         stateVariables,
-        declare,
-        loop: loopExprTilde,
-        globalCode: [
+        generateDeclarations,
+        generateLoop: loopExprTilde,
+        dependencies: [
             messageTokenToString,
             messageTokenToFloat,
             roundFloatAsPdInt,
             bangUtils,
-            coreCode.commonsArrays,
+            stdlib.commonsArrays,
         ],
     },
 }

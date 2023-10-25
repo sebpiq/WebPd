@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation, NodeImplementations, GlobalCodeGenerator } from '@webpd/compiler/src/types'
+import { Code, NodeImplementation, NodeImplementations, GlobalCodeGenerator } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
 
@@ -39,19 +39,19 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- loop ------------------------------ //
+// ------------------------------- generateLoop ------------------------------ //
 const makeNodeImplementation = ({
     generateOperation,
-    globalCode = [],
+    dependencies = [],
 }: {
     generateOperation: (input: Code) => Code,
-    globalCode?: Array<GlobalCodeGenerator>
+    dependencies?: Array<GlobalCodeGenerator>
 }): _NodeImplementation => {
-    const loop: _NodeImplementation['loop'] = ({ ins, outs }) => `
+    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs }) => `
         ${outs.$0} = ${generateOperation(ins.$0)}
     `
 
-    return { loop, stateVariables, globalCode }
+    return { generateLoop, stateVariables, dependencies }
 }
 
 // ------------------------------------------------------------------- //
@@ -60,8 +60,8 @@ const nodeImplementations: NodeImplementations = {
     'cos~': makeNodeImplementation({ generateOperation: (input) => `Math.cos(${input} * 2 * Math.PI)` }),
     'wrap~': makeNodeImplementation({ generateOperation: (input) => `(1 + (${input} % 1)) % 1` }),
     'sqrt~': makeNodeImplementation({ generateOperation: (input) => `${input} >= 0 ? Math.pow(${input}, 0.5): 0` }),
-    'mtof~': makeNodeImplementation({ generateOperation: (input) => `mtof(${input})`, globalCode: [mtof] }),
-    'ftom~': makeNodeImplementation({ generateOperation: (input) => `ftom(${input})`, globalCode: [ftom] }),
+    'mtof~': makeNodeImplementation({ generateOperation: (input) => `mtof(${input})`, dependencies: [mtof] }),
+    'ftom~': makeNodeImplementation({ generateOperation: (input) => `ftom(${input})`, dependencies: [ftom] }),
 }
 
 const builders = {

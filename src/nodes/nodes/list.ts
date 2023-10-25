@@ -19,7 +19,7 @@
  */
 
 import { Code, DspGraph, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { bangUtils, msgUtils } from '../global-code/core'
@@ -108,8 +108,8 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
     node: { args },
     macros: { Var, Func },
@@ -156,8 +156,8 @@ const declare: _NodeImplementation['declare'] = ({
     }
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ 
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
     snds, 
     globs, 
     state, 
@@ -239,10 +239,10 @@ const messages: _NodeImplementation['messages'] = ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messages,
+    generateMessageReceivers,
     stateVariables,
-    declare,
-    globalCode: [bangUtils, msgUtils]
+    generateDeclarations,
+    dependencies: [bangUtils, msgUtils]
 }
 
 export { builder, nodeImplementation, NodeArguments }

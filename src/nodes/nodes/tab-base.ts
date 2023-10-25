@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation } from '@webpd/compiler/src/types'
+import { Code, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 
@@ -41,7 +41,7 @@ export const translateArgsTabBase: NodeBuilder<NodeArgumentsTabBase>['translateA
         arrayName: assertOptionalString(pdNode.args[0]) || '',
     })
 
-export const declareTabBase: NodeImplementationTabBase['declare'] = (
+export const declareTabBase: NodeImplementationTabBase['generateDeclarations'] = (
     {state, node, macros: { Func, Var }},
 ) => `
     let ${Var(state.array, 'FloatArray')} = createFloatArray(0)
@@ -70,7 +70,7 @@ export const declareTabBase: NodeImplementationTabBase['declare'] = (
 
 export const prepareIndexCode = (
     value: Code,
-    { state }: Parameters<NodeImplementationTabBase['declare']>[0]
+    { state }: Parameters<NodeImplementationTabBase['generateDeclarations']>[0]
 ): Code =>
     `toInt(Math.min(
         Math.max(
@@ -81,7 +81,7 @@ export const prepareIndexCode = (
 export const messageSetArrayCode = ({
     globs,
     state,
-}: Parameters<NodeImplementationTabBase['messages']>[0]): Code =>
+}: Parameters<NodeImplementationTabBase['generateMessageReceivers']>[0]): Code =>
     `else if (
         msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
         && msg_readStringToken(${globs.m}, 0) === 'set'

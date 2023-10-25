@@ -20,7 +20,7 @@
 import {
     GlobalCodeGenerator,
     GlobalCodeGeneratorWithSettings,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 
 export const point: GlobalCodeGenerator = ({ macros: { Var } }) => `
     class Point {

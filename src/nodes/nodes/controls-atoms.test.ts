@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -39,8 +39,8 @@ import {
     CompilerTarget,
     AudioSettings,
     NodeImplementations,
-    Message,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
+import { Message } from '@webpd/compiler/src/run/types'
 import assert from 'assert'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 
@@ -80,7 +80,7 @@ describe('controls-atoms', () => {
                     return value
                 case 'symbolatom':
                     return [value[0].toString()]
-                case 'floatatom': 
+                case 'floatatom':
                     return [value[0]]
             }
         }
@@ -126,7 +126,7 @@ describe('controls-atoms', () => {
                         graph,
                         audioSettings: {
                             bitDepth,
-                        channelCount: { in: 0, out: 0 }
+                            channelCount: { in: 0, out: 0 },
                         },
                         nodeImplementations: _nodeImplementations,
                         inletCallerSpecs: {
@@ -285,11 +285,16 @@ describe('controls-atoms', () => {
                         {
                             target,
                             bitDepth,
-                            node: buildNode(builders['floatatom'], 'floatatom', {
-                                receiveBusName: 'empty',
-                                sendBusName: 'empty',
-                            }),
-                            nodeImplementation: nodeImplementations['floatatom'],
+                            node: buildNode(
+                                builders['floatatom'],
+                                'floatatom',
+                                {
+                                    receiveBusName: 'empty',
+                                    sendBusName: 'empty',
+                                }
+                            ),
+                            nodeImplementation:
+                                nodeImplementations['floatatom'],
                         },
                         // Sending string to inlet 0
                         [
@@ -317,16 +322,18 @@ describe('controls-atoms', () => {
                         {
                             target,
                             bitDepth,
-                            node: buildNode(builders['floatatom'], 'floatatom', {
-                                receiveBusName: 'empty',
-                                sendBusName: 'empty',
-                            }),
-                            nodeImplementation: nodeImplementations['floatatom'],
+                            node: buildNode(
+                                builders['floatatom'],
+                                'floatatom',
+                                {
+                                    receiveBusName: 'empty',
+                                    sendBusName: 'empty',
+                                }
+                            ),
+                            nodeImplementation:
+                                nodeImplementations['floatatom'],
                         },
-                        [
-                            { ins: { '0': [['bang']] } },
-                            { outs: { '0': [[0]] } },
-                        ],
+                        [{ ins: { '0': [['bang']] } }, { outs: { '0': [[0]] } }]
                     )
                 }
             )
@@ -340,11 +347,16 @@ describe('controls-atoms', () => {
                         {
                             target,
                             bitDepth,
-                            node: buildNode(builders['symbolatom'], 'symbolatom', {
-                                receiveBusName: 'empty',
-                                sendBusName: 'empty',
-                            }),
-                            nodeImplementation: nodeImplementations['symbolatom'],
+                            node: buildNode(
+                                builders['symbolatom'],
+                                'symbolatom',
+                                {
+                                    receiveBusName: 'empty',
+                                    sendBusName: 'empty',
+                                }
+                            ),
+                            nodeImplementation:
+                                nodeImplementations['symbolatom'],
                         },
                         // Sending string to inlet 0
                         [
@@ -372,16 +384,21 @@ describe('controls-atoms', () => {
                         {
                             target,
                             bitDepth,
-                            node: buildNode(builders['symbolatom'], 'symbolatom', {
-                                receiveBusName: 'empty',
-                                sendBusName: 'empty',
-                            }),
-                            nodeImplementation: nodeImplementations['symbolatom'],
+                            node: buildNode(
+                                builders['symbolatom'],
+                                'symbolatom',
+                                {
+                                    receiveBusName: 'empty',
+                                    sendBusName: 'empty',
+                                }
+                            ),
+                            nodeImplementation:
+                                nodeImplementations['symbolatom'],
                         },
                         [
                             { ins: { '0': [['bang']] } },
                             { outs: { '0': [['']] } },
-                        ],
+                        ]
                     )
                 }
             )
@@ -403,8 +420,22 @@ describe('controls-atoms', () => {
                         },
                         // Sending string to inlet 0
                         [
-                            { ins: { '0': [['bla', 909], [123, 'hello']] } },
-                            { outs: { '0': [['bla', 909], [123, 'hello']] } },
+                            {
+                                ins: {
+                                    '0': [
+                                        ['bla', 909],
+                                        [123, 'hello'],
+                                    ],
+                                },
+                            },
+                            {
+                                outs: {
+                                    '0': [
+                                        ['bla', 909],
+                                        [123, 'hello'],
+                                    ],
+                                },
+                            },
                         ],
                         // Sending bang to inlet 0
                         [
@@ -436,7 +467,7 @@ describe('controls-atoms', () => {
                         [
                             { ins: { '0': [['bang']] } },
                             { outs: { '0': [['bang']] } },
-                        ],
+                        ]
                     )
                 }
             )

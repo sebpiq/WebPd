@@ -19,7 +19,7 @@
  */
 import {
     CodeVariableName, GlobalCodeGenerator,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import { ValidationError } from './validation'
 
 export type TypeArgument = 'float' | 'bang' | 'symbol' | 'list' | 'anything'

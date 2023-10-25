@@ -20,8 +20,8 @@
 import {
     GlobalCodeGenerator,
     GlobalCodeGeneratorWithSettings,
-} from '@webpd/compiler/src/types'
-import { coreCode } from '@webpd/compiler'
+} from '@webpd/compiler/src/compile/types'
+import { stdlib } from '@webpd/compiler'
 
 // TODO : unit tests
 export const signalBuses: GlobalCodeGenerator = ({ macros: { Var, Func } }) => `
@@ -110,5 +110,5 @@ export const messageBuses: GlobalCodeGeneratorWithSettings = {
         }
     }
 `,
-    dependencies: [coreCode.msg],
+    dependencies: [stdlib.msg],
 }

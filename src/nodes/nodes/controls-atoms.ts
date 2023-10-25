@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, coreCode, functional } from '@webpd/compiler'
-import { CodeVariableName, NodeImplementation } from '@webpd/compiler/src/types'
+import { Code, stdlib, functional } from '@webpd/compiler'
+import { CodeVariableName, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
@@ -31,7 +31,7 @@ export type _NodeImplementation = NodeImplementation<
     typeof stateVariables
 >
 
-// TODO : use standard "unsupported message" from compile-declare
+// TODO : use standard "unsupported message" from compile-generateDeclarations
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<ControlsBaseNodeArguments> = {
     translateArgs: ({ args: [_, __, receive, send] }: PdJson.AtomNode) => ({
@@ -49,8 +49,8 @@ const makeNodeImplementation = ({
     messageMatch?: (messageName: CodeVariableName) => Code
 }): _NodeImplementation => {
 
-    // ------------------------------- declare ------------------------------ //
-    const declare: _NodeImplementation['declare'] = (context) => {
+    // ------------------------------- generateDeclarations ------------------------------ //
+    const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
         const { 
             state,
             globs,
@@ -103,8 +103,8 @@ const makeNodeImplementation = ({
         `
     }
 
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = (context) => {
+    // ------------------------------- generateMessageReceivers ------------------------------ //
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
         const { state, globs } = context
         return ({
             '0': `
@@ -116,14 +116,14 @@ const makeNodeImplementation = ({
 
     // ------------------------------------------------------------------- //
     return {
-        declare,
-        messages,
+        generateDeclarations,
+        generateMessageReceivers,
         stateVariables,
-        globalCode: [
+        dependencies: [
             bangUtils,
             messageBuses,
             msgUtils,
-            coreCode.commonsWaitEngineConfigure,
+            stdlib.commonsWaitEngineConfigure,
         ],
     }
 }

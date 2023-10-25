@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 
 interface NodeArguments {}
@@ -49,20 +49,20 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ state, macros: { Var }}) => `
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, macros: { Var }}) => `
     let ${Var(state.signalMemory, 'Float')} = 0
     let ${Var(state.controlMemory, 'Float')} = 0
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => `
     ${state.signalMemory} = ${outs.$0} = ${ins.$1} < ${state.controlMemory} ? ${ins.$0}: ${state.signalMemory}
     ${state.controlMemory} = ${ins.$1}
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
     '0_message': `
         if (
             msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
@@ -90,10 +90,10 @@ const messages: _NodeImplementation['messages'] = ({ state, globs }) => ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    messages,
-    declare,
+    generateMessageReceivers,
+    generateDeclarations,
 }
 
 export { builder, nodeImplementation, NodeArguments }

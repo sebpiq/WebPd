@@ -20,7 +20,7 @@
 
 import { DspGraph } from '@webpd/compiler'
 import { nodeDefaults } from '@webpd/compiler/src/dsp-graph/test-helpers'
-import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/types'
+import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import {
     makePd,
@@ -39,13 +39,13 @@ export interface NodeImplementationTestParameters {
 
 export const NODE_IMPLEMENTATION_TEST_PARAMETERS: Array<NodeImplementationTestParameters> =
     [
-        // { target: 'javascript', bitDepth: 32, floatArrayType: Float32Array },
+        { target: 'javascript', bitDepth: 32, floatArrayType: Float32Array },
         // { target: 'javascript', bitDepth: 64, floatArrayType: Float64Array },
-        {
-            target: 'assemblyscript',
-            bitDepth: 32,
-            floatArrayType: Float32Array,
-        },
+        // {
+        //     target: 'assemblyscript',
+        //     bitDepth: 32,
+        //     floatArrayType: Float32Array,
+        // },
         // {
         //     target: 'assemblyscript',
         //     bitDepth: 64,

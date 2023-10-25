@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { coreCode, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { stdlib, functional } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
@@ -67,8 +67,8 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ state, node: {args}, macros: { Func, Var } }) => functional.renderCode`
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, node: {args}, macros: { Func, Var } }) => functional.renderCode`
     let ${Var(state.operationId, 'fs_OperationId')} = -1
     let ${Var(state.isWriting, 'boolean')} = false
     const ${Var(state.block, 'Array<FloatArray>')} = [
@@ -88,8 +88,8 @@ const declare: _NodeImplementation['declare'] = ({ state, node: {args}, macros: 
     }
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ state, ins, node: { args } }) => functional.renderCode`
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ state, ins, node: { args } }) => functional.renderCode`
     if (${state.isWriting} === true) {
         ${functional.countTo(args.channelCount).map((i) => 
             `${state.block}[${i}][${state.cursor}] = ${ins[i]}`)}
@@ -100,8 +100,8 @@ const loop: _NodeImplementation['loop'] = ({ state, ins, node: { args } }) => fu
     }
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ node, state, globs, macros: { Var } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node, state, globs, macros: { Var } }) => ({
     '0_message': `
     if (msg_getLength(${globs.m}) >= 2) {
         if (
@@ -161,15 +161,15 @@ const messages: _NodeImplementation['messages'] = ({ node, state, globs, macros:
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare, 
-    messages, 
-    loop, 
+    generateDeclarations, 
+    generateMessageReceivers, 
+    generateLoop, 
     stateVariables,
-    globalCode: [
+    dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,
         stringMsgUtils,
-        coreCode.fsWriteSoundStream,
+        stdlib.fsWriteSoundStream,
     ],
 }
 

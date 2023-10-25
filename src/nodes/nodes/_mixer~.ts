@@ -19,7 +19,7 @@
  */
 
 import { functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
 
@@ -43,14 +43,14 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ node, ins, outs }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ node, ins, outs }) => `
     ${outs.$0} = ${Object.keys(node.inlets)
     .map((inletId) => ins[inletId])
     .join(' + ')}
 `
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { loop, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateLoop, stateVariables }
 
 export { builder, nodeImplementation, NodeArguments }

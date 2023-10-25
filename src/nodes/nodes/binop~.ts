@@ -24,7 +24,7 @@ import {
     NodeImplementation,
     NodeImplementations,
     GlobalCodeGenerator,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { pow } from '../global-code/funcs'
@@ -66,14 +66,14 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 
 const makeNodeImplementation = ({
     generateOperation,
-    globalCode = [],
+    dependencies = [],
 }: {
-    globalCode?: Array<GlobalCodeGenerator>,
+    dependencies?: Array<GlobalCodeGenerator>,
     generateOperation: (leftOp: CodeVariableName, rightOp: CodeVariableName) => Code,
 }): _NodeImplementation => {
-    const loop: _NodeImplementation['loop'] = ({ ins, outs }) =>
+    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs }) =>
         `${outs.$0} = ${generateOperation(ins.$0, ins.$1)}`
-    return { loop, stateVariables, globalCode }
+    return { generateLoop, stateVariables, dependencies }
 }
 
 // ------------------------------------------------------------------- //
@@ -84,7 +84,7 @@ const nodeImplementations: NodeImplementations = {
     '/~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${rightOp} !== 0 ? ${leftOp} / ${rightOp} : 0` }),
     'min~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `Math.min(${leftOp}, ${rightOp})` }),
     'max~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `Math.max(${leftOp}, ${rightOp})` }),
-    'pow~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `pow(${leftOp}, ${rightOp})`, globalCode: [pow] }),
+    'pow~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `pow(${leftOp}, ${rightOp})`, dependencies: [pow] }),
 }
 
 const builders = {

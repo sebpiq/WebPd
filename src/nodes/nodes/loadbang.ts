@@ -18,10 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {}
@@ -37,15 +37,15 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ snds }) => 
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ snds }) => 
     `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    declare, 
+    generateDeclarations, 
     stateVariables,
-    globalCode: [ bangUtils, coreCode.commonsWaitFrame ],
+    dependencies: [ bangUtils, stdlib.commonsWaitFrame ],
 }
 
 export { 

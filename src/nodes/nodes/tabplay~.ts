@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = {
@@ -54,8 +54,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = (
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = (
     {state, node, macros: { Func, Var }},
 ) => `
     let ${Var(state.array, 'FloatArray')} = createFloatArray(0)
@@ -103,8 +103,8 @@ const declare: _NodeImplementation['declare'] = (
     })
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = (
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = (
     {state, snds, outs},
 ) => `
     if (${state.readPosition} < ${state.readUntil}) {
@@ -118,8 +118,8 @@ const loop: _NodeImplementation['loop'] = (
     }
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs, macros: { Var } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, macros: { Var } }) => ({
     '0': `
     if (msg_isBang(${globs.m})) {
         ${state.funcPlay}(0, ${state.array}.length)
@@ -156,14 +156,14 @@ const messages: _NodeImplementation['messages'] = ({ state, globs, macros: { Var
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
-    loop,
+    generateDeclarations,
+    generateMessageReceivers,
+    generateLoop,
     stateVariables,
-    globalCode: [
+    dependencies: [
         bangUtils,
-        coreCode.commonsWaitEngineConfigure,
-        coreCode.commonsArrays,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsArrays,
         stringMsgUtils,
     ],
 }

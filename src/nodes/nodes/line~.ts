@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
@@ -60,8 +60,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     globs,
     state,
     node: { args },
@@ -116,8 +116,8 @@ const declare: _NodeImplementation['declare'] = ({
     }
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ globs, state, macros: { Var } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state, macros: { Var } }) => ({
     '0': `
     if (
         msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])
@@ -141,8 +141,8 @@ const messages: _NodeImplementation['messages'] = ({ globs, state, macros: { Var
     '1': coldFloatInletWithSetter(globs.m, state.funcSetNextDuration),
 })
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ outs, state, globs }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => `
     ${outs.$0} = ${state.currentValue}
     if (toFloat(${globs.frame}) < ${state.currentLine}.p1.x) {
         ${state.currentValue} += ${state.currentLine}.dy
@@ -154,11 +154,11 @@ const loop: _NodeImplementation['loop'] = ({ outs, state, globs }) => `
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
-    loop,
+    generateDeclarations,
+    generateMessageReceivers,
+    generateLoop,
     stateVariables,
-    globalCode: [stringMsgUtils, computeUnitInSamples, linesUtils]
+    dependencies: [stringMsgUtils, computeUnitInSamples, linesUtils]
 }
 
 export { builder, nodeImplementation, NodeArguments }

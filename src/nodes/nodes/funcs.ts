@@ -22,7 +22,7 @@ import {
     NodeImplementation,
     NodeImplementations,
     GlobalCodeGenerator,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
 
@@ -48,14 +48,14 @@ const builder: NodeBuilder<NodeArguments> = {
 
 const makeNodeImplementation = ({
     operationCode,
-    globalCode = [],
+    dependencies = [],
 }: {
     operationCode: Code,
-    globalCode?: Array<GlobalCodeGenerator>
+    dependencies?: Array<GlobalCodeGenerator>
 }): _NodeImplementation => {
 
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = ({ globs, snds, macros: { Var } }) => ({
+    // ------------------------------- generateMessageReceivers ------------------------------ //
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, snds, macros: { Var } }) => ({
         '0': `
         if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
             const ${Var('value', 'Float')} = msg_readFloatToken(${globs.m}, 0)
@@ -65,7 +65,7 @@ const makeNodeImplementation = ({
         `
     })
 
-    return { messages, stateVariables, globalCode }
+    return { generateMessageReceivers, stateVariables, dependencies }
 }
 
 // ------------------------------------------------------------------- //
@@ -74,8 +74,8 @@ const nodeImplementations: NodeImplementations = {
     'wrap': makeNodeImplementation({ operationCode: `(1 + (value % 1)) % 1` }),
     'cos': makeNodeImplementation({ operationCode: `Math.cos(value)` }),
     'sqrt': makeNodeImplementation({ operationCode: `value >= 0 ? Math.pow(value, 0.5): 0` }),
-    'mtof': makeNodeImplementation({ operationCode: `mtof(value)`, globalCode: [mtof] }),
-    'ftom': makeNodeImplementation({ operationCode: `ftom(value)`, globalCode: [ftom] }),
+    'mtof': makeNodeImplementation({ operationCode: `mtof(value)`, dependencies: [mtof] }),
+    'ftom': makeNodeImplementation({ operationCode: `ftom(value)`, dependencies: [ftom] }),
     'rmstodb': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : 20 * Math.log(value) / Math.LN10 + 100` }),
     'dbtorms': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : Math.exp(Math.LN10 * (value - 100) / 20)` }),
     'powtodb': makeNodeImplementation({ operationCode: `value <= 0 ? 0 : 10 * Math.log(value) / Math.LN10 + 100` }),

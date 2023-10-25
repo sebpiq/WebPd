@@ -22,7 +22,7 @@ import { Code } from '@webpd/compiler'
 import {
     NodeImplementation,
     NodeImplementations,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
@@ -60,9 +60,9 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
+// ------------------------------- generateDeclarations ------------------------------ //
 const makeDeclare =
-    (prepareValueCode: Code = 'value'): _NodeImplementation['declare'] =>
+    (prepareValueCode: Code = 'value'): _NodeImplementation['generateDeclarations'] =>
     ({ node: { args }, state, macros: { Var, Func } }) =>
     `
         let ${Var(state.value, 'Float')} = 0
@@ -74,8 +74,8 @@ const makeDeclare =
         ${state.funcSetValue}(${args.value})
     `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
     globs,
     state,
@@ -106,16 +106,16 @@ const builders = {
 
 const nodeImplementations: NodeImplementations = {
     float: {
-        declare: makeDeclare(),
-        messages,
+        generateDeclarations: makeDeclare(),
+        generateMessageReceivers,
         stateVariables,
-        globalCode: [bangUtils],
+        dependencies: [bangUtils],
     },
     int: {
-        declare: makeDeclare('roundFloatAsPdInt(value)'),
-        messages,
+        generateDeclarations: makeDeclare('roundFloatAsPdInt(value)'),
+        generateMessageReceivers,
         stateVariables,
-        globalCode: [roundFloatAsPdInt, bangUtils],
+        dependencies: [roundFloatAsPdInt, bangUtils],
     },
 }
 

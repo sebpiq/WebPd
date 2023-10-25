@@ -18,10 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = stateVariablesTabBase
@@ -40,11 +40,11 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = declareTabBase
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = declareTabBase
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = (context) => {
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
     const { snds, state, globs } = context
     return {
         '0': `
@@ -64,10 +64,10 @@ const messages: _NodeImplementation['messages'] = (context) => {
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
+    generateDeclarations,
+    generateMessageReceivers,
     stateVariables,
-    globalCode: [coreCode.commonsWaitEngineConfigure, coreCode.commonsArrays]
+    dependencies: [stdlib.commonsWaitEngineConfigure, stdlib.commonsArrays]
 }
 
 export { 

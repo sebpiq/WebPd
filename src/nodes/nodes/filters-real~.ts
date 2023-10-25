@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
+import { Code, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 
@@ -69,8 +69,8 @@ const makeNodeImplementation = ({
     ) => Code
 }): _NodeImplementation => {
 
-    // ------------------------------- declare ------------------------------ //
-    const declare: _NodeImplementation['declare'] = ({
+    // ------------------------------- generateDeclarations ------------------------------ //
+    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         state,
         macros: { Var },
     }) => `
@@ -78,16 +78,16 @@ const makeNodeImplementation = ({
         let ${Var(state.lastInput, 'Float')} = 0
     `
 
-    // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => `
+    // ------------------------------- generateLoop ------------------------------ //
+    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => `
         ${state.lastOutput} = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, state.lastOutput, state.lastInput)}
         ${state.lastInput} = ${ins.$0}
     `
 
     return {
-        loop,
+        generateLoop,
         stateVariables,
-        declare,
+        generateDeclarations,
     }
 }
 

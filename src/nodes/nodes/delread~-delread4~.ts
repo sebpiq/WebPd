@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { coreCode } from '@webpd/compiler'
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/types'
+import { stdlib } from '@webpd/compiler'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
@@ -60,8 +60,8 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 const makeNodeImplementation = (): _NodeImplementation => {
-    // ------------------------------- declare ------------------------------ //
-    const declare: _NodeImplementation['declare'] = ({ 
+    // ------------------------------- generateDeclarations ------------------------------ //
+    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
         state, 
         node: { args }, 
         macros: { Var, Func }
@@ -90,8 +90,8 @@ const makeNodeImplementation = (): _NodeImplementation => {
         })
     `
 
-    // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ globs, outs, ins, state }) => `
+    // ------------------------------- generateLoop ------------------------------ //
+    const generateLoop: _NodeImplementation['generateLoop'] = ({ globs, outs, ins, state }) => `
         ${outs.$0} = buf_readSample(${state.buffer}, toInt(Math.round(
             Math.min(
                 Math.max(computeUnitInSamples(${globs.sampleRate}, ${ins.$0}, "msec"), 0), 
@@ -102,14 +102,14 @@ const makeNodeImplementation = (): _NodeImplementation => {
 
     // ------------------------------------------------------------------- //
     return {
-        loop,
+        generateLoop,
         stateVariables,
-        declare,
-        globalCode: [
+        generateDeclarations,
+        dependencies: [
             computeUnitInSamples,
             delayBuffers,
-            coreCode.commonsWaitEngineConfigure,
-            coreCode.bufWriteRead,
+            stdlib.commonsWaitEngineConfigure,
+            stdlib.bufWriteRead,
         ],
     }
 

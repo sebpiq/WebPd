@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { coreCode, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { stdlib, functional } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
@@ -68,8 +68,8 @@ const builder: NodeBuilder<NodeArguments> = {
     })
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     macros: { Var },
     state,
 }) => `
@@ -78,8 +78,8 @@ const declare: _NodeImplementation['declare'] = ({
     let ${Var(state.readingStatus, 'Int')} = 0
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({
     state,
     snds,
     outs,
@@ -109,8 +109,8 @@ const loop: _NodeImplementation['loop'] = ({
     }
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     node,
     state,
     globs,
@@ -188,16 +188,16 @@ const messages: _NodeImplementation['messages'] = ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
-    loop,
+    generateDeclarations,
+    generateMessageReceivers,
+    generateLoop,
     stateVariables,
-    globalCode: [
+    dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,
         bangUtils,
         stringMsgUtils,
-        coreCode.fsReadSoundStream,
+        stdlib.fsReadSoundStream,
     ],
 }
 

@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { coreCode, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { stdlib, functional } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
@@ -45,8 +45,8 @@ const builder: NodeBuilder<NodeArguments> = {
     build,
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = (context) => {
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
     const { 
         state,
         snds,
@@ -78,8 +78,8 @@ const declare: _NodeImplementation['declare'] = (context) => {
     `
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = (context) => {
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
     const { state, globs } = context
     return ({
         '0': `
@@ -91,14 +91,14 @@ const messages: _NodeImplementation['messages'] = (context) => {
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
+    generateDeclarations,
+    generateMessageReceivers,
     stateVariables,
-    globalCode: [
+    dependencies: [
         bangUtils,
         messageBuses,
-        coreCode.commonsWaitEngineConfigure,
-        coreCode.commonsWaitFrame,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

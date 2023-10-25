@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 
@@ -61,8 +61,8 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
     macros: { Var },
 }) => `
@@ -72,9 +72,9 @@ const declare: _NodeImplementation['declare'] = ({
     let ${Var(state.normal, 'Float')} = 0
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, state, outs, globs }) => `
-    ${state.coeff} = Math.min(Math.max(1 - freq * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => `
+    ${state.coeff} = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
     ${state.normal} = 0.5 * (1 + ${state.coeff})
     ${state.current} = ${ins.$0} + ${state.coeff} * ${state.previous}
     ${outs.$0} = ${state.normal} * (${state.current} - ${state.previous})
@@ -82,9 +82,9 @@ const loop: _NodeImplementation['loop'] = ({ ins, state, outs, globs }) => `
 `
 
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    declare,
+    generateDeclarations,
 }
 
 // ------------------------------------------------------------------- //

@@ -18,14 +18,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments {
     initValue: number
@@ -73,8 +73,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     globs,
     state,
     snds,
@@ -175,8 +175,8 @@ const declare: _NodeImplementation['declare'] = ({
     })
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ snds, globs, state, macros: { Var } }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state, macros: { Var } }) => ({
     '0': `
     if (
         msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])
@@ -224,15 +224,15 @@ const messages: _NodeImplementation['messages'] = ({ snds, globs, state, macros:
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    declare,
-    messages,
+    generateDeclarations,
+    generateMessageReceivers,
     stateVariables,
-    globalCode: [
+    dependencies: [
         stringMsgUtils,
         computeUnitInSamples,
         linesUtils,
-        coreCode.commonsWaitEngineConfigure,
-        coreCode.commonsWaitFrame,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

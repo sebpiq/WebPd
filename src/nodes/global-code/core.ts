@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { coreCode } from '@webpd/compiler'
-import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/types'
+import { stdlib } from '@webpd/compiler'
+import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
 
 export const bangUtils: GlobalCodeGeneratorWithSettings = {
     codeGenerator: ({ macros: { Func, Var } }) => `
@@ -43,7 +43,7 @@ export const bangUtils: GlobalCodeGeneratorWithSettings = {
         }
     }
 `,
-    dependencies: [coreCode.msg],
+    dependencies: [stdlib.msg],
 }
 
 export const msgUtils: GlobalCodeGeneratorWithSettings = {
@@ -124,7 +124,7 @@ export const msgUtils: GlobalCodeGeneratorWithSettings = {
         }
     }
 `,
-    dependencies: [coreCode.msg],
+    dependencies: [stdlib.msg],
 }
 
 export const stringMsgUtils: GlobalCodeGeneratorWithSettings = {
@@ -137,5 +137,5 @@ export const stringMsgUtils: GlobalCodeGeneratorWithSettings = {
             && msg_readStringToken(message, 0) === action
     }
 `,
-    dependencies: [coreCode.msg],
+    dependencies: [stdlib.msg],
 }

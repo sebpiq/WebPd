@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { messageBuses } from '../global-code/buses'
-import { coreCode } from '@webpd/compiler'
+import { stdlib } from '@webpd/compiler'
 
 interface NodeArguments {
     busName: string
@@ -47,8 +47,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     compilation: { codeVariableNames: { nodes } },
     node: { id, args },
 }) => `
@@ -60,8 +60,8 @@ const declare: _NodeImplementation['declare'] = ({
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     stateVariables,
-    declare,
-    globalCode: [messageBuses, coreCode.commonsWaitEngineConfigure],
+    generateDeclarations,
+    dependencies: [messageBuses, stdlib.commonsWaitEngineConfigure],
 }
 
 export { builder, nodeImplementation, NodeArguments }

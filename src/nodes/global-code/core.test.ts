@@ -20,7 +20,7 @@
 
 import { runTestSuite } from '@webpd/compiler/src/test-helpers'
 import { bangUtils, msgUtils } from './core'
-import { core, msg } from '@webpd/compiler/src/core-code'
+import { stdlib } from '@webpd/compiler'
 
 describe('global-code.core', () => {
     runTestSuite([
@@ -135,5 +135,5 @@ describe('global-code.core', () => {
 
             `
         },
-    ], [core, msg, bangUtils, msgUtils])
+    ], [stdlib.core, stdlib.msg, bangUtils, msgUtils])
 })

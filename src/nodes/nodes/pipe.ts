@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { coreCode, functional } from '@webpd/compiler'
-import { NodeImplementation, GlobalCodeDefinition } from '@webpd/compiler/src/types'
+import { stdlib, functional } from '@webpd/compiler'
+import { NodeImplementation, GlobalCodeDefinition } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
@@ -90,7 +90,7 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- globalCode ------------------------------ //
+// ------------------------------- dependencies ------------------------------ //
 const pipeGlobalCode: GlobalCodeDefinition = ({ macros: { Var }}) => `
     class pipe_ScheduledMessage {
         ${Var('message', 'Message')}
@@ -99,8 +99,8 @@ const pipeGlobalCode: GlobalCodeDefinition = ({ macros: { Var }}) => `
     }
 `
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
     globs,
     snds,
@@ -224,8 +224,8 @@ const declare: _NodeImplementation['declare'] = ({
     })
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ node, snds, globs, state }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node, snds, globs, state }) => ({
     '0': functional.renderCode`
     if (msg_isBang(${globs.m})) {
         ${state.funcScheduleMessage}(msg_create([]))
@@ -261,17 +261,17 @@ const messages: _NodeImplementation['messages'] = ({ node, snds, globs, state })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messages, 
+    generateMessageReceivers, 
     stateVariables, 
-    declare,
-    globalCode: [
+    generateDeclarations,
+    dependencies: [
         pipeGlobalCode,
         messageTokenToFloat, 
         messageTokenToString,
         bangUtils,
         stringMsgUtils,
-        coreCode.commonsWaitEngineConfigure,
-        coreCode.commonsWaitFrame,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

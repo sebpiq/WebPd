@@ -40,8 +40,10 @@ import {
     CompilerTarget,
     AudioSettings,
     NodeImplementations,
+} from '@webpd/compiler/src/compile/types'
+import {
     Message,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/run/types'
 import assert from 'assert'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 

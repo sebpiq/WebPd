@@ -23,7 +23,7 @@ import {
     AudioSettings,
     CompilerTarget,
     NodeImplementations,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import {
     nodeImplementation as nodeImplementationThrow,
     builder as builderThrow,
@@ -80,7 +80,7 @@ describe('throw~ / catch~', () => {
                 'catch~': nodeImplementationCatch,
                 'dac~': nodeImplementationDac,
                 counter: {
-                    loop: ({ globs, outs }) =>
+                    generateLoop: ({ globs, outs }) =>
                         `${outs.$0} = toFloat(${globs.frame})`,
                 },
             }

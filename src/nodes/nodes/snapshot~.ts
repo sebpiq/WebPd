@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 
@@ -49,18 +49,18 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ state, macros: { Var }}) => `
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, macros: { Var }}) => `
     let ${Var(state.currentValue, 'Float')} = 0
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, state }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => `
     ${state.currentValue} = ${ins.$0}
 `
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ state, globs, snds }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds }) => ({
     '0_message': `
         if (msg_isBang(${globs.m})) {
             ${snds.$0}(msg_floats([${state.currentValue}]))
@@ -71,11 +71,11 @@ const messages: _NodeImplementation['messages'] = ({ state, globs, snds }) => ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    messages,
-    declare,
-    globalCode: [ bangUtils ]
+    generateMessageReceivers,
+    generateDeclarations,
+    dependencies: [ bangUtils ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

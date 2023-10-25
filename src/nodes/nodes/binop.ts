@@ -23,7 +23,7 @@ import {
     NodeImplementation,
     NodeImplementations,
     GlobalCodeGenerator,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
@@ -65,19 +65,19 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 
 const makeNodeImplementation = ({
     generateOperation,
-    globalCode = [],
+    dependencies = [],
     prepareLeftOp = 'value',
     prepareRightOp = 'value',
 }: {
     generateOperation: (
-        state: Parameters<_NodeImplementation['messages']>[0]['state']
+        state: Parameters<_NodeImplementation['generateMessageReceivers']>[0]['state']
     ) => Code
-    globalCode?: Array<GlobalCodeGenerator>,
+    dependencies?: Array<GlobalCodeGenerator>,
     prepareLeftOp?: Code
     prepareRightOp?: Code
 }): _NodeImplementation => {
-    // ------------------------------ declare ------------------------------ //
-    const declare: _NodeImplementation['declare'] = ({
+    // ------------------------------ generateDeclarations ------------------------------ //
+    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         state,
         macros: { Var, Func },
         node: { args },
@@ -103,8 +103,8 @@ const makeNodeImplementation = ({
         ${state.funcSetRightOp}(${args.value})
     `
 
-    // ------------------------------- messages ------------------------------ //
-    const messages: _NodeImplementation['messages'] = ({
+    // ------------------------------- generateMessageReceivers ------------------------------ //
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
         state,
         globs,
         snds,
@@ -125,10 +125,10 @@ const makeNodeImplementation = ({
     })
 
     return {
-        declare,
-        messages,
+        generateDeclarations,
+        generateMessageReceivers,
         stateVariables,
-        globalCode: [bangUtils, ...globalCode],
+        dependencies: [bangUtils, ...dependencies],
     }
 }
 
@@ -168,7 +168,7 @@ const nodeImplementations: NodeImplementations = {
     }),
     pow: makeNodeImplementation({
         generateOperation: (state) => `pow(${state.leftOp}, ${state.rightOp})`,
-        globalCode: [pow],
+        dependencies: [pow],
     }),
     log: makeNodeImplementation({
         generateOperation: (state) => `Math.log(${state.leftOp}) / Math.log(${state.rightOp})`,

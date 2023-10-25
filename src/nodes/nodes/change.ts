@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
@@ -49,16 +49,16 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node,
     state,
     macros: { Var },
 }) => 
     `let ${Var(state.currentValue, 'Float')} = ${node.args.initValue}`
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
     globs,
     state,
@@ -89,10 +89,10 @@ const messages: _NodeImplementation['messages'] = ({
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messages,
+    generateMessageReceivers,
     stateVariables,
-    declare,
-    globalCode: [bangUtils],
+    generateDeclarations,
+    dependencies: [bangUtils],
 }
 
 export { builder, nodeImplementation, NodeArguments }

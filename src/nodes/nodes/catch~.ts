@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { signalBuses } from '../global-code/buses'
@@ -45,8 +45,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = ({ 
+// ------------------------------- generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state, 
     node: { args }, 
     macros: { Var, Func }
@@ -65,18 +65,18 @@ const declare: _NodeImplementation['declare'] = ({
     ${state.funcSetBusName}("${args.busName}")
 `
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ outs, state }) => `
+// ------------------------------- generateLoop ------------------------------ //
+const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state }) => `
     ${outs.$0} = readSignalBus(${state.busName})
     resetSignalBus(${state.busName})
 `
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop,
+    generateLoop,
     stateVariables,
-    declare,
-    globalCode: [ signalBuses ]
+    generateDeclarations,
+    dependencies: [ signalBuses ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

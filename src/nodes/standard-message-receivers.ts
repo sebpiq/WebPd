@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { CodeVariableName } from '@webpd/compiler/src/types'
+import { CodeVariableName } from '@webpd/compiler/src/compile/types'
 
 export const coldFloatInlet = (
     messageName: CodeVariableName,

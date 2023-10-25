@@ -27,7 +27,7 @@ import {
 import { nodeImplementation, builder } from './line'
 import { FrameNodeIn, FrameNodeOut } from '@webpd/compiler/src/test-helpers-node-implementations'
 import assert from 'assert'
-import { Message } from '@webpd/compiler/src/types'
+import { Message } from '@webpd/compiler/src/run/types'
 
 describe('line', () => {
     describe('builder', () => {

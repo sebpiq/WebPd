@@ -23,7 +23,7 @@ import {
     AudioSettings,
     CompilerTarget,
     NodeImplementations,
-} from '@webpd/compiler/src/types'
+} from '@webpd/compiler/src/compile/types'
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
@@ -97,7 +97,7 @@ describe('dac~', () => {
             const nodeImplementations: NodeImplementations = {
                 'dac~': nodeImplementation,
                 counter: {
-                    loop: ({ globs, outs }) => functional.renderCode`
+                    generateLoop: ({ globs, outs }) => functional.renderCode`
                         ${functional
                             .countTo(args.channelMapping.length)
                             .map(

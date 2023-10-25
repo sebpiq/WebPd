@@ -19,7 +19,7 @@
  */
 
 import { DspGraph, functional } from '@webpd/compiler'
-import { Code, NodeImplementation } from '@webpd/compiler/src/types'
+import { Code, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 
 interface NodeArguments { templates: Array<Array<DspGraph.NodeArgument>> }
@@ -66,8 +66,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ declare ------------------------------ //
-const declare: _NodeImplementation['declare'] = (context) => {
+// ------------------------------ generateDeclarations ------------------------------ //
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
     const {
         state,
         node,
@@ -98,8 +98,8 @@ const declare: _NodeImplementation['declare'] = (context) => {
     `
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
     state,
     globs,
@@ -151,7 +151,7 @@ const messages: _NodeImplementation['messages'] = ({
 }
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {declare, messages, stateVariables}
+const nodeImplementation: _NodeImplementation = {generateDeclarations, generateMessageReceivers, stateVariables}
 
 export { 
     builder,
@@ -160,7 +160,7 @@ export {
 }
 
 const buildMsgTransferCode = (
-    { state, macros: { Var } }: Parameters<_NodeImplementation['declare']>[0],
+    { state, macros: { Var } }: Parameters<_NodeImplementation['generateDeclarations']>[0],
     template: Array<DspGraph.NodeArgument>, 
     index: number,
 ) => {

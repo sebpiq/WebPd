@@ -19,7 +19,7 @@
  */
 import { interpolateLin } from './points'
 import { runTestSuite } from '@webpd/compiler/src/test-helpers'
-import { core } from '@webpd/compiler/src/core-code'
+import { stdlib } from '@webpd/compiler'
 
 describe('global-code.points', () => {
     runTestSuite([
@@ -52,5 +52,5 @@ describe('global-code.points', () => {
                 ), 32)
             `
         },
-    ], [core, interpolateLin])
+    ], [stdlib.core, interpolateLin])
 })

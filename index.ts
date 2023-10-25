@@ -1,5 +1,5 @@
 export * as Build from './src/build'
-export * as Runtime from './src/runtime'
+export * as Run from './src/run'
 export * as AppGenerator from './src/app-generator'
 
 export { DspGraph, Message } from '@webpd/compiler'

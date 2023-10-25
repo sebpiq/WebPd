@@ -19,7 +19,7 @@
  */
 
 import { functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertString } from '../validation'
 import { bangUtils } from '../global-code/core'
@@ -62,8 +62,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- messages ------------------------------ //
-const messages: _NodeImplementation['messages'] = ({ snds, globs, node: { args: { typeArguments }} }) => ({
+// ------------------------------- generateMessageReceivers ------------------------------ //
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, node: { args: { typeArguments }} }) => ({
     '0': functional.renderCode`
         ${typeArguments.reverse().map((typeArg, i) => 
             `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, globs.m, 0)})`
@@ -74,9 +74,9 @@ const messages: _NodeImplementation['messages'] = ({ snds, globs, node: { args: 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    messages, 
+    generateMessageReceivers, 
     stateVariables, 
-    globalCode: [ 
+    dependencies: [ 
         messageTokenToFloat, 
         messageTokenToString,
         bangUtils,
