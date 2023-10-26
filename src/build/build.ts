@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 import compile from '@webpd/compiler'
 import parse from '@webpd/pd-parser'
 import appGenerator from '../app-generator/generate-app'
@@ -27,21 +28,11 @@ import {
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
 import { compileAsc } from './asc'
 import { renderWav } from './audio'
-import { getArtefact, stringifyArrayBuffer } from './helpers'
-import { Artefacts, BuildFormat, BUILD_FORMATS, Settings } from './types'
-
-type BuildTree = Array<BuildFormat | BuildTree>
-export const BUILD_TREE: BuildTree = [
-    'pd',
-    'pdJson',
-    'dspGraph',
-    [
-        ['compiledJs', 'wav'],
-        ['compiledAsc', 'wasm', 'wav'],
-        ['compiledAsc', 'wasm', 'appTemplate'],
-        ['compiledJs', 'appTemplate'],
-    ],
-]
+import { UnknownNodeTypeError, getArtefact, stringifyArrayBuffer } from './helpers'
+import { Artefacts, Settings } from './types'
+import { BuildFormat, listBuildSteps } from './formats'
+import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes'
+import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 
 interface BuildSuccess {
     status: 0
@@ -56,47 +47,124 @@ interface BuildFailure {
 
 export type BuildResult = BuildSuccess | BuildFailure
 
+/**
+ * Simple build function to compile a Pd patch into compiled code
+ * that can be directly run into a web app.
+ * 
+ * Throws an error if the build fails.
+ * 
+ * @see performBuildStep
+ */
+export const buildRunnable = async (
+    pdFile: string,
+    format: 'compiledJs' | 'wasm' = 'compiledJs',
+    settings: Settings,
+) => {
+    if (!['wasm', 'compiledJs'].includes(format)) {
+        throw new Error(`Invalid out format ${format}`)
+    }
+
+    const artefacts: Artefacts = { 'pd': pdFile }
+    for (const step of listBuildSteps('pd', format)) {
+        const result = await performBuildStep(
+            artefacts,
+            step, 
+            settings
+        )
+        if (result.status === 1) {
+            throw new Error(`Build failed : ${result.errors.join('\n')}`)
+        }
+    }
+    return artefacts[format]
+}
+
+export const createDefaultSettings = (): Settings => ({
+    audioSettings: {
+        channelCount: {
+            in: 2,
+            out: 2,
+        },
+        bitDepth: 64,
+    },
+    renderAudioSettings: {
+        sampleRate: 44100,
+        blockSize: 4096,
+        previewDurationSeconds: 30,
+    },
+    abstractionLoader: alwaysFailingAbstractionLoader,
+    nodeBuilders: NODE_BUILDERS,
+    nodeImplementations: NODE_IMPLEMENTATIONS,
+})
+
+const alwaysFailingAbstractionLoader: AbstractionLoader = async (nodeType) => {
+    throw new UnknownNodeTypeError(nodeType)
+}
+
+/**
+ * @returns an empty artefacts object.
+ */
 export const createArtefacts = (): Artefacts => ({})
 
-export const preloadArtefact = (
+/**
+ * Helper to unpack an artefact from an ArrayBuffer into its correct format.
+ * Useful for example to load artefacts from files or http requests.
+ * 
+ * @returns a new artefacts object.
+ */
+export const loadArtefact = (
     artefacts: Artefacts,
-    inBuffer: ArrayBuffer,
-    inFormat: BuildFormat
+    artefactBuffer: ArrayBuffer,
+    artefactFormat: BuildFormat
 ): Artefacts => {
-    switch (inFormat) {
+    switch (artefactFormat) {
         case 'pd':
-            return { ...artefacts, pd: stringifyArrayBuffer(inBuffer) }
+            return { ...artefacts, pd: stringifyArrayBuffer(artefactBuffer) }
         case 'pdJson':
             return {
                 ...artefacts,
-                pdJson: JSON.parse(stringifyArrayBuffer(inBuffer)),
+                pdJson: JSON.parse(stringifyArrayBuffer(artefactBuffer)),
             }
         case 'dspGraph':
             return {
                 ...artefacts,
-                dspGraph: JSON.parse(stringifyArrayBuffer(inBuffer)),
+                dspGraph: JSON.parse(stringifyArrayBuffer(artefactBuffer)),
             }
         case 'compiledJs':
-            return { ...artefacts, compiledJs: stringifyArrayBuffer(inBuffer) }
+            return { ...artefacts, compiledJs: stringifyArrayBuffer(artefactBuffer) }
         case 'compiledAsc':
-            return { ...artefacts, compiledAsc: stringifyArrayBuffer(inBuffer) }
+            return { ...artefacts, compiledAsc: stringifyArrayBuffer(artefactBuffer) }
         case 'wasm':
-            return { ...artefacts, wasm: inBuffer }
+            return { ...artefacts, wasm: artefactBuffer }
         case 'wav':
-            return { ...artefacts, wav: new Uint8Array(inBuffer) }
+            return { ...artefacts, wav: new Uint8Array(artefactBuffer) }
 
         default:
-            throw new Error(`Unexpected format for preloading ${inFormat}`)
+            throw new Error(`Unexpected format for preloading ${artefactFormat}`)
     }
 }
 
+/**
+ * A helper to perform a build step on a given artefacts object.
+ * If the build is successful, the artefacts object is updated in place with 
+ * the newly built artefact.
+ * 
+ * Beware that this can only build one step at a time. If targetting a given format 
+ * requires multiple steps, you need to call this function multiple times with intermediate targets.
+ * 
+ * @see fromPatch
+ * 
+ * @param artefacts 
+ * @param target
+ * @param settings
+ */
 export const performBuildStep = async (
     artefacts: Artefacts,
-    buildStep: BuildFormat,
+    target: BuildFormat,
     {
         nodeBuilders,
         nodeImplementations,
         audioSettings,
+        renderAudioSettings,
         inletCallerSpecs,
         abstractionLoader,
     }: Settings
@@ -104,7 +172,7 @@ export const performBuildStep = async (
     let warnings: Array<string> = []
     let errors: Array<string> = []
 
-    switch (buildStep) {
+    switch (target) {
         case 'pdJson':
             const parseResult = parse(artefacts.pd!)
             if (parseResult.status === 0) {
@@ -201,7 +269,7 @@ export const performBuildStep = async (
                 nodeImplementations,
                 {
                     target:
-                        buildStep === 'compiledJs'
+                        target === 'compiledJs'
                             ? 'javascript'
                             : 'assemblyscript',
                     audioSettings,
@@ -210,7 +278,7 @@ export const performBuildStep = async (
                 }
             )
             if (compileCodeResult.status === 0) {
-                if (buildStep === 'compiledJs') {
+                if (target === 'compiledJs') {
                     artefacts.compiledJs = compileCodeResult.code
                 } else {
                     artefacts.compiledAsc = compileCodeResult.code
@@ -237,9 +305,9 @@ export const performBuildStep = async (
 
         case 'wav':
             artefacts.wav = await renderWav(
-                audioSettings.previewDurationSeconds,
+                renderAudioSettings.previewDurationSeconds,
                 artefacts,
-                audioSettings
+                {...audioSettings, ...renderAudioSettings}
             )
             return { status: 0, warnings: [] }
 
@@ -248,51 +316,9 @@ export const performBuildStep = async (
             return { status: 0, warnings: [] }
 
         default:
-            throw new Error(`invalid build step ${buildStep}`)
+            throw new Error(`invalid build step ${target}`)
     }
 }
-
-export const guessFormat = (filepath: string): BuildFormat | null => {
-    const formats = Object.entries(BUILD_FORMATS).filter(([_, specs]) => {
-        if (
-            specs.extensions.some((extension) => filepath.endsWith(extension))
-        ) {
-            return true
-        }
-        return false
-    })
-    if (formats.length === 0) {
-        return null
-    }
-    return formats[0][0] as BuildFormat
-}
-
-export const listBuildSteps = (
-    inFormat: BuildFormat,
-    outFormat: BuildFormat,
-    intermediateStep?: BuildFormat
-): Array<BuildFormat> => {
-    let paths = _findBuildPaths(BUILD_TREE, outFormat, [])
-        .filter((path) => path.includes(inFormat))
-        .map((path) => path.slice(path.indexOf(inFormat) + 1))
-
-    if (intermediateStep) {
-        paths = paths.filter((path) => path.includes(intermediateStep))
-    }
-
-    if (paths.length === 0) {
-        return null
-    }
-    return paths[0]
-}
-
-export const listOutputFormats = (inFormat: BuildFormat): Set<BuildFormat> =>
-    new Set(
-        _traverseBuildTree(BUILD_TREE, [])
-            .filter((path) => path.includes(inFormat))
-            .map((path) => path.slice(path.indexOf(inFormat) + 1))
-            .flat()
-    )
 
 const _makeUnknownNodeTypeMessage = (nodeTypeSet: Set<string>) => [
     `Unknown object types ${Array.from(nodeTypeSet)
@@ -301,43 +327,8 @@ const _makeUnknownNodeTypeMessage = (nodeTypeSet: Set<string>) => [
 ]
 
 const _makeParseErrorMessages = (
-    errorOrWarnings: Array<{ message: string; lineIndex: number }>
-) =>
-    errorOrWarnings.map(
-        ({ message, lineIndex }) => `line ${lineIndex + 1} : ${message}`
-    )
+    errorOrWarnings: Array<{ message: string; lineIndex: number} >
+) => errorOrWarnings.map(
+    ({ message, lineIndex }) => `line ${lineIndex + 1} : ${message}`
+)
 
-export const _findBuildPaths = (
-    branch: BuildTree,
-    target: BuildFormat,
-    parentPath: Array<BuildFormat>
-): Array<Array<BuildFormat>> => {
-    let path: Array<BuildFormat> = [...parentPath]
-    return branch.flatMap((node) => {
-        if (Array.isArray(node)) {
-            return _findBuildPaths(node, target, path)
-        }
-        path = [...path, node]
-        if (node === target) {
-            return [path]
-        }
-        return []
-    })
-}
-
-export const _traverseBuildTree = (
-    branch: BuildTree,
-    parentPath: Array<BuildFormat>
-): Array<Array<BuildFormat>> => {
-    let path: Array<BuildFormat> = [...parentPath]
-    return branch.flatMap((node, i) => {
-        if (Array.isArray(node)) {
-            return _traverseBuildTree(node, path)
-        }
-        path = [...path, node]
-        if (i === branch.length - 1) {
-            return [path]
-        }
-        return []
-    })
-}

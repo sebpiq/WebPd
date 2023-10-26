@@ -7,18 +7,17 @@ import * as path from 'path'
 import fs from 'fs'
 import {
     Artefacts,
-    BuildFormat,
-    BUILD_FORMATS,
     Settings,
 } from './src/build/types'
+import { BuildFormat } from './src/build/formats'
+import { BUILD_FORMATS } from './src/build/formats'
 import { setAsc } from './src/build/asc'
 import { analysePd } from './src/build/reports'
 import {
     performBuildStep,
-    listBuildSteps,
-    preloadArtefact,
-    guessFormat,
+    loadArtefact,
 } from './src/build/build'
+import { listBuildSteps, guessFormat } from './src/build/formats'
 import {
     getArtefact,
     makeAbstractionLoader,
@@ -213,7 +212,7 @@ const makeCliAbstractionLoader = (rootDirPath: string): AbstractionLoader =>
 const executeTask = async (task: Task, settings: Settings): Promise<Task> => {
     const { inFilepath, inFormat, outFormat } = task
     const inString = await readInFile(inFilepath)
-    const artefacts = preloadArtefact(task.artefacts, inString, inFormat)
+    const artefacts = loadArtefact(task.artefacts, inString, inFormat)
     const buildSteps = listBuildSteps(inFormat, outFormat)
     ifConditionThenExitError(
         buildSteps === null,
@@ -409,6 +408,8 @@ const main = (): void => {
             audioSettings: {
                 bitDepth: BIT_DEPTH,
                 channelCount: CHANNEL_COUNT,
+            },
+            renderAudioSettings: {
                 sampleRate: SAMPLE_RATE,
                 blockSize: BLOCK_SIZE,
                 previewDurationSeconds: WAV_PREVIEW_DURATION,

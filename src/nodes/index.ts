@@ -61,6 +61,7 @@ import * as filtersLopTilde from './nodes/filters-lop~'
 import * as filtersVcfTilde from './nodes/filters-vcf~'
 import * as msg from './nodes/msg'
 import * as list from './nodes/list'
+import * as symbol from './nodes/symbol'
 import * as send from './nodes/send'
 import * as receive from './nodes/receive'
 import * as soundfiler from './nodes/soundfiler'
@@ -126,6 +127,7 @@ const NODE_BUILDERS: NodeBuilders = {
     bng: { aliasTo: 'bang' },
     b: { aliasTo: 'bang' },
     list: list.builder,
+    symbol: symbol.builder,
     loadbang: loadbang.builder,
     send: send.builder,
     s: { aliasTo: 'send' },
@@ -207,6 +209,7 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     ...expr.nodeImplementations,
     bang: bang.nodeImplementation,
     list: list.nodeImplementation,
+    symbol: symbol.nodeImplementation,
     send: send.nodeImplementation,
     receive: receive.nodeImplementation,
     loadbang: loadbang.nodeImplementation,

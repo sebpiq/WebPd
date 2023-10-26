@@ -19,7 +19,8 @@
  */
 import parse, { PdJson } from '@webpd/pd-parser'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
-import { Artefacts, BuildFormat } from './types'
+import { Artefacts } from './types'
+import { BuildFormat } from './formats'
 
 /**
  * A helper to build an abstraction loader. 

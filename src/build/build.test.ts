@@ -18,8 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import assert from 'assert'
-import { listBuildSteps, BUILD_TREE, _findBuildPaths, _traverseBuildTree, listOutputFormats, guessFormat } from './build'
-import { BuildFormat } from './types'
+import { listBuildSteps, _findBuildPaths, _traverseBuildTree, listOutputFormats, guessFormat } from './formats'
+import { BUILD_TREE } from './formats'
+import { BuildFormat } from './formats'
 
 describe('artefacts', () => {
 

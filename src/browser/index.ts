@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-export {
-    WebPdWorkletNode,
-    registerWebPdWorkletNode,
-    fsWeb,
-    urlDirName,
-} from '@webpd/runtime'
+
+export { default as initialize } from "./initialize"
+export { createDefaultSettings as createDefaultBuildSettings, makeUrlAbstractionLoader } from './build'
+export { default as run, createDefaultSettings as createDefaultRunSettings } from './run'

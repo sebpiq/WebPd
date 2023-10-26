@@ -18,10 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { parseSoundFileOpenOpts } from '../global-code/fs'
-import { stdlib } from '@webpd/compiler'
+import { functional, stdlib } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -47,8 +47,8 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, macros: { Func, Var } }) => `
-    class SfOperation {
+const sharedCode: GlobalCodeGenerator = ({ macros: { Var }}) => functional.renderCode`
+    class SoundfilerOperation {
         ${Var('url', 'string')}
         ${Var('arrayNames', 'Array<string>')}
         ${Var('resize', 'boolean')}
@@ -57,7 +57,10 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ sta
         ${Var('skip', 'Float')}
         ${Var('soundInfo', 'fs_SoundInfo')}
     }
-    const ${Var(state.operations, 'Map<fs_OperationId, SfOperation>')} = new Map()
+`
+
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, macros: { Func, Var } }) => `
+    const ${Var(state.operations, 'Map<fs_OperationId, SoundfilerOperation>')} = new Map()
 
     const ${state.buildMessage1} = ${Func([
         Var('soundInfo', 'fs_SoundInfo')
@@ -99,7 +102,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
             endianness: '',
             extraOptions: '',
         }
-        const ${Var('operation', 'SfOperation')} = {
+        const ${Var('operation', 'SoundfilerOperation')} = {
             arrayNames: [],
             resize: false,
             maxSize: -1,
@@ -196,7 +199,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 Var('status', 'fs_OperationStatus'),
                 Var('sound', 'FloatArray[]'),
             ], 'void')} => {
-                const ${Var('operation', 'SfOperation')} = ${state.operations}.get(id)
+                const ${Var('operation', 'SoundfilerOperation')} = ${state.operations}.get(id)
                 ${state.operations}.delete(id)
                 let ${Var('i', 'Int')} = 0
                 let ${Var('maxFramesRead', 'Float')} = 0
@@ -294,7 +297,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 Var('id', 'fs_OperationId'),
                 Var('status', 'fs_OperationStatus'),
             ], 'void')} => {
-                const ${Var('operation', 'SfOperation')} = ${state.operations}.get(id)
+                const ${Var('operation', 'SoundfilerOperation')} = ${state.operations}.get(id)
                 ${state.operations}.delete(id)
                 ${snds.$1}(${state.buildMessage1}(operation.soundInfo))
                 ${snds.$0}(msg_floats([operation.framesToWrite]))
@@ -321,6 +324,7 @@ const nodeImplementation: _NodeImplementation = {
     generateMessageReceivers,
     stateVariables,
     dependencies: [
+        sharedCode,
         parseSoundFileOpenOpts,
         stdlib.commonsArrays,
         stdlib.fsReadSoundFile,

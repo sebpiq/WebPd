@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import {
-    AudioSettings as BaseAudioSettings,
+    AudioSettings,
     CompilationSettings,
     DspGraph,
     NodeImplementations,
@@ -27,42 +27,7 @@ import { PdJson } from '@webpd/pd-parser'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 import { NodeBuilders } from '../compile-dsp-graph/types'
 
-export const BUILD_FORMATS = {
-    pd: {
-        extensions: ['.pd'],
-        description: 'Pure Data text',
-    },
-    pdJson: {
-        extensions: ['.pd.json'],
-        description: 'Pure Data JSON',
-    },
-    dspGraph: {
-        extensions: ['.dsp-graph.json'],
-        description: 'WebPd DSP graph',
-    },
-    compiledJs: {
-        extensions: ['.js'],
-        description: 'JavaScript WebPd module',
-    },
-    compiledAsc: {
-        extensions: ['.asc'],
-        description: 'AssemblyScript DSP code',
-    },
-    wasm: {
-        extensions: ['.wasm'],
-        description: 'Web Assembly WebPd module',
-    },
-    wav: {
-        extensions: ['.wav'],
-        description: 'An audio preview of your patch',
-    },
-    appTemplate: {
-        extensions: [] as Array<string>,
-        description: 'Complete web app embedding your compiled WebPd patch',
-    },
-}
-
-export type BuildFormat = keyof typeof BUILD_FORMATS
+export type WasmBuffer = ArrayBuffer
 
 export interface Artefacts {
     pd?: string
@@ -80,7 +45,7 @@ export interface Artefacts {
     appTemplate?: { [filename: string]: string | ArrayBuffer }
 }
 
-export interface AudioSettings extends BaseAudioSettings {
+export interface RenderAudioSettings {
     sampleRate: number
     blockSize: number
     previewDurationSeconds: number
@@ -88,6 +53,7 @@ export interface AudioSettings extends BaseAudioSettings {
 
 export interface Settings {
     audioSettings: AudioSettings
+    renderAudioSettings: RenderAudioSettings
     nodeBuilders: NodeBuilders
     nodeImplementations: NodeImplementations
     abstractionLoader: AbstractionLoader

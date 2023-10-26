@@ -18,6 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import {
+    AudioSettings,
     CompilationSettings,
     createAssemblyScriptWasmEngine,
     Engine,
@@ -26,12 +27,14 @@ import {
 } from '@webpd/compiler'
 import * as wavefile from 'wavefile'
 import { getArtefact } from './helpers'
-import { Artefacts, AudioSettings } from './types'
+import { Artefacts, RenderAudioSettings } from './types'
+
+type CombinedAudioSettings = AudioSettings & RenderAudioSettings
 
 export const renderWav = async (
     durationSeconds: number,
     artefacts: Artefacts,
-    audioSettings: AudioSettings
+    audioSettings: CombinedAudioSettings
 ) => {
     let target: CompilationSettings['target'] = 'assemblyscript'
     if (!artefacts.wasm && !artefacts.compiledJs) {
@@ -79,9 +82,9 @@ const createEngine = async (
 const renderAudioData = (
     engine: Engine,
     durationSeconds: number,
-    audioSettings: AudioSettings
+    audioSettings: CombinedAudioSettings,
 ): Array<FloatArray> => {
-    const { sampleRate, blockSize, channelCount } = audioSettings
+    const { channelCount, sampleRate, blockSize } = audioSettings
     const durationSamples = Math.round(durationSeconds * sampleRate)
     const blockInput = _makeBlock('in', audioSettings)
     const blockOutput = _makeBlock('out', audioSettings)
@@ -108,7 +111,7 @@ const renderAudioData = (
 
 const _makeBlock = (
     inOrOut: keyof AudioSettings['channelCount'],
-    audioSettings: AudioSettings,
+    audioSettings: CombinedAudioSettings,
     blockSize?: number
 ) => {
     const {

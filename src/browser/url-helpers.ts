@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,31 +17,24 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-export { setAsc } from './asc'
-export {
-    makeAbstractionLoader,
-    UnknownNodeTypeError,
-} from './helpers'
-export {
-    createArtefacts,
-    performBuildStep,
-    loadArtefact,
-    buildRunnable,
-} from './build'
-export {
-    listOutputFormats,
-    listBuildSteps,
-    guessFormat,
-    BuildFormat,
-    BUILD_FORMATS,
-} from './formats'
-export { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
-export {
-    Artefacts,
-    Settings,
-} from './types'
-export {
-    NODE_BUILDERS,
-    NODE_IMPLEMENTATIONS,
-} from '../nodes/index'
-export { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
+
+export const urlDirName = (url: string): string => {
+    if (isExternalUrl(url)) {
+        return new URL('.', url).href;
+    } else {
+        return new URL('.', new URL(url, document.URL).href).href;
+    }
+}
+
+// REF : https://stackoverflow.com/questions/10687099/how-to-test-if-a-url-string-is-absolute-or-relative
+export const isExternalUrl = (urlString: string) => {
+    try {
+        const url = new URL(urlString);
+        if (url.origin !== new URL(document.URL, document.baseURI).origin) {
+            return true;
+        }
+    } catch (_e) {
+        new URL(urlString, document.baseURI);
+    }
+    return false;
+};

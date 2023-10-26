@@ -18,23 +18,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code } from '@webpd/compiler'
 import {
     NodeImplementation,
-    NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { assertOptionalNumber } from '../validation'
+import { assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
-import { roundFloatAsPdInt } from '../global-code/numbers'
-import { coldFloatInletWithSetter } from '../standard-message-receivers'
+import { messageBuses } from '../global-code/buses'
 
 interface NodeArguments {
-    value: number
+    value: string
 }
 const stateVariables = {
     value: 1,
-    funcSetValue: 1,
 }
 type _NodeImplementation = NodeImplementation<
     NodeArguments,
@@ -46,7 +42,7 @@ type _NodeImplementation = NodeImplementation<
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
     translateArgs: (pdNode) => ({
-        value: assertOptionalNumber(pdNode.args[0]) || 0,
+        value: assertOptionalString(pdNode.args[0]) || '',
     }),
     build: () => ({
         inlets: {
@@ -61,18 +57,13 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const makeGenerateDeclarations =
-    (prepareValueCode: Code = 'value'): _NodeImplementation['generateDeclarations'] =>
-    ({ node: { args }, state, macros: { Var, Func } }) =>
-    `
-        let ${Var(state.value, 'Float')} = 0
-
-        const ${state.funcSetValue} = ${Func([
-            Var('value', 'Float')
-        ], 'void')} => { ${state.value} = ${prepareValueCode} }
-        
-        ${state.funcSetValue}(${args.value})
-    `
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
+    node: { args }, 
+    state, 
+    macros: { Var } 
+}) => `
+    let ${Var(state.value, 'string')} = "${args.value}"
+`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
@@ -81,42 +72,32 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     state,
 }) => ({
     '0': `
-    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        ${state.funcSetValue}(msg_readFloatToken(${globs.m}, 0))
-        ${snds.$0}(msg_floats([${state.value}]))
-        return 
-
-    } else if (msg_isBang(${globs.m})) {
-        ${snds.$0}(msg_floats([${state.value}]))
+    if (msg_isBang(${globs.m})) {
+        ${snds.$0}(msg_strings([${state.value}]))
         return
-        
+
+    } else if (msg_isMatching(${globs.m}, [MSG_STRING_TOKEN])) {
+        ${state.value} = msg_readStringToken(${globs.m}, 0)
+        ${snds.$0}(msg_strings([${state.value}]))
+        return
+
     }
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetValue),
+    '1': `
+    if (msg_isMatching(${globs.m}, [MSG_STRING_TOKEN])) {
+        ${state.value} = msg_readStringToken(${globs.m}, 0)
+        return 
+    }
+    `,
 })
 
 // ------------------------------------------------------------------- //
-const builders = {
-    float: builder,
-    f: { aliasTo: 'float' },
-    int: builder,
-    i: { aliasTo: 'int' },
+const nodeImplementation: _NodeImplementation = {
+    generateMessageReceivers,
+    stateVariables,
+    generateDeclarations,
+    dependencies: [bangUtils, messageBuses]
 }
 
-const nodeImplementations: NodeImplementations = {
-    float: {
-        generateDeclarations: makeGenerateDeclarations(),
-        generateMessageReceivers,
-        stateVariables,
-        dependencies: [bangUtils],
-    },
-    int: {
-        generateDeclarations: makeGenerateDeclarations('roundFloatAsPdInt(value)'),
-        generateMessageReceivers,
-        stateVariables,
-        dependencies: [roundFloatAsPdInt, bangUtils],
-    },
-}
-
-export { builders, nodeImplementations, NodeArguments }
+export { builder, nodeImplementation, NodeArguments }
