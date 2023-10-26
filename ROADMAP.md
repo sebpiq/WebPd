@@ -91,6 +91,7 @@ NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI
 [vu]
 [float]
 [f]
+[symbol]
 [int]
 [i]
 [expr]

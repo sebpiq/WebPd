@@ -3,4 +3,5 @@ export default buildRollupConfig({
     importAsString: [
         './src/app-generator/runtime.generated.js.txt',
     ],
+    sourcemap: false,
 })
