@@ -214,29 +214,8 @@ var WebPdRuntime = (function (exports) {
       }
       return fixedSound;
   };
-  const urlDirName = (patchUrl) => {
-      if (isExternalUrl(patchUrl)) {
-          return new URL('.', patchUrl).href;
-      }
-      else {
-          return new URL('.', new URL(patchUrl, document.URL).href).href;
-      }
-  };
   const resolveRelativeUrl = (rootUrl, relativeUrl) => {
       return new URL(relativeUrl, rootUrl).href;
-  };
-  // REF : https://stackoverflow.com/questions/10687099/how-to-test-if-a-url-string-is-absolute-or-relative
-  const isExternalUrl = (urlString) => {
-      try {
-          const url = new URL(urlString);
-          if (url.origin !== new URL(document.URL, document.baseURI).origin) {
-              return true;
-          }
-      }
-      catch (_e) {
-          new URL(urlString, window.document.baseURI);
-      }
-      return false;
   };
   class FileError extends Error {
       constructor(status, msg) {
@@ -263,10 +242,25 @@ var WebPdRuntime = (function (exports) {
    * You should have received a copy of the GNU Lesser General Public License
    * along with this program. If not, see <http://www.gnu.org/licenses/>.
    */
+  // TODO : manage transferables
+  class WebPdWorkletNode extends AudioWorkletNode {
+      constructor(context) {
+          super(context, 'webpd-node', {
+              numberOfOutputs: 1,
+              outputChannelCount: [2],
+          });
+      }
+      destroy() {
+          this.port.postMessage({
+              type: 'destroy',
+              payload: {},
+          });
+      }
+  }
   // Concatenate WorkletProcessor code with the Wasm bindings it needs
-  const WebPdWorkletProcessorCode = AssemblyScriptWasmBindingsCode + ';\n' + JavaScriptBindingsCode + ';\n' + _WebPdWorkletProcessorCode;
+  const WEBPD_WORKLET_PROCESSOR_CODE = AssemblyScriptWasmBindingsCode + ';\n' + JavaScriptBindingsCode + ';\n' + _WebPdWorkletProcessorCode;
   const registerWebPdWorkletNode = (context) => {
-      return addModule(context, WebPdWorkletProcessorCode);
+      return addModule(context, WEBPD_WORKLET_PROCESSOR_CODE);
   };
 
   /*
@@ -375,7 +369,7 @@ var WebPdRuntime = (function (exports) {
       pushBlock,
   };
 
-  var closeSoundStream = async (node, payload, settings) => {
+  var closeSoundStream = async (_, payload, __) => {
       if (payload.functionName === 'onCloseSoundStream') {
           killStream(payload.arguments[0]);
       }
@@ -653,45 +647,63 @@ var WebPdRuntime = (function (exports) {
       }
   };
 
-  /*
-   * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
-   *
-   * This file is part of WebPd
-   * (see https://github.com/sebpiq/WebPd).
-   *
-   * This program is free software: you can redistribute it and/or modify
-   * it under the terms of the GNU Lesser General Public License as published by
-   * the Free Software Foundation, either version 3 of the License, or
-   * (at your option) any later version.
-   *
-   * This program is distributed in the hope that it will be useful,
-   * but WITHOUT ANY WARRANTY; without even the implied warranty of
-   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   * GNU Lesser General Public License for more details.
-   *
-   * You should have received a copy of the GNU Lesser General Public License
-   * along with this program. If not, see <http://www.gnu.org/licenses/>.
-   */
-  // TODO : manage transferables
-  class WebPdWorkletNode extends AudioWorkletNode {
-      constructor(context) {
-          super(context, 'webpd-node', {
-              numberOfOutputs: 1,
-              outputChannelCount: [2],
-          });
-      }
-      destroy() {
-          this.port.postMessage({
-              type: 'destroy',
-              payload: {},
-          });
-      }
-  }
+  var initialize = (...args) => {
+      return registerWebPdWorkletNode(...args);
+  };
 
-  exports.WebPdWorkletNode = WebPdWorkletNode;
-  exports.fsWeb = index;
-  exports.registerWebPdWorkletNode = registerWebPdWorkletNode;
-  exports.urlDirName = urlDirName;
+  const urlDirName = (url) => {
+      if (isExternalUrl(url)) {
+          return new URL('.', url).href;
+      }
+      else {
+          return new URL('.', new URL(url, document.URL).href).href;
+      }
+  };
+  const isExternalUrl = (urlString) => {
+      try {
+          const url = new URL(urlString);
+          if (url.origin !== new URL(document.URL, document.baseURI).origin) {
+              return true;
+          }
+      }
+      catch (_e) {
+          new URL(urlString, document.baseURI);
+      }
+      return false;
+  };
+
+  var run = async (audioContext, compiledPatch, settings) => {
+      const { messageHandler } = settings;
+      const webpdNode = new WebPdWorkletNode(audioContext);
+      webpdNode.port.onmessage = (msg) => messageHandler(webpdNode, msg);
+      if (typeof compiledPatch === 'string') {
+          webpdNode.port.postMessage({
+              type: 'code:JS',
+              payload: {
+                  jsCode: compiledPatch,
+              },
+          });
+      }
+      else {
+          webpdNode.port.postMessage({
+              type: 'code:WASM',
+              payload: {
+                  wasmBuffer: compiledPatch,
+              },
+          });
+      }
+      return webpdNode;
+  };
+  const createDefaultSettings = (patchUrl) => {
+      const rootUrl = urlDirName(patchUrl);
+      return {
+          messageHandler: (node, message) => index(node, message, { rootUrl }),
+      };
+  };
+
+  exports.createDefaultSettings = createDefaultSettings;
+  exports.initialize = initialize;
+  exports.run = run;
 
   return exports;
 

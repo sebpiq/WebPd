@@ -106,7 +106,7 @@ const bareBonesApp = (settings: Settings) => {
 
             const initApp = async () => {
                 // Register the worklet
-                await WebPdRuntime.registerWebPdWorkletNode(audioContext)
+                await WebPdRuntime.initialize(audioContext)
 
                 // Fetch the patch code
                 response = await fetch('${compiledPatchFilename}')
@@ -131,30 +131,13 @@ const bareBonesApp = (settings: Settings) => {
 
                 // Setup web audio graph
                 const sourceNode = audioContext.createMediaStreamSource(stream)
-                webpdNode = new WebPdRuntime.WebPdWorkletNode(audioContext)
+                webpdNode = await WebPdRuntime.run(
+                    audioContext, 
+                    patch, 
+                    WebPdRuntime.createDefaultSettings('./${compiledPatchFilename}'),
+                )
                 sourceNode.connect(webpdNode)
                 webpdNode.connect(audioContext.destination)
-
-                // Setup filesystem management
-                webpdNode.port.onmessage = (message) => 
-                    WebPdRuntime.fsWeb(webpdNode, message, { 
-                        rootUrl: WebPdRuntime.urlDirName(location.pathname) 
-                    })
-
-                // Send code to the worklet
-                ${artefacts.compiledJs ? `
-                webpdNode.port.postMessage({
-                    type: 'code:JS',
-                    payload: {
-                        jsCode: patch,
-                    },
-                })`: `
-                webpdNode.port.postMessage({
-                    type: 'code:WASM',
-                    payload: {
-                        wasmBuffer: patch,
-                    },
-                })`}
 
                 // Hide the start button
                 startButton.style.display = 'none'

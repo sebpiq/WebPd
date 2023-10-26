@@ -11,6 +11,7 @@ export default {
         file: 'bin/cli.mjs',
         format: 'es',
         banner: '#!/usr/bin/env node',
+        sourcemap: true,
     },
     plugins: [
         string({
