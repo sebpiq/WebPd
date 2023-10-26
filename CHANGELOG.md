@@ -1,3 +1,25 @@
+1.0.0-alpha.4
+---------------
+
+- Published WebPd API for use by third party libraries
+- Automatically transform float messages to signal when sent to signal inlets
+- Dependency system for smaller code generation
+
+1.0.0-alpha.3 & 1.0.0-alpha.2
+-------------------------------
+
+- Minor bug fixes
+
+1.0.0-alpha.1
+---------------
+
+Complete refactor of the entire library. Now instead of being a Web Audio overlay which glues 
+reluctant AudioNodes together to try to make a something that remotely resembles the original Pd objects, 
+it is a standalone compiler that transforms pd patches to JS code or WASM modules, and which can then be 
+ran in AudioWorklets.
+
+------------------------------------------
+
 0.4.2
 ------
 
