@@ -38,7 +38,7 @@ export {
 export { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 export {
     Artefacts,
-    Settings,
+    BuildSettings as Settings,
 } from './types'
 export {
     NODE_BUILDERS,

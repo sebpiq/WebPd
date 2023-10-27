@@ -29,7 +29,7 @@ import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
 import { compileAsc } from './asc'
 import { renderWav } from './audio'
 import { UnknownNodeTypeError, getArtefact, stringifyArrayBuffer } from './helpers'
-import { Artefacts, Settings } from './types'
+import { Artefacts, BuildSettings } from './types'
 import { BuildFormat, listBuildSteps } from './formats'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
@@ -58,7 +58,7 @@ export type BuildResult = BuildSuccess | BuildFailure
 export const buildRunnable = async (
     pdFile: string,
     format: 'compiledJs' | 'wasm' = 'compiledJs',
-    settings: Settings,
+    settings: BuildSettings,
 ) => {
     if (!['wasm', 'compiledJs'].includes(format)) {
         throw new Error(`Invalid out format ${format}`)
@@ -78,7 +78,7 @@ export const buildRunnable = async (
     return artefacts[format]
 }
 
-export const createDefaultSettings = (): Settings => ({
+export const createDefaultSettings = (): BuildSettings => ({
     audioSettings: {
         channelCount: {
             in: 2,
@@ -167,7 +167,7 @@ export const performBuildStep = async (
         renderAudioSettings,
         inletCallerSpecs,
         abstractionLoader,
-    }: Settings
+    }: BuildSettings
 ): Promise<BuildResult> => {
     let warnings: Array<string> = []
     let errors: Array<string> = []

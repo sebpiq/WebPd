@@ -22,12 +22,12 @@ import instantiateAbstractions, {
     AbstractionLoader,
 } from '../compile-dsp-graph/instantiate-abstractions'
 import { NodeBuilders } from '../compile-dsp-graph/types'
-import { Settings } from './types'
+import { BuildSettings } from './types'
 
 export const analysePd = async (
     pdJson: PdJson.Pd,
     abstractionLoader: AbstractionLoader,
-    { nodeBuilders }: Settings
+    { nodeBuilders }: BuildSettings
 ) => {
     const resolveResult = await instantiateAbstractions(
         pdJson,

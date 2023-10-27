@@ -7,7 +7,7 @@ import * as path from 'path'
 import fs from 'fs'
 import {
     Artefacts,
-    Settings,
+    BuildSettings,
 } from './src/build/types'
 import { BuildFormat } from './src/build/formats'
 import { BUILD_FORMATS } from './src/build/formats'
@@ -33,8 +33,13 @@ const SAMPLE_RATE = 44100
 const CHANNEL_COUNT = { in: 2, out: 2 }
 const WAV_PREVIEW_DURATION = 15
 
+const ENGINE_OPTIONS: ReadonlyArray<BuildFormat> = ['compiledJs', 'wasm']
+const DEFAULT_ENGINE: Task['engine'] = 'wasm'
+const FORMAT_OUT_WITH_ENGINE: ReadonlyArray<BuildFormat> = ['wav', 'appTemplate']
+
 interface Task {
     inFilepath: string
+    engine: 'compiledJs' | 'wasm'
     inFormat: BuildFormat
     outFilepath: string | null
     outFormat: BuildFormat
@@ -50,7 +55,7 @@ const consoleLogEm = (message: string) =>
 const checkSupportPdJson = async (
     pdJson: PdJson.Pd,
     abstractionLoader: AbstractionLoader,
-    settings: Settings
+    settings: BuildSettings
 ) => {
     const { unimplementedObjectTypes } = await analysePd(
         pdJson,
@@ -209,15 +214,20 @@ const makeCliAbstractionLoader = (rootDirPath: string): AbstractionLoader =>
         return (await fs.promises.readFile(filepath)).toString()
     })
 
-const executeTask = async (task: Task, settings: Settings): Promise<Task> => {
-    const { inFilepath, inFormat, outFormat } = task
+const executeTask = async (task: Task, settings: BuildSettings): Promise<Task> => {
+    const { inFilepath, inFormat, outFormat, engine } = task
     const inString = await readInFile(inFilepath)
     const artefacts = loadArtefact(task.artefacts, inString, inFormat)
-    const buildSteps = listBuildSteps(inFormat, outFormat)
+
+    const buildSteps = FORMAT_OUT_WITH_ENGINE.includes(outFormat) ? 
+        listBuildSteps(inFormat, outFormat, engine): 
+        listBuildSteps(inFormat, outFormat)
+    
     ifConditionThenExitError(
         buildSteps === null,
         `Not able to convert from ${inFormat} to ${outFormat}`
     )
+    
     // Remove first step as it corresponds with the input file.
     for (let buildStep of buildSteps!) {
         consoleLogHeader(`Building ${buildStep} `)
@@ -296,7 +306,7 @@ const main = (): void => {
                 (['pd', 'wasm'] as Array<BuildFormat>)
                     .map(
                         (format) =>
-                            `\n${BUILD_FORMATS[format].extensions.join(
+                            `\n  ${BUILD_FORMATS[format].extensions.join(
                                 ', '
                             )} - ${BUILD_FORMATS[format].description}`
                     )
@@ -319,9 +329,13 @@ const main = (): void => {
                 )
                     .map(
                         (format) =>
-                            `\n${format} - ${BUILD_FORMATS[format].description}`
+                            `\n  ${format} - ${BUILD_FORMATS[format].description}`
                     )
                     .join('')
+        )
+        .option(
+            '--engine <engine>',
+            `Select an engine for audio generation (default "${DEFAULT_ENGINE}"). Engines supported : \n  ${ENGINE_OPTIONS.join('\n  ')}`
         )
         .option('--check-support')
         .option('--whats-implemented')
@@ -348,6 +362,7 @@ const main = (): void => {
 
     const inFilepath: string | null = options.input || null
     const outFilepath: string | null = options.output || null
+    const engine: Task['engine'] = options.engine || DEFAULT_ENGINE
     let outFormat: BuildFormat | null = options.outputFormat || null
     const artefacts: Artefacts = {}
 
@@ -355,6 +370,15 @@ const main = (): void => {
         !!outFilepath && !inFilepath,
         `Please provide an input file with --input option.`
     )
+
+    ifConditionThenExitError(
+        !ENGINE_OPTIONS.includes(engine),
+        `Invalid engine ${engine}`
+    )
+
+    if (!options.whatsImplemented && !inFilepath) {
+        exitError('Nothing to do ! (add --help for additional information)')
+    }
 
     if (options.whatsImplemented) {
         whatsImplemented()
@@ -402,7 +426,7 @@ const main = (): void => {
             path.dirname(inFilepath)
         )
 
-        const settings: Settings = {
+        const settings: BuildSettings = {
             nodeBuilders: NODE_BUILDERS,
             nodeImplementations: NODE_IMPLEMENTATIONS,
             audioSettings: {
@@ -421,6 +445,7 @@ const main = (): void => {
             inFilepath,
             outFilepath,
             inFormat,
+            engine,
             outFormat: outFormat || 'wasm',
             artefacts,
         }
@@ -446,6 +471,7 @@ const main = (): void => {
                     (colors as any).brightMagenta.bold('\n~ done ~\n')
                 )
             })
+    
     }
 }
 

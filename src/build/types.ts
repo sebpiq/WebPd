@@ -51,7 +51,7 @@ export interface RenderAudioSettings {
     previewDurationSeconds: number
 }
 
-export interface Settings {
+export interface BuildSettings {
     audioSettings: AudioSettings
     renderAudioSettings: RenderAudioSettings
     nodeBuilders: NodeBuilders

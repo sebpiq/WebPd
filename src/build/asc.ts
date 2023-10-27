@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Settings, WasmBuffer } from './types'
+import { BuildSettings, WasmBuffer } from './types'
 
 let ASC: any = null
 
@@ -32,7 +32,7 @@ export const setAsc = (asc: any) => ASC = asc
 
 export const compileAsc = async (
     code: string,
-    bitDepth: Settings['audioSettings']['bitDepth']
+    bitDepth: BuildSettings['audioSettings']['bitDepth']
 ): Promise<WasmBuffer> => {
     if (!ASC) {
         throw new Error(`assemblyscript compiler was not set properly. Please use WebPd's setAsc function to initialize it.`)
