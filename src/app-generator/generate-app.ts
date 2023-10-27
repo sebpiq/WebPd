@@ -113,7 +113,7 @@ const bareBonesApp = (settings: Settings) => {
                 patch = await ${artefacts.compiledJs ? 
                     'response.text()': 'response.arrayBuffer()'}
 
-                // Get audio input
+                // Comment this if you don't need audio input
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
                 // Hide loading and show start button
@@ -130,14 +130,16 @@ const bareBonesApp = (settings: Settings) => {
                 }
 
                 // Setup web audio graph
-                const sourceNode = audioContext.createMediaStreamSource(stream)
                 webpdNode = await WebPdRuntime.run(
                     audioContext, 
                     patch, 
                     WebPdRuntime.createDefaultSettings('./${compiledPatchFilename}'),
                 )
-                sourceNode.connect(webpdNode)
                 webpdNode.connect(audioContext.destination)
+
+                // Comment this if you don't need audio input
+                const sourceNode = audioContext.createMediaStreamSource(stream)
+                sourceNode.connect(webpdNode)
 
                 // Hide the start button
                 startButton.style.display = 'none'
