@@ -259,7 +259,7 @@ const ifConditionThenExitError = (test: boolean, msg: string) => {
 }
 
 const exitError = (msg: string) => {
-    process.stderr.write('\n' + msg + '\n\n')
+    process.stderr.write('\n' + colors.red('ERROR : ' + msg) + '\n\n')
     process.exit(1)
 }
 

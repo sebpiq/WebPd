@@ -74,7 +74,7 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => `
-    ${state.coeff} = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
+    ${state.coeff} = Math.max(Math.min(${ins.$1} * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
     ${state.previous} = ${outs.$0} = ${state.coeff} * ${ins.$0} + (1 - ${state.coeff}) * ${state.previous}
 `
 
