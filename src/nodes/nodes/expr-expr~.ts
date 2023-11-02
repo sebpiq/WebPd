@@ -22,7 +22,7 @@ import { Code, stdlib, functional } from '@webpd/compiler'
 import {
     NodeImplementation,
     NodeImplementations,
-    NodeVariableNames,
+    PrecompiledNodeCode,
 } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
@@ -289,7 +289,7 @@ export const tokenizeExpression = (expression: string) => {
 
 export const renderTokenizedExpression = (
     state: { [Parameter in keyof typeof stateVariables]: string },
-    ins: NodeVariableNames['ins'] | null,
+    ins: PrecompiledNodeCode['ins'] | null,
     tokens: Array<ExpressionToken>, 
 ): Code =>
     // Add '+(' to convert for example boolean output to float

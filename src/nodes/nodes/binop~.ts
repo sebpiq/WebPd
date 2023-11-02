@@ -30,10 +30,7 @@ import { assertOptionalNumber } from '../validation'
 import { pow } from '../global-code/funcs'
 
 interface NodeArguments { value: number }
-const stateVariables = {
-    leftOp: 1,
-    rightOp: 1,
-}
+const stateVariables = {}
 type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
 // ------------------------------- node builder ------------------------------ //
