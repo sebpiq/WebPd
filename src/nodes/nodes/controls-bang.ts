@@ -50,9 +50,8 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = (conte
     const { 
         state,
         snds,
-        node: { id, args },
+        node: { args },
         macros: { Var, Func },
-        compilation: { codeVariableNames: { nodes } }
     } = context
     return `
         function ${state.funcMessageReceiver} ${Func([
@@ -61,7 +60,7 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = (conte
             ${messageSetSendReceive(context)}
             else {
                 const ${Var('outMessage', 'Message')} = msg_bang()
-                ${nodes[id].snds.$0}(outMessage)
+                ${snds.$0}(outMessage)
                 if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                     msgBusPublish(${state.sendBusName}, outMessage)
                 }

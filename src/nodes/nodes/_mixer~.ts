@@ -44,13 +44,12 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ node, ins, outs }) => `
-    ${outs.$0} = ${Object.keys(node.inlets)
-    .map((inletId) => ins[inletId])
-    .join(' + ')}
-`
+const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ node, ins }) =>
+    `${Object.keys(node.inlets)
+        .map((inletId) => ins[inletId])
+        .join(' + ')}`
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateLoop, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateLoopInline, stateVariables }
 
 export { builder, nodeImplementation, NodeArguments }

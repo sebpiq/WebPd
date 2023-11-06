@@ -91,18 +91,17 @@ const makeNodeImplementation = (): _NodeImplementation => {
     `
 
     // ------------------------------- generateLoop ------------------------------ //
-    const generateLoop: _NodeImplementation['generateLoop'] = ({ globs, outs, ins, state }) => `
-        ${outs.$0} = buf_readSample(${state.buffer}, toInt(Math.round(
+    const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ globs, ins, state }) =>
+        `buf_readSample(${state.buffer}, toInt(Math.round(
             Math.min(
                 Math.max(computeUnitInSamples(${globs.sampleRate}, ${ins.$0}, "msec"), 0), 
                 toFloat(${state.buffer}.length - 1)
             )
-        )))
-    `
+        )))`
 
     // ------------------------------------------------------------------- //
     return {
-        generateLoop,
+        generateLoopInline,
         stateVariables,
         generateDeclarations,
         dependencies: [

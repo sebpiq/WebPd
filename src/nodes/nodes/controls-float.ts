@@ -87,8 +87,7 @@ const makeNodeImplementation = ({
             node, 
             state,
             snds,
-            node: { id, args },
-            compilation: { codeVariableNames: { nodes } },
+            node: { args },
             macros: { Var, Func }
         } = context
         return `
@@ -120,7 +119,7 @@ const makeNodeImplementation = ({
                         `${state.value} = ${state.funcPrepareStoreValue}(msg_readFloatToken(m, 0))`
                         : `${state.value} = msg_readFloatToken(m, 0)`}
                     const ${Var('outMessage', 'Message')} = msg_floats([${state.value}])
-                    ${nodes[id].snds.$0}(outMessage)
+                    ${snds.$0}(outMessage)
                     if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                         msgBusPublish(${state.sendBusName}, outMessage)
                     }
@@ -131,7 +130,7 @@ const makeNodeImplementation = ({
                         () => `${state.value} = ${state.funcPrepareStoreValueBang}(${state.value})`
                     )}
                     const ${Var('outMessage', 'Message')} = msg_floats([${state.value}])
-                    ${nodes[id].snds.$0}(outMessage)
+                    ${snds.$0}(outMessage)
                     if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                         msgBusPublish(${state.sendBusName}, outMessage)
                     }

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,23 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {
-    Code,
-    CodeVariableName,
-    NodeImplementation,
-    NodeImplementations,
-    GlobalCodeGenerator,
-} from '@webpd/compiler/src/compile/types'
+import { NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { pow } from '../global-code/funcs'
 
-interface NodeArguments { value: number }
-const stateVariables = {
-    leftOp: 1,
-    rightOp: 1,
+interface NodeArguments {
+    value: number
 }
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+const stateVariables = {}
 
 // ------------------------------- node builder ------------------------------ //
 const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
@@ -64,27 +56,37 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
     },
 })
 
-const makeNodeImplementation = ({
-    generateOperation,
-    dependencies = [],
-}: {
-    dependencies?: Array<GlobalCodeGenerator>,
-    generateOperation: (leftOp: CodeVariableName, rightOp: CodeVariableName) => Code,
-}): _NodeImplementation => {
-    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs }) =>
-        `${outs.$0} = ${generateOperation(ins.$0, ins.$1)}`
-    return { generateLoop, stateVariables, dependencies }
-}
-
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
-    '+~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${leftOp} + ${rightOp}` }),
-    '-~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${leftOp} - ${rightOp}` }),
-    '*~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${leftOp} * ${rightOp}` }),
-    '/~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `${rightOp} !== 0 ? ${leftOp} / ${rightOp} : 0` }),
-    'min~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `Math.min(${leftOp}, ${rightOp})` }),
-    'max~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `Math.max(${leftOp}, ${rightOp})` }),
-    'pow~': makeNodeImplementation({ generateOperation: (leftOp, rightOp) => `pow(${leftOp}, ${rightOp})`, dependencies: [pow] }),
+    '+~': {
+        generateLoopInline: ({ ins }) => `${ins.$0} + ${ins.$1}`,
+        stateVariables,
+    },
+    '-~': {
+        generateLoopInline: ({ ins }) => `${ins.$0} - ${ins.$1}`,
+        stateVariables,
+    },
+    '*~': {
+        generateLoopInline: ({ ins }) => `${ins.$0} * ${ins.$1}`,
+        stateVariables,
+    },
+    '/~': {
+        generateLoopInline: ({ ins }) => `${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
+        stateVariables,
+    },
+    'min~': {
+        generateLoopInline: ({ ins }) => `Math.min(${ins.$0}, ${ins.$1})`,
+        stateVariables,
+    },
+    'max~': {
+        generateLoopInline: ({ ins }) => `Math.max(${ins.$0}, ${ins.$1})`,
+        stateVariables,
+    },
+    'pow~': {
+        generateLoopInline: ({ ins }) => `pow(${ins.$0}, ${ins.$1})`,
+        stateVariables,
+        dependencies: [pow],
+    },
 }
 
 const builders = {
@@ -97,8 +99,4 @@ const builders = {
     'pow~': makeBuilder(0),
 }
 
-export { 
-    builders,
-    nodeImplementations,
-    NodeArguments,
-}
+export { builders, nodeImplementations, NodeArguments }

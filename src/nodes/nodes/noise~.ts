@@ -42,9 +42,7 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs }) => `
-    ${outs.$0} = Math.random() * 2 - 1
-`
+const generateLoopInline: _NodeImplementation['generateLoopInline'] = () => `Math.random() * 2 - 1`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs }) => ({
@@ -60,7 +58,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 })
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateLoop, generateMessageReceivers, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateLoopInline, generateMessageReceivers, stateVariables }
 
 export { 
     builder,

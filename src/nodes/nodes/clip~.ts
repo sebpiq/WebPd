@@ -58,9 +58,8 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ nod
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => `
-    ${outs.$0} = Math.max(Math.min(${state.maxValue}, ${ins.$0}), ${state.minValue})
-`
+const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ ins, state }) =>
+    `Math.max(Math.min(${state.maxValue}, ${ins.$0}), ${state.minValue})`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
@@ -70,7 +69,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateLoop,
+    generateLoopInline,
     stateVariables,
     generateMessageReceivers,
     generateDeclarations,

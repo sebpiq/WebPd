@@ -52,9 +52,8 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ nod
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state }) => `
-    ${outs.$0} = ${state.currentValue}
-`
+const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ state }) => 
+    `${state.currentValue}`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
@@ -63,7 +62,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateLoop,
+    generateLoopInline,
     stateVariables,
     generateMessageReceivers,
     generateDeclarations,

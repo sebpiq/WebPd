@@ -49,11 +49,11 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    compilation: { codeVariableNames: { nodes } },
-    node: { id, args },
+    snds,
+    node: { args },
 }) => `
     commons_waitEngineConfigure(() => {
-        msgBusSubscribe("${args.busName}", ${nodes[id].snds.$0})
+        msgBusSubscribe("${args.busName}", ${snds.$0})
     })
 `
 

@@ -54,9 +54,9 @@ const makeNodeImplementation = ({
         const { 
             state,
             globs,
+            snds,
             macros: { Var, Func },
             node: { id },
-            compilation: { codeVariableNames: { nodes } }
         } = context
         return `
             let ${Var(state.value, 'Message')} = ${initValue}
@@ -66,7 +66,7 @@ const makeNodeImplementation = ({
             ], 'void')} {
                 ${messageSetSendReceive(context)}
                 else if (msg_isBang(m)) {
-                    ${nodes[id].snds.$0}(${state.value})
+                    ${snds.$0}(${state.value})
                     if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                         msgBusPublish(${state.sendBusName}, ${state.value})
                     }
@@ -89,7 +89,7 @@ const makeNodeImplementation = ({
                     `else {`}
                 
                     ${state.value} = m
-                    ${nodes[id].snds.$0}(${state.value})
+                    ${snds.$0}(${state.value})
                     if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                         msgBusPublish(${state.sendBusName}, ${state.value})
                     }
