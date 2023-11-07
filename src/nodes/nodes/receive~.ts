@@ -68,9 +68,8 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state }) => `
-    ${outs.$0} = readSignalBus(${state.busName})
-`
+const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ state }) => 
+    `readSignalBus(${state.busName})`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
@@ -87,7 +86,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateLoop,
+    generateLoopInline,
     generateMessageReceivers,
     stateVariables,
     generateDeclarations,

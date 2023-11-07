@@ -18,13 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation, NodeImplementations, GlobalCodeGenerator } from '@webpd/compiler/src/compile/types'
+import { NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
 
 interface NodeArguments {}
 const stateVariables = {}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -39,29 +38,14 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateLoop ------------------------------ //
-const makeNodeImplementation = ({
-    generateOperation,
-    dependencies = [],
-}: {
-    generateOperation: (input: Code) => Code,
-    dependencies?: Array<GlobalCodeGenerator>
-}): _NodeImplementation => {
-    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs }) => `
-        ${outs.$0} = ${generateOperation(ins.$0)}
-    `
-
-    return { generateLoop, stateVariables, dependencies }
-}
-
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
-    'abs~': makeNodeImplementation({ generateOperation: (input) => `Math.abs(${input})` }),
-    'cos~': makeNodeImplementation({ generateOperation: (input) => `Math.cos(${input} * 2 * Math.PI)` }),
-    'wrap~': makeNodeImplementation({ generateOperation: (input) => `(1 + (${input} % 1)) % 1` }),
-    'sqrt~': makeNodeImplementation({ generateOperation: (input) => `${input} >= 0 ? Math.pow(${input}, 0.5): 0` }),
-    'mtof~': makeNodeImplementation({ generateOperation: (input) => `mtof(${input})`, dependencies: [mtof] }),
-    'ftom~': makeNodeImplementation({ generateOperation: (input) => `ftom(${input})`, dependencies: [ftom] }),
+    'abs~': { stateVariables, generateLoopInline: ({ ins }) => `Math.abs(${ins.$0})` },
+    'cos~': { stateVariables, generateLoopInline: ({ ins }) => `Math.cos(${ins.$0} * 2 * Math.PI)` },
+    'wrap~': { stateVariables, generateLoopInline: ({ ins }) => `(1 + (${ins.$0} % 1)) % 1` },
+    'sqrt~': { stateVariables, generateLoopInline: ({ ins }) => `${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0` },
+    'mtof~': { stateVariables, generateLoopInline: ({ ins }) => `mtof(${ins.$0})`, dependencies: [mtof] },
+    'ftom~': { stateVariables, generateLoopInline: ({ ins }) => `ftom(${ins.$0})`, dependencies: [ftom] },
 }
 
 const builders = {

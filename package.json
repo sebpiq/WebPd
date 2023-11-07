@@ -14,8 +14,8 @@
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "WebPd is a compiler for audio programming language Pure Data allowing to run .pd patches on web pages.",
   "license": "LGPL-3.0",
-  "engines" : { 
-    "node" : ">=18.0.0"
+  "engines": {
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",
@@ -31,7 +31,7 @@
     "build:cli": "npx rollup --config configs/cli.rollup.config.js",
     "build:dist": "npx rollup --config configs/dist.rollup.config.js",
     "build:runtime": "npx rollup --config configs/runtime.rollup.config.js",
-    "prepublish": "rm -rf dist; npm run build:runtime; npm run build:dist; npm run build:cli"
+    "build:all": "rm -rf dist; npm run build:runtime; npm run build:dist; npm run build:cli"
   },
   "dependencies": {
     "wavefile": "^11.0.0"
@@ -47,7 +47,7 @@
     "@webpd/dev": "file:../WebPd_dev",
     "@webpd/pd-parser": "file:../WebPd_pd-parser",
     "@webpd/runtime": "file:../WebPd_runtime",
-    "assemblyscript": "^0.25.0",
+    "assemblyscript": "^0.25.2",
     "colors": "^1.4.0",
     "commander": "^10.0.0",
     "jest": "^29.4.3",
