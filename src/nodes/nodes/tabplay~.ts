@@ -23,6 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = {
@@ -56,17 +57,17 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = (
-    {state, node, macros: { Func, Var }},
-) => `
-    let ${Var(state.array, 'FloatArray')} = createFloatArray(0)
-    let ${Var(state.arrayName, 'string')} = "${node.args.arrayName}"
-    let ${Var(state.arrayChangesSubscription, 'SkedId')} = SKED_ID_NULL
-    let ${Var(state.readPosition, 'Int')} = 0
-    let ${Var(state.readUntil, 'Int')} = 0
+    { state, node },
+) => ast`
+    ${Var('FloatArray', state.array, 'createFloatArray(0)')}
+    ${Var('string', state.arrayName, `"${node.args.arrayName}"`)}
+    ${Var('SkedId', state.arrayChangesSubscription, 'SKED_ID_NULL')}
+    ${Var('Int', state.readPosition, '0')}
+    ${Var('Int', state.readUntil, '0')}
 
-    function ${state.funcSetArrayName} ${Func([
-        Var('arrayName', 'string')
-    ], 'void')} {
+    ${Func(state.funcSetArrayName, [
+        Var('string', 'arrayName')
+    ], 'void')`
         if (${state.arrayChangesSubscription} != SKED_ID_NULL) {
             commons_cancelArrayChangesSubscription(${state.arrayChangesSubscription})
         }
@@ -78,23 +79,23 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = (
             ${state.readPosition} = ${state.array}.length
             ${state.readUntil} = ${state.array}.length
         })
-    }
+    `}
 
-    function ${state.funcPlay} ${Func([
-        Var('playFrom', 'Int'),
-        Var('playTo', 'Int'),
-    ], 'void')} {
+    ${Func(state.funcPlay, [
+        Var('Int', 'playFrom'),
+        Var('Int', 'playTo'),
+    ], 'void')`
         ${state.readPosition} = playFrom
         ${state.readUntil} = toInt(Math.min(
             toFloat(playTo), 
             toFloat(${state.array}.length),
         ))
-    }
+    `}
 
-    function ${state.funcStop} ${Func([], 'void')} {
+    ${Func(state.funcStop, [], 'void')`
         ${state.readPosition} = 0
         ${state.readUntil} = 0
-    }
+    `}
 
     commons_waitEngineConfigure(() => {
         if (${state.arrayName}.length) {
@@ -106,7 +107,7 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = (
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = (
     {state, snds, outs},
-) => `
+) => ast`
     if (${state.readPosition} < ${state.readUntil}) {
         ${outs.$0} = ${state.array}[${state.readPosition}]
         ${state.readPosition}++
@@ -119,38 +120,38 @@ const generateLoop: _NodeImplementation['generateLoop'] = (
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, macros: { Var } }) => ({
-    '0': `
-    if (msg_isBang(${globs.m})) {
-        ${state.funcPlay}(0, ${state.array}.length)
-        return 
-        
-    } else if (msg_isAction(${globs.m}, 'stop')) {
-        ${state.funcStop}()
-        return 
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${state.funcPlay}(0, ${state.array}.length)
+            return 
+            
+        } else if (msg_isAction(m, 'stop')) {
+            ${state.funcStop}()
+            return 
 
-    } else if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'set'
-    ) {
-        ${state.funcSetArrayName}(msg_readStringToken(${globs.m}, 1))   
-        return
+        } else if (
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+            && msg_readStringToken(m, 0) === 'set'
+        ) {
+            ${state.funcSetArrayName}(msg_readStringToken(m, 1))   
+            return
 
-    } else if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        ${state.funcPlay}(
-            toInt(msg_readFloatToken(${globs.m}, 0)), 
-            ${state.array}.length
-        )
-        return 
+        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${state.funcPlay}(
+                toInt(msg_readFloatToken(m, 0)), 
+                ${state.array}.length
+            )
+            return 
 
-    } else if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
-        const ${Var('fromSample', 'Int')} = toInt(msg_readFloatToken(${globs.m}, 0))
-        ${state.funcPlay}(
-            fromSample,
-            fromSample + toInt(msg_readFloatToken(${globs.m}, 1)),
-        )
-        return
-    }
+        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
+            ${ConstVar('Int', 'fromSample', `toInt(msg_readFloatToken(m, 0))`)}
+            ${state.funcPlay}(
+                fromSample,
+                fromSample + toInt(msg_readFloatToken(m, 1)),
+            )
+            return
+        }
     `,
 })
 

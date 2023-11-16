@@ -24,6 +24,7 @@ import { stringMsgUtils } from '../global-code/core'
 import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -54,19 +55,19 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ globs, state, macros: { Var, Func }}) => `
-    let ${Var(state.points, 'Array<Point>')} = []
-    let ${Var(state.lineSegments, 'Array<LineSegment>')} = []
-    let ${Var(state.currentValue, 'Float')} = 0
-    let ${Var(state.nextDurationSamp, 'Float')} = 0
-    let ${Var(state.nextDelaySamp, 'Float')} = 0
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ globs, state }) => ast`
+    ${Var('Array<Point>', state.points, '[]')}
+    ${Var('Array<LineSegment>', state.lineSegments, '[]')}
+    ${Var('Float', state.currentValue, '0')}
+    ${Var('Float', state.nextDurationSamp, '0')}
+    ${Var('Float', state.nextDelaySamp, '0')}
 
-    function ${state.funcSetNewLine} ${Func([
-        Var('targetValue', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetNewLine, [
+        Var('Float', 'targetValue'),
+    ], 'void')`
         ${state.points} = removePointsBeforeFrame(${state.points}, toFloat(${globs.frame}))
-        const ${Var('startFrame', 'Float')} = toFloat(${globs.frame}) + ${state.nextDelaySamp}
-        const ${Var('endFrame', 'Float')} = startFrame + ${state.nextDurationSamp}
+        ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame}) + ${state.nextDelaySamp}`)}
+        ${ConstVar('Float', 'endFrame', `startFrame + ${state.nextDurationSamp}`)}
         if (endFrame === toFloat(${globs.frame})) {
             ${state.currentValue} = targetValue
             ${state.lineSegments} = []
@@ -81,23 +82,23 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ glo
         }
         ${state.nextDurationSamp} = 0
         ${state.nextDelaySamp} = 0
-    }
+    `}
 
-    function ${state.funcSetNextDuration} ${Func([
-        Var('durationMsec', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetNextDuration, [
+        Var('Float', 'durationMsec'),
+    ], 'void')`
         ${state.nextDurationSamp} = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
-    }
+    `}
 
-    function ${state.funcSetNextDelay} ${Func([
-        Var('delayMsec', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetNextDelay, [
+        Var('Float', 'delayMsec'),
+    ], 'void')`
         ${state.nextDelaySamp} = computeUnitInSamples(${globs.sampleRate}, delayMsec, 'msec')
-    }
+    `}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => ast`
     if (${state.lineSegments}.length) {
         if (toFloat(${globs.frame}) < ${state.lineSegments}[0].p0.x) {
 
@@ -119,31 +120,31 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs 
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0': `
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
     if (
-        msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])
-        || msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
-        || msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
+        msg_isMatching(m, [MSG_FLOAT_TOKEN])
+        || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
+        || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
     ) {
-        switch (msg_getLength(${globs.m})) {
+        switch (msg_getLength(m)) {
             case 3:
-                ${state.funcSetNextDelay}(msg_readFloatToken(${globs.m}, 2))
+                ${state.funcSetNextDelay}(msg_readFloatToken(m, 2))
             case 2:
-                ${state.funcSetNextDuration}(msg_readFloatToken(${globs.m}, 1))
+                ${state.funcSetNextDuration}(msg_readFloatToken(m, 1))
             case 1:
-                ${state.funcSetNewLine}(msg_readFloatToken(${globs.m}, 0))
+                ${state.funcSetNewLine}(msg_readFloatToken(m, 0))
         }
         return
 
-    } else if (msg_isAction(${globs.m}, 'stop')) {
+    } else if (msg_isAction(m, 'stop')) {
         ${state.points} = []
         ${state.lineSegments} = []
         return
     }
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetNextDuration),
-    '2': coldFloatInletWithSetter(globs.m, state.funcSetNextDelay),
+    '1': coldFloatInletWithSetter(state.funcSetNextDuration),
+    '2': coldFloatInletWithSetter(state.funcSetNextDelay),
 })
 
 // ------------------------------------------------------------------- //

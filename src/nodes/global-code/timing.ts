@@ -17,17 +17,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+import { Func, Var } from "@webpd/compiler/src/ast/declare"
 import { GlobalCodeGenerator } from "@webpd/compiler/src/compile/types"
 
 // TODO : unit testing
 // TODO : amount = 0 ?
 // TODO : missing persec and all per...
-export const computeUnitInSamples: GlobalCodeGenerator = ({ macros: { Func, Var } }) => `
-    function computeUnitInSamples ${Func([
-        Var('sampleRate', 'Float'),
-        Var('amount', 'Float'),
-        Var('unit', 'string'),
-    ], 'Float')} {
+export const computeUnitInSamples: GlobalCodeGenerator = () => 
+    Func('computeUnitInSamples', [
+        Var('Float', 'sampleRate'),
+        Var('Float', 'amount'),
+        Var('string', 'unit'),
+    ], 'Float')`
         if (unit === 'msec' || unit === 'millisecond') {
             return amount / 1000 * sampleRate
         } else if (unit === 'sec' || unit === 'seconds' || unit === 'second') {
@@ -39,5 +40,4 @@ export const computeUnitInSamples: GlobalCodeGenerator = ({ macros: { Func, Var 
         } else {
             throw new Error("invalid time unit : " + unit)
         }
-    }
-`
+    `

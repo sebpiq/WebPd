@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
+import { AnonFunc, ast, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     minValue: number
@@ -58,25 +59,24 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node,
     state,
-    macros: { Var },
-}) => `
-    let ${Var(state.minValue, 'Float')} = ${node.args.minValue}
-    let ${Var(state.maxValue, 'Float')} = ${node.args.maxValue}
+}) => ast`
+    ${Var('Float', state.minValue, node.args.minValue.toString())}
+    ${Var('Float', state.maxValue, node.args.maxValue.toString())}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
-    '0': `
-    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        ${snds[0]}(msg_floats([
-            Math.max(Math.min(${state.maxValue}, msg_readFloatToken(${globs.m}, 0)), ${state.minValue})
-        ]))
-        return
-    }
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${snds[0]}(msg_floats([
+                Math.max(Math.min(${state.maxValue}, msg_readFloatToken(m, 0)), ${state.minValue})
+            ]))
+            return
+        }
     `,
 
-    '1': coldFloatInlet(globs.m, state.minValue),
-    '2': coldFloatInlet(globs.m, state.maxValue),
+    '1': coldFloatInlet(state.minValue),
+    '2': coldFloatInlet(state.maxValue),
 })
 
 // ------------------------------------------------------------------- //

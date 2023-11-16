@@ -19,211 +19,210 @@
  */
 import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
 import { interpolateLin } from './points'
+import { Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler/src/ast/declare'
 
 export const linesUtils: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: ({ macros: { Var, Func } }) => `
+    codeGenerator: () => Sequence([
+        Class('LineSegment', [
+            Var('Point', 'p0'),
+            Var('Point', 'p1'),
+            Var('Float', 'dx'),
+            Var('Float', 'dy'),
+        ]),
 
-    class LineSegment {
-        ${Var('p0', 'Point')}
-        ${Var('p1', 'Point')}
-        ${Var('dx', 'Float')}
-        ${Var('dy', 'Float')}
-    }
+        Func('computeSlope', 
+            [Var('Point', 'p0'), Var('Point', 'p1')],
+            'Float'
+        )`
+            return p1.x !== p0.x ? (p1.y - p0.y) / (p1.x - p0.x) : 0
+        `,
 
-    function computeSlope ${Func(
-        [Var('p0', 'Point'), Var('p1', 'Point')],
-        'Float'
-    )} {
-        return p1.x !== p0.x ? (p1.y - p0.y) / (p1.x - p0.x) : 0
-    }
-
-    function removePointsBeforeFrame ${Func(
-        [Var('points', 'Array<Point>'), Var('frame', 'Float')],
-        'Array<Point>'
-    )} {
-        const ${Var('newPoints', 'Array<Point>')} = []
-        let ${Var('i', 'Int')} = 0
-        while (i < points.length) {
-            if (frame <= points[i].x) {
-                newPoints.push(points[i])
+        Func('removePointsBeforeFrame', 
+            [Var('Array<Point>', 'points'), Var('Float', 'frame')],
+            'Array<Point>'
+        )`
+            ${ConstVar('Array<Point>', 'newPoints', '[]')}
+            ${Var('Int', 'i', '0')}
+            while (i < points.length) {
+                if (frame <= points[i].x) {
+                    newPoints.push(points[i])
+                }
+                i++
             }
-            i++
-        }
-        return newPoints
-    }
+            return newPoints
+        `,
 
-    function insertNewLinePoints ${Func(
-        [Var('points', 'Array<Point>'), Var('p0', 'Point'), Var('p1', 'Point')],
-        'Array<Point>'
-    )} {
-        const ${Var('newPoints', 'Array<Point>')} = []
-        let ${Var('i', 'Int')} = 0
-        
-        // Keep the points that are before the new points added
-        while (i < points.length && points[i].x <= p0.x) {
-            newPoints.push(points[i])
-            i++
-        }
-        
-        // Find the start value of the start point :
-        
-        // 1. If there is a previous point and that previous point
-        // is on the same frame, we don't modify the start point value.
-        // (represents a vertical line).
-        if (0 < i - 1 && points[i - 1].x === p0.x) {
+        Func('insertNewLinePoints', 
+            [Var('Array<Point>', 'points'), Var('Point', 'p0'), Var('Point', 'p1')],
+            'Array<Point>'
+        )`
+            ${ConstVar('Array<Point>', 'newPoints', '[]')}
+            ${Var('Int', 'i', '0')}
+            
+            // Keep the points that are before the new points added
+            while (i < points.length && points[i].x <= p0.x) {
+                newPoints.push(points[i])
+                i++
+            }
+            
+            // Find the start value of the start point :
+            
+            // 1. If there is a previous point and that previous point
+            // is on the same frame, we don't modify the start point value.
+            // (represents a vertical line).
+            if (0 < i - 1 && points[i - 1].x === p0.x) {
 
-        // 2. If new points are inserted in between already existing points 
-        // we need to interpolate the existing line to find the startValue.
-        } else if (0 < i && i < points.length) {
+            // 2. If new points are inserted in between already existing points 
+            // we need to interpolate the existing line to find the startValue.
+            } else if (0 < i && i < points.length) {
+                newPoints.push({
+                    x: p0.x,
+                    y: interpolateLin(p0.x, points[i - 1], points[i])
+                })
+
+            // 3. If new line is inserted after all existing points, 
+            // we just take the value of the last point
+            } else if (i >= points.length && points.length) {
+                newPoints.push({
+                    x: p0.x,
+                    y: points[points.length - 1].y,
+                })
+
+            // 4. If new line placed in first position, we take the defaultStartValue.
+            } else if (i === 0) {
+                newPoints.push({
+                    x: p0.x,
+                    y: p0.y,
+                })
+            }
+            
             newPoints.push({
-                x: p0.x,
-                y: interpolateLin(p0.x, points[i - 1], points[i])
+                x: p1.x,
+                y: p1.y,
             })
+            return newPoints
+        `,
 
-        // 3. If new line is inserted after all existing points, 
-        // we just take the value of the last point
-        } else if (i >= points.length && points.length) {
-            newPoints.push({
-                x: p0.x,
-                y: points[points.length - 1].y,
-            })
+        Func('computeFrameAjustedPoints', 
+            [Var('Array<Point>', 'points')],
+            'Array<Point>'
+        )`
+            if (points.length < 2) {
+                throw new Error('invalid length for points')
+            }
 
-        // 4. If new line placed in first position, we take the defaultStartValue.
-        } else if (i === 0) {
-            newPoints.push({
-                x: p0.x,
-                y: p0.y,
-            })
-        }
-        
-        newPoints.push({
-            x: p1.x,
-            y: p1.y,
-        })
-        return newPoints
-    }
+            ${ConstVar('Array<Point>', 'newPoints', '[]')}
+            ${Var('Int', 'i', '0')}
+            ${Var('Point', 'p', 'points[0]')}
+            ${Var('Float', 'frameLower', '0')}
+            ${Var('Float', 'frameUpper', '0')}
+            
+            while(i < points.length) {
+                p = points[i]
+                frameLower = Math.floor(p.x)
+                frameUpper = frameLower + 1
 
-    function computeFrameAjustedPoints ${Func(
-        [Var('points', 'Array<Point>')],
-        'Array<Point>'
-    )} {
-        if (points.length < 2) {
-            throw new Error('invalid length for points')
-        }
+                // I. Placing interpolated point at the lower bound of the current frame
+                // ------------------------------------------------------------------------
+                // 1. Point is already on an exact frame,
+                if (p.x === frameLower) {
+                    newPoints.push({ x: p.x, y: p.y })
 
-        const ${Var('newPoints', 'Array<Point>')} = []
-        let ${Var('i', 'Int')} = 0
-        let ${Var('p', 'Point')} = points[0]
-        let ${Var('frameLower', 'Float')} = 0
-        let ${Var('frameUpper', 'Float')} = 0
-        
-        while(i < points.length) {
-            p = points[i]
-            frameLower = Math.floor(p.x)
-            frameUpper = frameLower + 1
+                    // 1.a. if several of the next points are also on the same X,
+                    // we find the last one to draw a vertical line.
+                    while (
+                        (i + 1) < points.length
+                        && points[i + 1].x === frameLower
+                    ) {
+                        i++
+                    }
+                    if (points[i].y !== newPoints[newPoints.length - 1].y) {
+                        newPoints.push({ x: points[i].x, y: points[i].y })
+                    }
 
-            // I. Placing interpolated point at the lower bound of the current frame
-            // ------------------------------------------------------------------------
-            // 1. Point is already on an exact frame,
-            if (p.x === frameLower) {
-                newPoints.push({ x: p.x, y: p.y })
+                    // 1.b. if last point, we quit
+                    if (i + 1 >= points.length) {
+                        break
+                    }
 
-                // 1.a. if several of the next points are also on the same X,
-                // we find the last one to draw a vertical line.
+                    // 1.c. if next point is in a different frame we can move on to next iteration
+                    if (frameUpper <= points[i + 1].x) {
+                        i++
+                        continue
+                    }
+                
+                // 2. Point isn't on an exact frame
+                // 2.a. There's a previous point, the we use it to interpolate the value.
+                } else if (newPoints.length) {
+                    newPoints.push({
+                        x: frameLower,
+                        y: interpolateLin(frameLower, points[i - 1], p),
+                    })
+                
+                // 2.b. It's the very first point, then we don't change its value.
+                } else {
+                    newPoints.push({ x: frameLower, y: p.y })
+                }
+
+                // II. Placing interpolated point at the upper bound of the current frame
+                // ---------------------------------------------------------------------------
+                // First, we find the closest point from the frame upper bound (could be the same p).
+                // Or could be a point that is exactly placed on frameUpper.
                 while (
-                    (i + 1) < points.length
-                    && points[i + 1].x === frameLower
+                    (i + 1) < points.length 
+                    && (
+                        Math.ceil(points[i + 1].x) === frameUpper
+                        || Math.floor(points[i + 1].x) === frameUpper
+                    )
                 ) {
                     i++
                 }
-                if (points[i].y !== newPoints[newPoints.length - 1].y) {
-                    newPoints.push({ x: points[i].x, y: points[i].y })
-                }
+                p = points[i]
 
-                // 1.b. if last point, we quit
-                if (i + 1 >= points.length) {
-                    break
-                }
-
-                // 1.c. if next point is in a different frame we can move on to next iteration
-                if (frameUpper <= points[i + 1].x) {
-                    i++
+                // 1. If the next point is directly in the next frame, 
+                // we do nothing, as this corresponds with next iteration frameLower.
+                if (Math.floor(p.x) === frameUpper) {
                     continue
-                }
-            
-            // 2. Point isn't on an exact frame
-            // 2.a. There's a previous point, the we use it to interpolate the value.
-            } else if (newPoints.length) {
-                newPoints.push({
-                    x: frameLower,
-                    y: interpolateLin(frameLower, points[i - 1], p),
-                })
-            
-            // 2.b. It's the very first point, then we don't change its value.
-            } else {
-                newPoints.push({ x: frameLower, y: p.y })
-            }
+                
+                // 2. If there's still a point after p, we use it to interpolate the value
+                } else if (i < points.length - 1) {
+                    newPoints.push({
+                        x: frameUpper,
+                        y: interpolateLin(frameUpper, p, points[i + 1]),
+                    })
 
-            // II. Placing interpolated point at the upper bound of the current frame
-            // ---------------------------------------------------------------------------
-            // First, we find the closest point from the frame upper bound (could be the same p).
-            // Or could be a point that is exactly placed on frameUpper.
-            while (
-                (i + 1) < points.length 
-                && (
-                    Math.ceil(points[i + 1].x) === frameUpper
-                    || Math.floor(points[i + 1].x) === frameUpper
-                )
-            ) {
+                // 3. If it's the last point, we dont change the value
+                } else {
+                    newPoints.push({ x: frameUpper, y: p.y })
+                }
+
                 i++
             }
-            p = points[i]
 
-            // 1. If the next point is directly in the next frame, 
-            // we do nothing, as this corresponds with next iteration frameLower.
-            if (Math.floor(p.x) === frameUpper) {
-                continue
-            
-            // 2. If there's still a point after p, we use it to interpolate the value
-            } else if (i < points.length - 1) {
-                newPoints.push({
-                    x: frameUpper,
-                    y: interpolateLin(frameUpper, p, points[i + 1]),
+            return newPoints
+        `,
+
+        Func('computeLineSegments', 
+            [Var('Array<Point>', 'points')],
+            'Array<LineSegment>'
+        )`
+            ${ConstVar('Array<LineSegment>', 'lineSegments', '[]')}
+            ${Var('Int', 'i', '0')}
+            ${Var('Point', 'p0')}
+            ${Var('Point', 'p1')}
+
+            while(i < points.length - 1) {
+                p0 = points[i]
+                p1 = points[i + 1]
+                lineSegments.push({
+                    p0, p1, 
+                    dy: computeSlope(p0, p1),
+                    dx: 1,
                 })
-
-            // 3. If it's the last point, we dont change the value
-            } else {
-                newPoints.push({ x: frameUpper, y: p.y })
+                i++
             }
-
-            i++
-        }
-
-        return newPoints
-    }
-
-    function computeLineSegments ${Func(
-        [Var('points', 'Array<Point>')],
-        'Array<LineSegment>'
-    )} {
-        const ${Var('lineSegments', 'Array<LineSegment>')} = []
-        let ${Var('i', 'Int')} = 0
-        let ${Var('p0', 'Point')}
-        let ${Var('p1', 'Point')}
-
-        while(i < points.length - 1) {
-            p0 = points[i]
-            p1 = points[i + 1]
-            lineSegments.push({
-                p0, p1, 
-                dy: computeSlope(p0, p1),
-                dx: 1,
-            })
-            i++
-        }
-        return lineSegments
-    }
-
-`,
+            return lineSegments
+        `,
+    ]),
     dependencies: [interpolateLin],
 }

@@ -17,26 +17,25 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+import { Class, Func, Var } from '@webpd/compiler/src/ast/declare'
 import {
     GlobalCodeGenerator,
     GlobalCodeGeneratorWithSettings,
 } from '@webpd/compiler/src/compile/types'
 
-export const point: GlobalCodeGenerator = ({ macros: { Var } }) => `
-    class Point {
-        ${Var('x', 'Float')}
-        ${Var('y', 'Float')}
-    }
-`
+export const point: GlobalCodeGenerator = () => 
+    Class('Point', [
+        Var('Float', 'x'),
+        Var('Float', 'y'),
+    ])
 
 export const interpolateLin: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: ({ macros: { Var, Func } }) => `
-    function interpolateLin ${Func(
-        [Var('x', 'Float'), Var('p0', 'Point'), Var('p1', 'Point')],
-        'Float'
-    )} {
-        return p0.y + (x - p0.x) * (p1.y - p0.y) / (p1.x - p0.x)
-    }
-`,
+    codeGenerator: () => 
+        Func('interpolateLin', 
+            [Var('Float', 'x'), Var('Point', 'p0'), Var('Point', 'p1')],
+            'Float'
+        )`
+            return p0.y + (x - p0.x) * (p1.y - p0.y) / (p1.x - p0.x)
+        `,
     dependencies: [point],
 }

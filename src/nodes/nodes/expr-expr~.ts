@@ -32,6 +32,7 @@ import {
     messageTokenToFloat,
     messageTokenToString,
 } from '../type-arguments'
+import { AnonFunc, ast, ConstVar, Sequence, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     tokenizedExpressions: Array<Array<ExpressionToken>>
@@ -92,17 +93,16 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node: { args, type },
     state,
-    macros: { Var },
 }) => {
     const inputs = type === 'expr' ? 
         validateAndListInputsExpr(args.tokenizedExpressions)
         : validateAndListInputsExprTilde(args.tokenizedExpressions)
             .filter(({ type }) => type !== 'signal')
 
-    return functional.renderCode`
-        const ${Var(state.floatInputs, 'Map<Int, Float>')} = new Map()
-        const ${Var(state.stringInputs, 'Map<Int, string>')} = new Map()
-        const ${Var(state.outputs, 'Array<Float>')} = new Array(${args.tokenizedExpressions.length})
+    return ast`
+        ${ConstVar('Map<Int, Float>', state.floatInputs, 'new Map()')}
+        ${ConstVar('Map<Int, string>', state.stringInputs, 'new Map()')}
+        ${ConstVar('Array<Float>', state.outputs, `new Array(${args.tokenizedExpressions.length})`)}
         ${inputs.filter(input => input.type === 'float' || input.type === 'int')
             .map(input => `${state.floatInputs}.set(${input.id}, 0)`)}
         ${inputs.filter(input => input.type === 'string')
@@ -116,18 +116,16 @@ const loopExprTilde: _NodeImplementation['generateLoop'] = ({
     state,
     outs, 
     ins,
-}) => `
-    ${args.tokenizedExpressions.map((tokens, i) => 
-        `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)}
-`
+}) => Sequence(
+    args.tokenizedExpressions.map((tokens, i) => 
+        `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)
+) 
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
     snds, 
-    globs, 
     state, 
     node: { args, type },
-    macros: { Var },
 }) => {
     const inputs = type === 'expr' ? 
         validateAndListInputsExpr(args.tokenizedExpressions)
@@ -137,44 +135,49 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     const hasInput0 = inputs.length && inputs[0].id === 0
 
     return {
-        '0': functional.renderCode`
-
-        if (!msg_isBang(${globs.m})) {
-            for (let ${Var('i', 'Int')} = 0; i < msg_getLength(${globs.m}); i++) {
-                ${state.stringInputs}.set(i, messageTokenToString(${globs.m}, i))
-                ${state.floatInputs}.set(i, messageTokenToFloat(${globs.m}, i))
+        '0': AnonFunc([Var('Message', 'm')], 'void')`
+            if (!msg_isBang(m)) {
+                for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
+                    ${state.stringInputs}.set(i, messageTokenToString(m, i))
+                    ${state.floatInputs}.set(i, messageTokenToFloat(m, i))
+                }
             }
-        }
 
-        ${functional.renderIf(
-            type === 'expr', 
-            () => `
-                ${args.tokenizedExpressions.map((tokens, i) => 
-                    `${state.outputs}[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
-        
-                ${args.tokenizedExpressions.map((_, i) => 
-                    `${snds[`${i}`]}(msg_floats([${state.outputs}[${i}]]))`)}
-            `
-        )}
-        
-        return
+            ${functional.renderIf(
+                type === 'expr', 
+                () => `
+                    ${args.tokenizedExpressions.map((tokens, i) => 
+                        `${state.outputs}[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
+            
+                    ${args.tokenizedExpressions.map((_, i) => 
+                        `${snds[`${i}`]}(msg_floats([${state.outputs}[${i}]]))`)}
+                `
+            )}
+            
+            return
         `,
 
         ...functional.mapArray(
             inputs.slice(hasInput0 ? 1 : 0), 
-            ({ id, type }) => [
-                `${id}`, 
-                functional.renderSwitch(
-                    [
-                        type === 'float' || type === 'int',
-                        `${state.floatInputs}.set(${id}, messageTokenToFloat(${globs.m}, 0));return`,
-                    ],
-                    [
-                        type === 'string',
-                        `${state.stringInputs}.set(${id}, messageTokenToString(${globs.m}, 0));return`,
+            ({ id, type }) => {
+                if (type === 'float' || type === 'int') {
+                    return [
+                        `${id}`, 
+                        AnonFunc([Var('Message', 'm')], 'void')`
+                            ${state.floatInputs}.set(${id}, messageTokenToFloat(m, 0));return
+                        `
                     ]
-                )
-            ]
+                } else if (type === 'string') {
+                    return [
+                        `${id}`, 
+                        AnonFunc([Var('Message', 'm')], 'void')`
+                            ${state.stringInputs}.set(${id}, messageTokenToString(m, 0));return
+                        `
+                    ]
+                } else {
+                    throw new Error(`invalid input type ${type}`)
+                }
+            }
         )
     }
 }

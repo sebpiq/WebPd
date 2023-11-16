@@ -20,6 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
+import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {}
@@ -40,15 +41,16 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, snds }) => ({
-    '0': `
-    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        ${snds.$0}(m)
-        return
-    } else {
-        ${snds.$1}(m)
-        return
-    }`,
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${snds.$0}(m)
+            return
+        } else {
+            ${snds.$1}(m)
+            return
+        }
+    `,
 })
 
 // ------------------------------------------------------------------- //

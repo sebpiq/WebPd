@@ -50,6 +50,7 @@ import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
 import { executeCompilation } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import { ast } from '@webpd/compiler/src/ast/declare'
 
 const SAMPLE_RATE = 44100
 // const DELREAD_NODE_TYPES = ['delread~', 'delread4~'] as const
@@ -111,7 +112,7 @@ describe('delread~ / delwrite~', () => {
                 'dac~': nodeImplementationDac,
                 'sig~': nodeImplementationSig,
                 counter: {
-                    generateLoop: ({ globs, outs }) => `${outs.$0} = toFloat(${globs.frame})`,
+                    generateLoop: ({ globs, outs }) => ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
 

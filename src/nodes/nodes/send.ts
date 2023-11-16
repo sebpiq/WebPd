@@ -24,6 +24,7 @@ import { assertOptionalString } from '../validation'
 import { messageBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     busName: string
@@ -53,23 +54,21 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
-    macros: { Var },
     node: { args },
-}) => `
-    let ${Var(state.busName, 'string')} = "${args.busName}"
+}) => ast`
+    ${Var('string', state.busName, `"${args.busName}"`)}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     state,
-    globs,
 }) => ({
-    '0': `
-    msgBusPublish(${state.busName}, ${globs.m})
-    return
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        msgBusPublish(${state.busName}, m)
+        return
     `,
 
-    '1': coldStringInlet(globs.m, state.busName)
+    '1': coldStringInlet(state.busName)
 })
 
 // ------------------------------------------------------------------- //

@@ -20,19 +20,13 @@
 import { interpolateLin } from './points'
 import { runTestSuite } from '@webpd/compiler/src/test-helpers'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc } from '@webpd/compiler/src/ast/declare'
 
 describe('global-code.points', () => {
     runTestSuite([
         {
             description: 'interpolateLin > should compute linear interpolation %s',
-            codeGenerator: ({ macros: { Var, Func }}) => `
-                function testCreatePoint ${Func([
-                    Var('x', 'Float'), 
-                    Var('y', 'Float')
-                ], 'Point')} {
-                    return { x, y }
-                }
-
+            testFunction: () => AnonFunc([], 'void')`
                 assert_floatsEqual(interpolateLin(                
                     0,
                     {x: 0, y: 0},

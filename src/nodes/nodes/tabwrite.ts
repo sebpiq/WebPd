@@ -23,6 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = {
@@ -46,38 +47,38 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
-    const { state, macros: { Var, Func }} = context
-    return `
-        let ${Var(state.index, 'Int')} = 0
+    const { state } = context
+    return ast`
+        ${Var('Int', state.index, 0)}
         ${declareTabBase(context)}
 
-        function ${state.funcSetIndex} ${Func([
-            Var('index', 'Float')
-        ], 'void')} {
+        ${Func(state.funcSetIndex, [
+            Var('Float', 'index')
+        ], 'void')`
             ${state.index} = ${prepareIndexCode('index', context)}
-        }
+        `}
     `
 }
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
-    const { state, globs } = context
+    const { state } = context
     return {
-        '0': `
-        if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {        
-            if (${state.array}.length === 0) {
-                return
+        '0': AnonFunc([Var('Message', 'm')], 'void')`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
+                if (${state.array}.length === 0) {
+                    return
 
-            } else {
-                ${state.array}[${state.index}] = msg_readFloatToken(${globs.m}, 0)
-                return
-            }
-            return 
+                } else {
+                    ${state.array}[${state.index}] = msg_readFloatToken(m, 0)
+                    return
+                }
+                return 
 
-        } ${messageSetArrayCode(context)}
+            } ${messageSetArrayCode(context)}
         `,
 
-        '1': coldFloatInletWithSetter(globs.m, state.funcSetIndex)
+        '1': coldFloatInletWithSetter(state.funcSetIndex)
     }
 }
 

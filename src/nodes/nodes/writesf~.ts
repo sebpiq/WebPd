@@ -24,6 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 const BLOCK_SIZE = 44100 * 5
 
@@ -68,28 +69,28 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, node: {args}, macros: { Func, Var } }) => functional.renderCode`
-    let ${Var(state.operationId, 'fs_OperationId')} = -1
-    let ${Var(state.isWriting, 'boolean')} = false
-    const ${Var(state.block, 'Array<FloatArray>')} = [
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, node: {args} }) => ast`
+    ${Var('fs_OperationId', state.operationId, '-1')}
+    ${Var('boolean', state.isWriting, 'false')}
+    ${ConstVar('Array<FloatArray>', state.block, `[
         ${functional.countTo(args.channelCount).map(() => 
-            `createFloatArray(${BLOCK_SIZE}),`)}
-    ]
-    let ${Var(state.cursor, 'Int')} = 0
+            `createFloatArray(${BLOCK_SIZE})`
+        ).join(',')}
+    ]`)}
+    ${Var('Int', state.cursor, 0)}
 
-    const ${state.funcFlushBlock} = ${Func([
-    ], 'void')} => {
-        const ${Var('block', 'Array<FloatArray>')} = []
-        for (let ${Var('i', 'Int')} = 0; i < ${state.block}.length; i++) {
+    ${Func(state.funcFlushBlock, [], 'void')`
+        ${ConstVar('Array<FloatArray>', 'block', '[]')}
+        for (${Var('Int', 'i', '0')}; i < ${state.block}.length; i++) {
             block.push(${state.block}[i].subarray(0, ${state.cursor}))
         }
         fs_sendSoundStreamData(${state.operationId}, block)
         ${state.cursor} = 0
-    }
+    `}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ state, ins, node: { args } }) => functional.renderCode`
+const generateLoop: _NodeImplementation['generateLoop'] = ({ state, ins, node: { args } }) => ast`
     if (${state.isWriting} === true) {
         ${functional.countTo(args.channelCount).map((i) => 
             `${state.block}[${i}][${state.cursor}] = ${ins[i]}`)}
@@ -101,61 +102,61 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ state, ins, node: {
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node, state, globs, macros: { Var } }) => ({
-    '0_message': `
-    if (msg_getLength(${globs.m}) >= 2) {
-        if (
-            msg_isStringToken(${globs.m}, 0) 
-            && msg_readStringToken(${globs.m}, 0) === 'open'
-        ) {
-            if (${state.operationId} !== -1) {
-                fs_closeSoundStream(${state.operationId}, FS_OPERATION_SUCCESS)
-            }
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node, state, globs }) => ({
+    '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+        if (msg_getLength(m) >= 2) {
+            if (
+                msg_isStringToken(m, 0) 
+                && msg_readStringToken(m, 0) === 'open'
+            ) {
+                if (${state.operationId} !== -1) {
+                    fs_closeSoundStream(${state.operationId}, FS_OPERATION_SUCCESS)
+                }
 
-            const ${Var('soundInfo', 'fs_SoundInfo')} = {
-                channelCount: ${node.args.channelCount},
-                sampleRate: toInt(${globs.sampleRate}),
-                bitDepth: 32,
-                encodingFormat: '',
-                endianness: '',
-                extraOptions: '',
-            }
-            const ${Var('unhandledOptions', 'Set<Int>')} = parseSoundFileOpenOpts(
-                ${globs.m},
-                soundInfo,
-            )
-            const ${Var('url', 'string')} = parseReadWriteFsOpts(
-                ${globs.m},
-                soundInfo,
-                unhandledOptions
-            )
-            if (url.length === 0) {
+                ${ConstVar('fs_SoundInfo', 'soundInfo', `{
+                    channelCount: ${node.args.channelCount},
+                    sampleRate: toInt(${globs.sampleRate}),
+                    bitDepth: 32,
+                    encodingFormat: '',
+                    endianness: '',
+                    extraOptions: '',
+                }`)}
+                ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+                    m,
+                    soundInfo,
+                )`)}
+                ${ConstVar('string', 'url', `parseReadWriteFsOpts(
+                    m,
+                    soundInfo,
+                    unhandledOptions
+                )`)}
+                if (url.length === 0) {
+                    return
+                }
+                ${state.operationId} = fs_openSoundWriteStream(
+                    url,
+                    soundInfo,
+                    () => {
+                        ${state.funcFlushBlock}()
+                        ${state.operationId} = -1
+                    }
+                )
                 return
             }
-            ${state.operationId} = fs_openSoundWriteStream(
-                url,
-                soundInfo,
-                () => {
-                    ${state.funcFlushBlock}()
-                    ${state.operationId} = -1
-                }
-            )
-            return
-        }
 
-    } else if (msg_isAction(${globs.m}, 'start')) {
-            ${state.isWriting} = true
+        } else if (msg_isAction(m, 'start')) {
+                ${state.isWriting} = true
+                return
+
+        } else if (msg_isAction(m, 'stop')) {
+            ${state.funcFlushBlock}()
+            ${state.isWriting} = false
             return
 
-    } else if (msg_isAction(${globs.m}, 'stop')) {
-        ${state.funcFlushBlock}()
-        ${state.isWriting} = false
-        return
-
-    } else if (msg_isAction(${globs.m}, 'print')) {
-        console.log('[writesf~] writing = ' + ${state.isWriting}.toString())
-        return
-    }    
+        } else if (msg_isAction(m, 'print')) {
+            console.log('[writesf~] writing = ' + ${state.isWriting}.toString())
+            return
+        }    
     `
 })
 

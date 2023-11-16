@@ -25,6 +25,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { messageBuses } from '../global-code/buses'
+import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     value: string
@@ -59,36 +60,34 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     node: { args }, 
-    state, 
-    macros: { Var } 
-}) => `
-    let ${Var(state.value, 'string')} = "${args.value}"
+    state,
+}) => ast`
+    ${Var('string', state.value, `"${args.value}"`)}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
-    globs,
     state,
 }) => ({
-    '0': `
-    if (msg_isBang(${globs.m})) {
-        ${snds.$0}(msg_strings([${state.value}]))
-        return
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${snds.$0}(msg_strings([${state.value}]))
+            return
 
-    } else if (msg_isMatching(${globs.m}, [MSG_STRING_TOKEN])) {
-        ${state.value} = msg_readStringToken(${globs.m}, 0)
-        ${snds.$0}(msg_strings([${state.value}]))
-        return
+        } else if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
+            ${state.value} = msg_readStringToken(m, 0)
+            ${snds.$0}(msg_strings([${state.value}]))
+            return
 
-    }
+        }
     `,
 
-    '1': `
-    if (msg_isMatching(${globs.m}, [MSG_STRING_TOKEN])) {
-        ${state.value} = msg_readStringToken(${globs.m}, 0)
-        return 
-    }
+    '1': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
+            ${state.value} = msg_readStringToken(m, 0)
+            return 
+        }
     `,
 })
 

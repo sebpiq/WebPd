@@ -22,6 +22,7 @@ import { functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
+import { Sequence } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     channelMapping: Array<number>
@@ -74,19 +75,20 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
     globs,
     node,
     compilation: { audioSettings, target },
-}) => node.args.channelMapping
-    // Save the original index 
-    .map((source, i) => [source, i])
-    // Ignore channels that are out of bounds
-    .filter(
-        ([source]) => 0 <= source && source < audioSettings.channelCount.in
-    )
-    .map(([source, i]) =>
-        target === 'javascript'
-            ? `${outs[`${i}`]} = ${globs.input}[${source}][${globs.iterFrame}]`
-            : `${outs[`${i}`]} = ${globs.input}[${globs.iterFrame} + ${globs.blockSize} * ${source}]`
-    )
-    .join('\n') + '\n'
+}) => Sequence([
+    node.args.channelMapping
+        // Save the original index 
+        .map((source, i) => [source, i])
+        // Ignore channels that are out of bounds
+        .filter(
+            ([source]) => 0 <= source && source < audioSettings.channelCount.in
+        )
+        .map(([source, i]) =>
+            target === 'javascript'
+                ? `${outs[`${i}`]} = ${globs.input}[${source}][${globs.iterFrame}]`
+                : `${outs[`${i}`]} = ${globs.input}[${globs.iterFrame} + ${globs.blockSize} * ${source}]`
+        )
+    ])
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { generateLoop, stateVariables }

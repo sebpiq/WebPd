@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
+import { ast, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     minValue: number,
@@ -52,9 +53,9 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ node: { args }, state, macros: { Var }}) => `
-    let ${Var(state.minValue, 'Float')} = ${args.minValue}
-    let ${Var(state.maxValue, 'Float')} = ${args.maxValue}
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ node: { args }, state }) => ast`
+    ${Var('Float', state.minValue, args.minValue.toString())}
+    ${Var('Float', state.maxValue, args.maxValue.toString())}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
@@ -62,9 +63,9 @@ const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ ins, st
     `Math.max(Math.min(${state.maxValue}, ${ins.$0}), ${state.minValue})`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '1': coldFloatInlet(globs.m, state.minValue),
-    '2': coldFloatInlet(globs.m, state.maxValue),
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+    '1': coldFloatInlet(state.minValue),
+    '2': coldFloatInlet(state.maxValue),
 })
 
 // ------------------------------------------------------------------- //

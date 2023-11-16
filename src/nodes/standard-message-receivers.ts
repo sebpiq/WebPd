@@ -18,34 +18,38 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { CodeVariableName } from '@webpd/compiler/src/compile/types'
+import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export const coldFloatInlet = (
-    messageName: CodeVariableName,
-    storageName: CodeVariableName,
+    storageName: VariableName,
 ) => {
-    return `if (msg_isMatching(${messageName}, [MSG_FLOAT_TOKEN])) {
-        ${storageName} = msg_readFloatToken(${messageName}, 0)
-        return
-    }`
+    return AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${storageName} = msg_readFloatToken(m, 0)
+            return
+        }
+    `
 }
 
 export const coldStringInlet = (
-    messageName: CodeVariableName,
-    storageName: CodeVariableName,
+    storageName: VariableName,
 ) => {
-    return `if (msg_isMatching(${messageName}, [MSG_STRING_TOKEN])) {
-        ${storageName} = msg_readStringToken(${messageName}, 0)
-        return
-    }`
+    return AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
+            ${storageName} = msg_readStringToken(m, 0)
+            return
+        }
+    `
 }
 
 export const coldFloatInletWithSetter = (
-    messageName: CodeVariableName,
-    setterName: CodeVariableName,
+    setterName: VariableName,
 ) => {
-    return `if (msg_isMatching(${messageName}, [MSG_FLOAT_TOKEN])) {
-        ${setterName}(msg_readFloatToken(${messageName}, 0))
-        return
-    }`
+    return AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${setterName}(msg_readFloatToken(m, 0))
+            return
+        }
+    `
 }

@@ -23,6 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     maxValue: number
@@ -57,33 +58,32 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node,
     state,
-    macros: { Var, Func },
-}) => `
-    let ${Var(state.maxValue, 'Float')} = ${node.args.maxValue}
+}) => ast`
+    ${Var('Float', state.maxValue, node.args.maxValue)}
 
-    function ${state.funcSetMaxValue} ${Func([
-        Var('maxValue', 'Float')
-    ], 'void')} {
+    ${Func(state.funcSetMaxValue, [
+        Var('Float', 'maxValue')
+    ], 'void')`
         ${state.maxValue} = Math.max(maxValue, 0)
-    }
+    `}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
-    '0': `
-    if (msg_isBang(${globs.m})) {
-        ${snds['0']}(msg_floats([Math.floor(Math.random() * ${state.maxValue})]))
-        return
-    } else if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'seed'
-    ) {
-        console.log('WARNING : seed not implemented yet for [random]')
-        return
-    }
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${snds['0']}(msg_floats([Math.floor(Math.random() * ${state.maxValue})]))
+            return
+        } else if (
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+            && msg_readStringToken(m, 0) === 'seed'
+        ) {
+            console.log('WARNING : seed not implemented yet for [random]')
+            return
+        }
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetMaxValue),
+    '1': coldFloatInletWithSetter(state.funcSetMaxValue),
 })
 
 // ------------------------------------------------------------------- //

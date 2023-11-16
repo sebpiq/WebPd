@@ -25,6 +25,7 @@ import { assertOptionalString } from '../validation'
 import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     outputOnLoad: boolean
@@ -51,22 +52,21 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = (conte
         state,
         snds,
         node: { args },
-        macros: { Var, Func },
     } = context
-    return `
-        function ${state.funcMessageReceiver} ${Func([
-            Var('m', 'Message'),
-        ], 'void')} {
+    return ast`
+        ${Func(state.funcMessageReceiver, [
+            Var('Message', 'm'),
+        ], 'void')`
             ${messageSetSendReceive(context)}
             else {
-                const ${Var('outMessage', 'Message')} = msg_bang()
+                ${ConstVar('Message', 'outMessage', 'msg_bang()')}
                 ${snds.$0}(outMessage)
                 if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                     msgBusPublish(${state.sendBusName}, outMessage)
                 }
                 return
             }
-        }
+        `}
 
         ${declareControlSendReceive(context)}
 
@@ -79,10 +79,10 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = (conte
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
-    const { state, globs } = context
+    const { state } = context
     return ({
-        '0': `
-            ${state.funcMessageReceiver}(${globs.m})
+        '0': AnonFunc([Var('Message', 'm')], 'void')`
+            ${state.funcMessageReceiver}(m)
             return
         `,
     })

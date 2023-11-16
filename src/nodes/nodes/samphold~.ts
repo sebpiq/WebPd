@@ -20,6 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
+import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -50,37 +51,37 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, macros: { Var }}) => `
-    let ${Var(state.signalMemory, 'Float')} = 0
-    let ${Var(state.controlMemory, 'Float')} = 0
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state }) => ast`
+    ${Var('Float', state.signalMemory, 0)}
+    ${Var('Float', state.controlMemory, 0)}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => ast`
     ${state.signalMemory} = ${outs.$0} = ${ins.$1} < ${state.controlMemory} ? ${ins.$0}: ${state.signalMemory}
     ${state.controlMemory} = ${ins.$1}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0_message': `
+    '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
         if (
-            msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-            && msg_readStringToken(${globs.m}, 0) === 'set'
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+            && msg_readStringToken(m, 0) === 'set'
         ) {
-            ${state.signalMemory} = msg_readFloatToken(${globs.m}, 1)
+            ${state.signalMemory} = msg_readFloatToken(m, 1)
             return
 
         } else if (
-            msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-            && msg_readStringToken(${globs.m}, 0) === 'reset'
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+            && msg_readStringToken(m, 0) === 'reset'
         ) {
-            ${state.controlMemory} = msg_readFloatToken(${globs.m}, 1)
+            ${state.controlMemory} = msg_readFloatToken(m, 1)
             return
 
         } else if (
-            msg_isMatching(${globs.m}, [MSG_STRING_TOKEN])
-            && msg_readStringToken(${globs.m}, 0) === 'reset'
+            msg_isMatching(m, [MSG_STRING_TOKEN])
+            && msg_readStringToken(m, 0) === 'reset'
         ) {
             ${state.controlMemory} = 1e20
             return

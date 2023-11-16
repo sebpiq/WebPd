@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     isClosed: boolean
@@ -55,27 +56,26 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node,
     state,
-    macros: { Var, Func },
-}) => `
-    let ${Var(state.isClosed, 'Float')} = ${node.args.isClosed ? 'true': 'false'}
+}) => ast`
+    ${Var('Float', state.isClosed, node.args.isClosed ? 'true': 'false')}
 
-    function ${state.funcSetIsClosed} ${Func([
-        Var('value', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetIsClosed, [
+        Var('Float', 'value'),
+    ], 'void')`
         ${state.isClosed} = (value === 0)
-    }
+    `}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
-    '0': `
-    if (!${state.isClosed}) {
-        ${snds.$0}(${globs.m})
-    }
-    return
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (!${state.isClosed}) {
+            ${snds.$0}(m)
+        }
+        return
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetIsClosed),
+    '1': coldFloatInletWithSetter(state.funcSetIsClosed),
 })
 
 // ------------------------------------------------------------------- //

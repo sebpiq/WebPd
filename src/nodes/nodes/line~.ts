@@ -25,6 +25,7 @@ import { stringMsgUtils } from '../global-code/core'
 import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
+import { Func, Var, ast, ConstVar, AnonFunc } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     initValue: number
@@ -65,84 +66,84 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     globs,
     state,
     node: { args },
-    macros: { Var, Func },
-}) => `
-    const ${Var(state.defaultLine, 'LineSegment')} = {
-        p0: {x: -1, y: 0},
-        p1: {x: -1, y: 0},
-        dx: 1,
-        dy: 0,
-    }
-    let ${Var(state.currentLine, 'LineSegment')} = ${state.defaultLine}
-    let ${Var(state.currentValue, 'Float')} = ${args.initValue}
-    let ${Var(state.nextDurationSamp, 'Float')} = 0
+}) => 
+    ast`
+        ${ConstVar('LineSegment', state.defaultLine, `{
+            p0: {x: -1, y: 0},
+            p1: {x: -1, y: 0},
+            dx: 1,
+            dy: 0,
+        }`)}
+        ${Var('LineSegment', state.currentLine, state.defaultLine)}
+        ${Var('Float', state.currentValue, args.initValue)}
+        ${Var('Float', state.nextDurationSamp, 0)}
 
-    function ${state.funcSetNewLine} ${Func([
-        Var('targetValue', 'Float'),
-    ], 'void')} {
-        const ${Var('startFrame', 'Float')} = toFloat(${globs.frame})
-        const ${Var('endFrame', 'Float')} = toFloat(${globs.frame}) + ${state.nextDurationSamp}
-        if (endFrame === toFloat(${globs.frame})) {
-            ${state.currentLine} = ${state.defaultLine}
-            ${state.currentValue} = targetValue
-            ${state.nextDurationSamp} = 0
-        } else {
-            ${state.currentLine} = {
-                p0: {
-                    x: startFrame, 
-                    y: ${state.currentValue},
-                }, 
-                p1: {
-                    x: endFrame, 
-                    y: targetValue,
-                }, 
-                dx: 1,
-                dy: 0,
+        ${Func(state.funcSetNewLine, [
+            Var('Float', 'targetValue'),
+        ], 'void')`
+            ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame})`)}
+            ${ConstVar('Float', 'endFrame', `toFloat(${globs.frame}) + ${state.nextDurationSamp}`)}
+            if (endFrame === toFloat(${globs.frame})) {
+                ${state.currentLine} = ${state.defaultLine}
+                ${state.currentValue} = targetValue
+                ${state.nextDurationSamp} = 0
+            } else {
+                ${state.currentLine} = {
+                    p0: {
+                        x: startFrame, 
+                        y: ${state.currentValue},
+                    }, 
+                    p1: {
+                        x: endFrame, 
+                        y: targetValue,
+                    }, 
+                    dx: 1,
+                    dy: 0,
+                }
+                ${state.currentLine}.dy = computeSlope(${state.currentLine}.p0, ${state.currentLine}.p1)
+                ${state.nextDurationSamp} = 0
             }
-            ${state.currentLine}.dy = computeSlope(${state.currentLine}.p0, ${state.currentLine}.p1)
-            ${state.nextDurationSamp} = 0
-        }
-    }
+        `}
 
-    function ${state.funcSetNextDuration} ${Func([
-        Var('durationMsec', 'Float'),
-    ], 'void')} {
-        ${state.nextDurationSamp} = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
-    }
+        ${Func(state.funcSetNextDuration, [
+            Var('Float', 'durationMsec'),
+        ], 'void')`
+            ${state.nextDurationSamp} = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
+        `}
 
-    function ${state.funcStopCurrentLine} ${Func([], 'void')} {
-        ${state.currentLine}.p1.x = -1
-        ${state.currentLine}.p1.y = ${state.currentValue}
-    }
-`
+        ${Func(state.funcStopCurrentLine, [], 'void')`
+            ${state.currentLine}.p1.x = -1
+            ${state.currentLine}.p1.y = ${state.currentValue}
+        `}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state, macros: { Var } }) => ({
-    '0': `
-    if (
-        msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])
-        || msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
-    ) {
-        switch (msg_getLength(${globs.m})) {
-            case 2:
-                ${state.funcSetNextDuration}(msg_readFloatToken(${globs.m}, 1))
-            case 1:
-                ${state.funcSetNewLine}(msg_readFloatToken(${globs.m}, 0))
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (
+            msg_isMatching(m, [MSG_FLOAT_TOKEN])
+            || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
+        ) {
+            switch (msg_getLength(m)) {
+                case 2:
+                    ${state.funcSetNextDuration}(msg_readFloatToken(m, 1))
+                case 1:
+                    ${state.funcSetNewLine}(msg_readFloatToken(m, 0))
+            }
+            return
+
+        } else if (msg_isAction(m, 'stop')) {
+            ${state.funcStopCurrentLine}()
+            return
+
         }
-        return
-
-    } else if (msg_isAction(${globs.m}, 'stop')) {
-        ${state.funcStopCurrentLine}()
-        return
-
-    }
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetNextDuration),
+    '1': coldFloatInletWithSetter(state.funcSetNextDuration),
 })
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => ast`
     ${outs.$0} = ${state.currentValue}
     if (toFloat(${globs.frame}) < ${state.currentLine}.p1.x) {
         ${state.currentValue} += ${state.currentLine}.dy

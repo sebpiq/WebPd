@@ -22,6 +22,7 @@ import { DspGraph, functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils, msgUtils } from '../global-code/core'
+import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     filters: Array<number | string>
@@ -64,117 +65,112 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node: { args },
     state,
-    macros: { Var },
-}) => functional.renderCode`
-    ${functional.renderIf(args.filters.length === 1, `
-        let ${Var(state.floatFilter, 'Float')} = ${typeof args.filters[0] === 'number' ? args.filters[0]: 0}
-        let ${Var(state.stringFilter, 'string')} = "${args.filters[0]}"
-        let ${Var(state.filterType, 'Int')} = ${
-            typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN'}
-    `)}
-`
+}) => args.filters.length === 1 ? ast`
+        ${Var('Float', state.floatFilter, typeof args.filters[0] === 'number' ? args.filters[0]: 0)}
+        ${Var('string', state.stringFilter, `"${args.filters[0]}"`)}
+        ${Var('Int', state.filterType, typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN')}    
+    `: ast``
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state, node: { args } }) => {
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state, node: { args } }) => {
     if (args.filters.length > 1) {
         return {
-            '0': functional.renderCode`
-        
-            ${args.filters.map((filter, i) => functional.renderSwitch(
-                [filter === 'float', `
-                    if (msg_isFloatToken(${globs.m}, 0)) {
-                        ${snds[i]}(${globs.m})
-                        return
-                    }
-                `],
-                [filter === 'symbol', `
-                    if (msg_isStringToken(${globs.m}, 0)) {
-                        ${snds[i]}(${globs.m})
-                        return
-                    }
-                `],
-                [filter === 'list', `
-                    if (msg_getLength(${globs.m}).length > 1) {
-                        ${snds[i]}(${globs.m})
-                        return
-                    }
-                `],
-                [filter === 'bang', `
-                    if (msg_isBang(${globs.m})) {
-                        ${snds[i]}(${globs.m})
-                        return
-                    }
-                `],
-                [typeof filter === 'number', `
-                    if (
-                        msg_isFloatToken(${globs.m}, 0)
-                        && msg_readFloatToken(${globs.m}, 0) === ${filter}
-                    ) {
-                        ${snds[i]}(msg_emptyToBang(msg_shift(${globs.m})))
-                        return
-                    }
-                `],
-                [typeof filter === 'string', `
-                    if (
-                        msg_isStringToken(${globs.m}, 0) 
-                        && msg_readStringToken(${globs.m}, 0) === "${filter}"
-                    ) {
-                        ${snds[i]}(msg_emptyToBang(msg_shift(${globs.m})))
-                        return
-                    }`
-                ],
-            ))}
+            '0': AnonFunc([Var('Message', 'm')], 'void')`
+                ${args.filters.map((filter, i) => functional.renderSwitch(
+                    [filter === 'float', `
+                        if (msg_isFloatToken(m, 0)) {
+                            ${snds[i]}(m)
+                            return
+                        }
+                    `],
+                    [filter === 'symbol', `
+                        if (msg_isStringToken(m, 0)) {
+                            ${snds[i]}(m)
+                            return
+                        }
+                    `],
+                    [filter === 'list', `
+                        if (msg_getLength(m).length > 1) {
+                            ${snds[i]}(m)
+                            return
+                        }
+                    `],
+                    [filter === 'bang', `
+                        if (msg_isBang(m)) {
+                            ${snds[i]}(m)
+                            return
+                        }
+                    `],
+                    [typeof filter === 'number', `
+                        if (
+                            msg_isFloatToken(m, 0)
+                            && msg_readFloatToken(m, 0) === ${filter}
+                        ) {
+                            ${snds[i]}(msg_emptyToBang(msg_shift(m)))
+                            return
+                        }
+                    `],
+                    [typeof filter === 'string', `
+                        if (
+                            msg_isStringToken(m, 0) 
+                            && msg_readStringToken(m, 0) === "${filter}"
+                        ) {
+                            ${snds[i]}(msg_emptyToBang(msg_shift(m)))
+                            return
+                        }`
+                    ],
+                ))}
 
-            ${snds[args.filters.length]}(${globs.m})
-            return
+                ${snds[args.filters.length]}(m)
+                return
             `
         }
     
     } else {
         return {
-            '0': `
-            if (${state.filterType} === MSG_STRING_TOKEN) {
-                if (
-                    (${state.stringFilter} === 'float'
-                        && msg_isFloatToken(${globs.m}, 0))
-                    || (${state.stringFilter} === 'symbol'
-                        && msg_isStringToken(${globs.m}, 0))
-                    || (${state.stringFilter} === 'list'
-                        && msg_getLength(${globs.m}) > 1)
-                    || (${state.stringFilter} === 'bang' 
-                        && msg_isBang(${globs.m}))
-                ) {
-                    ${snds.$0}(${globs.m})
-                    return
-                
+            '0': AnonFunc([Var('Message', 'm')], 'void')`
+                if (${state.filterType} === MSG_STRING_TOKEN) {
+                    if (
+                        (${state.stringFilter} === 'float'
+                            && msg_isFloatToken(m, 0))
+                        || (${state.stringFilter} === 'symbol'
+                            && msg_isStringToken(m, 0))
+                        || (${state.stringFilter} === 'list'
+                            && msg_getLength(m) > 1)
+                        || (${state.stringFilter} === 'bang' 
+                            && msg_isBang(m))
+                    ) {
+                        ${snds.$0}(m)
+                        return
+                    
+                    } else if (
+                        msg_isStringToken(m, 0)
+                        && msg_readStringToken(m, 0) === ${state.stringFilter}
+                    ) {
+                        ${snds.$0}(msg_emptyToBang(msg_shift(m)))
+                        return
+                    }
+
                 } else if (
-                    msg_isStringToken(${globs.m}, 0)
-                    && msg_readStringToken(${globs.m}, 0) === ${state.stringFilter}
+                    msg_isFloatToken(m, 0)
+                    && msg_readFloatToken(m, 0) === ${state.floatFilter}
                 ) {
-                    ${snds.$0}(msg_emptyToBang(msg_shift(${globs.m})))
+                    ${snds.$0}(msg_emptyToBang(msg_shift(m)))
                     return
                 }
-
-            } else if (
-                msg_isFloatToken(${globs.m}, 0)
-                && msg_readFloatToken(${globs.m}, 0) === ${state.floatFilter}
-            ) {
-                ${snds.$0}(msg_emptyToBang(msg_shift(${globs.m})))
-                return
-            }
-        
-            ${snds.$1}(${globs.m})
+            
+                ${snds.$1}(m)
             return
             `,
 
-            '1': `
-            ${state.filterType} = msg_getTokenType(${globs.m}, 0)
-            if (${state.filterType} === MSG_STRING_TOKEN) {
-                ${state.stringFilter} = msg_readStringToken(${globs.m}, 0)
-            } else {
-                ${state.floatFilter} = msg_readFloatToken(${globs.m}, 0)
-            }
-            return
+            '1': AnonFunc([Var('Message', 'm')], 'void')`
+                ${state.filterType} = msg_getTokenType(m, 0)
+                if (${state.filterType} === MSG_STRING_TOKEN) {
+                    ${state.stringFilter} = msg_readStringToken(m, 0)
+                } else {
+                    ${state.floatFilter} = msg_readFloatToken(m, 0)
+                }
+                return
             `
         }
     }

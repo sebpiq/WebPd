@@ -23,6 +23,7 @@ import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/com
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
+import { Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     frequency: number
@@ -71,14 +72,15 @@ const makeNodeImplementation = ({
     const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         state,
         globs,
-        macros: { Var, Func },
-    }) => `
-        let ${Var(state.phase, 'Float')} = 0
-        let ${Var(state.J, 'Float')}
+    }) => ast`
+        ${Var('Float', state.phase, 0)}
+        ${Var('Float', state.J, 0)}
 
-        function ${state.funcSetPhase} ${Func([
-            Var('phase', 'Float')
-        ], 'void')} { ${state.phase} = phase % 1.0${coeff ? ` * ${coeff}`: ''} }
+        ${Func(state.funcSetPhase, [
+            Var('Float', 'phase')
+        ], 'void')`
+            ${state.phase} = phase % 1.0${coeff ? ` * ${coeff}`: ''}
+        `}
 
         commons_waitEngineConfigure(() => {
             ${state.J} = ${coeff ? `${coeff}`: '1'} / ${globs.sampleRate}
@@ -86,14 +88,14 @@ const makeNodeImplementation = ({
     `
 
     // ------------------------------- generateLoop ------------------------------ //
-    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => `
+    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
         ${outs.$0} = ${generateOperation(state.phase)}
         ${state.phase} += (${state.J} * ${ins.$0})
     `
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
     const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
-        '1': coldFloatInletWithSetter(globs.m, state.funcSetPhase),
+        '1': coldFloatInletWithSetter(state.funcSetPhase),
     })
 
     return {

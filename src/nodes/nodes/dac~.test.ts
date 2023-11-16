@@ -37,6 +37,7 @@ import { nodeImplementation, builder } from './dac~'
 import { executeCompilation, functional } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { PartialNode } from '../../compile-dsp-graph/types'
+import { Sequence } from '@webpd/compiler/src/ast/declare'
 
 describe('dac~', () => {
     describe('builder', () => {
@@ -97,14 +98,14 @@ describe('dac~', () => {
             const nodeImplementations: NodeImplementations = {
                 'dac~': nodeImplementation,
                 counter: {
-                    generateLoop: ({ globs, outs }) => functional.renderCode`
-                        ${functional
+                    generateLoop: ({ globs, outs }) => Sequence([
+                        functional
                             .countTo(args.channelMapping.length)
                             .map(
                                 (i) =>
                                     `${outs[`${i}`]} = toFloat(${globs.frame}) * Math.pow(10, ${i})`
-                            )}
-                    `,
+                            )
+                    ]),
                 },
             }
 

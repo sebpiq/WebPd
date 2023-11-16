@@ -17,8 +17,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, NodeImplementation } from "@webpd/compiler/src/compile/types"
+import { NodeImplementation } from "@webpd/compiler/src/compile/types"
 import { NodeBuilder } from "../../compile-dsp-graph/types"
+import { Func, Var, ast } from "@webpd/compiler/src/ast/declare"
+import { Code } from "@webpd/compiler"
 
 export const EMPTY_BUS_NAME = 'empty'
 
@@ -52,15 +54,14 @@ export const build: NodeBuilder<any>['build'] = () => ({
 export const declareControlSendReceive: NodeImplementation<any>['generateDeclarations'] = ({ 
     node, 
     state, 
-    node: { args }, 
-    macros: { Var, Func }
-}) => `
-    let ${Var(state.receiveBusName, 'string')} = "${node.args.receiveBusName}"
-    let ${Var(state.sendBusName, 'string')} = "${node.args.sendBusName}"
+    node: { args },
+}) => ast`
+    ${Var('string', state.receiveBusName, `"${node.args.receiveBusName}"`)}
+    ${Var('string', state.sendBusName, `"${node.args.sendBusName}"`)}
 
-    function ${state.funcSetReceiveBusName} ${Func([
-        Var('busName', 'string')
-    ], 'void')} {
+    ${Func(state.funcSetReceiveBusName, [
+        Var('string', 'busName')
+    ], 'void')`
         if (${state.receiveBusName} !== "${EMPTY_BUS_NAME}") {
             msgBusUnsubscribe(${state.receiveBusName}, ${state.funcMessageReceiver})
         }
@@ -68,7 +69,7 @@ export const declareControlSendReceive: NodeImplementation<any>['generateDeclara
         if (${state.receiveBusName} !== "${EMPTY_BUS_NAME}") {
             msgBusSubscribe(${state.receiveBusName}, ${state.funcMessageReceiver})
         }
-    }
+    `}
 
     commons_waitEngineConfigure(() => {
         ${state.funcSetReceiveBusName}("${args.receiveBusName}")
@@ -77,19 +78,19 @@ export const declareControlSendReceive: NodeImplementation<any>['generateDeclara
 
 export const messageSetSendReceive: (
     context: Parameters<NodeImplementation<any>['generateDeclarations']>[0]
-) => Code = ({ globs, state }) => `
+) => Code = ({ state }) => `
     if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'receive'
+        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+        && msg_readStringToken(m, 0) === 'receive'
     ) {
-        ${state.funcSetReceiveBusName}(msg_readStringToken(${globs.m}, 1))
+        ${state.funcSetReceiveBusName}(msg_readStringToken(m, 1))
         return
 
     } else if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'send'
+        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+        && msg_readStringToken(m, 0) === 'send'
     ) {
-        ${state.sendBusName} = msg_readStringToken(${globs.m}, 1)
+        ${state.sendBusName} = msg_readStringToken(m, 1)
         return
     }
 `

@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
+import { AnonFunc, Sequence, Var, ConstVar } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     initValue: number
@@ -53,37 +54,35 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node,
     state,
-    macros: { Var },
-}) => 
-    `let ${Var(state.currentValue, 'Float')} = ${node.args.initValue}`
+}) => Sequence([
+    Var('Float', state.currentValue, node.args.initValue.toString())
+])
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
-    globs,
     state,
-    macros: { Var },
 }) => ({
-    '0': `
-    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        const ${Var('newValue', 'Float')} = msg_readFloatToken(${globs.m}, 0)
-        if (newValue !== ${state.currentValue}) {
-            ${state.currentValue} = newValue
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${ConstVar('Float', 'newValue', 'msg_readFloatToken(m, 0)')}
+            if (newValue !== ${state.currentValue}) {
+                ${state.currentValue} = newValue
+                ${snds[0]}(msg_floats([${state.currentValue}]))
+            }
+            return
+
+        } else if (msg_isBang(m)) {
             ${snds[0]}(msg_floats([${state.currentValue}]))
+            return 
+
+        } else if (
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+            && msg_readStringToken(m, 0) === 'set'
+        ) {
+            ${state.currentValue} = msg_readFloatToken(m, 1)
+            return
         }
-        return
-
-    } else if (msg_isBang(${globs.m})) {
-        ${snds[0]}(msg_floats([${state.currentValue}]))
-        return 
-
-    } else if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'set'
-    ) {
-        ${state.currentValue} = msg_readFloatToken(${globs.m}, 1)
-        return
-    }
     `,
 })
 

@@ -18,9 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import {
-    CodeVariableName, GlobalCodeGenerator,
+    GlobalCodeGenerator,
 } from '@webpd/compiler/src/compile/types'
 import { ValidationError } from './validation'
+import { VariableName } from '@webpd/compiler/src/ast/types'
+import { Func, Var, ConstVar } from '@webpd/compiler/src/ast/declare'
 
 export type TypeArgument = 'float' | 'bang' | 'symbol' | 'list' | 'anything'
 
@@ -62,7 +64,7 @@ export const assertTypeArgument = (value: string): TypeArgument => {
 
 export const renderMessageTransfer = (
     typeArgument: TypeArgument,
-    msgVariableName: CodeVariableName,
+    msgVariableName: VariableName,
     index: number
 ) => {
     switch (typeArgument) {
@@ -84,26 +86,25 @@ export const renderMessageTransfer = (
     }
 }
 
-export const messageTokenToFloat: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
-    function messageTokenToFloat ${Func([
-        Var('m', 'Message'), 
-        Var('i', 'Int')
-    ], 'Float')} {
+export const messageTokenToFloat: GlobalCodeGenerator = () => 
+    Func('messageTokenToFloat', [
+        Var('Message', 'm'), 
+        Var('Int', 'i')
+    ], 'Float')`
         if (msg_isFloatToken(m, i)) {
             return msg_readFloatToken(m, i)
         } else {
             return 0
         }
-    }
-`
+    `
 
-export const messageTokenToString: GlobalCodeGenerator = ({ macros: { Func, Var }}) => `
-    function messageTokenToString ${Func([
-        Var('m', 'Message'), 
-        Var('i', 'Int')
-    ], 'string')} {
+export const messageTokenToString: GlobalCodeGenerator = () =>
+    Func('messageTokenToString', [
+        Var('Message', 'm'), 
+        Var('Int', 'i')
+    ], 'string')`
         if (msg_isStringToken(m, i)) {
-            const ${Var('str', 'string')} = msg_readStringToken(m, i)
+            ${ConstVar('string', 'str', 'msg_readStringToken(m, i)')}
             if (str === 'bang') {
                 return 'symbol'
             } else {
@@ -112,5 +113,4 @@ export const messageTokenToString: GlobalCodeGenerator = ({ macros: { Func, Var 
         } else {
             return 'float'
         }
-    }
-`
+    `

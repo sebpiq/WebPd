@@ -46,6 +46,7 @@ import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
 import { executeCompilation } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import { ast } from '@webpd/compiler/src/ast/declare'
 
 describe('send~ / receive~', () => {
     describe('builder [send~]', () => {
@@ -81,7 +82,7 @@ describe('send~ / receive~', () => {
                 'dac~': nodeImplementationDac,
                 counter: {
                     generateLoop: ({ globs, outs }) =>
-                        `${outs.$0} = toFloat(${globs.frame})`,
+                        ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
 

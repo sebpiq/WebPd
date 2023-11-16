@@ -24,6 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
+import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     channelCount: number
@@ -70,12 +71,11 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    macros: { Var },
     state,
-}) => `
-    let ${Var(state.buffers, 'Array<buf_SoundBuffer>')} = []
-    let ${Var(state.streamOperationId, 'fs_OperationId')} = -1
-    let ${Var(state.readingStatus, 'Int')} = 0
+}) => ast`
+    ${Var('Array<buf_SoundBuffer>', state.buffers, '[]')}
+    ${Var('fs_OperationId', state.streamOperationId, '-1')}
+    ${Var('Int', state.readingStatus, '0')}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
@@ -86,7 +86,7 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
     node: {
         args: { channelCount },
     },
-}) => functional.renderCode`
+}) => ast`
     switch(${state.readingStatus}) {
         case 1: 
             ${functional.countTo(channelCount).map((i) => 
@@ -114,75 +114,74 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     node,
     state,
     globs,
-    macros: { Var },
 }) => ({
-    '0': `
-    if (msg_getLength(${globs.m}) >= 2) {
-        if (msg_isStringToken(${globs.m}, 0) 
-            && msg_readStringToken(${globs.m}, 0) === 'open'
-        ) {
-            if (${state.streamOperationId} !== -1) {
-                ${state.readingStatus} = 3
-                fs_closeSoundStream(${
-                    state.streamOperationId
-                }, FS_OPERATION_SUCCESS)
-            }
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_getLength(m) >= 2) {
+            if (msg_isStringToken(m, 0) 
+                && msg_readStringToken(m, 0) === 'open'
+            ) {
+                if (${state.streamOperationId} !== -1) {
+                    ${state.readingStatus} = 3
+                    fs_closeSoundStream(${
+                        state.streamOperationId
+                    }, FS_OPERATION_SUCCESS)
+                }
 
-            const ${Var('soundInfo', 'fs_SoundInfo')} = {
-                channelCount: ${node.args.channelCount},
-                sampleRate: toInt(${globs.sampleRate}),
-                bitDepth: 32,
-                encodingFormat: '',
-                endianness: '',
-                extraOptions: '',
-            }
-            const ${Var('unhandledOptions', 'Set<Int>')} = parseSoundFileOpenOpts(
-                ${globs.m},
-                soundInfo,
-            )
-            const ${Var('url', 'string')} = parseReadWriteFsOpts(
-                ${globs.m},
-                soundInfo,
-                unhandledOptions
-            )
-            if (url.length === 0) {
+                ${ConstVar('fs_SoundInfo', 'soundInfo', `{
+                    channelCount: ${node.args.channelCount},
+                    sampleRate: toInt(${globs.sampleRate}),
+                    bitDepth: 32,
+                    encodingFormat: '',
+                    endianness: '',
+                    extraOptions: '',
+                }`)}
+                ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+                    m,
+                    soundInfo,
+                )`)}
+                ${ConstVar('string', 'url', `parseReadWriteFsOpts(
+                    m,
+                    soundInfo,
+                    unhandledOptions
+                )`)}
+                if (url.length === 0) {
+                    return
+                }
+                ${state.streamOperationId} = fs_openSoundReadStream(
+                    url,
+                    soundInfo,
+                    () => {
+                        ${state.streamOperationId} = -1
+                        if (${state.readingStatus} === 1) {
+                            ${state.readingStatus} = 2
+                        } else {
+                            ${state.readingStatus} = 3
+                        }
+                    }
+                )
+                ${state.buffers} = _FS_SOUND_STREAM_BUFFERS.get(${state.streamOperationId})
                 return
             }
-            ${state.streamOperationId} = fs_openSoundReadStream(
-                url,
-                soundInfo,
-                () => {
-                    ${state.streamOperationId} = -1
-                    if (${state.readingStatus} === 1) {
-                        ${state.readingStatus} = 2
-                    } else {
-                        ${state.readingStatus} = 3
-                    }
-                }
-            )
-            ${state.buffers} = _FS_SOUND_STREAM_BUFFERS.get(${state.streamOperationId})
-            return
-        }
 
-    } else if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        if (msg_readFloatToken(${globs.m}, 0) === 0) {
-            ${state.readingStatus} = 3
-            return
+        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            if (msg_readFloatToken(m, 0) === 0) {
+                ${state.readingStatus} = 3
+                return
 
-        } else {
-            if (${state.streamOperationId} !== -1) {
-                ${state.readingStatus} = 1
             } else {
-                console.log('[readsf~] start requested without prior open')
-            }
-            return
+                if (${state.streamOperationId} !== -1) {
+                    ${state.readingStatus} = 1
+                } else {
+                    console.log('[readsf~] start requested without prior open')
+                }
+                return
 
+            }
+            
+        } else if (msg_isAction(m, 'print')) {
+            console.log('[readsf~] reading = ' + ${state.readingStatus}.toString())
+            return
         }
-        
-    } else if (msg_isAction(${globs.m}, 'print')) {
-        console.log('[readsf~] reading = ' + ${state.readingStatus}.toString())
-        return
-    }    
     `,
 })
 

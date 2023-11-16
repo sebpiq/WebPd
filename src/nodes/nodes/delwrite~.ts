@@ -24,6 +24,7 @@ import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     delayName: string,
@@ -64,14 +65,13 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state, 
     globs,
     node: { args },
-    macros: { Var, Func }
-}) => `
-    let ${Var(state.delayName, 'string')} = ""
-    let ${Var(state.buffer, 'buf_SoundBuffer')} = DELAY_BUFFERS_NULL
+}) => ast`
+    ${Var('string', state.delayName, '""')}
+    ${Var('buf_SoundBuffer', state.buffer, 'DELAY_BUFFERS_NULL')}
 
-    const ${state.funcSetDelayName} = ${Func([
-        Var('delayName', 'string')
-    ], 'void')} => {
+    ${Func(state.funcSetDelayName, [
+        Var('string', 'delayName')
+    ], 'void')`
         if (${state.delayName}.length) {
             DELAY_BUFFERS_delete(${state.delayName})
         }
@@ -79,7 +79,7 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         if (${state.delayName}.length) {
             DELAY_BUFFERS_set(${state.delayName}, ${state.buffer})
         }
-    }
+    `}
 
     commons_waitEngineConfigure(() => {
         ${state.buffer} = buf_create(
@@ -96,14 +96,14 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => ast`
     buf_writeSample(${state.buffer}, ${ins.$0})
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0_message': `
-        if (msg_isAction(${globs.m}, 'clear')) {
+    '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+        if (msg_isAction(m, 'clear')) {
             buf_clear(${state.buffer})
             return
         }

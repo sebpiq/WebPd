@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { signalBuses } from '../global-code/buses'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     busName: string,
@@ -50,19 +51,18 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state, 
-    node: { args }, 
-    macros: { Var, Func }
-}) => `
-    let ${Var(state.busName, 'string')} = ""
+    node: { args },
+}) => ast`
+    ${Var('string', state.busName, '""')}
 
-    const ${state.funcSetBusName} = ${Func([
-        Var('busName', 'string')
-    ], 'void')} => {
+    ${Func(state.funcSetBusName, [
+        Var('string', 'busName')
+    ], 'void')`
         if (busName.length) {
             ${state.busName} = busName
             resetSignalBus(${state.busName})
         }
-    }
+    `}
 
     ${state.funcSetBusName}("${args.busName}")
 `
@@ -73,12 +73,12 @@ const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ state }
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0': `
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
     if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'set'
+        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+        && msg_readStringToken(m, 0) === 'set'
     ) {
-        ${state.funcSetBusName}(msg_readStringToken(${globs.m}, 1))
+        ${state.funcSetBusName}(msg_readStringToken(m, 1))
         return
     }
     `

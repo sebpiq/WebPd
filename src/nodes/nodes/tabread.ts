@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = stateVariablesTabBase
@@ -45,19 +46,19 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = declar
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
-    const { snds, state, globs } = context
+    const { snds, state } = context
     return {
-        '0': `
-        if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {        
-            if (${state.array}.length === 0) {
-                ${snds.$0}(msg_floats([0]))
+        '0': AnonFunc([Var('Message', 'm')], 'void')`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
+                if (${state.array}.length === 0) {
+                    ${snds.$0}(msg_floats([0]))
 
-            } else {
-                ${snds.$0}(msg_floats([${state.array}[${prepareIndexCode(`msg_readFloatToken(${globs.m}, 0)`, context)}]]))
-            }
-            return 
+                } else {
+                    ${snds.$0}(msg_floats([${state.array}[${prepareIndexCode(`msg_readFloatToken(m, 0)`, context)}]]))
+                }
+                return 
 
-        } ${messageSetArrayCode(context)}
+            } ${messageSetArrayCode(context)}
         `,
     }
 }

@@ -17,9 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, functional } from '@webpd/compiler'
+import { stdlib, functional, Code } from '@webpd/compiler'
 import {
-    Code,
     NodeImplementation,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
@@ -29,6 +28,7 @@ import { assertNumber, assertOptionalString } from '../validation'
 import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     minValue: number
@@ -88,37 +88,34 @@ const makeNodeImplementation = ({
             state,
             snds,
             node: { args },
-            macros: { Var, Func }
         } = context
-        return `
-            let ${Var(state.value, 'Float')} = ${node.args.initValue}
+        return ast`
+            ${Var('Float', state.value, node.args.initValue.toString())}
 
-            ${functional.renderIf(
-                prepareStoreValue, 
-                () => `function ${state.funcPrepareStoreValue} ${Func([
-                    Var('value', 'Float')
-                ], 'Float')} {
+            ${prepareStoreValue ? 
+                Func(state.funcPrepareStoreValue, [
+                    Var('Float', 'value')
+                ], 'Float')`
                     return ${prepareStoreValue(node.args)}
-                }`
-            )}
+                `: null
+            }
 
-            ${functional.renderIf(
-                prepareStoreValueBang, 
-                () => `function ${state.funcPrepareStoreValueBang} ${Func([
-                    Var('value', 'Float')
-                ], 'Float')} {
+            ${prepareStoreValueBang ? 
+                Func(state.funcPrepareStoreValueBang, [
+                    Var('Float', 'value')
+                ], 'Float')`
                     return ${prepareStoreValueBang(node.args)}
-                }`
-            )}
+                `: null
+            }
 
-            function ${state.funcMessageReceiver} ${Func([
-                Var('m', 'Message'),
-            ], 'void')} {
+            ${Func(state.funcMessageReceiver, [
+                Var('Message', 'm'),
+            ], 'void')`
                 if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                     ${prepareStoreValue ? 
                         `${state.value} = ${state.funcPrepareStoreValue}(msg_readFloatToken(m, 0))`
                         : `${state.value} = msg_readFloatToken(m, 0)`}
-                    const ${Var('outMessage', 'Message')} = msg_floats([${state.value}])
+                    ${ConstVar('Message', 'outMessage', `msg_floats([${state.value}])`)}
                     ${snds.$0}(outMessage)
                     if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                         msgBusPublish(${state.sendBusName}, outMessage)
@@ -129,7 +126,7 @@ const makeNodeImplementation = ({
                         prepareStoreValueBang, 
                         () => `${state.value} = ${state.funcPrepareStoreValueBang}(${state.value})`
                     )}
-                    const ${Var('outMessage', 'Message')} = msg_floats([${state.value}])
+                    ${ConstVar('Message', 'outMessage', `msg_floats([${state.value}])`)}
                     ${snds.$0}(outMessage)
                     if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
                         msgBusPublish(${state.sendBusName}, outMessage)
@@ -145,7 +142,7 @@ const makeNodeImplementation = ({
                 }
             
                 ${messageSetSendReceive(context)}
-            }
+            `}
 
             ${declareControlSendReceive(context)}
 
@@ -157,15 +154,12 @@ const makeNodeImplementation = ({
     }
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
-        const { globs, state } = context
-        return {
-            '0': `
-                ${state.funcMessageReceiver}(${globs.m})
-                return
-            `
-        }
-    }
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+        '0': AnonFunc([Var('Message', 'm')], 'void')`
+            ${state.funcMessageReceiver}(m)
+            return
+        `
+    })
 
     return {
         generateMessageReceivers,

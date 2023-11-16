@@ -18,9 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
+import { Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { Code } from '@webpd/compiler'
 
 interface NodeArgumentsTabBase {
     arrayName: string
@@ -42,15 +44,15 @@ export const translateArgsTabBase: NodeBuilder<NodeArgumentsTabBase>['translateA
     })
 
 export const declareTabBase: NodeImplementationTabBase['generateDeclarations'] = (
-    {state, node, macros: { Func, Var }},
-) => `
-    let ${Var(state.array, 'FloatArray')} = createFloatArray(0)
-    let ${Var(state.arrayName, 'string')} = "${node.args.arrayName}"
-    let ${Var(state.arrayChangesSubscription, 'SkedId')} = SKED_ID_NULL
+    { state, node },
+) => ast`
+    ${Var('FloatArray', state.array, 'createFloatArray(0)')}
+    ${Var('string', state.arrayName, `"${node.args.arrayName}"`)}
+    ${Var('SkedId', state.arrayChangesSubscription, 'SKED_ID_NULL')}
 
-    function ${state.funcSetArrayName} ${Func([
-        Var('arrayName', 'string')
-    ], 'void')} {
+    ${Func(state.funcSetArrayName, [
+        Var('string', 'arrayName')
+    ], 'void')`
         if (${state.arrayChangesSubscription} != SKED_ID_NULL) {
             commons_cancelArrayChangesSubscription(${state.arrayChangesSubscription})
         }
@@ -59,7 +61,7 @@ export const declareTabBase: NodeImplementationTabBase['generateDeclarations'] =
         commons_subscribeArrayChanges(arrayName, () => {
             ${state.array} = commons_getArray(${state.arrayName})
         })
-    }
+    `}
 
     commons_waitEngineConfigure(() => {
         if (${state.arrayName}.length) {
@@ -79,14 +81,13 @@ export const prepareIndexCode = (
     ))`
 
 export const messageSetArrayCode = ({
-    globs,
     state,
 }: Parameters<NodeImplementationTabBase['generateMessageReceivers']>[0]): Code =>
     `else if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'set'
+        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+        && msg_readStringToken(m, 0) === 'set'
     ) {
-        ${state.funcSetArrayName}(msg_readStringToken(${globs.m}, 1))
+        ${state.funcSetArrayName}(msg_readStringToken(m, 1))
         return
 
     }`

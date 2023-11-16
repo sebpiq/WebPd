@@ -20,6 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
+import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     prefix: string
@@ -51,8 +52,8 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, node: { args } }) => ({
-    '0': `
-        console.log("${args.prefix} " + msg_display(${globs.m}))
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        console.log("${args.prefix} " + msg_display(m))
         return
     `,
 })

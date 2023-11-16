@@ -28,6 +28,7 @@ import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { roundFloatAsPdInt } from '../global-code/numbers'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     value: number
@@ -63,13 +64,13 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const makeGenerateDeclarations =
     (prepareValueCode: Code = 'value'): _NodeImplementation['generateDeclarations'] =>
-    ({ node: { args }, state, macros: { Var, Func } }) =>
-    `
-        let ${Var(state.value, 'Float')} = 0
+    ({ node: { args }, state }) =>
+    ast`
+        ${Var('Float', state.value, 0)}
 
-        const ${state.funcSetValue} = ${Func([
-            Var('value', 'Float')
-        ], 'void')} => { ${state.value} = ${prepareValueCode} }
+        ${Func(state.funcSetValue, [
+            Var('Float', 'value')
+        ], 'void')`${state.value} = ${prepareValueCode}`}
         
         ${state.funcSetValue}(${args.value})
     `
@@ -77,23 +78,22 @@ const makeGenerateDeclarations =
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
-    globs,
     state,
 }) => ({
-    '0': `
-    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        ${state.funcSetValue}(msg_readFloatToken(${globs.m}, 0))
-        ${snds.$0}(msg_floats([${state.value}]))
-        return 
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${state.funcSetValue}(msg_readFloatToken(m, 0))
+            ${snds.$0}(msg_floats([${state.value}]))
+            return 
 
-    } else if (msg_isBang(${globs.m})) {
-        ${snds.$0}(msg_floats([${state.value}]))
-        return
-        
-    }
+        } else if (msg_isBang(m)) {
+            ${snds.$0}(msg_floats([${state.value}]))
+            return
+            
+        }
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetValue),
+    '1': coldFloatInletWithSetter(state.funcSetValue),
 })
 
 // ------------------------------------------------------------------- //

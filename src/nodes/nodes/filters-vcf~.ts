@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
+import { Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     frequency: number,
@@ -70,47 +71,47 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state, 
     globs,
-    node: { args }, 
-    macros: { Var, Func }}) => `
-    let ${Var(state.frequency, 'Float')} = ${args.frequency}
-    let ${Var(state.Q, 'Float')} = ${args.Q}
-    let ${Var(state.coef1, 'Float')} = 0
-    let ${Var(state.coef2, 'Float')} = 0
-    let ${Var(state.gain, 'Float')} = 0
-    let ${Var(state.y, 'Float')} = 0
-    let ${Var(state.ym1, 'Float')} = 0
-    let ${Var(state.ym2, 'Float')} = 0
+    node: { args }
+}) => ast`
+    ${Var('Float', state.frequency, args.frequency)}
+    ${Var('Float', state.Q, args.Q)}
+    ${Var('Float', state.coef1, 0)}
+    ${Var('Float', state.coef2, 0)}
+    ${Var('Float', state.gain, 0)}
+    ${Var('Float', state.y, 0)}
+    ${Var('Float', state.ym1, 0)}
+    ${Var('Float', state.ym2, 0)}
 
-    function ${state.funcUpdateCoefs} ${Func([], 'void')} {
-        let ${Var('omega', 'Float')} = ${state.frequency} * (2.0 * Math.PI) / ${globs.sampleRate}
-        let ${Var('oneminusr', 'Float')} = ${state.Q} < 0.001 ? 1.0 : Math.min(omega / ${state.Q}, 1)
-        let ${Var('r', 'Float')} = 1.0 - oneminusr
-        let ${Var('sigbp_qcos', 'Float')} = (omega >= -(0.5 * Math.PI) && omega <= 0.5 * Math.PI) ? 
+    ${Func(state.funcUpdateCoefs, [], 'void')`
+        ${Var('Float', 'omega', `${state.frequency} * (2.0 * Math.PI) / ${globs.sampleRate}`)}
+        ${Var('Float', 'oneminusr', `${state.Q} < 0.001 ? 1.0 : Math.min(omega / ${state.Q}, 1)`)}
+        ${Var('Float', 'r', `1.0 - oneminusr`)}
+        ${Var('Float', 'sigbp_qcos', `(omega >= -(0.5 * Math.PI) && omega <= 0.5 * Math.PI) ? 
             (((Math.pow(omega, 6) * (-1.0 / 720.0) + Math.pow(omega, 4) * (1.0 / 24)) - Math.pow(omega, 2) * 0.5) + 1)
-            : 0
+            : 0`)}
 
         ${state.coef1} = 2.0 * sigbp_qcos * r
         ${state.coef2} = - r * r
         ${state.gain} = 2 * oneminusr * (oneminusr + r * omega)
-    }
+    `}
 
-    function ${state.funcSetFrequency} ${Func([
-        Var('frequency', 'Float')
-    ], 'void')} {
+    ${Func(state.funcSetFrequency, [
+        Var('Float', 'frequency')
+    ], 'void')`
         ${state.frequency} = (frequency < 0.001) ? 10: frequency
         ${state.funcUpdateCoefs}()
-    }
+    `}
 
-    function ${state.funcSetQ} ${Func([
-        Var('Q', 'Float')
-    ], 'void')} {
+    ${Func(state.funcSetQ, [
+        Var('Float', 'Q')
+    ], 'void')`
         ${state.Q} = Math.max(Q, 0)
         ${state.funcUpdateCoefs}()
-    }
+    `}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => ast`
     ${state.funcSetFrequency}(${ins.$1})
     ${state.y} = ${ins.$0} + ${state.coef1} * ${state.ym1} + ${state.coef2} * ${state.ym2}
     ${outs.$1} = ${outs.$0} = ${state.gain} * ${state.y}
@@ -120,7 +121,7 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state })
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '2': coldFloatInletWithSetter(globs.m, state.funcSetQ),
+    '2': coldFloatInletWithSetter(state.funcSetQ),
 })
 
 // ------------------------------------------------------------------- //

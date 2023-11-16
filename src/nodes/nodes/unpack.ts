@@ -22,6 +22,7 @@ import { functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
+import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     typeArguments: Array<TypeArgument>
@@ -61,25 +62,25 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, node: { args } }) => ({
-    '0': functional.renderCode`
-    ${args.typeArguments.map((t, i) => [t, i] as [TypeArgument, number]).reverse().map(([t, reversedI]) =>
-        `
-            if (
-                msg_getLength(${globs.m}) >= ${reversedI + 1}
-            ) {
-                if (msg_getTokenType(${globs.m}, ${reversedI}) === ${t === 'float' ? 'MSG_FLOAT_TOKEN': 'MSG_STRING_TOKEN'}) {
-                    ${functional.renderSwitch(
-                        [t === 'float', `${snds[reversedI]}(msg_floats([msg_readFloatToken(${globs.m}, ${reversedI})]))`],
-                        [t === 'symbol', `${snds[reversedI]}(msg_strings([msg_readStringToken(${globs.m}, ${reversedI})]))`],
-                    )}
-                } else {
-                    console.log('unpack : invalid token type index ${reversedI}')
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, node: { args } }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        ${args.typeArguments.map((t, i) => [t, i] as [TypeArgument, number]).reverse().map(([t, reversedI]) =>
+            `
+                if (
+                    msg_getLength(m) >= ${reversedI + 1}
+                ) {
+                    if (msg_getTokenType(m, ${reversedI}) === ${t === 'float' ? 'MSG_FLOAT_TOKEN': 'MSG_STRING_TOKEN'}) {
+                        ${functional.renderSwitch(
+                            [t === 'float', `${snds[reversedI]}(msg_floats([msg_readFloatToken(m, ${reversedI})]))`],
+                            [t === 'symbol', `${snds[reversedI]}(msg_strings([msg_readStringToken(m, ${reversedI})]))`],
+                        )}
+                    } else {
+                        console.log('unpack : invalid token type index ${reversedI}')
+                    }
                 }
-            }
-        `
-    )}
-    return
+            `
+        )}
+        return
     `,
 })
 

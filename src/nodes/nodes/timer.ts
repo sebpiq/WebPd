@@ -24,6 +24,7 @@ import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     unitAmount: number
@@ -60,10 +61,9 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
     globs,
     node: { args },
-    macros: { Var },
-}) => `
-    let ${Var(state.sampleRatio, 'Float')} = 0
-    let ${Var(state.resetTime, 'Int')} = 0
+}) => ast`
+    ${Var('Float', state.sampleRatio, '0')}
+    ${Var('Int', state.resetTime, '0')}
 
     commons_waitEngineConfigure(() => {
         ${state.sampleRatio} = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
@@ -76,29 +76,29 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     globs,
     state,
 }) => ({
-    '0': `
-    if (msg_isBang(${globs.m})) {
-        ${state.resetTime} = ${globs.frame}
-        return
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${state.resetTime} = ${globs.frame}
+            return
 
-    } else if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'tempo'
-    ) {
-        ${state.sampleRatio} = computeUnitInSamples(
-            ${globs.sampleRate}, 
-            msg_readFloatToken(${globs.m}, 1), 
-            msg_readStringToken(${globs.m}, 2)
-        )
-        return
-    }
+        } else if (
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
+            && msg_readStringToken(m, 0) === 'tempo'
+        ) {
+            ${state.sampleRatio} = computeUnitInSamples(
+                ${globs.sampleRate}, 
+                msg_readFloatToken(m, 1), 
+                msg_readStringToken(m, 2)
+            )
+            return
+        }
     `,
 
-    '1': `
-    if (msg_isBang(${globs.m})) {
-        ${snds.$0}(msg_floats([toFloat(${globs.frame} - ${state.resetTime}) / ${state.sampleRatio}]))
-        return
-    }
+    '1': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${snds.$0}(msg_floats([toFloat(${globs.frame} - ${state.resetTime}) / ${state.sampleRatio}]))
+            return
+        }
     `,
 })
 

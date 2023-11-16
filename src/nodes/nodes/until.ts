@@ -21,6 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
+import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -48,37 +49,36 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
-    macros: { Var },
-}) => `
-    let ${Var(state.continueIter, 'boolean')} = true
+}) => ast`
+    ${Var('boolean', state.continueIter, 'true')}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state, macros: { Var } }) => ({
-    '0': `
-    if (msg_isBang(${globs.m})) {
-        ${state.continueIter} = true
-        while (${state.continueIter}) {
-            ${snds[0]}(msg_bang())
-        }
-        return
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${state.continueIter} = true
+            while (${state.continueIter}) {
+                ${snds[0]}(msg_bang())
+            }
+            return
 
-    } else if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        ${state.continueIter} = true
-        let ${Var('maxIterCount', 'Int')} = toInt(msg_readFloatToken(${globs.m}, 0))
-        let ${Var('iterCount', 'Int')} = 0
-        while (${state.continueIter} && iterCount++ < maxIterCount) {
-            ${snds[0]}(msg_bang())
+        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${state.continueIter} = true
+            ${Var('Int', 'maxIterCount', 'toInt(msg_readFloatToken(m, 0))')}
+            ${Var('Int', 'iterCount', '0')}
+            while (${state.continueIter} && iterCount++ < maxIterCount) {
+                ${snds[0]}(msg_bang())
+            }
+            return
         }
-        return
-    }
     `,
 
-    '1': `
-    if (msg_isBang(${globs.m})) {
-        ${state.continueIter} = false
-        return
-    }
+    '1': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${state.continueIter} = false
+            return
+        }
     `,
 })
 

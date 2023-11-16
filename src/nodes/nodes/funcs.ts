@@ -18,13 +18,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import {
-    Code,
     NodeImplementation,
     NodeImplementations,
     GlobalCodeGenerator,
 } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
+import { Code } from '@webpd/compiler'
+import { AnonFunc, Var, ConstVar } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {}
@@ -55,13 +56,13 @@ const makeNodeImplementation = ({
 }): _NodeImplementation => {
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, snds, macros: { Var } }) => ({
-        '0': `
-        if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-            const ${Var('value', 'Float')} = msg_readFloatToken(${globs.m}, 0)
-            ${snds.$0}(msg_floats([${operationCode}]))
-            return
-        }
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, snds }) => ({
+        '0': AnonFunc([Var('Message', 'm')], 'void')`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
+                ${snds.$0}(msg_floats([${operationCode}]))
+                return
+            }
         `
     })
 

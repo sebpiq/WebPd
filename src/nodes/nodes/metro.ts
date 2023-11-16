@@ -25,6 +25,7 @@ import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     rate: number
@@ -69,36 +70,35 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     globs,
     snds,
     node: { args },
-    macros: { Func, Var },
 }) =>
     // Time units are all expressed in samples here
-    `
-        let ${Var(state.rate, 'Float')} = 0
-        let ${Var(state.sampleRatio, 'Float')} = 1
-        let ${Var(state.skedId, 'Int')} = SKED_ID_NULL
-        let ${Var(state.realNextTick, 'Float')} = -1
+    ast`
+        ${Var('Float', state.rate, '0')}
+        ${Var('Float', state.sampleRatio, '1')}
+        ${Var('Int', state.skedId, 'SKED_ID_NULL')}
+        ${Var('Float', state.realNextTick, '-1')}
 
-        function ${state.funcSetRate} ${Func([
-            Var('rate', 'Float')
-        ], 'void')} {
+        ${Func(state.funcSetRate, [
+            Var('Float', 'rate')
+        ], 'void')`
             ${state.rate} = Math.max(rate, 0)
-        }
+        `}
 
-        function ${state.funcScheduleNextTick} ${Func([], 'void')} {
+        ${Func(state.funcScheduleNextTick, [], 'void')`
             ${snds.$0}(msg_bang())
             ${state.realNextTick} = ${state.realNextTick} + ${state.rate} * ${state.sampleRatio}
             ${state.skedId} = commons_waitFrame(toInt(Math.round(${state.realNextTick})), () => {
                 ${state.funcScheduleNextTick}()
             })
-        }
+        `}
 
-        function ${state.funcStop} ${Func([], 'void')} {
+        ${Func(state.funcStop, [], 'void')`
             if (${state.skedId} !== SKED_ID_NULL) {
                 commons_cancelWaitFrame(${state.skedId})
                 ${state.skedId} = SKED_ID_NULL
             }
             ${state.realNextTick} = 0
-        }
+        `}
 
         commons_waitEngineConfigure(() => {
             ${state.sampleRatio} = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
@@ -108,18 +108,18 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
 
 // ------------------------------ generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds }) => ({
-    '0': `
-    if (msg_getLength(${globs.m}) === 1) {
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    if (msg_getLength(m) === 1) {
         if (
-            (msg_isFloatToken(${globs.m}, 0) && msg_readFloatToken(${globs.m}, 0) === 0)
-            || msg_isAction(${globs.m}, 'stop')
+            (msg_isFloatToken(m, 0) && msg_readFloatToken(m, 0) === 0)
+            || msg_isAction(m, 'stop')
         ) {
             ${state.funcStop}()
             return
 
         } else if (
-            msg_isFloatToken(${globs.m}, 0)
-            || msg_isBang(${globs.m})
+            msg_isFloatToken(m, 0)
+            || msg_isBang(m)
         ) {
             ${state.realNextTick} = toFloat(${globs.frame})
             ${state.funcScheduleNextTick}()
@@ -128,7 +128,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     }
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetRate),
+    '1': coldFloatInletWithSetter(state.funcSetRate),
 })
 
 // ------------------------------------------------------------------- //

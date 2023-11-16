@@ -32,6 +32,7 @@ import {
     resolveTypeArgumentAlias,
     TypeArgument,
 } from '../type-arguments'
+import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     typeArguments: Array<[TypeArgument, number | string]>
@@ -90,13 +91,12 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- dependencies ------------------------------ //
-const pipeGlobalCode: GlobalCodeDefinition = ({ macros: { Var }}) => `
-    class pipe_ScheduledMessage {
-        ${Var('message', 'Message')}
-        ${Var('frame', 'Int')}
-        ${Var('skedId', 'SkedId')}
-    }
-`
+const pipeGlobalCode: GlobalCodeDefinition = () => 
+    Class('pipe_ScheduledMessage', [
+        Var('Message', 'message'), 
+        Var('Int', 'frame'), 
+        Var('SkedId', 'skedId'), 
+    ])
 
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
@@ -104,28 +104,27 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     globs,
     snds,
     node: { args },
-    macros: { Var, Func },
-}) => functional.renderCode`
-    let ${state.delay} = 0
-    const ${Var(state.outputMessages, 'Array<Message>')} = [${
+}) => ast`
+    ${Var('Int', state.delay, 0)}
+    ${ConstVar('Array<Message>', state.outputMessages, `[${
         args.typeArguments
             .map(([_, value]) => typeof value === 'number' ? 
                 `msg_floats([${value}])`
                 : `msg_strings(["${value}"])`).join(',')
-    }]
-    let ${Var(state.scheduledMessages, 'Array<pipe_ScheduledMessage>')} = []
+    }]`)}
+    ${Var('Array<pipe_ScheduledMessage>', state.scheduledMessages, '[]')}
 
-    const ${state.funcScheduleMessage} = ${Func([
-        Var('inMessage', 'Message')
-    ], 'void')} => {
-        let ${Var('insertIndex', 'Int')} = 0
-        let ${Var('frame', 'Int')} = ${globs.frame} + ${state.delay}
-        let ${Var('skedId', 'SkedId')} = SKED_ID_NULL
-        let ${Var('scheduledMessage', 'pipe_ScheduledMessage')} = {
+    ${Func(state.funcScheduleMessage, [
+        Var('Message', 'inMessage')
+    ], 'void')`
+        ${Var('Int', 'insertIndex', '0')}
+        ${Var('Int', 'frame', `${globs.frame} + ${state.delay}`)}
+        ${Var('SkedId', 'skedId', 'SKED_ID_NULL')}
+        ${Var('pipe_ScheduledMessage', 'scheduledMessage', `{
             message: msg_create([]),
             frame: frame,
             skedId: SKED_ID_NULL,
-        }
+        }`)}
 
         ${''
         // !!! Array.splice insertion is not supported by assemblyscript, so : 
@@ -181,9 +180,9 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
                 `
             )
         }
-    }
+    `}
 
-    const ${state.funcSendMessages} = ${Func([Var('toFrame', 'Int')], 'void')} => {
+    ${Func(state.funcSendMessages, [Var('Int', 'toFrame')], 'void')`
         while (
             ${state.scheduledMessages}.length 
             && ${state.scheduledMessages}[0].frame <= toFrame
@@ -195,28 +194,28 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
                 )
             }
         }
-    }
+    `}
 
-    const ${state.funcWaitFrameCallback} = ${Func([
-        Var('event', 'SkedEvent')
-    ], 'void')} => {
+    ${Func(state.funcWaitFrameCallback, [
+        Var('SkedEvent', 'event')
+    ], 'void')`
         ${state.funcSendMessages}(${globs.frame})
-    }
+    `}
 
-    const ${state.funcClear} = ${Func([], 'void')} => {
-        let ${Var('i', 'Int')} = 0
-        const ${Var('length', 'Int')} = ${state.scheduledMessages}.length
+    ${Func(state.funcClear, [], 'void')`
+        ${Var('Int', 'i', '0')}
+        ${ConstVar('Int', 'length', `${state.scheduledMessages}.length`)}
         for (i; i < length; i++) {
             commons_cancelWaitFrame(${state.scheduledMessages}[i].skedId)
         }
         ${state.scheduledMessages} = []
-    }
+    `}
 
-    const ${state.funcSetDelay} = ${Func([
-        Var('delay', 'Float')
-    ], 'void')} => {
+    ${Func(state.funcSetDelay, [
+        Var('Float', 'delay')
+    ], 'void')`
         ${state.delay} = toInt(Math.round(delay / 1000 * ${globs.sampleRate}))
-    }
+    `}
 
     commons_waitEngineConfigure(() => {
         ${state.funcSetDelay}(${args.delay})
@@ -225,37 +224,39 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node, snds, globs, state }) => ({
-    '0': functional.renderCode`
-    if (msg_isBang(${globs.m})) {
-        ${state.funcScheduleMessage}(msg_create([]))
-        return
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isBang(m)) {
+            ${state.funcScheduleMessage}(msg_create([]))
+            return
 
-    } else if (msg_isAction(${globs.m}, 'clear')) {
-        ${state.funcClear}()
-        return 
+        } else if (msg_isAction(m, 'clear')) {
+            ${state.funcClear}()
+            return 
 
-    } else if (msg_isAction(${globs.m}, 'flush')) {
-        if (${state.scheduledMessages}.length) {
-            ${state.funcSendMessages}(${state.scheduledMessages}[${state.scheduledMessages}.length - 1].frame)
+        } else if (msg_isAction(m, 'flush')) {
+            if (${state.scheduledMessages}.length) {
+                ${state.funcSendMessages}(${state.scheduledMessages}[${state.scheduledMessages}.length - 1].frame)
+            }
+            return
+
+        } else {
+            ${state.funcScheduleMessage}(m)
+            return
         }
-        return
-
-    } else {
-        ${state.funcScheduleMessage}(${globs.m})
-        return
-    }
     `,
 
     ...functional.mapArray(
         node.args.typeArguments.slice(1), 
         ([typeArg], i) => [
             `${i + 1}`, 
-            `${state.outputMessages}[${i + 1}] = ${renderMessageTransfer(typeArg, globs.m, 0)}
-            return`
+            AnonFunc([Var('Message', 'm')], 'void')`
+                ${state.outputMessages}[${i + 1}] = ${renderMessageTransfer(typeArg, 'm', 0)}
+                return
+            `
         ]
     ),
 
-    [node.args.typeArguments.length]: coldFloatInletWithSetter(globs.m, state.funcSetDelay)
+    [node.args.typeArguments.length]: coldFloatInletWithSetter(state.funcSetDelay)
 })
 
 // ------------------------------------------------------------------- //

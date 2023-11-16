@@ -26,6 +26,7 @@ import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     initValue: number
@@ -75,28 +76,27 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    globs,
     state,
     snds,
+    globs,
     node: { args },
-    macros: { Var, Func },
-}) => `
-    let ${Var(state.currentLine, 'LineSegment')} = {
+}) => ast`
+    ${Var('LineSegment', state.currentLine, `{
         p0: {x: -1, y: 0},
         p1: {x: -1, y: 0},
         dx: 1,
         dy: 0,
-    }
-    let ${Var(state.currentValue, 'Float')} = ${args.initValue}
-    let ${Var(state.nextSamp, 'Float')} = -1
-    let ${Var(state.nextSampInt, 'Int')} = -1
-    let ${Var(state.grainSamp, 'Float')} = 0
-    let ${Var(state.nextDurationSamp, 'Float')} = 0
-    let ${Var(state.skedId, 'SkedId')} = SKED_ID_NULL
+    }`)}
+    ${Var('Float', state.currentValue, args.initValue)}
+    ${Var('Float', state.nextSamp, -1)}
+    ${Var('Int', state.nextSampInt, -1)}
+    ${Var('Float', state.grainSamp, 0)}
+    ${Var('Float', state.nextDurationSamp, 0)}
+    ${Var('SkedId', state.skedId, 'SKED_ID_NULL')}
 
-    function ${state.funcSetNewLine} ${Func([
-        Var('targetValue', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetNewLine, [
+        Var('Float', 'targetValue'),
+    ], 'void')`
         ${state.currentLine} = {
             p0: {
                 x: toFloat(${globs.frame}), 
@@ -110,21 +110,21 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         }
         ${state.nextDurationSamp} = 0
         ${state.currentLine}.dy = computeSlope(${state.currentLine}.p0, ${state.currentLine}.p1) * ${state.grainSamp}
-    }
+    `}
 
-    function ${state.funcSetNextDuration} ${Func([
-        Var('durationMsec', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetNextDuration, [
+        Var('Float', 'durationMsec'),
+    ], 'void')`
         ${state.nextDurationSamp} = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
-    }
+    `}
 
-    function ${state.funcSetGrain} ${Func([
-        Var('grainMsec', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetGrain, [
+        Var('Float', 'grainMsec'),
+    ], 'void')`
         ${state.grainSamp} = computeUnitInSamples(${globs.sampleRate}, Math.max(grainMsec, ${MIN_GRAIN_MSEC}), 'msec')
-    }
+    `}
 
-    function ${state.funcStopCurrentLine} ${Func([], 'void')} {
+    ${Func(state.funcStopCurrentLine, [], 'void')`
         if (${state.skedId} !== SKED_ID_NULL) {
             commons_cancelWaitFrame(${state.skedId})
             ${state.skedId} = SKED_ID_NULL
@@ -133,18 +133,18 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
             ${state.funcIncrementTime}(-1 * (${state.nextSamp} - toFloat(${globs.frame})))
         }
         ${state.funcSetNextSamp}(-1)
-    }
+    `}
 
-    function ${state.funcSetNextSamp} ${Func([
-        Var('currentSamp', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcSetNextSamp, [
+        Var('Float', 'currentSamp'),
+    ], 'void')`
         ${state.nextSamp} = currentSamp
         ${state.nextSampInt} = toInt(Math.round(currentSamp))
-    }
+    `}
 
-    function ${state.funcIncrementTime} ${Func([
-        Var('incrementSamp', 'Float'),
-    ], 'void')} {
+    ${Func(state.funcIncrementTime, [
+        Var('Float', 'incrementSamp'),
+    ], 'void')`
         if (incrementSamp === ${state.currentLine}.dx) {
             ${state.currentValue} += ${state.currentLine}.dy
         } else {
@@ -155,9 +155,9 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
             )
         }
         ${state.funcSetNextSamp}((${state.nextSamp} !== -1 ? ${state.nextSamp}: toFloat(${globs.frame})) + incrementSamp)
-    }
+    `}
 
-    function ${state.funcScheduleNextTick} ${Func([], 'void')} {
+    ${Func(state.funcScheduleNextTick, [], 'void')`
         ${state.skedId} = commons_waitFrame(${state.nextSampInt}, () => {
             ${snds.$0}(msg_floats([${state.currentValue}]))
             if (toFloat(${globs.frame}) >= ${state.currentLine}.p1.x) {
@@ -168,7 +168,7 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
                 ${state.funcScheduleNextTick}()
             }
         })
-    }
+    `}
 
     commons_waitEngineConfigure(() => {
         ${state.funcSetGrain}(${args.timeGrainMsec})
@@ -176,21 +176,21 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state, macros: { Var } }) => ({
-    '0': `
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
     if (
-        msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])
-        || msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
-        || msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
+        msg_isMatching(m, [MSG_FLOAT_TOKEN])
+        || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
+        || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
     ) {
         ${state.funcStopCurrentLine}()
-        switch (msg_getLength(${globs.m})) {
+        switch (msg_getLength(m)) {
             case 3:
-                ${state.funcSetGrain}(msg_readFloatToken(${globs.m}, 2))
+                ${state.funcSetGrain}(msg_readFloatToken(m, 2))
             case 2:
-                ${state.funcSetNextDuration}(msg_readFloatToken(${globs.m}, 1))
+                ${state.funcSetNextDuration}(msg_readFloatToken(m, 1))
             case 1:
-                const ${Var('targetValue', 'Float')} = msg_readFloatToken(${globs.m}, 0)
+                ${ConstVar('Float', 'targetValue', 'msg_readFloatToken(m, 0)')}
                 if (${state.nextDurationSamp} === 0) {
                     ${state.currentValue} = targetValue
                     ${snds.$0}(msg_floats([targetValue]))
@@ -204,22 +204,22 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
         }
         return
 
-    } else if (msg_isAction(${globs.m}, 'stop')) {
+    } else if (msg_isAction(m, 'stop')) {
         ${state.funcStopCurrentLine}()
         return
 
     } else if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'set'
+        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+        && msg_readStringToken(m, 0) === 'set'
     ) {
         ${state.funcStopCurrentLine}()
-        ${state.currentValue} = msg_readFloatToken(${globs.m}, 1)
+        ${state.currentValue} = msg_readFloatToken(m, 1)
         return
     }
     `,
 
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetNextDuration),
-    '2': coldFloatInletWithSetter(globs.m, state.funcSetGrain),
+    '1': coldFloatInletWithSetter(state.funcSetNextDuration),
+    '2': coldFloatInletWithSetter(state.funcSetGrain),
 })
 
 // ------------------------------------------------------------------- //

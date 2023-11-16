@@ -20,6 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
+import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {}
@@ -46,14 +47,14 @@ const generateLoopInline: _NodeImplementation['generateLoopInline'] = () => `Mat
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs }) => ({
-    '0': `
-    if (
-        msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-        && msg_readStringToken(${globs.m}, 0) === 'seed'
-    ) {
-        console.log('WARNING : seed not implemented yet for [noise~]')
-        return
-    }
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+            && msg_readStringToken(m, 0) === 'seed'
+        ) {
+            console.log('WARNING : seed not implemented yet for [noise~]')
+            return
+        }
     `,
 })
 

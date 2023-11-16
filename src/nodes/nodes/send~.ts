@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { signalBuses } from '../global-code/buses'
+import { ast, ConstVar } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     busName: string,
@@ -48,14 +49,13 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state, 
-    node: { args }, 
-    macros: { Var }
-}) => `
-    const ${Var(state.busName, 'string')} = "${args.busName}"
+    node: { args },
+}) => ast`
+    ${ConstVar('string', state.busName, `"${args.busName}"`)}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => ast`
     setSignalBus(${state.busName}, ${ins.$0})
 `
 

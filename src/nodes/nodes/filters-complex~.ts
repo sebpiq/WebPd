@@ -18,9 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
+import { Code } from '@webpd/compiler'
+import { ast, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     initCoeffRe: number
@@ -103,16 +105,15 @@ const makeNodeImplementation = ({
     // ------------------------------- generateDeclarations ------------------------------ //
     const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         state,
-        macros: { Var },
-    }) => `
-        let ${Var(state.lastOutputRe, 'Float')} = 0
-        let ${Var(state.lastOutputIm, 'Float')} = 0
-        let ${Var(state.lastInputRe, 'Float')} = 0
-        let ${Var(state.lastInputIm, 'Float')} = 0
+    }) => ast`
+        ${Var('Float', state.lastOutputRe, 0)}
+        ${Var('Float', state.lastOutputIm, 0)}
+        ${Var('Float', state.lastInputRe, 0)}
+        ${Var('Float', state.lastInputIm, 0)}
     `
 
     // ------------------------------- generateLoop ------------------------------ //
-    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => `
+    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
         ${outs.$0} = ${generateOperationRe(
             ins.$0, 
             ins.$1, 

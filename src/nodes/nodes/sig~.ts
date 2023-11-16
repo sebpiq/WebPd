@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
+import { ast, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     initValue: number,
@@ -47,8 +48,8 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ node: { args }, state, macros: { Var }}) => `
-    let ${Var(state.currentValue, 'Float')} = ${args.initValue}
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ node: { args }, state }) => ast`
+    ${Var('Float', state.currentValue, args.initValue)}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
@@ -57,7 +58,7 @@ const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ state }
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0': coldFloatInlet(globs.m, state.currentValue),
+    '0': coldFloatInlet(state.currentValue),
 })
 
 // ------------------------------------------------------------------- //

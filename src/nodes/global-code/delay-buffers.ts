@@ -18,39 +18,41 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { stdlib } from '@webpd/compiler'
+import { ConstVar, Func, Sequence, Var } from '@webpd/compiler/src/ast/declare'
 import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
 
 // TODO : how to safely declare a global variable without clashing
 export const delayBuffers: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: ({ macros: { Var, Func } }) => `
-    const ${Var('DELAY_BUFFERS', 'Map<string, buf_SoundBuffer>')} = new Map()
-    const ${Var('DELAY_BUFFERS_SKEDULER', 'Skeduler')} = sked_create(true)
-    const ${Var('DELAY_BUFFERS_NULL', 'buf_SoundBuffer')} = buf_create(1)
-
-    function DELAY_BUFFERS_set ${Func(
-        [Var('delayName', 'string'), Var('buffer', 'buf_SoundBuffer')],
-        'void'
-    )} {
-        DELAY_BUFFERS.set(delayName, buffer)
-        sked_emit(DELAY_BUFFERS_SKEDULER, delayName)
-    }
-
-    function DELAY_BUFFERS_get ${Func(
-        [
-            Var('delayName', 'string'),
-            Var('callback', '(event: string) => void'),
-        ],
-        'void'
-    )} {
-        sked_wait(DELAY_BUFFERS_SKEDULER, delayName, callback)
-    }
-
-    function DELAY_BUFFERS_delete ${Func(
-        [Var('delayName', 'string')],
-        'void'
-    )} {
-        DELAY_BUFFERS.delete(delayName)
-    }
-`,
+    codeGenerator: () => Sequence([
+        ConstVar('Map<string, buf_SoundBuffer>', 'DELAY_BUFFERS', 'new Map()'),
+        ConstVar('Skeduler', 'DELAY_BUFFERS_SKEDULER', 'sked_create(true)'),
+        ConstVar('buf_SoundBuffer', 'DELAY_BUFFERS_NULL', 'buf_create(1)'),
+    
+        Func('DELAY_BUFFERS_set', 
+            [Var('string', 'delayName'), Var('buf_SoundBuffer', 'buffer')],
+            'void'
+        )`
+            DELAY_BUFFERS.set(delayName, buffer)
+            sked_emit(DELAY_BUFFERS_SKEDULER, delayName)
+        `,
+    
+        Func('DELAY_BUFFERS_get', 
+            [
+                Var('string', 'delayName'),
+                Var('(event: string) => void', 'callback'),
+            ],
+            'void'
+        )`
+            sked_wait(DELAY_BUFFERS_SKEDULER, delayName, callback)
+        `,
+    
+        Func('DELAY_BUFFERS_delete', 
+            [Var('string', 'delayName')],
+            'void'
+        )`
+            DELAY_BUFFERS.delete(delayName)
+        `,
+    ])
+,
     dependencies: [stdlib.bufCore, stdlib.sked],
 }

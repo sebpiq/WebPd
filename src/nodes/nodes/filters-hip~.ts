@@ -21,6 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
+import { ast, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     initValue: number
@@ -64,16 +65,15 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
-    macros: { Var },
-}) => `
-    let ${Var(state.previous, 'Float')} = 0
-    let ${Var(state.current, 'Float')} = 0
-    let ${Var(state.coeff, 'Float')} = 0
-    let ${Var(state.normal, 'Float')} = 0
+}) => ast`
+    ${Var('Float', state.previous, 0)}
+    ${Var('Float', state.current, 0)}
+    ${Var('Float', state.coeff, 0)}
+    ${Var('Float', state.normal, 0)}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => ast`
     ${state.coeff} = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
     ${state.normal} = 0.5 * (1 + ${state.coeff})
     ${state.current} = ${ins.$0} + ${state.coeff} * ${state.previous}

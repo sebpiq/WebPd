@@ -21,6 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
+import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {
@@ -50,19 +51,19 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, macros: { Var }}) => `
-    let ${Var(state.currentValue, 'Float')} = 0
+const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state }) => ast`
+    ${Var('Float', state.currentValue, 0)}
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => ast`
     ${state.currentValue} = ${ins.$0}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds }) => ({
-    '0_message': `
-        if (msg_isBang(${globs.m})) {
+    '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+        if (msg_isBang(m)) {
             ${snds.$0}(msg_floats([${state.currentValue}]))
             return 
         }

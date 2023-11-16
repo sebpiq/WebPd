@@ -22,6 +22,7 @@ import { functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
+import { Sequence } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     channelMapping: Array<number>
@@ -75,7 +76,7 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
     globs,
     node,
     compilation: { audioSettings, target },
-}) =>
+}) => Sequence([
     node.args.channelMapping
         // Save the original index
         .map((destination, i) => [destination, i])
@@ -89,7 +90,7 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
                 ? `${globs.output}[${destination}][${globs.iterFrame}] = ${ins[`${i}`]}`
                 : `${globs.output}[${globs.iterFrame} + ${globs.blockSize} * ${destination}] = ${ins[`${i}`]}`
         )
-        .join('\n') + '\n'
+])
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { generateLoop, stateVariables }

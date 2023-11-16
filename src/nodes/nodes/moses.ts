@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
+import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     threshold: number
@@ -55,26 +56,25 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node,
     state,
-    macros: { Var },
-}) => `
-    let ${Var(state.threshold, 'Float')} = ${node.args.threshold}
+}) => ast`
+    ${Var('Float', state.threshold, node.args.threshold)}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state, macros: { Var } }) => ({
-    '0': `
-    if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-        const ${Var('value', 'Float')} = msg_readFloatToken(${globs.m}, 0)
-        if (value >= ${state.threshold}) {
-            ${snds[1]}(msg_floats([value]))
-        } else {
-            ${snds[0]}(msg_floats([value]))
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
+            if (value >= ${state.threshold}) {
+                ${snds[1]}(msg_floats([value]))
+            } else {
+                ${snds[0]}(msg_floats([value]))
+            }
+            return
         }
-        return
-    }
     `,
 
-    '1': coldFloatInlet(globs.m, state.threshold),
+    '1': coldFloatInlet(state.threshold),
 })
 
 // ------------------------------------------------------------------- //

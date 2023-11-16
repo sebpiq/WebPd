@@ -23,6 +23,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
+import { AnonFunc, ast, ConstVar, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     typeArguments: Array<[TypeArgument, number | string]>
@@ -80,58 +81,63 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     node: { args },
     state,
-    macros: { Var },
-}) => functional.renderCode`
-    const ${Var(state.floatValues, 'Array<Float>')} = [${
+}) => ast`
+    ${ConstVar('Array<Float>', state.floatValues, `[${
         args.typeArguments.map(([typeArg, defaultValue]) => 
-            `${typeArg === 'float' ? defaultValue: 0}`).join(',')}]
-    const ${Var(state.stringValues, 'Array<string>')} = [${
+            `${typeArg === 'float' ? defaultValue: 0}`).join(',')}]`)}
+    ${ConstVar('Array<string>', state.stringValues, `[${
         args.typeArguments.map(([typeArg, defaultValue]) => 
-            `${typeArg === 'symbol' ? `"${defaultValue}"`: '""'}`).join(',')}]
+            `${typeArg === 'symbol' ? `"${defaultValue}"`: '""'}`).join(',')}]`)}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state, node, macros: { Var } }) => ({
-    '0': functional.renderCode`
-    if (!msg_isBang(${globs.m})) {
-        for (let ${Var('i', 'Int')} = 0; i < msg_getLength(${globs.m}); i++) {
-            ${state.stringValues}[i] = messageTokenToString(${globs.m}, i)
-            ${state.floatValues}[i] = messageTokenToFloat(${globs.m}, i)
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state, node }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (!msg_isBang(m)) {
+            for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
+                ${state.stringValues}[i] = messageTokenToString(m, i)
+                ${state.floatValues}[i] = messageTokenToFloat(m, i)
+            }
         }
-    }
 
-    const ${Var('template', 'MessageTemplate')} = [${
-        node.args.typeArguments.map(([typeArg], i) => 
+        ${ConstVar('MessageTemplate', 'template', `[${
+            node.args.typeArguments.map(([typeArg], i) => 
+                typeArg === 'symbol' ? 
+                    `MSG_STRING_TOKEN,${state.stringValues}[${i}].length`
+                    : `MSG_FLOAT_TOKEN`).join(',')}]`)}
+
+        ${ConstVar('Message', 'messageOut', 'msg_create(template)')}
+
+        ${node.args.typeArguments.map(([typeArg], i) => 
             typeArg === 'symbol' ? 
-                `MSG_STRING_TOKEN,${state.stringValues}[${i}].length`
-                : `MSG_FLOAT_TOKEN`).join(',')}]
+                `msg_writeStringToken(messageOut, ${i}, ${state.stringValues}[${i}])`
+                : `msg_writeFloatToken(messageOut, ${i}, ${state.floatValues}[${i}])`)}
 
-    const ${Var('messageOut', 'Message')} = msg_create(template)
-
-    ${node.args.typeArguments.map(([typeArg], i) => 
-        typeArg === 'symbol' ? 
-            `msg_writeStringToken(messageOut, ${i}, ${state.stringValues}[${i}])`
-            : `msg_writeFloatToken(messageOut, ${i}, ${state.floatValues}[${i}])`)}
-
-    ${snds[0]}(messageOut)
-    return
+        ${snds[0]}(messageOut)
+        return
     `,
 
-    ...functional.mapArray(node.args.typeArguments.slice(1), ([typeArg], i) => 
-        [
-            `${i + 1}`, 
-            functional.renderSwitch(
-                [
-                    typeArg === 'symbol', 
-                    `${state.stringValues}[${i + 1}] = messageTokenToString(${globs.m}, 0)`
-                ],
-                [
-                    typeArg === 'float', 
-                    `${state.floatValues}[${i + 1}] = messageTokenToFloat(${globs.m}, 0)`
-                ],
-            ) + ';return'
-        ]
-    ),
+    ...functional.mapArray(node.args.typeArguments.slice(1), ([typeArg], i) => {
+        if (typeArg === 'symbol') {
+            return [
+                `${i + 1}`, 
+                AnonFunc([Var('Message', 'm')], 'void')`
+                    ${state.stringValues}[${i + 1}] = messageTokenToString(m, 0)
+                    return
+                `
+            ]
+        } else if (typeArg === 'float') {
+            return [
+                `${i + 1}`, 
+                AnonFunc([Var('Message', 'm')], 'void')`
+                    ${state.floatValues}[${i + 1}] = messageTokenToFloat(m, 0)
+                    return
+                `
+            ]
+        } else {
+            throw new Error(`Unsupported type argument ${typeArg}`)
+        }
+    }),
 })
 
 // ------------------------------------------------------------------- //

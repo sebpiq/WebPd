@@ -22,93 +22,95 @@ import {
     GlobalCodeGeneratorWithSettings,
 } from '@webpd/compiler/src/compile/types'
 import { stdlib } from '@webpd/compiler'
+import { Sequence, ConstVar, Var, Func } from '@webpd/compiler/src/ast/declare'
 
 // TODO : unit tests
-export const signalBuses: GlobalCodeGenerator = ({ macros: { Var, Func } }) => `
-    const ${Var('SIGNAL_BUSES', 'Map<string, Float>')} = new Map()
-    SIGNAL_BUSES.set('', 0)
+export const signalBuses: GlobalCodeGenerator = () => 
+    Sequence([
+        ConstVar('Map<string, Float>', 'SIGNAL_BUSES', 'new Map()'),
+        `SIGNAL_BUSES.set('', 0)`,
 
-    function addAssignSignalBus ${Func(
-        [Var('busName', 'string'), Var('value', 'Float')],
-        'Float'
-    )} {
-        const ${Var('newValue', 'Float')} = SIGNAL_BUSES.get(busName) + value
-        SIGNAL_BUSES.set(
-            busName,
-            newValue,
-        )
-        return newValue
-    }
+        Func('addAssignSignalBus', [
+            Var('string', 'busName'), 
+            Var('Float', 'value')
+        ], 'Float')`
+            ${ConstVar('Float', 'newValue', 'SIGNAL_BUSES.get(busName) + value')}
+            SIGNAL_BUSES.set(
+                busName,
+                newValue,
+            )
+            return newValue
+        `,
 
-    function setSignalBus ${Func([
-        Var('busName', 'string'), 
-        Var('value', 'Float'),
-    ], 'void')} {
-        SIGNAL_BUSES.set(
-            busName,
-            value,
-        )
-    }
+        Func('setSignalBus', [
+            Var('string', 'busName'), 
+            Var('Float', 'value'),
+        ], 'void')`
+            SIGNAL_BUSES.set(
+                busName,
+                value,
+            )
+        `,
 
-    function resetSignalBus ${Func([
-        Var('busName', 'string')
-    ], 'void')} {
-        SIGNAL_BUSES.set(busName, 0)
-    }
+        Func('resetSignalBus', [
+            Var('string', 'busName')
+        ], 'void')`
+            SIGNAL_BUSES.set(busName, 0)
+        `,
 
-    function readSignalBus ${Func([Var('busName', 'string')], 'Float')} {
-        return SIGNAL_BUSES.get(busName)
-    }
-`
+        Func('readSignalBus', [Var('string', 'busName')], 'Float')`
+            return SIGNAL_BUSES.get(busName)
+        `
+    ])
 
 // TODO : unit tests
 export const messageBuses: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: ({ macros: { Var, Func } }) => `
-    const ${Var(
-        'MSG_BUSES',
-        'Map<string, Array<(m: Message) => void>>'
-    )} = new Map()
+    codeGenerator: () => Sequence([
+        ConstVar(
+            'Map<string, Array<(m: Message) => void>>',
+            'MSG_BUSES',
+            'new Map()'
+        ),
 
-    function msgBusPublish ${Func(
-        [Var('busName', 'string'), Var('message', 'Message')],
-        'void'
-    )} {
-        let ${Var('i', 'Int')} = 0
-        const ${Var(
-            'callbacks',
-            'Array<(m: Message) => void>'
-        )} = MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []
-        for (i = 0; i < callbacks.length; i++) {
-            callbacks[i](message)
-        }
-    }
+        Func('msgBusPublish', 
+            [Var('string', 'busName'), Var('Message', 'message')],
+            'void'
+        )`
+            ${Var('Int', 'i', '0')}
+            ${ConstVar(
+                'Array<(m: Message) => void>',
+                'callbacks',
+                'MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []'
+            )}
+            for (i = 0; i < callbacks.length; i++) {
+                callbacks[i](message)
+            }
+        `,
 
-    function msgBusSubscribe ${Func(
-        [Var('busName', 'string'), Var('callback', '(m: Message) => void')],
-        'void'
-    )} {
-        if (!MSG_BUSES.has(busName)) {
-            MSG_BUSES.set(busName, [])
-        }
-        MSG_BUSES.get(busName).push(callback)
-    }
+        Func('msgBusSubscribe', 
+            [Var('string', 'busName'), Var('(m: Message) => void', 'callback')],
+            'void'
+        )`
+            if (!MSG_BUSES.has(busName)) {
+                MSG_BUSES.set(busName, [])
+            }
+            MSG_BUSES.get(busName).push(callback)
+        `,
 
-    function msgBusUnsubscribe ${Func(
-        [Var('busName', 'string'), Var('callback', '(m: Message) => void')],
-        'void'
-    )} {
-        if (!MSG_BUSES.has(busName)) {
-            return
-        }
-        const ${Var(
-            'callbacks',
-            'Array<(m: Message) => void>'
-        )} = MSG_BUSES.get(busName)
-        const ${Var('found', 'Int')} = callbacks.indexOf(callback) !== -1
-        if (found !== -1) {
-            callbacks.splice(found, 1)
-        }
-    }
-`,
+        Func('msgBusUnsubscribe', 
+            [Var('string', 'busName'), Var('(m: Message) => void', 'callback')],
+            'void'
+        )`
+            if (!MSG_BUSES.has(busName)) {
+                return
+            }
+            ${ConstVar('Array<(m: Message) => void>', 'callbacks', 'MSG_BUSES.get(busName)')}
+            ${ConstVar('Int', 'found', 'callbacks.indexOf(callback) !== -1')}
+            if (found !== -1) {
+                callbacks.splice(found, 1)
+            }
+        `
+    ]),
+
     dependencies: [stdlib.msg],
 }

@@ -31,6 +31,7 @@ import {
     resolveTypeArgumentAlias,
     TypeArgument,
 } from '../type-arguments'
+import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     typeArguments: Array<TypeArgument>
@@ -63,10 +64,10 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, node: { args: { typeArguments }} }) => ({
-    '0': functional.renderCode`
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, node: { args: { typeArguments }} }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
         ${typeArguments.reverse().map((typeArg, i) => 
-            `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, globs.m, 0)})`
+            `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, 'm', 0)})`
         )}
         return
     `,

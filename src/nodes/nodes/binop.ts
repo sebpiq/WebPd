@@ -19,7 +19,6 @@
  */
 
 import {
-    Code,
     NodeImplementation,
     NodeImplementations,
     GlobalCodeGenerator,
@@ -29,6 +28,8 @@ import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { pow } from '../global-code/funcs'
+import { AnonFunc, ast, Func, Var } from '@webpd/compiler/src/ast/declare'
+import { Code } from '@webpd/compiler'
 
 interface NodeArguments {
     value: number
@@ -79,25 +80,23 @@ const makeNodeImplementation = ({
     // ------------------------------ generateDeclarations ------------------------------ //
     const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
         state,
-        macros: { Var, Func },
         node: { args },
-    }) => `
-        let ${Var(state.leftOp, 'Float')} = 0
-        let ${Var(state.rightOp, 'Float')} = 0
+    }) => ast`
+        ${Var('Float', state.leftOp, 0)}
+        ${Var('Float', state.rightOp, 0)}
 
-        const ${state.funcSetLeftOp} = ${Func(
-        [Var('value', 'Float')],
-        'void'
-    )} => {
+        ${Func(state.funcSetLeftOp,
+            [Var('Float', 'value')],
+        'void')`
             ${state.leftOp} = ${prepareLeftOp}
-        }
+        `}
 
-        const ${state.funcSetRightOp} = ${Func(
-        [Var('value', 'Float')],
+        ${Func(state.funcSetRightOp,
+            [Var('Float', 'value')],
         'void'
-    )} => {
+        )`
             ${state.rightOp} = ${prepareRightOp}
-        }
+        `}
 
         ${state.funcSetLeftOp}(0)
         ${state.funcSetRightOp}(${args.value})
@@ -106,22 +105,21 @@ const makeNodeImplementation = ({
     // ------------------------------- generateMessageReceivers ------------------------------ //
     const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
         state,
-        globs,
         snds,
     }) => ({
-        '0': `
-        if (msg_isMatching(${globs.m}, [MSG_FLOAT_TOKEN])) {
-            ${state.funcSetLeftOp}(msg_readFloatToken(${globs.m}, 0))
-            ${snds.$0}(msg_floats([${generateOperation(state)}]))
-            return
-        
-        } else if (msg_isBang(${globs.m})) {
-            ${snds.$0}(msg_floats([${generateOperation(state)}]))
-            return
-        }
+        '0': AnonFunc([Var('Message', 'm')], 'void')`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${state.funcSetLeftOp}(msg_readFloatToken(m, 0))
+                ${snds.$0}(msg_floats([${generateOperation(state)}]))
+                return
+            
+            } else if (msg_isBang(m)) {
+                ${snds.$0}(msg_floats([${generateOperation(state)}]))
+                return
+            }
         `,
 
-        '1': coldFloatInletWithSetter(globs.m, state.funcSetRightOp),
+        '1': coldFloatInletWithSetter(state.funcSetRightOp),
     })
 
     return {

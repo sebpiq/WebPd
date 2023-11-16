@@ -23,6 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { messageBuses } from '../global-code/buses'
 import { stdlib } from '@webpd/compiler'
+import { ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     busName: string
@@ -51,7 +52,7 @@ const builder: NodeBuilder<NodeArguments> = {
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     snds,
     node: { args },
-}) => `
+}) => ast`
     commons_waitEngineConfigure(() => {
         msgBusSubscribe("${args.busName}", ${snds.$0})
     })

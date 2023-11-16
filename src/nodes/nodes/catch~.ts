@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { signalBuses } from '../global-code/buses'
+import { Func, ast, Var } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     busName: string,
@@ -48,25 +49,24 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
     state, 
-    node: { args }, 
-    macros: { Var, Func }
-}) => `
-    let ${Var(state.busName, 'string')} = ""
+    node: { args },
+}) => ast`
+    ${Var('string', state.busName, '""')}
 
-    const ${state.funcSetBusName} = ${Func([
-        Var('busName', 'string')
-    ], 'void')} => {
+    ${Func(state.funcSetBusName, [
+        Var('string', 'busName')
+    ], 'void')`
         if (busName.length) {
             ${state.busName} = busName
             resetSignalBus(${state.busName})
         }
-    }
+    `}
 
     ${state.funcSetBusName}("${args.busName}")
 `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state }) => `
+const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state }) => ast`
     ${outs.$0} = readSignalBus(${state.busName})
     resetSignalBus(${state.busName})
 `

@@ -24,6 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
+import { Func, Var, ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {
     delayName: string,
@@ -63,15 +64,14 @@ const makeNodeImplementation = (): _NodeImplementation => {
     // ------------------------------- generateDeclarations ------------------------------ //
     const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
         state, 
-        node: { args }, 
-        macros: { Var, Func }
-    }) => `
-        let ${Var(state.delayName, 'string')} = ""
-        let ${Var(state.buffer, 'buf_SoundBuffer')} = DELAY_BUFFERS_NULL
+        node: { args },
+    }) => ast`
+        ${Var('string', state.delayName, '""')}
+        ${Var('buf_SoundBuffer', state.buffer, 'DELAY_BUFFERS_NULL')}
 
-        const ${state.funcSetDelayName} = ${Func([
-            Var('delayName', 'string')
-        ], 'void')} => {
+        ${Func(state.funcSetDelayName, [
+            Var('string', 'delayName')
+        ], 'void')`
             if (${state.delayName}.length) {
                 ${state.buffer} = DELAY_BUFFERS_NULL
             }
@@ -81,7 +81,7 @@ const makeNodeImplementation = (): _NodeImplementation => {
                     ${state.buffer} = DELAY_BUFFERS.get(${state.delayName})
                 })
             }
-        }
+        `}
 
         commons_waitEngineConfigure(() => {
             if ("${args.delayName}".length) {

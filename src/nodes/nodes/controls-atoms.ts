@@ -18,13 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { Code, stdlib, functional } from '@webpd/compiler'
-import { CodeVariableName, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils, msgUtils } from '../global-code/core'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export type _NodeImplementation = NodeImplementation<
     ControlsBaseNodeArguments,
@@ -46,23 +48,21 @@ const makeNodeImplementation = ({
     messageMatch,
 }: {
     initValue: Code,
-    messageMatch?: (messageName: CodeVariableName) => Code
+    messageMatch?: (messageName: VariableName) => Code
 }): _NodeImplementation => {
 
     // ------------------------------- generateDeclarations ------------------------------ //
     const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
         const { 
             state,
-            globs,
             snds,
-            macros: { Var, Func },
         } = context
-        return `
-            let ${Var(state.value, 'Message')} = ${initValue}
+        return ast`
+            ${Var('Message', state.value, initValue)}
             
-            function ${state.funcMessageReceiver} ${Func([
-                Var('m', 'Message'),
-            ], 'void')} {
+            ${Func(state.funcMessageReceiver, [
+                Var('Message', 'm'),
+            ], 'void')`
                 ${messageSetSendReceive(context)}
                 else if (msg_isBang(m)) {
                     ${snds.$0}(${state.value})
@@ -72,10 +72,10 @@ const makeNodeImplementation = ({
                     return
                 
                 } else if (
-                    msg_getTokenType(${globs.m}, 0) === MSG_STRING_TOKEN
-                    && msg_readStringToken(${globs.m}, 0) === 'set'
+                    msg_getTokenType(m, 0) === MSG_STRING_TOKEN
+                    && msg_readStringToken(m, 0) === 'set'
                 ) {
-                    const ${Var('setMessage','Message')} = msg_slice(${globs.m}, 1, msg_getLength(${globs.m}))
+                    ${ConstVar('Message', 'setMessage', 'msg_slice(m, 1, msg_getLength(m))')}
                     ${functional.renderIf(messageMatch, 
                         () => `if (${messageMatch('setMessage')}) {`)} 
                             ${state.value} = setMessage    
@@ -96,22 +96,20 @@ const makeNodeImplementation = ({
 
                 }
                 throw new Error('unsupported message ' + msg_display(m))
-            }
+            `}
 
             ${declareControlSendReceive(context)}
         `
     }
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
-        const { state, globs } = context
-        return ({
-            '0': `
-                ${state.funcMessageReceiver}(${globs.m})
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) =>
+        ({
+            '0': AnonFunc([Var('Message', 'm')], 'void')`
+                ${state.funcMessageReceiver}(m)
                 return
             `,
         })
-    }
 
     // ------------------------------------------------------------------- //
     return {

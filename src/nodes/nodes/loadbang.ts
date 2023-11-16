@@ -22,6 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { stdlib } from '@webpd/compiler'
+import { ast } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments {}
 const stateVariables = {}
@@ -39,7 +40,7 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- generateDeclarations ------------------------------ //
 const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ snds }) => 
-    `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`
+    ast`commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 

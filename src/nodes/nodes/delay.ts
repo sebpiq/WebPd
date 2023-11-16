@@ -25,6 +25,7 @@ import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
+import { ast, Var, Func, AnonFunc, ConstVar } from '@webpd/compiler/src/ast/declare'
 
 interface NodeArguments { 
     delay: number,
@@ -65,21 +66,20 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     state,
     snds, 
     globs,
-    node: { args }, 
-    macros: { Func, Var } 
+    node: { args },
 }) => 
-    `
-        let ${Var(state.delay, 'Float')} = 0
-        let ${Var(state.sampleRatio, 'Float')} = 1
-        let ${Var(state.scheduledBang, 'SkedId')} = SKED_ID_NULL
+    ast`
+        ${Var('Float', state.delay, '0')}
+        ${Var('Float', state.sampleRatio, '1')}
+        ${Var('SkedId', state.scheduledBang, 'SKED_ID_NULL')}
 
-        const ${state.funcSetDelay} = ${Func([
-            Var('delay', 'Float')
-        ], 'void')} => {
+        ${Func(state.funcSetDelay, [
+            Var('Float', 'delay')
+        ], 'void')`
             ${state.delay} = Math.max(0, delay)
-        }
+        `}
 
-        const ${state.funcScheduleDelay} = ${Func([], 'void')} => {
+        ${Func(state.funcScheduleDelay, [], 'void')`
             if (${state.scheduledBang} !== SKED_ID_NULL) {
                 ${state.funcStopDelay}()
             }
@@ -88,12 +88,12 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
                     toFloat(${globs.frame}) + ${state.delay} * ${state.sampleRatio})),
                 () => ${snds.$0}(msg_bang())
             )
-        }
+        `}
 
-        const ${state.funcStopDelay} = ${Func([], 'void')} => {
+        ${Func(state.funcStopDelay, [], 'void')`
             commons_cancelWaitFrame(${state.scheduledBang})
             ${state.scheduledBang} = SKED_ID_NULL
-        }
+        `}
 
         commons_waitEngineConfigure(() => {
             ${state.sampleRatio} = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
@@ -102,11 +102,11 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
     `
 
 // ------------------------------ generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({state, globs, macros: { Var }}) => ({
-    '0': `
-        if (msg_getLength(${globs.m}) === 1) {
-            if (msg_isStringToken(${globs.m}, 0)) {
-                const ${Var('action', 'string')} = msg_readStringToken(${globs.m}, 0)
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
+    '0': AnonFunc([Var('Message', 'm')], 'void')`
+        if (msg_getLength(m) === 1) {
+            if (msg_isStringToken(m, 0)) {
+                ${ConstVar('string', 'action', 'msg_readStringToken(m, 0)')}
                 if (action === 'bang' || action === 'start') {
                     ${state.funcScheduleDelay}()
                     return
@@ -115,26 +115,26 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                     return
                 }
                 
-            } else if (msg_isFloatToken(${globs.m}, 0)) {
-                ${state.funcSetDelay}(msg_readFloatToken(${globs.m}, 0))
+            } else if (msg_isFloatToken(m, 0)) {
+                ${state.funcSetDelay}(msg_readFloatToken(m, 0))
                 ${state.funcScheduleDelay}()
                 return 
             }
         
         } else if (
-            msg_isMatching(${globs.m}, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
-            && msg_readStringToken(${globs.m}, 0) === 'tempo'
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
+            && msg_readStringToken(m, 0) === 'tempo'
         ) {
             ${state.sampleRatio} = computeUnitInSamples(
                 ${globs.sampleRate}, 
-                msg_readFloatToken(${globs.m}, 1), 
-                msg_readStringToken(${globs.m}, 2)
+                msg_readFloatToken(m, 1), 
+                msg_readStringToken(m, 2)
             )
             return
         }
     `,
     
-    '1': coldFloatInletWithSetter(globs.m, state.funcSetDelay)
+    '1': coldFloatInletWithSetter(state.funcSetDelay)
 })
 
 // ------------------------------------------------------------------- //
