@@ -24,7 +24,7 @@ import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     unitAmount: number

@@ -21,7 +21,7 @@
 import { DspGraph, functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { AstElement } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments { templates: Array<Array<DspGraph.NodeArgument>> }

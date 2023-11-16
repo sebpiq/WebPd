@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { stdlib } from '@webpd/compiler'
-import { ConstVar, Func, Sequence, Var } from '@webpd/compiler/src/ast/declare'
+import { ConstVar, Func, Sequence, Var } from '@webpd/compiler'
 import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
 
 export const bangUtils: GlobalCodeGeneratorWithSettings = {

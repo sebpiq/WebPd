@@ -23,7 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = {

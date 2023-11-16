@@ -22,7 +22,7 @@ import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/com
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { Code } from '@webpd/compiler'
-import { ast, Var } from '@webpd/compiler/src/ast/declare'
+import { ast, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     initCoeffRe: number

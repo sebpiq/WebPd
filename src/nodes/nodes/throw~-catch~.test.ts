@@ -46,7 +46,7 @@ import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
 import { executeCompilation } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
-import { ast } from '@webpd/compiler/src/ast/declare'
+import { ast } from '@webpd/compiler'
 
 describe('throw~ / catch~', () => {
     describe('builder [throw~]', () => {

@@ -22,7 +22,7 @@ import { functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
-import { Sequence } from '@webpd/compiler/src/ast/declare'
+import { Sequence } from '@webpd/compiler'
 
 interface NodeArguments {
     channelMapping: Array<number>

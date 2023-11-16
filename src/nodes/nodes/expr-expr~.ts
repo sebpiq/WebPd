@@ -32,7 +32,7 @@ import {
     messageTokenToFloat,
     messageTokenToString,
 } from '../type-arguments'
-import { AnonFunc, ast, ConstVar, Sequence, Var } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ast, ConstVar, Sequence, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     tokenizedExpressions: Array<Array<ExpressionToken>>

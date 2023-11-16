@@ -25,7 +25,7 @@ import { assertOptionalString } from '../validation'
 import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils, msgUtils } from '../global-code/core'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export type _NodeImplementation = NodeImplementation<

@@ -22,7 +22,7 @@ import {
     GlobalCodeGeneratorWithSettings,
 } from '@webpd/compiler/src/compile/types'
 import { stdlib } from '@webpd/compiler'
-import { Sequence, ConstVar, Var, Func } from '@webpd/compiler/src/ast/declare'
+import { Sequence, ConstVar, Var, Func } from '@webpd/compiler'
 
 // TODO : unit tests
 export const signalBuses: GlobalCodeGenerator = () => 

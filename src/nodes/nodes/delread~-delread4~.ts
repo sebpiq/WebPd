@@ -24,7 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     delayName: string,

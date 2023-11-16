@@ -24,7 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 const BLOCK_SIZE = 44100 * 5
 

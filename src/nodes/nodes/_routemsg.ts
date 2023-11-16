@@ -20,7 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Var } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {}

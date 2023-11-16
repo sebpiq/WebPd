@@ -21,7 +21,7 @@
 import { linesUtils } from './lines'
 import { round, runTestSuite } from '@webpd/compiler/src/test-helpers'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, ConstVar, Func, Sequence, Var } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
 
 describe('global-code.lines', () => {
     runTestSuite(

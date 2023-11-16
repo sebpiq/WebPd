@@ -24,7 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     operation: string

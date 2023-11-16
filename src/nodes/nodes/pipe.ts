@@ -32,7 +32,7 @@ import {
     resolveTypeArgumentAlias,
     TypeArgument,
 } from '../type-arguments'
-import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     typeArguments: Array<[TypeArgument, number | string]>

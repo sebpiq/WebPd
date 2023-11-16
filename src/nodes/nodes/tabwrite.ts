@@ -23,7 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = {

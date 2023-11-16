@@ -26,7 +26,7 @@ import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     initValue: number

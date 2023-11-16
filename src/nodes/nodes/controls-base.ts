@@ -19,7 +19,7 @@
  */
 import { NodeImplementation } from "@webpd/compiler/src/compile/types"
 import { NodeBuilder } from "../../compile-dsp-graph/types"
-import { Func, Var, ast } from "@webpd/compiler/src/ast/declare"
+import { Func, Var, ast } from "@webpd/compiler"
 import { Code } from "@webpd/compiler"
 
 export const EMPTY_BUS_NAME = 'empty'

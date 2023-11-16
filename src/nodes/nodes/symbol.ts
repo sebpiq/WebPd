@@ -25,7 +25,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { messageBuses } from '../global-code/buses'
-import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     value: string

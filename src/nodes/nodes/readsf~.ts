@@ -24,7 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
-import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     channelCount: number

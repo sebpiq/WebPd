@@ -25,7 +25,7 @@ import {
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
 import { Code } from '@webpd/compiler'
-import { AnonFunc, Var, ConstVar } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Var, ConstVar } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {}

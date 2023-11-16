@@ -22,7 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { signalBuses } from '../global-code/buses'
-import { Func, ast, Var } from '@webpd/compiler/src/ast/declare'
+import { Func, ast, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     busName: string,

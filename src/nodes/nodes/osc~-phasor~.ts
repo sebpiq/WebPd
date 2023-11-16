@@ -23,7 +23,7 @@ import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/com
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     frequency: number

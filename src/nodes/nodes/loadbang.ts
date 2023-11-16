@@ -22,7 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { stdlib } from '@webpd/compiler'
-import { ast } from '@webpd/compiler/src/ast/declare'
+import { ast } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {}

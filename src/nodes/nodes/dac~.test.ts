@@ -37,7 +37,7 @@ import { nodeImplementation, builder } from './dac~'
 import { executeCompilation, functional } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { PartialNode } from '../../compile-dsp-graph/types'
-import { Sequence } from '@webpd/compiler/src/ast/declare'
+import { Sequence } from '@webpd/compiler'
 
 describe('dac~', () => {
     describe('builder', () => {

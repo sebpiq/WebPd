@@ -24,7 +24,7 @@ import { assertOptionalString } from '../validation'
 import { messageBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     busName: string

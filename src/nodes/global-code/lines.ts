@@ -19,7 +19,7 @@
  */
 import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
 import { interpolateLin } from './points'
-import { Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler/src/ast/declare'
+import { Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
 
 export const linesUtils: GlobalCodeGeneratorWithSettings = {
     codeGenerator: () => Sequence([

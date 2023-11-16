@@ -25,7 +25,7 @@ import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     rate: number

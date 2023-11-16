@@ -28,7 +28,7 @@ import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { pow } from '../global-code/funcs'
-import { AnonFunc, ast, Func, Var } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ast, Func, Var } from '@webpd/compiler'
 import { Code } from '@webpd/compiler'
 
 interface NodeArguments {

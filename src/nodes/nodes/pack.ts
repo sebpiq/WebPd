@@ -23,7 +23,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
-import { AnonFunc, ast, ConstVar, Var } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ast, ConstVar, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     typeArguments: Array<[TypeArgument, number | string]>

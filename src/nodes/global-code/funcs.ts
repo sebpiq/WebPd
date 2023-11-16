@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { GlobalCodeGenerator } from "@webpd/compiler/src/compile/types"
-import { Func, Var } from "@webpd/compiler/src/ast/declare"
+import { Func, Var } from "@webpd/compiler"
 
 const MAX_MIDI_FREQ = Math.pow(2, (1499 - 69) / 12) * 440
 

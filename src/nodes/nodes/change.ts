@@ -22,7 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Sequence, Var, ConstVar } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Sequence, Var, ConstVar } from '@webpd/compiler'
 
 interface NodeArguments {
     initValue: number

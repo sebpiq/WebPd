@@ -22,7 +22,7 @@ import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/com
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { parseSoundFileOpenOpts } from '../global-code/fs'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {}
 const stateVariables = {

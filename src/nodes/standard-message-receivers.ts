@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Var } from '@webpd/compiler'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export const coldFloatInlet = (

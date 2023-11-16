@@ -20,7 +20,7 @@
 import { interpolateLin } from './points'
 import { runTestSuite } from '@webpd/compiler/src/test-helpers'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc } from '@webpd/compiler'
 
 describe('global-code.points', () => {
     runTestSuite([

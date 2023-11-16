@@ -25,7 +25,7 @@ import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { stdlib } from '@webpd/compiler'
-import { ast, Var, Func, AnonFunc, ConstVar } from '@webpd/compiler/src/ast/declare'
+import { ast, Var, Func, AnonFunc, ConstVar } from '@webpd/compiler'
 
 interface NodeArguments { 
     delay: number,

@@ -22,7 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, Var } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Var } from '@webpd/compiler'
 
 interface NodeArguments { arrayName: string }
 const stateVariables = stateVariablesTabBase

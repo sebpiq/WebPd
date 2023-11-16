@@ -22,7 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     isClosed: boolean

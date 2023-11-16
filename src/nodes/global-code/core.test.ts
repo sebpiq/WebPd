@@ -21,7 +21,7 @@
 import { runTestSuite } from '@webpd/compiler/src/test-helpers'
 import { bangUtils, msgUtils } from './core'
 import { stdlib } from '@webpd/compiler'
-import { AnonFunc, ConstVar } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar } from '@webpd/compiler'
 
 describe('global-code.core', () => {
     runTestSuite([

@@ -23,7 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { messageBuses } from '../global-code/buses'
 import { stdlib } from '@webpd/compiler'
-import { ast } from '@webpd/compiler/src/ast/declare'
+import { ast } from '@webpd/compiler'
 
 interface NodeArguments {
     busName: string

@@ -22,7 +22,7 @@ import {
 } from '@webpd/compiler/src/compile/types'
 import { ValidationError } from './validation'
 import { VariableName } from '@webpd/compiler/src/ast/types'
-import { Func, Var, ConstVar } from '@webpd/compiler/src/ast/declare'
+import { Func, Var, ConstVar } from '@webpd/compiler'
 
 export type TypeArgument = 'float' | 'bang' | 'symbol' | 'list' | 'anything'
 

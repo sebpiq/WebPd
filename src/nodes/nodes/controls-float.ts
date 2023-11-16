@@ -28,7 +28,7 @@ import { assertNumber, assertOptionalString } from '../validation'
 import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     minValue: number

@@ -24,7 +24,7 @@ import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler/src/ast/declare'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     delayName: string,
