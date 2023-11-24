@@ -37,10 +37,7 @@ import * as tabplayTilde from './nodes/tabplay~'
 import * as readsfTilde from './nodes/readsf~'
 import * as writesfTilde from './nodes/writesf~'
 import * as bpTilde from './nodes/filters-bp~'
-import * as throwTilde from './nodes/throw~'
-import * as catchTilde from './nodes/catch~'
-import * as sendTilde from './nodes/send~'
-import * as receiveTilde from './nodes/receive~'
+import * as throwCatchSendReceiveTilde from './nodes/throw~-catch~-send~-receive~'
 import * as metro from './nodes/metro'
 import * as timer from './nodes/timer'
 import * as delay from './nodes/delay'
@@ -62,8 +59,7 @@ import * as filtersVcfTilde from './nodes/filters-vcf~'
 import * as msg from './nodes/msg'
 import * as list from './nodes/list'
 import * as symbol from './nodes/symbol'
-import * as send from './nodes/send'
-import * as receive from './nodes/receive'
+import * as sendReceive from './nodes/send-receive'
 import * as soundfiler from './nodes/soundfiler'
 import * as print from './nodes/print'
 import * as trigger from './nodes/trigger'
@@ -92,6 +88,8 @@ const NODE_BUILDERS: NodeBuilders = {
     ...filtersRealTilde.builders,
     ...filtersComplexTilde.builders,
     ...delreadTilde.builders,
+    ...throwCatchSendReceiveTilde.builders,
+    ...sendReceive.builders,
     'noise~': noiseTilde.builder,
     'snapshot~': snapshotTilde.builder,
     'sig~': sigTilde.builder,
@@ -111,11 +109,7 @@ const NODE_BUILDERS: NodeBuilders = {
     'lop~': filtersLopTilde.builder,
     'vcf~': filtersVcfTilde.builder,
     'delwrite~': delwriteTilde.builder,
-    'throw~': throwTilde.builder,
-    'catch~': catchTilde.builder,
-    'send~': sendTilde.builder,
     's~': { aliasTo: 'send~' },
-    'receive~': receiveTilde.builder,
     'r~': { aliasTo: 'receive~' },
     ...controlsFloat.builders,
     ...controlsAtoms.builders,
@@ -129,9 +123,7 @@ const NODE_BUILDERS: NodeBuilders = {
     list: list.builder,
     symbol: symbol.builder,
     loadbang: loadbang.builder,
-    send: send.builder,
     s: { aliasTo: 'send' },
-    receive: receive.builder,
     r: { aliasTo: 'receive' },
     print: print.builder,
     trigger: trigger.builder,
@@ -179,6 +171,8 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     ...filtersRealTilde.nodeImplementations,
     ...filtersComplexTilde.nodeImplementations,
     ...delreadTilde.nodeImplementations,
+    ...throwCatchSendReceiveTilde.nodeImplementations,
+    ...sendReceive.nodeImplementations,
     'noise~': noiseTilde.nodeImplementation,
     'snapshot~': snapshotTilde.nodeImplementation,
     'sig~': sigTilde.nodeImplementation,
@@ -197,10 +191,6 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     'hip~': filtersHipTilde.nodeImplementation,
     'lop~': filtersLopTilde.nodeImplementation,
     'vcf~': filtersVcfTilde.nodeImplementation,
-    'throw~': throwTilde.nodeImplementation,
-    'catch~': catchTilde.nodeImplementation,
-    'send~': sendTilde.nodeImplementation,
-    'receive~': receiveTilde.nodeImplementation,
     ...controlsFloat.nodeImplementations,
     ...controlsAtoms.nodeImplementations,
     ...binop.nodeImplementations,
@@ -210,8 +200,6 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     bang: bang.nodeImplementation,
     list: list.nodeImplementation,
     symbol: symbol.nodeImplementation,
-    send: send.nodeImplementation,
-    receive: receive.nodeImplementation,
     loadbang: loadbang.nodeImplementation,
     print: print.nodeImplementation,
     trigger: trigger.nodeImplementation,

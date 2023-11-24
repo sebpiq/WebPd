@@ -18,22 +18,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Sequence, Var, ConstVar } from '@webpd/compiler'
+import { AnonFunc, Sequence, Var, ConstVar, ast, Class } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initValue: number
 }
-const stateVariables = {
-    currentValue: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -51,36 +46,44 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    node,
-    state,
-}) => Sequence([
-    Var('Float', state.currentValue, node.args.initValue.toString())
+const variableNames = generateVariableNamesNodeType('change')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'currentValue'), 
+    ]),
 ])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            currentValue: ${args.initValue}
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
     state,
 }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
             ${ConstVar('Float', 'newValue', 'msg_readFloatToken(m, 0)')}
-            if (newValue !== ${state.currentValue}) {
-                ${state.currentValue} = newValue
-                ${snds[0]}(msg_floats([${state.currentValue}]))
+            if (newValue !== ${state}.currentValue) {
+                ${state}.currentValue = newValue
+                ${snds[0]}(msg_floats([${state}.currentValue]))
             }
             return
 
         } else if (msg_isBang(m)) {
-            ${snds[0]}(msg_floats([${state.currentValue}]))
+            ${snds[0]}(msg_floats([${state}.currentValue]))
             return 
 
         } else if (
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
             && msg_readStringToken(m, 0) === 'set'
         ) {
-            ${state.currentValue} = msg_readFloatToken(m, 1)
+            ${state}.currentValue = msg_readFloatToken(m, 1)
             return
         }
     `,
@@ -88,10 +91,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
+    generateInitialization,
     generateMessageReceivers,
-    stateVariables,
-    generateDeclarations,
-    dependencies: [bangUtils],
+    dependencies: [bangUtils, nodeCore],
 }
 
 export { builder, nodeImplementation, NodeArguments }

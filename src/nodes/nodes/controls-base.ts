@@ -17,26 +17,16 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { NodeImplementation } from "@webpd/compiler/src/compile/types"
+import { GlobalCodeGenerator } from "@webpd/compiler/src/compile/types"
 import { NodeBuilder } from "../../compile-dsp-graph/types"
-import { Func, Var, ast } from "@webpd/compiler"
-import { Code } from "@webpd/compiler"
+import { Class, Func, Sequence, Var } from "@webpd/compiler"
+import { generateVariableNamesNodeType } from "../variable-names"
 
 export const EMPTY_BUS_NAME = 'empty'
 
 export interface ControlsBaseNodeArguments {
     receiveBusName: string
     sendBusName: string
-}
-
-export const stateVariables = {
-    value: 1,
-    funcPrepareStoreValue: 1,
-    funcPrepareStoreValueBang: 1,
-    funcSetReceiveBusName: 1,
-    sendBusName: 1,
-    receiveBusName: 1,
-    funcMessageReceiver: 1,
 }
 
 export const build: NodeBuilder<any>['build'] = () => ({
@@ -51,46 +41,58 @@ export const build: NodeBuilder<any>['build'] = () => ({
     isPushingMessages: true
 })
 
-export const declareControlSendReceive: NodeImplementation<any>['generateDeclarations'] = ({ 
-    node, 
-    state, 
-    node: { args },
-}) => ast`
-    ${Var('string', state.receiveBusName, `"${node.args.receiveBusName}"`)}
-    ${Var('string', state.sendBusName, `"${node.args.sendBusName}"`)}
+// TODO : move to global code
+export const controlsCoreVariableNames = generateVariableNamesNodeType('control', [
+    'setReceiveBusName', 
+    'setSendReceiveFromMessage',
+    'defaultMessageHandler',
+])
 
-    ${Func(state.funcSetReceiveBusName, [
-        Var('string', 'busName')
+export const controlsCore: GlobalCodeGenerator = () => Sequence([
+    Class(controlsCoreVariableNames.stateClass, [
+        Var('Float', 'minValue'),
+        Var('Float', 'maxValue'),
+        Var('Float', 'valueFloat'),
+        Var('Message', 'value'),
+        Var('string', 'receiveBusName'),
+        Var('string', 'sendBusName'),
+        Var('(m: Message) => void', 'messageReceiver'),
+        Var('(m: Message) => void', 'messageSender'),
+    ]),
+
+    Func(controlsCoreVariableNames.setReceiveBusName, [
+        Var(controlsCoreVariableNames.stateClass, 'state'),
+        Var('string', 'busName'),
     ], 'void')`
-        if (${state.receiveBusName} !== "${EMPTY_BUS_NAME}") {
-            msgBusUnsubscribe(${state.receiveBusName}, ${state.funcMessageReceiver})
+        if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
+            msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
         }
-        ${state.receiveBusName} = busName
-        if (${state.receiveBusName} !== "${EMPTY_BUS_NAME}") {
-            msgBusSubscribe(${state.receiveBusName}, ${state.funcMessageReceiver})
+        state.receiveBusName = busName
+        if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
+            msgBusSubscribe(state.receiveBusName, state.messageReceiver)
         }
-    `}
+    `,
 
-    commons_waitEngineConfigure(() => {
-        ${state.funcSetReceiveBusName}("${args.receiveBusName}")
-    })
-`
+    Func(controlsCoreVariableNames.setSendReceiveFromMessage, [
+        Var(controlsCoreVariableNames.stateClass, 'state'),
+        Var('Message', 'm'),
+    ], 'boolean')`
+        if (
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+            && msg_readStringToken(m, 0) === 'receive'
+        ) {
+            ${controlsCoreVariableNames.setReceiveBusName}(state, msg_readStringToken(m, 1))
+            return true
 
-export const messageSetSendReceive: (
-    context: Parameters<NodeImplementation<any>['generateDeclarations']>[0]
-) => Code = ({ state }) => `
-    if (
-        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(m, 0) === 'receive'
-    ) {
-        ${state.funcSetReceiveBusName}(msg_readStringToken(m, 1))
-        return
+        } else if (
+            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+            && msg_readStringToken(m, 0) === 'send'
+        ) {
+            state.sendBusName = msg_readStringToken(m, 1)
+            return true
+        }
+        return false
+    `,
 
-    } else if (
-        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(m, 0) === 'send'
-    ) {
-        ${state.sendBusName} = msg_readStringToken(m, 1)
-        return
-    }
-`
+    Func(controlsCoreVariableNames.defaultMessageHandler, [Var('Message', 'm')], 'void')``,
+])

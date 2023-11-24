@@ -18,29 +18,22 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { stdlib } from '@webpd/compiler'
+import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { ast, Var, Func, AnonFunc, ConstVar } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments { 
     delay: number,
     unitAmount: number,
     unit: string,
 }
-const stateVariables = {
-    funcSetDelay: 1,
-    funcScheduleDelay: 1,
-    funcStopDelay: 1,
-    delay: 1,
-    scheduledBang: 1,
-    sampleRatio: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -62,62 +55,88 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
-    state,
-    snds, 
-    globs,
-    node: { args },
-}) => 
-    ast`
-        ${Var('Float', state.delay, '0')}
-        ${Var('Float', state.sampleRatio, '1')}
-        ${Var('SkedId', state.scheduledBang, 'SKED_ID_NULL')}
+    const variableNames = generateVariableNamesNodeType('delay', [
+        'setDelay',
+        'scheduleDelay',
+        'stop',
+    ])
 
-        ${Func(state.funcSetDelay, [
-            Var('Float', 'delay')
+    const nodeCore: GlobalCodeGenerator = () => Sequence([
+        Class(variableNames.stateClass, [
+            Var('Float', 'delay', '0'),
+            Var('Float', 'sampleRatio', '1'),
+            Var('SkedId', 'scheduledBang', 'SKED_ID_NULL'),
+        ]),
+
+        Func(variableNames.setDelay, [
+            Var(variableNames.stateClass, 'state'),
+            Var('Float', 'delay'),
         ], 'void')`
-            ${state.delay} = Math.max(0, delay)
-        `}
+            state.delay = Math.max(0, delay)
+        `,
 
-        ${Func(state.funcScheduleDelay, [], 'void')`
-            if (${state.scheduledBang} !== SKED_ID_NULL) {
-                ${state.funcStopDelay}()
+        Func(variableNames.scheduleDelay, [
+            Var(variableNames.stateClass, 'state'),
+            Var('SkedCallback', 'callback'),
+            Var('Int', 'currentFrame'),
+        ], 'void')`
+            if (state.scheduledBang !== SKED_ID_NULL) {
+                ${variableNames.stop}(state)
             }
-            ${state.scheduledBang} = commons_waitFrame(toInt(
+            state.scheduledBang = commons_waitFrame(toInt(
                 Math.round(
-                    toFloat(${globs.frame}) + ${state.delay} * ${state.sampleRatio})),
-                () => ${snds.$0}(msg_bang())
+                    toFloat(currentFrame) + state.delay * state.sampleRatio)),
+                callback
             )
-        `}
+        `,
 
-        ${Func(state.funcStopDelay, [], 'void')`
-            commons_cancelWaitFrame(${state.scheduledBang})
-            ${state.scheduledBang} = SKED_ID_NULL
-        `}
+        Func(variableNames.stop, [
+            Var(variableNames.stateClass, 'state'),
+        ], 'void')`
+            commons_cancelWaitFrame(state.scheduledBang)
+            state.scheduledBang = SKED_ID_NULL
+        `
+    ])
+    
+    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state, globs }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                delay: 0,
+                sampleRatio: 1,
+                scheduledBang: SKED_ID_NULL,
+            }`)}
 
-        commons_waitEngineConfigure(() => {
-            ${state.sampleRatio} = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-            ${state.funcSetDelay}(${args.delay})
-        })
-    `
+            commons_waitEngineConfigure(() => {
+                ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
+                ${variableNames.setDelay}(${state}, ${args.delay})
+            })
+        `
 
 // ------------------------------ generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds }) => ({
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_getLength(m) === 1) {
             if (msg_isStringToken(m, 0)) {
                 ${ConstVar('string', 'action', 'msg_readStringToken(m, 0)')}
                 if (action === 'bang' || action === 'start') {
-                    ${state.funcScheduleDelay}()
+                    ${variableNames.scheduleDelay}(
+                        ${state}, 
+                        () => ${snds.$0}(msg_bang()),
+                        ${globs.frame},
+                    )
                     return
                 } else if (action === 'stop') {
-                    ${state.funcStopDelay}()
+                    ${variableNames.stop}(${state})
                     return
                 }
                 
             } else if (msg_isFloatToken(m, 0)) {
-                ${state.funcSetDelay}(msg_readFloatToken(m, 0))
-                ${state.funcScheduleDelay}()
+                ${variableNames.setDelay}(${state}, msg_readFloatToken(m, 0))
+                ${variableNames.scheduleDelay}(
+                    ${state},
+                    () => ${snds.$0}(msg_bang()),
+                    ${globs.frame},
+                )
                 return 
             }
         
@@ -125,7 +144,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
             && msg_readStringToken(m, 0) === 'tempo'
         ) {
-            ${state.sampleRatio} = computeUnitInSamples(
+            ${state}.sampleRatio = computeUnitInSamples(
                 ${globs.sampleRate}, 
                 msg_readFloatToken(m, 1), 
                 msg_readStringToken(m, 2)
@@ -134,19 +153,19 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
         }
     `,
     
-    '1': coldFloatInletWithSetter(state.funcSetDelay)
+    '1': coldFloatInletWithSetter(variableNames.setDelay, state)
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
-    stateVariables,
     dependencies: [
         computeUnitInSamples,
         bangUtils,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
+        nodeCore
     ],
 }
 

@@ -18,23 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, ConstVar, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     isClosed: boolean
 }
-const stateVariables = {
-    isClosed: 1,
-    funcSetIsClosed: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -53,36 +48,47 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    node,
-    state,
-}) => ast`
-    ${Var('Float', state.isClosed, node.args.isClosed ? 'true': 'false')}
+const variableNames = generateVariableNamesNodeType('spigot', ['setIsClosed'])
 
-    ${Func(state.funcSetIsClosed, [
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'isClosed')
+    ]),
+
+    Func(variableNames.setIsClosed, [
+        Var(variableNames.stateClass, 'state'),
         Var('Float', 'value'),
     ], 'void')`
-        ${state.isClosed} = (value === 0)
-    `}
-`
+        state.isClosed = (value === 0)
+    `
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            isClosed: ${args.isClosed ? 'true': 'false'}
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
-        if (!${state.isClosed}) {
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
+    '0': AnonFunc([Var('Message', 'm')])`
+        if (!${state}.isClosed) {
             ${snds.$0}(m)
         }
         return
     `,
 
-    '1': coldFloatInletWithSetter(state.funcSetIsClosed),
+    '1': coldFloatInletWithSetter(variableNames.setIsClosed, state),
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
+    generateInitialization,
     generateMessageReceivers,
-    stateVariables,
-    generateDeclarations,
+    dependencies: [
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

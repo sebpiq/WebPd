@@ -29,13 +29,9 @@ import {
 import { nodeImplementations, builders, NodeArguments } from './controls-float'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
-    nodeImplementation as nodeImplementationSend,
-    builder as builderSend,
-} from './send'
-import {
-    nodeImplementation as nodeImplementationReceive,
-    builder as builderReceive,
-} from './receive'
+    nodeImplementations as nodeImplementationsSendReceive,
+    builders as buildersSendReceive,
+} from './send-receive'
 import {
     CompilerTarget,
     AudioSettings,
@@ -53,7 +49,11 @@ const NODE_TYPES_NUMBERS = [
     'vsl',
     'vradio',
 ] as const
-const NODE_TYPES_ALL = [...NODE_TYPES_NUMBERS, 'nbx', 'tgl'] as const
+const NODE_TYPES_ALL = [
+    ...NODE_TYPES_NUMBERS, 
+    'nbx', 
+    'tgl',
+] as const
 
 const CONTROLS_TEST_PARAMETERS_NUMBERS = testParametersCombine<{
     nodeType: keyof typeof builders
@@ -192,8 +192,7 @@ describe('controls-float', () => {
             ) => {
                 const _nodeImplementations: NodeImplementations = {
                     ...nodeImplementations,
-                    send: nodeImplementationSend,
-                    receive: nodeImplementationReceive,
+                    ...nodeImplementationsSendReceive,
                 }
 
                 const graph = makeGraph({
@@ -204,12 +203,12 @@ describe('controls-float', () => {
                     },
                     send: {
                         type: 'send',
-                        ...builderSend.build({ busName: 'BUS_TO_CTRL' }),
+                        ...buildersSendReceive['send'].build({ busName: 'BUS_TO_CTRL' }),
                         args: { busName: 'BUS_TO_CTRL' },
                     },
                     receive: {
                         type: 'receive',
-                        ...builderReceive.build({ busName: 'BUS_FROM_CTRL' }),
+                        ...buildersSendReceive['receive'].build({ busName: 'BUS_FROM_CTRL' }),
                         args: { busName: 'BUS_FROM_CTRL' },
                     },
                 })

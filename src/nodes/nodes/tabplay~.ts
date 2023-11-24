@@ -18,25 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
-import { stdlib } from '@webpd/compiler'
+import { Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
+import { nodeCoreTabBase, variableNamesTabBase } from './tab-base'
 
 interface NodeArguments { arrayName: string }
-const stateVariables = {
-    array: 1,
-    arrayName: 1,
-    arrayChangesSubscription: 1,
-    readPosition: 1,
-    readUntil: 1,
-    funcSetArrayName: 1,
-    funcStop: 1,
-    funcPlay: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : Should work also if array was set the play started
 // ------------------------------- node builder ------------------------------ //
@@ -56,62 +49,68 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = (
-    { state, node },
-) => ast`
-    ${Var('FloatArray', state.array, 'createFloatArray(0)')}
-    ${Var('string', state.arrayName, `"${node.args.arrayName}"`)}
-    ${Var('SkedId', state.arrayChangesSubscription, 'SKED_ID_NULL')}
-    ${Var('Int', state.readPosition, '0')}
-    ${Var('Int', state.readUntil, '0')}
+const variableNames = generateVariableNamesNodeType('tabplay_t', [
+    'setArrayNameFinalize',
+    'play',
+    'stop',
+])
 
-    ${Func(state.funcSetArrayName, [
-        Var('string', 'arrayName')
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Func(variableNames.setArrayNameFinalize, [
+        Var(variableNamesTabBase.stateClass, 'state'),
     ], 'void')`
-        if (${state.arrayChangesSubscription} != SKED_ID_NULL) {
-            commons_cancelArrayChangesSubscription(${state.arrayChangesSubscription})
-        }
-        ${state.arrayName} = arrayName
-        ${state.array} = createFloatArray(0)
-        ${state.funcStop}()
-        commons_subscribeArrayChanges(arrayName, () => {
-            ${state.array} = commons_getArray(${state.arrayName})
-            ${state.readPosition} = ${state.array}.length
-            ${state.readUntil} = ${state.array}.length
-        })
-    `}
+        state.array = commons_getArray(state.arrayName)
+        state.readPosition = state.array.length
+        state.readUntil = state.array.length
+    `,
 
-    ${Func(state.funcPlay, [
+    Func(variableNames.play, [
+        Var(variableNamesTabBase.stateClass, 'state'),
         Var('Int', 'playFrom'),
         Var('Int', 'playTo'),
     ], 'void')`
-        ${state.readPosition} = playFrom
-        ${state.readUntil} = toInt(Math.min(
+        state.readPosition = playFrom
+        state.readUntil = toInt(Math.min(
             toFloat(playTo), 
-            toFloat(${state.array}.length),
+            toFloat(state.array.length),
         ))
-    `}
+    `,
 
-    ${Func(state.funcStop, [], 'void')`
-        ${state.readPosition} = 0
-        ${state.readUntil} = 0
-    `}
+    Func(variableNames.stop, [
+        Var(variableNamesTabBase.stateClass, 'state'),
+    ], 'void')`
+        state.readPosition = 0
+        state.readUntil = 0
+    `,
+])
 
-    commons_waitEngineConfigure(() => {
-        if (${state.arrayName}.length) {
-            ${state.funcSetArrayName}(${state.arrayName})
-        }
-    })
-`
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(
+            variableNamesTabBase.stateClass, 
+            state, 
+            `${variableNamesTabBase.createState}("${args.arrayName}")`
+        )}
+
+        commons_waitEngineConfigure(() => {
+            if (${state}.arrayName.length) {
+                ${variableNamesTabBase.setArrayName}(
+                    ${state}, 
+                    ${state}.arrayName,
+                    () => ${variableNames.setArrayNameFinalize}(${state})
+                )
+            }
+        })
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = (
     {state, snds, outs},
 ) => ast`
-    if (${state.readPosition} < ${state.readUntil}) {
-        ${outs.$0} = ${state.array}[${state.readPosition}]
-        ${state.readPosition}++
-        if (${state.readPosition} >= ${state.readUntil}) {
+    if (${state}.readPosition < ${state}.readUntil) {
+        ${outs.$0} = ${state}.array[${state}.readPosition]
+        ${state}.readPosition++
+        if (${state}.readPosition >= ${state}.readUntil) {
             ${snds.$1}(msg_bang())
         }
     } else {
@@ -121,32 +120,38 @@ const generateLoop: _NodeImplementation['generateLoop'] = (
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
-            ${state.funcPlay}(0, ${state.array}.length)
+            ${variableNames.play}(${state}, 0, ${state}.array.length)
             return 
             
         } else if (msg_isAction(m, 'stop')) {
-            ${state.funcStop}()
+            ${variableNames.stop}(${state})
             return 
 
         } else if (
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
             && msg_readStringToken(m, 0) === 'set'
         ) {
-            ${state.funcSetArrayName}(msg_readStringToken(m, 1))   
+            ${variableNamesTabBase.setArrayName}(
+                ${state},
+                msg_readStringToken(m, 1),
+                () => ${variableNames.setArrayNameFinalize}(${state}),
+            )
             return
 
         } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${state.funcPlay}(
+            ${variableNames.play}(
+                ${state},
                 toInt(msg_readFloatToken(m, 0)), 
-                ${state.array}.length
+                ${state}.array.length
             )
             return 
 
         } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
             ${ConstVar('Int', 'fromSample', `toInt(msg_readFloatToken(m, 0))`)}
-            ${state.funcPlay}(
+            ${variableNames.play}(
+                ${state},
                 fromSample,
                 fromSample + toInt(msg_readFloatToken(m, 1)),
             )
@@ -157,15 +162,16 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
     generateLoop,
-    stateVariables,
     dependencies: [
         bangUtils,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsArrays,
         stringMsgUtils,
+        nodeCoreTabBase,
+        nodeCore,
     ],
 }
 

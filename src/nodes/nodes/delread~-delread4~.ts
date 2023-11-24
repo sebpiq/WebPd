@@ -18,24 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { stdlib } from '@webpd/compiler'
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { Class, ConstVar, Sequence, stdlib } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     delayName: string,
     initDelayMsec: number,
 }
-const stateVariables = {
-    delayName: 1,
-    buffer: 1,
-    funcSetDelayName: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : Implement 4-point interpolation for delread4
 // ------------------------------- node builder ------------------------------ //
@@ -62,53 +58,64 @@ const builder: NodeBuilder<NodeArguments> = {
 
 const makeNodeImplementation = (): _NodeImplementation => {
     // ------------------------------- generateDeclarations ------------------------------ //
-    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
-        state, 
-        node: { args },
-    }) => ast`
-        ${Var('string', state.delayName, '""')}
-        ${Var('buf_SoundBuffer', state.buffer, 'DELAY_BUFFERS_NULL')}
+    const variableNames = generateVariableNamesNodeType('delread', ['setDelayName'])
 
-        ${Func(state.funcSetDelayName, [
-            Var('string', 'delayName')
+    const nodeCore: GlobalCodeGenerator = () => Sequence([
+        Class(variableNames.stateClass, [
+            Var('string', 'delayName'), 
+            Var('buf_SoundBuffer', 'buffer'), 
+        ]),
+
+        Func(variableNames.setDelayName, [
+            Var(variableNames.stateClass, 'state'),
+            Var('string', 'delayName'),
+            Var('SkedCallback', 'callback'),
         ], 'void')`
-            if (${state.delayName}.length) {
-                ${state.buffer} = DELAY_BUFFERS_NULL
+            if (state.delayName.length) {
+                state.buffer = DELAY_BUFFERS_NULL
             }
-            ${state.delayName} = delayName
-            if (${state.delayName}.length) {
-                DELAY_BUFFERS_get(${state.delayName}, () => { 
-                    ${state.buffer} = DELAY_BUFFERS.get(${state.delayName})
-                })
+            state.delayName = delayName
+            if (state.delayName.length) {
+                DELAY_BUFFERS_get(state.delayName, callback)
             }
-        `}
+        `
+    ])
 
-        commons_waitEngineConfigure(() => {
-            if ("${args.delayName}".length) {
-                ${state.funcSetDelayName}("${args.delayName}")
-            }
-        })
-    `
+    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                delayName: '',
+                buffer: DELAY_BUFFERS_NULL,
+            }`)}
+
+            commons_waitEngineConfigure(() => {
+                if ("${args.delayName}".length) {
+                    ${variableNames.setDelayName}(${state}, "${args.delayName}", () => {
+                        ${state}.buffer = DELAY_BUFFERS.get(${state}.delayName)
+                    })
+                }
+            })
+        `
 
     // ------------------------------- generateLoop ------------------------------ //
     const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ globs, ins, state }) =>
-        `buf_readSample(${state.buffer}, toInt(Math.round(
+        `buf_readSample(${state}.buffer, toInt(Math.round(
             Math.min(
                 Math.max(computeUnitInSamples(${globs.sampleRate}, ${ins.$0}, "msec"), 0), 
-                toFloat(${state.buffer}.length - 1)
+                toFloat(${state}.buffer.length - 1)
             )
         )))`
 
     // ------------------------------------------------------------------- //
     return {
+        generateInitialization,
         generateLoopInline,
-        stateVariables,
-        generateDeclarations,
         dependencies: [
             computeUnitInSamples,
             delayBuffers,
             stdlib.commonsWaitEngineConfigure,
             stdlib.bufWriteRead,
+            nodeCore,
         ],
     }
 

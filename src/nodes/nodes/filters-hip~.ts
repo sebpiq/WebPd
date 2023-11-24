@@ -18,24 +18,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { ast, Var } from '@webpd/compiler'
+import { ast, Class, ConstVar, Sequence, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initValue: number
 }
-const stateVariables = {
-    current: 1,
-    previous: 1,
-    coeff: 1,
-    normal: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : very inneficient compute coeff at each iter
 // TODO : tests + cleaner implementations
@@ -63,28 +56,40 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    state,
-}) => ast`
-    ${Var('Float', state.previous, 0)}
-    ${Var('Float', state.current, 0)}
-    ${Var('Float', state.coeff, 0)}
-    ${Var('Float', state.normal, 0)}
-`
+const variableNames = generateVariableNamesNodeType('hip_t')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'previous'),
+        Var('Float', 'current'),
+        Var('Float', 'coeff'),
+        Var('Float', 'normal'),
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            previous: 0,
+            current: 0,
+            coeff: 0,
+            normal: 0,
+        }`)}
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => ast`
-    ${state.coeff} = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
-    ${state.normal} = 0.5 * (1 + ${state.coeff})
-    ${state.current} = ${ins.$0} + ${state.coeff} * ${state.previous}
-    ${outs.$0} = ${state.normal} * (${state.current} - ${state.previous})
-    ${state.previous} = ${state.current}
+    ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
+    ${state}.normal = 0.5 * (1 + ${state}.coeff)
+    ${state}.current = ${ins.$0} + ${state}.coeff * ${state}.previous
+    ${outs.$0} = ${state}.normal * (${state}.current - ${state}.previous)
+    ${state}.previous = ${state}.current
 `
 
 const nodeImplementation: _NodeImplementation = {
+    generateInitialization,
     generateLoop,
-    stateVariables,
-    generateDeclarations,
+    dependencies: [nodeCore],
 }
 
 // ------------------------------------------------------------------- //

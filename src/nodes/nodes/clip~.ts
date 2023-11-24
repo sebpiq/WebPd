@@ -18,21 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
-import { ast, Var } from '@webpd/compiler'
+import { ast, Class, ConstVar, Sequence, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     minValue: number,
     maxValue: number,
 }
-const stateVariables = {
-    minValue: 1,
-    maxValue: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -53,27 +50,39 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ node: { args }, state }) => ast`
-    ${Var('Float', state.minValue, args.minValue.toString())}
-    ${Var('Float', state.maxValue, args.maxValue.toString())}
-`
+const variableNames = generateVariableNamesNodeType('clip_t')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'minValue'), 
+        Var('Float', 'maxValue'), 
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            minValue: ${args.minValue},
+            maxValue: ${args.maxValue},
+        }`)}
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ ins, state }) =>
-    `Math.max(Math.min(${state.maxValue}, ${ins.$0}), ${state.minValue})`
+    `Math.max(Math.min(${state}.maxValue, ${ins.$0}), ${state}.minValue)`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
-    '1': coldFloatInlet(state.minValue),
-    '2': coldFloatInlet(state.maxValue),
+    '1': coldFloatInlet(`${state}.minValue`),
+    '2': coldFloatInlet(`${state}.maxValue`),
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
+    generateInitialization,
     generateLoopInline,
-    stateVariables,
     generateMessageReceivers,
-    generateDeclarations,
+    dependencies: [nodeCore],
 }
 
 export { builder, nodeImplementation, NodeArguments }

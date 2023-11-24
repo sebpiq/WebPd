@@ -25,8 +25,7 @@ import { stdlib } from '@webpd/compiler'
 import { ast } from '@webpd/compiler'
 
 interface NodeArguments {}
-const stateVariables = {}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -39,13 +38,12 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ snds }) => 
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ snds }) => 
     ast`commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`
-
+    
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    generateDeclarations, 
-    stateVariables,
+    generateInitialization, 
     dependencies: [ bangUtils, stdlib.commonsWaitFrame ],
 }
 

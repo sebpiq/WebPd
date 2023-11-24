@@ -18,15 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { declareTabBase, messageSetArrayCode, prepareIndexCode, stateVariablesTabBase, translateArgsTabBase } from './tab-base'
-import { stdlib } from '@webpd/compiler'
+import { nodeCoreTabBase, translateArgsTabBase, variableNamesTabBase } from './tab-base'
+import { ConstVar, Func, Sequence, ast, stdlib } from '@webpd/compiler'
 import { AnonFunc, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments { arrayName: string }
-const stateVariables = stateVariablesTabBase
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -42,33 +42,83 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = declareTabBase
+const variableNames = generateVariableNamesNodeType('tabread', [
+    'setArrayNameFinalize',
+])
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Func(variableNames.setArrayNameFinalize, [
+        Var(variableNamesTabBase.stateClass, 'state'),
+    ], 'void')`
+        state.array = commons_getArray(state.arrayName)
+    `,
+])
+
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(
+            variableNamesTabBase.stateClass, 
+            state, 
+            `${variableNamesTabBase.createState}("${args.arrayName}")`
+        )}
+
+        commons_waitEngineConfigure(() => {
+            if (${state}.arrayName.length) {
+                ${variableNamesTabBase.setArrayName}(
+                    ${state}, 
+                    ${state}.arrayName,
+                    () => ${variableNames.setArrayNameFinalize}(${state})
+                )
+            }
+        })
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
     const { snds, state } = context
     return {
-        '0': AnonFunc([Var('Message', 'm')], 'void')`
+        '0': AnonFunc([Var('Message', 'm')])`
             if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
-                if (${state.array}.length === 0) {
+                if (${state}.array.length === 0) {
                     ${snds.$0}(msg_floats([0]))
 
                 } else {
-                    ${snds.$0}(msg_floats([${state.array}[${prepareIndexCode(`msg_readFloatToken(m, 0)`, context)}]]))
+                    ${snds.$0}(msg_floats([${state}.array[
+                        ${variableNamesTabBase.prepareIndex}(
+                            msg_readFloatToken(m, 0), 
+                            ${state}.array.length
+                        )
+                    ]]))
                 }
                 return 
 
-            } ${messageSetArrayCode(context)}
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${variableNamesTabBase.setArrayName}(
+                    ${state}, 
+                    msg_readStringToken(m, 1),
+                    () => ${variableNames.setArrayNameFinalize}(${state})
+                )
+                return
+        
+            }
         `,
     }
 }
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
-    stateVariables,
-    dependencies: [stdlib.commonsWaitEngineConfigure, stdlib.commonsArrays]
+    dependencies: [
+        stdlib.commonsWaitEngineConfigure, 
+        stdlib.commonsArrays,
+        nodeCoreTabBase,
+        nodeCore,
+    ]
 }
 
 export { 

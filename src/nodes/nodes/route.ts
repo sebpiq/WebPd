@@ -18,24 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Class, ConstVar, DspGraph, Sequence, functional } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     filters: Array<number | string>
 }
-const stateVariables = {
-    filterType: 1,
-    floatFilter: 1,
-    stringFilter: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -62,20 +56,31 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    node: { args },
-    state,
-}) => args.filters.length === 1 ? ast`
-        ${Var('Float', state.floatFilter, typeof args.filters[0] === 'number' ? args.filters[0]: 0)}
-        ${Var('string', state.stringFilter, `"${args.filters[0]}"`)}
-        ${Var('Int', state.filterType, typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN')}    
-    `: ast``
+
+const variableNames = generateVariableNamesNodeType('route')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'floatFilter'),
+        Var('string', 'stringFilter'),
+        Var('Int', 'filterType'),
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            floatFilter: ${typeof args.filters[0] === 'number' ? args.filters[0]: 0},
+            stringFilter: "${args.filters[0]}",
+            filterType: ${typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN'},
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state, node: { args } }) => {
     if (args.filters.length > 1) {
         return {
-            '0': AnonFunc([Var('Message', 'm')], 'void')`
+            '0': AnonFunc([Var('Message', 'm')])`
                 ${args.filters.map((filter, i) => functional.renderSwitch(
                     [filter === 'float', `
                         if (msg_isFloatToken(m, 0)) {
@@ -128,16 +133,16 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     
     } else {
         return {
-            '0': AnonFunc([Var('Message', 'm')], 'void')`
-                if (${state.filterType} === MSG_STRING_TOKEN) {
+            '0': AnonFunc([Var('Message', 'm')])`
+                if (${state}.filterType === MSG_STRING_TOKEN) {
                     if (
-                        (${state.stringFilter} === 'float'
+                        (${state}.stringFilter === 'float'
                             && msg_isFloatToken(m, 0))
-                        || (${state.stringFilter} === 'symbol'
+                        || (${state}.stringFilter === 'symbol'
                             && msg_isStringToken(m, 0))
-                        || (${state.stringFilter} === 'list'
+                        || (${state}.stringFilter === 'list'
                             && msg_getLength(m) > 1)
-                        || (${state.stringFilter} === 'bang' 
+                        || (${state}.stringFilter === 'bang' 
                             && msg_isBang(m))
                     ) {
                         ${snds.$0}(m)
@@ -145,7 +150,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                     
                     } else if (
                         msg_isStringToken(m, 0)
-                        && msg_readStringToken(m, 0) === ${state.stringFilter}
+                        && msg_readStringToken(m, 0) === ${state}.stringFilter
                     ) {
                         ${snds.$0}(msg_emptyToBang(msg_shift(m)))
                         return
@@ -153,7 +158,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
                 } else if (
                     msg_isFloatToken(m, 0)
-                    && msg_readFloatToken(m, 0) === ${state.floatFilter}
+                    && msg_readFloatToken(m, 0) === ${state}.floatFilter
                 ) {
                     ${snds.$0}(msg_emptyToBang(msg_shift(m)))
                     return
@@ -163,12 +168,12 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
             return
             `,
 
-            '1': AnonFunc([Var('Message', 'm')], 'void')`
-                ${state.filterType} = msg_getTokenType(m, 0)
-                if (${state.filterType} === MSG_STRING_TOKEN) {
-                    ${state.stringFilter} = msg_readStringToken(m, 0)
+            '1': AnonFunc([Var('Message', 'm')])`
+                ${state}.filterType = msg_getTokenType(m, 0)
+                if (${state}.filterType === MSG_STRING_TOKEN) {
+                    ${state}.stringFilter = msg_readStringToken(m, 0)
                 } else {
-                    ${state.floatFilter} = msg_readFloatToken(m, 0)
+                    ${state}.floatFilter = msg_readFloatToken(m, 0)
                 }
                 return
             `
@@ -179,10 +184,13 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    generateMessageReceivers, 
-    stateVariables, 
-    generateDeclarations,
-    dependencies: [ bangUtils, msgUtils ]
+    generateMessageReceivers,
+    generateInitialization,
+    dependencies: [ 
+        bangUtils, 
+        msgUtils,
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

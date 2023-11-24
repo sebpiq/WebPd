@@ -18,25 +18,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, stdlib } from '@webpd/compiler'
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { Class, Code, ConstVar, Sequence, stdlib } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     frequency: number
 }
-const stateVariables = {
-    phase: 1,
-    J: 1,
-    funcSetPhase: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -61,59 +55,77 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 const makeNodeImplementation = ({
+    name,
     coeff,
     generateOperation,
 }: {
+    name: string,
     coeff?: Code,
     generateOperation: (phase: Code) => Code,
 }): _NodeImplementation => {
 
     // ------------------------------ generateDeclarations ------------------------------ //
-    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-        state,
-        globs,
-    }) => ast`
-        ${Var('Float', state.phase, 0)}
-        ${Var('Float', state.J, 0)}
+    const variableNames = generateVariableNamesNodeType(name, [
+        'setPhase'
+    ])
 
-        ${Func(state.funcSetPhase, [
-            Var('Float', 'phase')
+    const nodeCore: GlobalCodeGenerator = () => Sequence([
+        Class(variableNames.stateClass, [
+            Var('Float', 'phase'),
+            Var('Float', 'J'),
+        ]),
+
+        Func(variableNames.setPhase, [
+            Var(variableNames.stateClass, 'state'),
+            Var('Float', 'phase'),
         ], 'void')`
-            ${state.phase} = phase % 1.0${coeff ? ` * ${coeff}`: ''}
-        `}
+            state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}
+        `
+    ])
 
-        commons_waitEngineConfigure(() => {
-            ${state.J} = ${coeff ? `${coeff}`: '1'} / ${globs.sampleRate}
-        })
-    `
+    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ globs, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                phase: 0,
+                J: 0,
+            }`)}
+            
+            commons_waitEngineConfigure(() => {
+                ${state}.J = ${coeff ? `${coeff}`: '1'} / ${globs.sampleRate}
+            })
+        `
 
     // ------------------------------- generateLoop ------------------------------ //
     const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
-        ${outs.$0} = ${generateOperation(state.phase)}
-        ${state.phase} += (${state.J} * ${ins.$0})
+        ${outs.$0} = ${generateOperation(`${state}.phase`)}
+        ${state}.phase += (${state}.J * ${ins.$0})
     `
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
     const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
-        '1': coldFloatInletWithSetter(state.funcSetPhase),
+        '1': coldFloatInletWithSetter(variableNames.setPhase, state),
     })
 
     return {
-        generateDeclarations,
+        generateInitialization,
         generateMessageReceivers,
         generateLoop,
-        stateVariables,
-        dependencies: [stdlib.commonsWaitEngineConfigure]
+        dependencies: [
+            stdlib.commonsWaitEngineConfigure, 
+            nodeCore
+        ]
     }
 }
 
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
     'osc~': makeNodeImplementation({
+        name: 'osc_t',
         coeff: '2 * Math.PI',
         generateOperation: (phase: Code) => `Math.cos(${phase})`
     }),
     'phasor~': makeNodeImplementation({
+        name: 'phasor_t',
         generateOperation: (phase: Code) => `${phase} % 1`
     }),
 }

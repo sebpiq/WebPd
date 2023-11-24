@@ -18,26 +18,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { computeUnitInSamples } from '../global-code/timing'
-import { stdlib } from '@webpd/compiler'
+import { Class, ConstVar, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     unitAmount: number
     unit: string
 }
-const stateVariables = {
-    resetTime: 1,
-    sampleRatio: 1
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -57,18 +52,26 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    state,
-    globs,
-    node: { args },
-}) => ast`
-    ${Var('Float', state.sampleRatio, '0')}
-    ${Var('Int', state.resetTime, '0')}
+const variableNames = generateVariableNamesNodeType('timer')
 
-    commons_waitEngineConfigure(() => {
-        ${state.sampleRatio} = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-    })
-`
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'sampleRatio'),
+        Var('Int', 'resetTime'),
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state, globs }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            sampleRatio: 0,
+            resetTime: 0,
+        }`)}
+
+        commons_waitEngineConfigure(() => {
+            ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
+        })
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
@@ -76,16 +79,16 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     globs,
     state,
 }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
-            ${state.resetTime} = ${globs.frame}
+            ${state}.resetTime = ${globs.frame}
             return
 
         } else if (
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
             && msg_readStringToken(m, 0) === 'tempo'
         ) {
-            ${state.sampleRatio} = computeUnitInSamples(
+            ${state}.sampleRatio = computeUnitInSamples(
                 ${globs.sampleRate}, 
                 msg_readFloatToken(m, 1), 
                 msg_readStringToken(m, 2)
@@ -94,9 +97,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
         }
     `,
 
-    '1': AnonFunc([Var('Message', 'm')], 'void')`
+    '1': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
-            ${snds.$0}(msg_floats([toFloat(${globs.frame} - ${state.resetTime}) / ${state.sampleRatio}]))
+            ${snds.$0}(msg_floats([toFloat(${globs.frame} - ${state}.resetTime) / ${state}.sampleRatio]))
             return
         }
     `,
@@ -104,10 +107,14 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    stateVariables,
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
-    dependencies: [ computeUnitInSamples, bangUtils, stdlib.commonsWaitEngineConfigure ]
+    dependencies: [ 
+        computeUnitInSamples, 
+        bangUtils, 
+        stdlib.commonsWaitEngineConfigure, 
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

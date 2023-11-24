@@ -17,24 +17,22 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { stdlib, functional, Func, Sequence } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
+import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCoreVariableNames, controlsCore } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     outputOnLoad: boolean
 }
 
-export type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+export type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -47,57 +45,72 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
-    const { 
-        state,
-        snds,
-        node: { args },
-    } = context
-    return ast`
-        ${Func(state.funcMessageReceiver, [
-            Var('Message', 'm'),
-        ], 'void')`
-            ${messageSetSendReceive(context)}
-            else {
-                ${ConstVar('Message', 'outMessage', 'msg_bang()')}
-                ${snds.$0}(outMessage)
-                if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
-                    msgBusPublish(${state.sendBusName}, outMessage)
-                }
-                return
-            }
-        `}
+const variableNames = generateVariableNamesNodeType('bang', ['receiveMessage'])
 
-        ${declareControlSendReceive(context)}
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Func(variableNames.receiveMessage, [
+        Var(controlsCoreVariableNames.stateClass, 'state'),
+        Var('Message', 'm'),
+    ], 'void')`
+        if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+            return
+        }
+        
+        ${ConstVar('Message', 'outMessage', 'msg_bang()')}
+        state.messageSender(outMessage)
+        if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+            msgBusPublish(state.sendBusName, outMessage)
+        }
+        return
+    `
+])
+    
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ 
+    snds,
+    state,
+    node: { args },
+}) => ast`
+        ${Var(controlsCoreVariableNames.stateClass, state, `{
+            value: msg_create([]),
+            receiveBusName: "${args.receiveBusName}",
+            sendBusName: "${args.sendBusName}",
+            messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
+            messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
+        }`)}
+    
+        commons_waitEngineConfigure(() => {
+            ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
+                ${variableNames.receiveMessage}(${state}, m)
+            `}
+            ${state}.messageSender = ${snds.$0}
+            ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+        })
 
         ${functional.renderIf(
             args.outputOnLoad, 
             `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`
         )}
     `
-}
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
-    const { state } = context
-    return ({
-        '0': AnonFunc([Var('Message', 'm')], 'void')`
-            ${state.funcMessageReceiver}(m)
-            return
-        `,
-    })
-}
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, snds }) => ({
+    '0': AnonFunc([Var('Message', 'm')])`
+        ${variableNames.receiveMessage}(${state}, m)
+        return
+    `,
+})
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
-    stateVariables,
     dependencies: [
         bangUtils,
         messageBuses,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
+        controlsCore,
+        nodeCore,
     ],
 }
 

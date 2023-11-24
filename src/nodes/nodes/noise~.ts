@@ -23,8 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { AnonFunc, Var } from '@webpd/compiler'
 
 interface NodeArguments {}
-const stateVariables = {}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : implement seed
 // ------------------------------- node builder ------------------------------ //
@@ -47,7 +46,7 @@ const generateLoopInline: _NodeImplementation['generateLoopInline'] = () => `Mat
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
             && msg_readStringToken(m, 0) === 'seed'
@@ -59,7 +58,10 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 })
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateLoopInline, generateMessageReceivers, stateVariables }
+const nodeImplementation: _NodeImplementation = { 
+    generateLoopInline, 
+    generateMessageReceivers,
+}
 
 export { 
     builder,

@@ -18,32 +18,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { Func, Var, ast, ConstVar, AnonFunc } from '@webpd/compiler'
+import { Func, Var, ast, ConstVar, AnonFunc, Class, Sequence } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initValue: number
 }
-const stateVariables = {
-    // Current value used only between 2 lines
-    currentValue: 1,
-    currentLine: 1,
-    defaultLine: 1,
-    nextDurationSamp: 1,
-    funcSetNewLine: 1,
-    funcSetNextDuration: 1,
-    funcStopCurrentLine: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -62,104 +51,122 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    globs,
-    state,
-    node: { args },
-}) => 
-    ast`
-        ${ConstVar('LineSegment', state.defaultLine, `{
-            p0: {x: -1, y: 0},
-            p1: {x: -1, y: 0},
-            dx: 1,
-            dy: 0,
-        }`)}
-        ${Var('LineSegment', state.currentLine, state.defaultLine)}
-        ${Var('Float', state.currentValue, args.initValue)}
-        ${Var('Float', state.nextDurationSamp, 0)}
 
-        ${Func(state.funcSetNewLine, [
-            Var('Float', 'targetValue'),
-        ], 'void')`
-            ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame})`)}
-            ${ConstVar('Float', 'endFrame', `toFloat(${globs.frame}) + ${state.nextDurationSamp}`)}
-            if (endFrame === toFloat(${globs.frame})) {
-                ${state.currentLine} = ${state.defaultLine}
-                ${state.currentValue} = targetValue
-                ${state.nextDurationSamp} = 0
-            } else {
-                ${state.currentLine} = {
-                    p0: {
-                        x: startFrame, 
-                        y: ${state.currentValue},
-                    }, 
-                    p1: {
-                        x: endFrame, 
-                        y: targetValue,
-                    }, 
-                    dx: 1,
-                    dy: 0,
-                }
-                ${state.currentLine}.dy = computeSlope(${state.currentLine}.p0, ${state.currentLine}.p1)
-                ${state.nextDurationSamp} = 0
+const variableNames = generateVariableNamesNodeType('line_t', [
+    'defaultLine',
+    'setNewLine',
+    'setNextDuration',
+    'stop',
+])
+
+const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
+    Class(variableNames.stateClass, [
+        Var('LineSegment', 'currentLine'),
+        Var('Float', 'currentValue'),
+        Var('Float', 'nextDurationSamp'),
+    ]),
+
+    ConstVar('LineSegment', variableNames.defaultLine, `{
+        p0: {x: -1, y: 0},
+        p1: {x: -1, y: 0},
+        dx: 1,
+        dy: 0,
+    }`),
+
+    Func(variableNames.setNewLine, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Float', 'targetValue'),
+    ], 'void')`
+        ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame})`)}
+        ${ConstVar('Float', 'endFrame', `toFloat(${globs.frame}) + state.nextDurationSamp`)}
+        if (endFrame === toFloat(${globs.frame})) {
+            state.currentLine = ${variableNames.defaultLine}
+            state.currentValue = targetValue
+            state.nextDurationSamp = 0
+        } else {
+            state.currentLine = {
+                p0: {
+                    x: startFrame, 
+                    y: state.currentValue,
+                }, 
+                p1: {
+                    x: endFrame, 
+                    y: targetValue,
+                }, 
+                dx: 1,
+                dy: 0,
             }
-        `}
+            state.currentLine.dy = computeSlope(state.currentLine.p0, state.currentLine.p1)
+            state.nextDurationSamp = 0
+        }
+    `,
 
-        ${Func(state.funcSetNextDuration, [
-            Var('Float', 'durationMsec'),
-        ], 'void')`
-            ${state.nextDurationSamp} = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
-        `}
+    Func(variableNames.setNextDuration, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Float', 'durationMsec'),
+    ], 'void')`
+        state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
+    `,
 
-        ${Func(state.funcStopCurrentLine, [], 'void')`
-            ${state.currentLine}.p1.x = -1
-            ${state.currentLine}.p1.y = ${state.currentValue}
-        `}
+    Func(variableNames.stop, [
+        Var(variableNames.stateClass, 'state'),
+    ], 'void')`
+        state.currentLine.p1.x = -1
+        state.currentLine.p1.y = state.currentValue
+    `
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state, node: { args } }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            currentLine: ${variableNames.defaultLine},
+            currentValue: ${args.initValue},
+            nextDurationSamp: 0,
+        }`)}
     `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+    '0': AnonFunc([Var('Message', 'm')])`
         if (
             msg_isMatching(m, [MSG_FLOAT_TOKEN])
             || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
         ) {
             switch (msg_getLength(m)) {
                 case 2:
-                    ${state.funcSetNextDuration}(msg_readFloatToken(m, 1))
+                    ${variableNames.setNextDuration}(${state}, msg_readFloatToken(m, 1))
                 case 1:
-                    ${state.funcSetNewLine}(msg_readFloatToken(m, 0))
+                    ${variableNames.setNewLine}(${state}, msg_readFloatToken(m, 0))
             }
             return
 
         } else if (msg_isAction(m, 'stop')) {
-            ${state.funcStopCurrentLine}()
+            ${variableNames.stop}(${state})
             return
 
         }
     `,
 
-    '1': coldFloatInletWithSetter(state.funcSetNextDuration),
+    '1': coldFloatInletWithSetter(variableNames.setNextDuration, state),
 })
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => ast`
-    ${outs.$0} = ${state.currentValue}
-    if (toFloat(${globs.frame}) < ${state.currentLine}.p1.x) {
-        ${state.currentValue} += ${state.currentLine}.dy
-        if (toFloat(${globs.frame} + 1) >= ${state.currentLine}.p1.x) {
-            ${state.currentValue} = ${state.currentLine}.p1.y
+    ${outs.$0} = ${state}.currentValue
+    if (toFloat(${globs.frame}) < ${state}.currentLine.p1.x) {
+        ${state}.currentValue += ${state}.currentLine.dy
+        if (toFloat(${globs.frame} + 1) >= ${state}.currentLine.p1.x) {
+            ${state}.currentValue = ${state}.currentLine.p1.y
         }
     }
 `
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
     generateLoop,
-    stateVariables,
-    dependencies: [stringMsgUtils, computeUnitInSamples, linesUtils]
+    dependencies: [stringMsgUtils, computeUnitInSamples, linesUtils, nodeCore],
 }
 
 export { builder, nodeImplementation, NodeArguments }

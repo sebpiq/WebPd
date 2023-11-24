@@ -36,11 +36,7 @@ import { AnonFunc, Var } from '@webpd/compiler'
 interface NodeArguments {
     typeArguments: Array<TypeArgument>
 }
-const stateVariables = {}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : 
 // - pointer
@@ -65,7 +61,7 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, node: { args: { typeArguments }} }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         ${typeArguments.reverse().map((typeArg, i) => 
             `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, 'm', 0)})`
         )}
@@ -75,8 +71,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    generateMessageReceivers, 
-    stateVariables, 
+    generateMessageReceivers,  
     dependencies: [ 
         messageTokenToFloat, 
         messageTokenToString,

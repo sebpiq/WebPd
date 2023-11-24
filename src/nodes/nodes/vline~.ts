@@ -18,26 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { stringMsgUtils } from '../global-code/core'
 import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, ConstVar, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
-const stateVariables = {
-    points: 1,
-    lineSegments: 1,
-    currentValue: 1,
-    nextDurationSamp: 1,
-    nextDelaySamp: 1,
-    funcSetNewLine: 1,
-    funcSetNextDuration: 1,
-    funcSetNextDelay: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -55,72 +47,95 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ globs, state }) => ast`
-    ${Var('Array<Point>', state.points, '[]')}
-    ${Var('Array<LineSegment>', state.lineSegments, '[]')}
-    ${Var('Float', state.currentValue, '0')}
-    ${Var('Float', state.nextDurationSamp, '0')}
-    ${Var('Float', state.nextDelaySamp, '0')}
 
-    ${Func(state.funcSetNewLine, [
+const variableNames = generateVariableNamesNodeType('vline_t', [
+    'setNewLine',
+    'setNextDuration',
+    'setNextDelay',
+])
+
+const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Array<Point>', 'points'),
+        Var('Array<LineSegment>', 'lineSegments'),
+        Var('Float', 'currentValue'),
+        Var('Float', 'nextDurationSamp'),
+        Var('Float', 'nextDelaySamp'),
+    ]),
+
+    Func(variableNames.setNewLine, [
+        Var(variableNames.stateClass, 'state'),
         Var('Float', 'targetValue'),
     ], 'void')`
-        ${state.points} = removePointsBeforeFrame(${state.points}, toFloat(${globs.frame}))
-        ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame}) + ${state.nextDelaySamp}`)}
-        ${ConstVar('Float', 'endFrame', `startFrame + ${state.nextDurationSamp}`)}
+        state.points = removePointsBeforeFrame(state.points, toFloat(${globs.frame}))
+        ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame}) + state.nextDelaySamp`)}
+        ${ConstVar('Float', 'endFrame', `startFrame + state.nextDurationSamp`)}
         if (endFrame === toFloat(${globs.frame})) {
-            ${state.currentValue} = targetValue
-            ${state.lineSegments} = []
+            state.currentValue = targetValue
+            state.lineSegments = []
         } else {
-            ${state.points} = insertNewLinePoints(
-                ${state.points}, 
-                {x: startFrame, y: ${state.currentValue}},
+            state.points = insertNewLinePoints(
+                state.points, 
+                {x: startFrame, y: state.currentValue},
                 {x: endFrame, y: targetValue}
             )
-            ${state.lineSegments} = computeLineSegments(
-                computeFrameAjustedPoints(${state.points}))
+            state.lineSegments = computeLineSegments(
+                computeFrameAjustedPoints(state.points))
         }
-        ${state.nextDurationSamp} = 0
-        ${state.nextDelaySamp} = 0
-    `}
+        state.nextDurationSamp = 0
+        state.nextDelaySamp = 0
+    `,
 
-    ${Func(state.funcSetNextDuration, [
+    Func(variableNames.setNextDuration, [
+        Var(variableNames.stateClass, 'state'),
         Var('Float', 'durationMsec'),
     ], 'void')`
-        ${state.nextDurationSamp} = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
-    `}
+        state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
+    `,
 
-    ${Func(state.funcSetNextDelay, [
+    Func(variableNames.setNextDelay, [
+        Var(variableNames.stateClass, 'state'),
         Var('Float', 'delayMsec'),
     ], 'void')`
-        ${state.nextDelaySamp} = computeUnitInSamples(${globs.sampleRate}, delayMsec, 'msec')
-    `}
-`
+        state.nextDelaySamp = computeUnitInSamples(${globs.sampleRate}, delayMsec, 'msec')
+    `,
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            points: [],
+            lineSegments: [],
+            currentValue: 0,
+            nextDurationSamp: 0,
+            nextDelaySamp: 0,
+        }`)}
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => ast`
-    if (${state.lineSegments}.length) {
-        if (toFloat(${globs.frame}) < ${state.lineSegments}[0].p0.x) {
+    if (${state}.lineSegments.length) {
+        if (toFloat(${globs.frame}) < ${state}.lineSegments[0].p0.x) {
 
         // This should come first to handle vertical lines
-        } else if (toFloat(${globs.frame}) === ${state.lineSegments}[0].p1.x) {
-            ${state.currentValue} = ${state.lineSegments}[0].p1.y
-            ${state.lineSegments}.shift()
+        } else if (toFloat(${globs.frame}) === ${state}.lineSegments[0].p1.x) {
+            ${state}.currentValue = ${state}.lineSegments[0].p1.y
+            ${state}.lineSegments.shift()
 
-        } else if (toFloat(${globs.frame}) === ${state.lineSegments}[0].p0.x) {
-            ${state.currentValue} = ${state.lineSegments}[0].p0.y
+        } else if (toFloat(${globs.frame}) === ${state}.lineSegments[0].p0.x) {
+            ${state}.currentValue = ${state}.lineSegments[0].p0.y
 
-        } else if (toFloat(${globs.frame}) < ${state.lineSegments}[0].p1.x) {
-            ${state.currentValue} += ${state.lineSegments}[0].dy
+        } else if (toFloat(${globs.frame}) < ${state}.lineSegments[0].p1.x) {
+            ${state}.currentValue += ${state}.lineSegments[0].dy
 
         }
     }
-    ${outs.$0} = ${state.currentValue}
+    ${outs.$0} = ${state}.currentValue
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+    '0': AnonFunc([Var('Message', 'm')])`
     if (
         msg_isMatching(m, [MSG_FLOAT_TOKEN])
         || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
@@ -128,32 +143,36 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     ) {
         switch (msg_getLength(m)) {
             case 3:
-                ${state.funcSetNextDelay}(msg_readFloatToken(m, 2))
+                ${variableNames.setNextDelay}(${state}, msg_readFloatToken(m, 2))
             case 2:
-                ${state.funcSetNextDuration}(msg_readFloatToken(m, 1))
+                ${variableNames.setNextDuration}(${state}, msg_readFloatToken(m, 1))
             case 1:
-                ${state.funcSetNewLine}(msg_readFloatToken(m, 0))
+                ${variableNames.setNewLine}(${state}, msg_readFloatToken(m, 0))
         }
         return
 
     } else if (msg_isAction(m, 'stop')) {
-        ${state.points} = []
-        ${state.lineSegments} = []
+        ${state}.points = []
+        ${state}.lineSegments = []
         return
     }
     `,
 
-    '1': coldFloatInletWithSetter(state.funcSetNextDuration),
-    '2': coldFloatInletWithSetter(state.funcSetNextDelay),
+    '1': coldFloatInletWithSetter(variableNames.setNextDuration, state),
+    '2': coldFloatInletWithSetter(variableNames.setNextDelay, state),
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     generateLoop,
-    stateVariables,
     generateMessageReceivers,
-    generateDeclarations,
-    dependencies: [linesUtils, computeUnitInSamples, stringMsgUtils]
+    generateInitialization,
+    dependencies: [
+        linesUtils, 
+        computeUnitInSamples, 
+        stringMsgUtils,
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

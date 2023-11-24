@@ -18,26 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import {
     coldFloatInletWithSetter,
 } from '../standard-message-receivers'
-import { ast, Var } from '@webpd/compiler'
+import { ast, Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     frequency: number
 }
-const stateVariables = {
-    coeff: 1,
-    previous: 1,
-    funcSetFreq: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : very inneficient compute coeff at each iter
 // TODO : tests + cleaner implementations
@@ -65,29 +59,46 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    state,
-}) => ast`
-    ${Var('Float', state.previous, 0)} 
-    ${Var('Float', state.coeff, 0)} 
-`
+const variableNames = generateVariableNamesNodeType('lop_t', ['setFreq'])
+
+const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'previous'),
+        Var('Float', 'coeff'),
+    ]),
+
+    Func(variableNames.setFreq, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Float', 'freq'),
+    ], 'void')`
+        state.coeff = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
+    `
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            previous: 0,
+            coeff: 0,
+        }`)}
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => ast`
-    ${state.coeff} = Math.max(Math.min(${ins.$1} * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
-    ${state.previous} = ${outs.$0} = ${state.coeff} * ${ins.$0} + (1 - ${state.coeff}) * ${state.previous}
+const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
+    ${variableNames.setFreq}(${state}, ${ins.$1})
+    ${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
-    '1': coldFloatInletWithSetter(state.funcSetFreq),
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+    '1': coldFloatInletWithSetter(variableNames.setFreq, state),
 })
 
 const nodeImplementation: _NodeImplementation = {
+    generateInitialization,
     generateLoop,
-    stateVariables,
     generateMessageReceivers,
-    generateDeclarations,
+    dependencies: [nodeCore],
 }
 
 // ------------------------------------------------------------------- //

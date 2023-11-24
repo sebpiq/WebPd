@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -28,22 +28,14 @@ import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { pow } from '../global-code/funcs'
-import { AnonFunc, ast, Func, Var } from '@webpd/compiler'
+import { AnonFunc, ast, Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
 import { Code } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     value: number
 }
-const stateVariables = {
-    leftOp: 1,
-    rightOp: 1,
-    funcSetRightOp: 1,
-    funcSetLeftOp: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
@@ -64,148 +56,191 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
     }),
 })
 
+// ------------------------------ generateDeclarations ------------------------------ //
+const variableNamesBinopBase = generateVariableNamesNodeType('binopbase')
+
+const nodeCoreBinopBase: GlobalCodeGenerator = () =>
+    Sequence([
+        Class(variableNamesBinopBase.stateClass, [
+            Var('Float', 'leftOp'), 
+            Var('Float', 'rightOp')
+        ])
+    ])
+
 const makeNodeImplementation = ({
+    operationName,
     generateOperation,
     dependencies = [],
-    prepareLeftOp = 'value',
-    prepareRightOp = 'value',
+    prepareLeftOp,
+    prepareRightOp,
 }: {
+    operationName: string,
     generateOperation: (
-        state: Parameters<_NodeImplementation['generateMessageReceivers']>[0]['state']
+        state: Parameters<
+            _NodeImplementation['generateMessageReceivers']
+        >[0]['state']
     ) => Code
-    dependencies?: Array<GlobalCodeGenerator>,
+    dependencies?: Array<GlobalCodeGenerator>
     prepareLeftOp?: Code
     prepareRightOp?: Code
 }): _NodeImplementation => {
-    // ------------------------------ generateDeclarations ------------------------------ //
-    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-        state,
-        node: { args },
-    }) => ast`
-        ${Var('Float', state.leftOp, 0)}
-        ${Var('Float', state.rightOp, 0)}
+    
+    const variableNames = generateVariableNamesNodeType(operationName, ['setLeft', 'setRight'])
 
-        ${Func(state.funcSetLeftOp,
-            [Var('Float', 'value')],
-        'void')`
-            ${state.leftOp} = ${prepareLeftOp}
-        `}
+    const nodeCore: GlobalCodeGenerator = () =>
+        Sequence([
+            Func(variableNames.setLeft, [
+                Var(variableNamesBinopBase.stateClass, 'state'),
+                Var('Float', 'value'),
+            ], 'void')`
+                state.leftOp = ${prepareLeftOp ? prepareLeftOp: 'value'}
+            `,
 
-        ${Func(state.funcSetRightOp,
-            [Var('Float', 'value')],
-        'void'
-        )`
-            ${state.rightOp} = ${prepareRightOp}
-        `}
+            Func(variableNames.setRight, [
+                Var(variableNamesBinopBase.stateClass, 'state'),
+                Var('Float', 'value'),
+            ], 'void')`
+                state.rightOp = ${prepareRightOp ? prepareRightOp: 'value'}
+            `,
+        ])
 
-        ${state.funcSetLeftOp}(0)
-        ${state.funcSetRightOp}(${args.value})
-    `
+    const generateInitialization: _NodeImplementation['generateInitialization'] =
+        ({ state, node: { args } }) => ast`
+            ${ConstVar(variableNamesBinopBase.stateClass, state, `{
+                leftOp: 0,
+                rightOp: 0,
+            }`)}
+            ${variableNames.setLeft}(${state}, 0)
+            ${variableNames.setRight}(${state}, ${args.value})
+        `
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
-        state,
-        snds,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')], 'void')`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${state.funcSetLeftOp}(msg_readFloatToken(m, 0))
-                ${snds.$0}(msg_floats([${generateOperation(state)}]))
-                return
-            
-            } else if (msg_isBang(m)) {
-                ${snds.$0}(msg_floats([${generateOperation(state)}]))
-                return
-            }
-        `,
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] =
+        ({ state, snds }) => ({
+            '0': AnonFunc([Var('Message', 'm')])`
+                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                    ${variableNames.setLeft}(${state}, msg_readFloatToken(m, 0))
+                    ${snds.$0}(msg_floats([${generateOperation(state)}]))
+                    return
+                
+                } else if (msg_isBang(m)) {
+                    ${snds.$0}(msg_floats([${generateOperation(state)}]))
+                    return
+                }
+            `,
 
-        '1': coldFloatInletWithSetter(state.funcSetRightOp),
-    })
+            '1': coldFloatInletWithSetter(variableNames.setRight, state),
+        })
 
     return {
-        generateDeclarations,
         generateMessageReceivers,
-        stateVariables,
-        dependencies: [bangUtils, ...dependencies],
+        generateInitialization,
+        dependencies: [
+            bangUtils, 
+            ...dependencies, 
+            nodeCoreBinopBase,
+            nodeCore,
+        ],
     }
 }
 
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
     '+': makeNodeImplementation({
-        generateOperation: (state) => `${state.leftOp} + ${state.rightOp}`,
+        operationName: 'add',
+        generateOperation: (state) => `${state}.leftOp + ${state}.rightOp`,
     }),
     '-': makeNodeImplementation({
-        generateOperation: (state) => `${state.leftOp} - ${state.rightOp}`,
+        operationName: 'sub',
+        generateOperation: (state) => `${state}.leftOp - ${state}.rightOp`,
     }),
     '*': makeNodeImplementation({
-        generateOperation: (state) => `${state.leftOp} * ${state.rightOp}`,
+        operationName: 'mul',
+        generateOperation: (state) => `${state}.leftOp * ${state}.rightOp`,
     }),
     '/': makeNodeImplementation({
+        operationName: 'div',
         generateOperation: (state) =>
-            `${state.rightOp} !== 0 ? ${state.leftOp} / ${state.rightOp}: 0`,
+            `${state}.rightOp !== 0 ? ${state}.leftOp / ${state}.rightOp: 0`,
     }),
-    'max': makeNodeImplementation({
-        generateOperation: (state) => `Math.max(${state.leftOp}, ${state.rightOp})`,
+    max: makeNodeImplementation({
+        operationName: 'max',
+        generateOperation: (state) =>
+            `Math.max(${state}.leftOp, ${state}.rightOp)`,
     }),
-    'min': makeNodeImplementation({
-        generateOperation: (state) => `Math.min(${state.leftOp}, ${state.rightOp})`,
+    min: makeNodeImplementation({
+        operationName: 'min',
+        generateOperation: (state) =>
+            `Math.min(${state}.leftOp, ${state}.rightOp)`,
     }),
     mod: makeNodeImplementation({
+        operationName: 'mod',
         prepareLeftOp: `value > 0 ? Math.floor(value): Math.ceil(value)`,
         prepareRightOp: `Math.floor(Math.abs(value))`,
         // Modulo in Pd works so that negative values passed to the [mod] function cycle seamlessly :
         // -3 % 3 = 0 ; -2 % 3 = 1 ; -1 % 3 = 2 ; 0 % 3 = 0 ; 1 % 3 = 1 ; ...
         // So we need to translate the leftOp so that it is > 0 in order for the javascript % function to work.
         generateOperation: (state) =>
-            `${state.rightOp} !== 0 ? (${state.rightOp} + (${state.leftOp} % ${state.rightOp})) % ${state.rightOp}: 0`,
+            `${state}.rightOp !== 0 ? (${state}.rightOp + (${state}.leftOp % ${state}.rightOp)) % ${state}.rightOp: 0`,
     }),
     // Legacy modulo
     '%': makeNodeImplementation({
-        generateOperation: (state) => `${state.leftOp} % ${state.rightOp}`,
+        operationName: 'modlegacy',
+        generateOperation: (state) => `${state}.leftOp % ${state}.rightOp`,
     }),
     pow: makeNodeImplementation({
-        generateOperation: (state) => `pow(${state.leftOp}, ${state.rightOp})`,
+        operationName: 'pow',
+        generateOperation: (state) => `pow(${state}.leftOp, ${state}.rightOp)`,
         dependencies: [pow],
     }),
     log: makeNodeImplementation({
-        generateOperation: (state) => `Math.log(${state.leftOp}) / Math.log(${state.rightOp})`,
+        operationName: 'log',
+        generateOperation: (state) =>
+            `Math.log(${state}.leftOp) / Math.log(${state}.rightOp)`,
     }),
     '||': makeNodeImplementation({
+        operationName: 'or',
         prepareLeftOp: `Math.floor(Math.abs(value))`,
         prepareRightOp: `Math.floor(Math.abs(value))`,
         generateOperation: (state) =>
-            `${state.leftOp} || ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp || ${state}.rightOp ? 1: 0`,
     }),
     '&&': makeNodeImplementation({
+        operationName: 'and',
         prepareLeftOp: `Math.floor(Math.abs(value))`,
         prepareRightOp: `Math.floor(Math.abs(value))`,
         generateOperation: (state) =>
-            `${state.leftOp} && ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp && ${state}.rightOp ? 1: 0`,
     }),
     '>': makeNodeImplementation({
+        operationName: 'gt',
         generateOperation: (state) =>
-            `${state.leftOp} > ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp > ${state}.rightOp ? 1: 0`,
     }),
     '>=': makeNodeImplementation({
+        operationName: 'gte',
         generateOperation: (state) =>
-            `${state.leftOp} >= ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp >= ${state}.rightOp ? 1: 0`,
     }),
     '<': makeNodeImplementation({
+        operationName: 'lt',
         generateOperation: (state) =>
-            `${state.leftOp} < ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp < ${state}.rightOp ? 1: 0`,
     }),
     '<=': makeNodeImplementation({
+        operationName: 'lte',
         generateOperation: (state) =>
-            `${state.leftOp} <= ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp <= ${state}.rightOp ? 1: 0`,
     }),
     '==': makeNodeImplementation({
+        operationName: 'eq',
         generateOperation: (state) =>
-            `${state.leftOp} == ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp == ${state}.rightOp ? 1: 0`,
     }),
     '!=': makeNodeImplementation({
+        operationName: 'neq',
         generateOperation: (state) =>
-            `${state.leftOp} != ${state.rightOp} ? 1: 0`,
+            `${state}.leftOp != ${state}.rightOp ? 1: 0`,
     }),
 }
 
@@ -214,8 +249,8 @@ const builders = {
     '-': makeBuilder(0),
     '*': makeBuilder(1),
     '/': makeBuilder(1),
-    'max': makeBuilder(0),
-    'min': makeBuilder(1),
+    max: makeBuilder(0),
+    min: makeBuilder(1),
     mod: makeBuilder(0),
     '%': makeBuilder(0),
     pow: makeBuilder(0),

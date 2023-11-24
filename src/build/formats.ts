@@ -89,7 +89,7 @@ export const listBuildSteps = (
         .filter((path) => path.includes(inFormat))
         .map((path) => path.slice(path.indexOf(inFormat) + 1))
 
-    if (intermediateStep) {
+    if (intermediateStep && intermediateStep !== inFormat) {
         paths = paths.filter((path) => path.includes(intermediateStep))
     }
 

@@ -18,8 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code } from '@webpd/compiler'
+import { Class, ConstVar, Sequence } from '@webpd/compiler'
 import {
+    GlobalCodeGenerator,
     NodeImplementation,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
@@ -29,18 +30,14 @@ import { bangUtils } from '../global-code/core'
 import { roundFloatAsPdInt } from '../global-code/numbers'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     value: number
 }
-const stateVariables = {
-    value: 1,
-    funcSetValue: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO: proper support for $ args
 // TODO: simple number - shortcut for float
@@ -62,39 +59,68 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const makeGenerateDeclarations =
-    (prepareValueCode: Code = 'value'): _NodeImplementation['generateDeclarations'] =>
-    ({ node: { args }, state }) =>
-    ast`
-        ${Var('Float', state.value, 0)}
 
-        ${Func(state.funcSetValue, [
-            Var('Float', 'value')
-        ], 'void')`${state.value} = ${prepareValueCode}`}
-        
-        ${state.funcSetValue}(${args.value})
-    `
+const variableNames = generateVariableNamesNodeType('float_int', [
+    'setValueInt', 
+    'setValueFloat'
+])
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
-    snds,
-    state,
-}) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${state.funcSetValue}(msg_readFloatToken(m, 0))
-            ${snds.$0}(msg_floats([${state.value}]))
-            return 
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'value')
+    ]),
 
-        } else if (msg_isBang(m)) {
-            ${snds.$0}(msg_floats([${state.value}]))
-            return
-            
-        }
+    Func(variableNames.setValueInt, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Float', 'value'),
+    ], 'void')`
+        state.value = roundFloatAsPdInt(value)
     `,
 
-    '1': coldFloatInletWithSetter(state.funcSetValue),
-})
+    Func(variableNames.setValueFloat, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Float', 'value'),
+    ], 'void')`
+        state.value = value
+    `
+])
+
+const makeNodeImplementation = (setValueVariableName: VariableName): _NodeImplementation => {
+
+    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                value: 0,
+            }`)}
+            ${setValueVariableName}(${state}, ${args.value})
+        `
+
+    // ------------------------------- generateMessageReceivers ------------------------------ //
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
+        snds,
+        state,
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${setValueVariableName}(${state}, msg_readFloatToken(m, 0))
+                ${snds.$0}(msg_floats([${state}.value]))
+                return 
+
+            } else if (msg_isBang(m)) {
+                ${snds.$0}(msg_floats([${state}.value]))
+                return
+                
+            }
+        `,
+
+        '1': coldFloatInletWithSetter(setValueVariableName, state),
+    })
+
+    return {
+        generateInitialization,
+        generateMessageReceivers,        
+    }
+}
 
 // ------------------------------------------------------------------- //
 const builders = {
@@ -106,16 +132,12 @@ const builders = {
 
 const nodeImplementations: NodeImplementations = {
     float: {
-        generateDeclarations: makeGenerateDeclarations(),
-        generateMessageReceivers,
-        stateVariables,
-        dependencies: [bangUtils],
+        ...makeNodeImplementation(variableNames.setValueFloat),
+        dependencies: [bangUtils, nodeCore],
     },
     int: {
-        generateDeclarations: makeGenerateDeclarations('roundFloatAsPdInt(value)'),
-        generateMessageReceivers,
-        stateVariables,
-        dependencies: [roundFloatAsPdInt, bangUtils],
+        ...makeNodeImplementation(variableNames.setValueInt),
+        dependencies: [roundFloatAsPdInt, bangUtils, nodeCore],
     },
 }
 

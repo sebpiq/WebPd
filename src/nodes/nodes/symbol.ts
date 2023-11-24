@@ -19,24 +19,21 @@
  */
 
 import {
+    GlobalCodeGenerator,
     NodeImplementation,
 } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { messageBuses } from '../global-code/buses'
-import { AnonFunc, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, ConstVar, Sequence, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     value: string
 }
-const stateVariables = {
-    value: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO: proper support for $ args
 // TODO: simple number - shortcut for float
@@ -58,34 +55,42 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
-    node: { args }, 
-    state,
-}) => ast`
-    ${Var('string', state.value, `"${args.value}"`)}
-`
+const variableNames = generateVariableNamesNodeType('symbol')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('string', 'value')
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            value: "${args.value}"
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     snds,
     state,
 }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
-            ${snds.$0}(msg_strings([${state.value}]))
+            ${snds.$0}(msg_strings([${state}.value]))
             return
 
         } else if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
-            ${state.value} = msg_readStringToken(m, 0)
-            ${snds.$0}(msg_strings([${state.value}]))
+            ${state}.value = msg_readStringToken(m, 0)
+            ${snds.$0}(msg_strings([${state}.value]))
             return
 
         }
     `,
 
-    '1': AnonFunc([Var('Message', 'm')], 'void')`
+    '1': AnonFunc([Var('Message', 'm')])`
         if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
-            ${state.value} = msg_readStringToken(m, 0)
+            ${state}.value = msg_readStringToken(m, 0)
             return 
         }
     `,
@@ -94,9 +99,12 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     generateMessageReceivers,
-    stateVariables,
-    generateDeclarations,
-    dependencies: [bangUtils, messageBuses]
+    generateInitialization,
+    dependencies: [
+        bangUtils, 
+        messageBuses,
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

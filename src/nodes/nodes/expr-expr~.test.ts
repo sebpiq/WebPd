@@ -130,11 +130,7 @@ describe('expr', () => {
     describe('renderTokenizedExpression', () => {
         it('should render the tokenized expression as expected', () => {
             const rendered = renderTokenizedExpression(
-                {
-                    floatInputs: 'FLOATS',
-                    stringInputs: 'STRINGS',
-                    outputs: 'OUTPUTS',
-                },
+                'STATE',
                 { '0': 'IN0' },
                 [
                     {
@@ -175,9 +171,9 @@ describe('expr', () => {
             )
             assert.strictEqual(
                 rendered,
-                '+(commons_getArray(STRINGS.get(1))' +
-                    '[toInt(12 * roundFloatAsPdInt(FLOATS.get(2)))]' +
-                    ' + 1.5 + FLOATS.get(0) + IN0)'
+                '+(commons_getArray(STATE.stringInputs.get(1))' +
+                    '[toInt(12 * roundFloatAsPdInt(STATE.floatInputs.get(2)))]' +
+                    ' + 1.5 + STATE.floatInputs.get(0) + IN0)'
             )
         })
     })

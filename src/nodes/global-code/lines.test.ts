@@ -29,7 +29,7 @@ describe('global-code.lines', () => {
             {
                 description:
                     'insertNewLinePoints > should remove points that are after the newly inserted line and interpolate y %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 100, y: 0}, 
                         {x: 200, y: 0.5}
@@ -52,7 +52,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'insertNewLinePoints > should add points at the end if no collision and use end value from previous point %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 100, y: 0}, 
                         {x: 200, y: 1}
@@ -76,7 +76,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'insertNewLinePoints > should use start value if inserting at the beginning %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 100, y: 0}, 
                         {x: 200, y: 0.5}
@@ -98,7 +98,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'insertNewLinePoints > should insert points in an empty list %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', '[]')}
                     const newPoints = insertNewLinePoints(
                         points,
@@ -117,7 +117,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'insertNewLinePoints > should not replace points on the start frame %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 100, y: 0}, 
                         {x: 100, y: 8}
@@ -140,7 +140,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'removePointsBeforeFrame > should remove points that are after the newly inserted line and interpolate y %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 90, y: 1}, 
                         {x: 100, y: 1.25}, 
@@ -159,7 +159,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'computeFrameAjustedPoints > should not change the points if already frame adjusted %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 0, y: 1}, 
                         {x: 100, y: 1.25}, 
@@ -179,7 +179,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'computeFrameAjustedPoints > should adjust the points separated by several frames %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 0.5, y: 0}, 
                         {x: 10.5, y: 10}
@@ -198,7 +198,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'computeFrameAjustedPoints > should adjust multiple points that are in the middle of their frames %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 100.25, y: 0}, 
                         {x: 200.25, y: 100000}, 
@@ -220,7 +220,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'computeFrameAjustedPoints > should compute multi segment from points that are all within a single frame %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 0, y: 0}, 
                         {x: 0.1, y: 100}, 
@@ -243,7 +243,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'computeFrameAjustedPoints > should handle vertical lines on exact frame fine %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     ${ConstVar('Array<Point>', 'points', `[
                         {x: 1, y: 1}, 
                         {x: 1, y: 4}, 
@@ -271,7 +271,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'computeLineSegments > should compute simple line segment from two points on exact frames %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     assert_linesArraysEqual(
                         computeLineSegments([
                             {x: 100, y: 0}, 
@@ -313,7 +313,7 @@ describe('global-code.lines', () => {
 
             {
                 description: 'computeLineSegments > should compute slope = 0 if same x %s',
-                testFunction: () => AnonFunc([], 'void')`
+                testFunction: () => AnonFunc()`
                     assert_linesArraysEqual(
                         computeLineSegments([
                             {x: 100, y: 0}, 

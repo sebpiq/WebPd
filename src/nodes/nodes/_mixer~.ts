@@ -24,8 +24,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
 
 interface NodeArguments { channelCount: number }
-const stateVariables = {}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -50,6 +49,6 @@ const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ node, i
         .join(' + ')}`
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateLoopInline, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateLoopInline }
 
 export { builder, nodeImplementation, NodeArguments }

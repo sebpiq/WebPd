@@ -18,25 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { stdlib, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { stdlib, functional, Class, Sequence } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 const BLOCK_SIZE = 44100 * 5
 
 interface NodeArguments { channelCount: number }
-const stateVariables = {
-    isWriting: 1,
-    operationId: 1,
-    block: 1,
-    cursor: 1,
-    funcFlushBlock: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO: lots of things left to implement
 // TODO : check the real state machine of writesf
@@ -69,34 +64,52 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state, node: {args} }) => ast`
-    ${Var('fs_OperationId', state.operationId, '-1')}
-    ${Var('boolean', state.isWriting, 'false')}
-    ${ConstVar('Array<FloatArray>', state.block, `[
-        ${functional.countTo(args.channelCount).map(() => 
-            `createFloatArray(${BLOCK_SIZE})`
-        ).join(',')}
-    ]`)}
-    ${Var('Int', state.cursor, 0)}
+const variableNames = generateVariableNamesNodeType('writesf_t', [
+    'flushBlock'
+])
 
-    ${Func(state.funcFlushBlock, [], 'void')`
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('fs_OperationId', 'operationId'),
+        Var('boolean', 'isWriting'),
+        Var('Array<FloatArray>', 'block'),
+        Var('Int', 'cursor'),
+    ]),
+
+    Func(variableNames.flushBlock, [
+        Var(variableNames.stateClass, 'state'),
+    ], 'void')`
         ${ConstVar('Array<FloatArray>', 'block', '[]')}
-        for (${Var('Int', 'i', '0')}; i < ${state.block}.length; i++) {
-            block.push(${state.block}[i].subarray(0, ${state.cursor}))
+        for (${Var('Int', 'i', '0')}; i < state.block.length; i++) {
+            block.push(state.block[i].subarray(0, state.cursor))
         }
-        fs_sendSoundStreamData(${state.operationId}, block)
-        ${state.cursor} = 0
-    `}
-`
+        fs_sendSoundStreamData(state.operationId, block)
+        state.cursor = 0
+    `,
+])
 
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            operationId: -1,
+            isWriting: false,
+            cursor: 0,
+            block: [
+                ${functional.countTo(args.channelCount).map(() => 
+                    `createFloatArray(${BLOCK_SIZE})`
+                ).join(',')}
+            ],
+        }`)}
+    `
+    
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({ state, ins, node: { args } }) => ast`
-    if (${state.isWriting} === true) {
+    if (${state}.isWriting === true) {
         ${functional.countTo(args.channelCount).map((i) => 
-            `${state.block}[${i}][${state.cursor}] = ${ins[i]}`)}
-        ${state.cursor}++
-        if (${state.cursor} === ${BLOCK_SIZE}) {
-            ${state.funcFlushBlock}()
+            `${state}.block[${i}][${state}.cursor] = ${ins[i]}`)}
+        ${state}.cursor++
+        if (${state}.cursor === ${BLOCK_SIZE}) {
+            ${variableNames.flushBlock}(${state})
         }
     }
 `
@@ -109,8 +122,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 msg_isStringToken(m, 0) 
                 && msg_readStringToken(m, 0) === 'open'
             ) {
-                if (${state.operationId} !== -1) {
-                    fs_closeSoundStream(${state.operationId}, FS_OPERATION_SUCCESS)
+                if (${state}.operationId !== -1) {
+                    fs_closeSoundStream(${state}.operationId, FS_OPERATION_SUCCESS)
                 }
 
                 ${ConstVar('fs_SoundInfo', 'soundInfo', `{
@@ -133,28 +146,28 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 if (url.length === 0) {
                     return
                 }
-                ${state.operationId} = fs_openSoundWriteStream(
+                ${state}.operationId = fs_openSoundWriteStream(
                     url,
                     soundInfo,
                     () => {
-                        ${state.funcFlushBlock}()
-                        ${state.operationId} = -1
+                        ${variableNames.flushBlock}(${state})
+                        ${state}.operationId = -1
                     }
                 )
                 return
             }
 
         } else if (msg_isAction(m, 'start')) {
-                ${state.isWriting} = true
+                ${state}.isWriting = true
                 return
 
         } else if (msg_isAction(m, 'stop')) {
-            ${state.funcFlushBlock}()
-            ${state.isWriting} = false
+            ${variableNames.flushBlock}(${state})
+            ${state}.isWriting = false
             return
 
         } else if (msg_isAction(m, 'print')) {
-            console.log('[writesf~] writing = ' + ${state.isWriting}.toString())
+            console.log('[writesf~] writing = ' + ${state}.isWriting.toString())
             return
         }    
     `
@@ -162,15 +175,15 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations, 
+    generateInitialization, 
     generateMessageReceivers, 
     generateLoop, 
-    stateVariables,
     dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,
         stringMsgUtils,
         stdlib.fsWriteSoundStream,
+        nodeCore,
     ],
 }
 

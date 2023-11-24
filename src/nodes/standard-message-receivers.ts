@@ -24,7 +24,7 @@ import { VariableName } from '@webpd/compiler/src/ast/types'
 export const coldFloatInlet = (
     storageName: VariableName,
 ) => {
-    return AnonFunc([Var('Message', 'm')], 'void')`
+    return AnonFunc([Var('Message', 'm')])`
         if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
             ${storageName} = msg_readFloatToken(m, 0)
             return
@@ -35,7 +35,7 @@ export const coldFloatInlet = (
 export const coldStringInlet = (
     storageName: VariableName,
 ) => {
-    return AnonFunc([Var('Message', 'm')], 'void')`
+    return AnonFunc([Var('Message', 'm')])`
         if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
             ${storageName} = msg_readStringToken(m, 0)
             return
@@ -45,10 +45,11 @@ export const coldStringInlet = (
 
 export const coldFloatInletWithSetter = (
     setterName: VariableName,
+    state: VariableName,
 ) => {
-    return AnonFunc([Var('Message', 'm')], 'void')`
+    return AnonFunc([Var('Message', 'm')])`
         if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${setterName}(msg_readFloatToken(m, 0))
+            ${setterName}(${state}, msg_readFloatToken(m, 0))
             return
         }
     `

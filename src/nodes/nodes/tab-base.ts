@@ -18,76 +18,72 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { Func, Var, ast } from '@webpd/compiler'
-import { Code } from '@webpd/compiler'
+import { AnonFunc, Class, Func, Sequence, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
+import { _NodeImplementation } from './controls-float'
 
 interface NodeArgumentsTabBase {
     arrayName: string
 }
-export const stateVariablesTabBase = {
-    array: 1,
-    arrayName: 1,
-    arrayChangesSubscription: 1,
-    funcSetArrayName: 1,
-}
-type NodeImplementationTabBase = NodeImplementation<
-    NodeArgumentsTabBase,
-    typeof stateVariablesTabBase
->
 
 export const translateArgsTabBase: NodeBuilder<NodeArgumentsTabBase>['translateArgs'] =
     (pdNode) => ({
         arrayName: assertOptionalString(pdNode.args[0]) || '',
     })
 
-export const declareTabBase: NodeImplementationTabBase['generateDeclarations'] = (
-    { state, node },
-) => ast`
-    ${Var('FloatArray', state.array, 'createFloatArray(0)')}
-    ${Var('string', state.arrayName, `"${node.args.arrayName}"`)}
-    ${Var('SkedId', state.arrayChangesSubscription, 'SKED_ID_NULL')}
+export const variableNamesTabBase = generateVariableNamesNodeType('tabbase', [
+    'setArrayName',
+    'createState',
+    'prepareIndex',
+])
 
-    ${Func(state.funcSetArrayName, [
-        Var('string', 'arrayName')
+export const nodeCoreTabBase: GlobalCodeGenerator = () => Sequence([
+    Class(variableNamesTabBase.stateClass, [
+        Var('FloatArray', 'array'),
+        Var('string', 'arrayName'),
+        Var('SkedId', 'arrayChangesSubscription'),
+        Var('Int', 'readPosition'),
+        Var('Int', 'readUntil'),
+        Var('Int', 'writePosition')
+    ]),
+
+    Func(variableNamesTabBase.createState, [
+        Var('string', 'arrayName'),
+    ], variableNamesTabBase.stateClass)`
+        return {
+            array: createFloatArray(0),
+            arrayName,
+            arrayChangesSubscription: SKED_ID_NULL,
+            readPosition: 0,
+            readUntil: 0,
+            writePosition: 0,
+        }
+    `,
+
+    Func(variableNamesTabBase.setArrayName, [
+        Var(variableNamesTabBase.stateClass, 'state'),
+        Var('string', 'arrayName'),
+        Var('SkedCallback', 'callback'),
     ], 'void')`
-        if (${state.arrayChangesSubscription} != SKED_ID_NULL) {
-            commons_cancelArrayChangesSubscription(${state.arrayChangesSubscription})
+        if (state.arrayChangesSubscription != SKED_ID_NULL) {
+            commons_cancelArrayChangesSubscription(state.arrayChangesSubscription)
         }
-        ${state.arrayName} = arrayName
-        ${state.array} = createFloatArray(0)
-        commons_subscribeArrayChanges(arrayName, () => {
-            ${state.array} = commons_getArray(${state.arrayName})
-        })
-    `}
+        state.arrayName = arrayName
+        state.array = createFloatArray(0)
+        commons_subscribeArrayChanges(arrayName, callback)
+    `,
 
-    commons_waitEngineConfigure(() => {
-        if (${state.arrayName}.length) {
-            ${state.funcSetArrayName}(${state.arrayName})
-        }
-    })
-`
-
-export const prepareIndexCode = (
-    value: Code,
-    { state }: Parameters<NodeImplementationTabBase['generateDeclarations']>[0]
-): Code =>
-    `toInt(Math.min(
-        Math.max(
-            0, Math.floor(${value})
-        ), toFloat(${state.array}.length - 1)
-    ))`
-
-export const messageSetArrayCode = ({
-    state,
-}: Parameters<NodeImplementationTabBase['generateMessageReceivers']>[0]): Code =>
-    `else if (
-        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-        && msg_readStringToken(m, 0) === 'set'
-    ) {
-        ${state.funcSetArrayName}(msg_readStringToken(m, 1))
-        return
-
-    }`
+    Func(variableNamesTabBase.prepareIndex, [
+        Var('Float', 'index'),
+        Var('Int', 'arrayLength'),
+    ], 'Int')`
+        return toInt(Math.min(
+            Math.max(
+                0, Math.floor(index)
+            ), toFloat(arrayLength - 1)
+        ))
+    `
+])

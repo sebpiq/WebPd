@@ -18,19 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, ConstVar, Sequence, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
-const stateVariables = {
-    continueIter: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -47,36 +43,45 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    state,
-}) => ast`
-    ${Var('boolean', state.continueIter, 'true')}
-`
+const variableNames = generateVariableNamesNodeType('until')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('boolean', 'continueIter')
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            continueIter: true,
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, globs, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
-            ${state.continueIter} = true
-            while (${state.continueIter}) {
+            ${state}.continueIter = true
+            while (${state}.continueIter) {
                 ${snds[0]}(msg_bang())
             }
             return
 
         } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${state.continueIter} = true
+            ${state}.continueIter = true
             ${Var('Int', 'maxIterCount', 'toInt(msg_readFloatToken(m, 0))')}
             ${Var('Int', 'iterCount', '0')}
-            while (${state.continueIter} && iterCount++ < maxIterCount) {
+            while (${state}.continueIter && iterCount++ < maxIterCount) {
                 ${snds[0]}(msg_bang())
             }
             return
         }
     `,
 
-    '1': AnonFunc([Var('Message', 'm')], 'void')`
+    '1': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
-            ${state.continueIter} = false
+            ${state}.continueIter = false
             return
         }
     `,
@@ -85,9 +90,11 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     generateMessageReceivers,
-    stateVariables,
-    generateDeclarations,
-    dependencies: [bangUtils],
+    generateInitialization,
+    dependencies: [
+        bangUtils,
+        nodeCore,
+    ],
 }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -28,11 +28,7 @@ import { Code } from '@webpd/compiler'
 import { AnonFunc, Var, ConstVar } from '@webpd/compiler'
 
 interface NodeArguments {}
-const stateVariables = {}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -56,8 +52,8 @@ const makeNodeImplementation = ({
 }): _NodeImplementation => {
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, snds }) => ({
-        '0': AnonFunc([Var('Message', 'm')], 'void')`
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
             if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                 ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
                 ${snds.$0}(msg_floats([${operationCode}]))
@@ -66,7 +62,7 @@ const makeNodeImplementation = ({
         `
     })
 
-    return { generateMessageReceivers, stateVariables, dependencies }
+    return { generateMessageReceivers, dependencies }
 }
 
 // ------------------------------------------------------------------- //

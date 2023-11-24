@@ -28,13 +28,9 @@ import {
 import { nodeImplementation, builder, NodeArguments } from './controls-bang'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
-    nodeImplementation as nodeImplementationSend,
-    builder as builderSend,
-} from './send'
-import {
-    nodeImplementation as nodeImplementationReceive,
-    builder as builderReceive,
-} from './receive'
+    nodeImplementations as nodeImplementationsSendReceive,
+    builders as buildersSendReceive,
+} from './send-receive'
 import {
     CompilerTarget,
     AudioSettings,
@@ -160,9 +156,8 @@ describe('controls-bang', () => {
             bangArgs: NodeArguments
         ) => {
             const _nodeImplementations: NodeImplementations = {
+                ...nodeImplementationsSendReceive,
                 bang: nodeImplementation,
-                send: nodeImplementationSend,
-                receive: nodeImplementationReceive,
             }
 
             const graph = makeGraph({
@@ -173,12 +168,12 @@ describe('controls-bang', () => {
                 },
                 send: {
                     type: 'send',
-                    ...builderSend.build({ busName: 'BUS_TO_BANG' }),
+                    ...buildersSendReceive['send'].build({ busName: 'BUS_TO_BANG' }),
                     args: { busName: 'BUS_TO_BANG' },
                 },
                 receive: {
                     type: 'receive',
-                    ...builderReceive.build({ busName: 'BUS_FROM_BANG' }),
+                    ...buildersSendReceive['receive'].build({ busName: 'BUS_FROM_BANG' }),
                     args: { busName: 'BUS_FROM_BANG' },
                 },
             })

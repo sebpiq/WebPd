@@ -18,19 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
-import { ast, Var } from '@webpd/compiler'
+import { ast, Class, ConstVar, Sequence, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initValue: number,
 }
-const stateVariables = {
-    currentValue: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -48,25 +47,38 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ node: { args }, state }) => ast`
-    ${Var('Float', state.currentValue, args.initValue)}
-`
+const variableNames = generateVariableNamesNodeType('sig_t')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'currentValue')
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            currentValue: ${args.initValue}
+        }`)}
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ state }) => 
-    `${state.currentValue}`
+    `${state}.currentValue`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
-    '0': coldFloatInlet(state.currentValue),
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+    '0': coldFloatInlet(`${state}.currentValue`),
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
+    generateInitialization,
     generateLoopInline,
-    stateVariables,
     generateMessageReceivers,
-    generateDeclarations,
+    dependencies: [
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

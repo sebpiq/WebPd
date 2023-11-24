@@ -26,7 +26,6 @@ import { pow } from '../global-code/funcs'
 interface NodeArguments {
     value: number
 }
-const stateVariables = {}
 
 // ------------------------------- node builder ------------------------------ //
 const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
@@ -60,31 +59,24 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 const nodeImplementations: NodeImplementations = {
     '+~': {
         generateLoopInline: ({ ins }) => `${ins.$0} + ${ins.$1}`,
-        stateVariables,
     },
     '-~': {
         generateLoopInline: ({ ins }) => `${ins.$0} - ${ins.$1}`,
-        stateVariables,
     },
     '*~': {
         generateLoopInline: ({ ins }) => `${ins.$0} * ${ins.$1}`,
-        stateVariables,
     },
     '/~': {
         generateLoopInline: ({ ins }) => `${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
-        stateVariables,
     },
     'min~': {
         generateLoopInline: ({ ins }) => `Math.min(${ins.$0}, ${ins.$1})`,
-        stateVariables,
     },
     'max~': {
         generateLoopInline: ({ ins }) => `Math.max(${ins.$0}, ${ins.$1})`,
-        stateVariables,
     },
     'pow~': {
         generateLoopInline: ({ ins }) => `pow(${ins.$0}, ${ins.$1})`,
-        stateVariables,
         dependencies: [pow],
     },
 }

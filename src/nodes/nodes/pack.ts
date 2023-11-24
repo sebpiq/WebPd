@@ -18,24 +18,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Class, functional, Sequence } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
 import { AnonFunc, ast, ConstVar, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     typeArguments: Array<[TypeArgument, number | string]>
 }
-const stateVariables = {
-    floatValues: 1,
-    stringValues: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -78,40 +73,55 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    node: { args },
-    state,
-}) => ast`
-    ${ConstVar('Array<Float>', state.floatValues, `[${
-        args.typeArguments.map(([typeArg, defaultValue]) => 
-            `${typeArg === 'float' ? defaultValue: 0}`).join(',')}]`)}
-    ${ConstVar('Array<string>', state.stringValues, `[${
-        args.typeArguments.map(([typeArg, defaultValue]) => 
-            `${typeArg === 'symbol' ? `"${defaultValue}"`: '""'}`).join(',')}]`)}
-`
+const variableNames = generateVariableNamesNodeType('pack')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Array<Float>', 'floatValues'),
+        Var('Array<string>', 'stringValues'),
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            floatValues: [${
+                args.typeArguments.map(([typeArg, defaultValue]) => 
+                    typeArg === 'float' ? defaultValue: 0
+                ).join(',')
+            }],
+            stringValues: [${
+                args.typeArguments.map(([typeArg, defaultValue]) => 
+                    typeArg === 'symbol' ? `"${defaultValue}"`: '""'
+                ).join(',')
+            }]
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state, node }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (!msg_isBang(m)) {
             for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
-                ${state.stringValues}[i] = messageTokenToString(m, i)
-                ${state.floatValues}[i] = messageTokenToFloat(m, i)
+                ${state}.stringValues[i] = messageTokenToString(m, i)
+                ${state}.floatValues[i] = messageTokenToFloat(m, i)
             }
         }
 
         ${ConstVar('MessageTemplate', 'template', `[${
             node.args.typeArguments.map(([typeArg], i) => 
                 typeArg === 'symbol' ? 
-                    `MSG_STRING_TOKEN,${state.stringValues}[${i}].length`
-                    : `MSG_FLOAT_TOKEN`).join(',')}]`)}
+                    `MSG_STRING_TOKEN, ${state}.stringValues[${i}].length`
+                    : `MSG_FLOAT_TOKEN`
+                ).join(',')
+        }]`)}
 
         ${ConstVar('Message', 'messageOut', 'msg_create(template)')}
 
         ${node.args.typeArguments.map(([typeArg], i) => 
             typeArg === 'symbol' ? 
-                `msg_writeStringToken(messageOut, ${i}, ${state.stringValues}[${i}])`
-                : `msg_writeFloatToken(messageOut, ${i}, ${state.floatValues}[${i}])`)}
+                `msg_writeStringToken(messageOut, ${i}, ${state}.stringValues[${i}])`
+                : `msg_writeFloatToken(messageOut, ${i}, ${state}.floatValues[${i}])`)}
 
         ${snds[0]}(messageOut)
         return
@@ -121,16 +131,16 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
         if (typeArg === 'symbol') {
             return [
                 `${i + 1}`, 
-                AnonFunc([Var('Message', 'm')], 'void')`
-                    ${state.stringValues}[${i + 1}] = messageTokenToString(m, 0)
+                AnonFunc([Var('Message', 'm')])`
+                    ${state}.stringValues[${i + 1}] = messageTokenToString(m, 0)
                     return
                 `
             ]
         } else if (typeArg === 'float') {
             return [
                 `${i + 1}`, 
-                AnonFunc([Var('Message', 'm')], 'void')`
-                    ${state.floatValues}[${i + 1}] = messageTokenToFloat(m, 0)
+                AnonFunc([Var('Message', 'm')])`
+                    ${state}.floatValues[${i + 1}] = messageTokenToFloat(m, 0)
                     return
                 `
             ]
@@ -142,10 +152,14 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    generateMessageReceivers, 
-    stateVariables, 
-    generateDeclarations,
-    dependencies: [ messageTokenToString, messageTokenToFloat, bangUtils ]
+    generateMessageReceivers,
+    generateInitialization,
+    dependencies: [ 
+        messageTokenToString, 
+        messageTokenToFloat, 
+        bangUtils, 
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

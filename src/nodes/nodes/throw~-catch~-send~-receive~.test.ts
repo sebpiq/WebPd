@@ -25,15 +25,10 @@ import {
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
 import {
-    nodeImplementation as nodeImplementationSend,
-    builder as builderSend,
-    NodeArguments as NodeArgumentsSend,
-} from './send~'
-import {
-    nodeImplementation as nodeImplementationReceive,
-    builder as builderReceive,
-    NodeArguments as NodeArgumentsReceive,
-} from './receive~'
+    nodeImplementations as nodeImplementationsThrowCatchSendReceive,
+    builders,
+    NodeArguments,
+} from './throw~-catch~-send~-receive~'
 import {
     nodeImplementation as nodeImplementationDac,
     builder as builderDac,
@@ -48,11 +43,31 @@ import { executeCompilation } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { ast } from '@webpd/compiler'
 
-describe('send~ / receive~', () => {
+describe('throw~ / catch~', () => {
+    describe('builder [throw~]', () => {
+        describe('translateArgs', () => {
+            it('should handle args as expected', () => {
+                testNodeTranslateArgs(builders['throw~'], [], {
+                    busName: '',
+                })
+            })
+        })
+    })
+
+    describe('builder [catch~]', () => {
+        describe('translateArgs', () => {
+            it('should handle args as expected', () => {
+                testNodeTranslateArgs(builders['catch~'], [], {
+                    busName: '',
+                })
+            })
+        })
+    })
+
     describe('builder [send~]', () => {
         describe('translateArgs', () => {
             it('should handle args as expected', () => {
-                testNodeTranslateArgs(builderSend, [], {
+                testNodeTranslateArgs(builders['send~'], [], {
                     busName: '',
                 })
             })
@@ -62,23 +77,141 @@ describe('send~ / receive~', () => {
     describe('builder [receive~]', () => {
         describe('translateArgs', () => {
             it('should handle args as expected', () => {
-                testNodeTranslateArgs(builderReceive, [], {
+                testNodeTranslateArgs(builders['receive~'], [], {
                     busName: '',
                 })
             })
         })
     })
 
-    describe('implementation', () => {
+    describe('implementation throw~/catch~', () => {
+        const createTestThrowCatchEngine = async (
+            target: CompilerTarget,
+            bitDepth: AudioSettings['bitDepth'],
+            throwArgs: NodeArguments,
+            catchArgs: NodeArguments,
+        ) => {
+            const nodeImplementations: NodeImplementations = {
+                ...nodeImplementationsThrowCatchSendReceive,
+                'dac~': nodeImplementationDac,
+                counter: {
+                    generateLoop: ({ globs, outs }) =>
+                        ast`${outs.$0} = toFloat(${globs.frame})`,
+                },
+            }
+
+            const dacArgs = { channelMapping: [0] }
+
+            const graph = makeGraph({
+                counter: {
+                    type: 'counter',
+                    sinks: {
+                        '0': [
+                            ['throw1', '0'],
+                            ['throw2', '0'],
+                        ],
+                    },
+                    outlets: {
+                        '0': { id: '0', type: 'signal' },
+                    },
+                },
+                throw1: {
+                    type: 'throw~',
+                    ...builders['throw~'].build(throwArgs),
+                    args: throwArgs as any,
+                },
+                throw2: {
+                    type: 'throw~',
+                    ...builders['throw~'].build(throwArgs),
+                    args: throwArgs as any,
+                },
+                catch: {
+                    type: 'catch~',
+                    ...builders['catch~'].build(catchArgs),
+                    args: catchArgs as any,
+                    sinks: { '0': [['dac', '0']] },
+                },
+                dac: {
+                    type: 'dac~',
+                    args: dacArgs,
+                    ...builderDac.build(dacArgs),
+                },
+            })
+
+            const channelCount = { out: 1, in: 0 }
+            const compilation = nodeImplementationsTestHelpers.makeCompilation({
+                target,
+                graph,
+                nodeImplementations,
+                inletCallerSpecs: {
+                    throw2: ['0_message'],
+                },
+                audioSettings: {
+                    channelCount,
+                    bitDepth,
+                },
+            })
+
+            const code = executeCompilation(compilation)
+
+            return await createTestEngine(compilation.target, bitDepth, code)
+        }
+
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should read the mix of all throw inputs %s',
+            async ({ target, bitDepth }) => {
+                const engine = await createTestThrowCatchEngine(
+                    target,
+                    bitDepth,
+                    {
+                        busName: 'BUS1',
+                    },
+                    {
+                        busName: 'BUS1',
+                    }
+                )
+
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[0], [2], [4], [6]]
+                )
+            }
+        )
+
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should set the throw address %s',
+            async ({ target, bitDepth }) => {
+                const engine = await createTestThrowCatchEngine(
+                    target,
+                    bitDepth,
+                    {
+                        busName: 'BUS1',
+                    },
+                    {
+                        busName: 'BUS1',
+                    }
+                )
+
+                engine.inletCallers.throw2['0_message'](['set', 'unknown_bus'])
+
+                assert.deepStrictEqual(
+                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
+                    [[0], [1], [2], [3]]
+                )
+            }
+        )
+    })
+
+    describe('implementation send~/receive~', () => {
         const createSndRcvTestEngine = async (
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
-            sendArgs: NodeArgumentsSend,
-            receiveArgs: NodeArgumentsReceive
+            sendArgs: NodeArguments,
+            receiveArgs: NodeArguments
         ) => {
             const nodeImplementations: NodeImplementations = {
-                'send~': nodeImplementationSend,
-                'receive~': nodeImplementationReceive,
+                'send~': nodeImplementationsThrowCatchSendReceive['send~'],
+                'receive~': nodeImplementationsThrowCatchSendReceive['receive~'],
                 'dac~': nodeImplementationDac,
                 counter: {
                     generateLoop: ({ globs, outs }) =>
@@ -102,18 +235,18 @@ describe('send~ / receive~', () => {
                 },
                 send: {
                     type: 'send~',
-                    ...builderSend.build(sendArgs),
+                    ...builders['send~'].build(sendArgs),
                     args: sendArgs as any,
                 },
                 receive1: {
                     type: 'receive~',
-                    ...builderReceive.build(receiveArgs),
+                    ...builders['receive~'].build(receiveArgs),
                     args: receiveArgs as any,
                     sinks: { '0': [['dac', '0']] },
                 },
                 receive2: {
                     type: 'receive~',
-                    ...builderReceive.build(receiveArgs),
+                    ...builders['receive~'].build(receiveArgs),
                     args: receiveArgs as any,
                     sinks: { '0': [['dac', '1']] },
                 },

@@ -17,18 +17,36 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, functional, Code } from '@webpd/compiler'
 import {
+    stdlib,
+    functional,
+    Code,
+    Sequence,
+    AnonFunc,
+    ConstVar,
+    Var,
+    ast,
+    Func,
+    Class,
+} from '@webpd/compiler'
+import {
+    GlobalCodeGenerator,
     NodeImplementation,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber, assertOptionalString } from '../validation'
-import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
+import {
+    build,
+    EMPTY_BUS_NAME,
+    ControlsBaseNodeArguments,
+    controlsCoreVariableNames,
+    controlsCore,
+} from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     minValue: number
@@ -39,10 +57,7 @@ interface NodeArguments extends ControlsBaseNodeArguments {
 
 export type _NodeBuilder = NodeBuilder<NodeArguments>
 
-export type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+export type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builderWithInit: _NodeBuilder = {
@@ -76,115 +91,129 @@ const builderWithoutMin: _NodeBuilder = {
 const makeNodeImplementation = ({
     prepareStoreValue,
     prepareStoreValueBang,
+    name
 }: {
-    prepareStoreValue?: (args: NodeArguments) => Code
-    prepareStoreValueBang?: (args: NodeArguments) => Code
+    prepareStoreValue?: (valueCode: Code) => Code
+    prepareStoreValueBang?: (valueCode: Code) => Code
+    name: string
 }): _NodeImplementation => {
 
-    // ------------------------------- generateDeclarations ------------------------------ //
-    const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
-        const { 
-            node, 
-            state,
-            snds,
-            node: { args },
-        } = context
-        return ast`
-            ${Var('Float', state.value, node.args.initValue.toString())}
+    const variableNames = generateVariableNamesNodeType(name, ['receiveMessage'])
 
-            ${prepareStoreValue ? 
-                Func(state.funcPrepareStoreValue, [
-                    Var('Float', 'value')
-                ], 'Float')`
-                    return ${prepareStoreValue(node.args)}
-                `: null
-            }
+    const nodeCore: GlobalCodeGenerator = () => Sequence([
 
-            ${prepareStoreValueBang ? 
-                Func(state.funcPrepareStoreValueBang, [
-                    Var('Float', 'value')
-                ], 'Float')`
-                    return ${prepareStoreValueBang(node.args)}
-                `: null
-            }
-
-            ${Func(state.funcMessageReceiver, [
-                Var('Message', 'm'),
-            ], 'void')`
-                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                    ${prepareStoreValue ? 
-                        `${state.value} = ${state.funcPrepareStoreValue}(msg_readFloatToken(m, 0))`
-                        : `${state.value} = msg_readFloatToken(m, 0)`}
-                    ${ConstVar('Message', 'outMessage', `msg_floats([${state.value}])`)}
-                    ${snds.$0}(outMessage)
-                    if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
-                        msgBusPublish(${state.sendBusName}, outMessage)
-                    }
-
-                } else if (msg_isBang(m)) {
-                    ${functional.renderIf(
-                        prepareStoreValueBang, 
-                        () => `${state.value} = ${state.funcPrepareStoreValueBang}(${state.value})`
-                    )}
-                    ${ConstVar('Message', 'outMessage', `msg_floats([${state.value}])`)}
-                    ${snds.$0}(outMessage)
-                    if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
-                        msgBusPublish(${state.sendBusName}, outMessage)
-                    }
-
-                } else if (
-                    msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN]) 
-                    && msg_readStringToken(m, 0) === 'set'
-                ) {
-                    ${prepareStoreValue ? 
-                        `${state.value} = ${state.funcPrepareStoreValue}(msg_readFloatToken(m, 1))`
-                        : `${state.value} = msg_readFloatToken(m, 1)`}
+        Func(variableNames.receiveMessage, [
+            Var(controlsCoreVariableNames.stateClass, 'state'),
+            Var('Message', 'm'),
+        ], 'void')`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${prepareStoreValue ? 
+                    `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 0)`)}`
+                    : `state.valueFloat = msg_readFloatToken(m, 0)`}
+                ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
+                state.messageSender(outMessage)
+                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                    msgBusPublish(state.sendBusName, outMessage)
                 }
-            
-                ${messageSetSendReceive(context)}
-            `}
+                return
 
-            ${declareControlSendReceive(context)}
+            } else if (msg_isBang(m)) {
+                ${prepareStoreValueBang ? 
+                    `state.valueFloat = ${prepareStoreValueBang(`state.valueFloat`)}`
+                : null}
+                ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
+                state.messageSender(outMessage)
+                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                    msgBusPublish(state.sendBusName, outMessage)
+                }
+                return
+
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN]) 
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${prepareStoreValue ? 
+                    `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 1)`)}`
+                    : `state.valueFloat = msg_readFloatToken(m, 1)`}
+                return
+            
+            } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                return
+            }
+        `
+    ])
+
+    // ------------------------------- generateDeclarations ------------------------------ //
+    const generateInitialization: _NodeImplementation['generateInitialization'] = ({
+        state,
+        snds,
+        node: { args },
+    }) =>
+        // There is a circular dependency problem between the state and snds.$0 so we can actually
+        // only use snds.$0 inside the callback of `commons_waitEngineConfigure`.
+        ast`
+            ${Var(controlsCoreVariableNames.stateClass, state, ast`{
+                minValue: ${args.minValue},
+                maxValue: ${args.maxValue},
+                valueFloat: ${args.initValue},
+                value: msg_create([]),
+                receiveBusName: "${args.receiveBusName}",
+                sendBusName: "${args.sendBusName}",
+                messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
+                messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
+            }`)}
+
+            commons_waitEngineConfigure(() => {
+                ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
+                    ${variableNames.receiveMessage}(${state}, m)
+                `}
+                ${state}.messageSender = ${snds.$0}
+                ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+            })
 
             ${functional.renderIf(
                 args.outputOnLoad, 
-                `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state.value}])))`
+                `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state}.valueFloat])))`
             )}
         `
-    }
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
-        '0': AnonFunc([Var('Message', 'm')], 'void')`
-            ${state.funcMessageReceiver}(m)
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
+        state, 
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            ${variableNames.receiveMessage}(${state}, m)
             return
         `
     })
 
     return {
+        generateInitialization,
         generateMessageReceivers,
-        generateDeclarations,
-        stateVariables,
         dependencies: [
             bangUtils,
             messageBuses,
             stdlib.commonsWaitEngineConfigure,
             stdlib.commonsWaitFrame,
+            controlsCore,
+            nodeCore,
         ],
     }
 }
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
     'tgl': makeNodeImplementation({
-        prepareStoreValueBang: ({ maxValue }) =>
-            `value === 0 ? ${maxValue}: 0`
+        name: 'tgl',
+        prepareStoreValueBang: (valueCode) =>
+            `${valueCode} === 0 ? state.maxValue: 0`
     }),
     'nbx': makeNodeImplementation({
-        prepareStoreValue: ({ minValue, maxValue }) => 
-            `Math.min(Math.max(value,${minValue}),${maxValue})`
+        name: 'nbx',
+        prepareStoreValue: (valueCode) => 
+            `Math.min(Math.max(${valueCode},state.minValue),state.maxValue)`
     }),
-    'hsl': makeNodeImplementation({}),
-    'hradio': makeNodeImplementation({}),
+    'hsl': makeNodeImplementation({ name: 'sl' }),
+    'hradio': makeNodeImplementation({ name: 'radio' }),
 }
 nodeImplementations['vsl'] = nodeImplementations['hsl']
 nodeImplementations['vradio'] = nodeImplementations['hradio']

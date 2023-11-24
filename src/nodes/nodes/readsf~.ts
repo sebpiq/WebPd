@@ -18,27 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { stdlib, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { stdlib, functional, Class, Func, Sequence } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     channelCount: number
 }
-const stateVariables = {
-    buffers: 1,
-    readingStatus: 1,
-    streamOperationId: 1,
-    frame: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : check the real state machine of readsf
 //      - what happens when start / stopping / start stream ?
@@ -70,13 +63,65 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    state,
-}) => ast`
-    ${Var('Array<buf_SoundBuffer>', state.buffers, '[]')}
-    ${Var('fs_OperationId', state.streamOperationId, '-1')}
-    ${Var('Int', state.readingStatus, '0')}
-`
+const variableNames = generateVariableNamesNodeType('readsf_t', [
+    'openStream',
+])
+
+const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Array<buf_SoundBuffer>', 'buffers'),
+        Var('fs_OperationId', 'streamOperationId'),
+        Var('Int', 'readingStatus'),
+    ]),
+
+    Func(variableNames.openStream, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Message', 'm'),
+        Var('Int', 'channelCount'),
+        Var('fs_OperationCallback', 'onStreamClose'),
+    ], 'void')`
+        if (state.streamOperationId !== -1) {
+            state.readingStatus = 3
+            fs_closeSoundStream(state.streamOperationId, FS_OPERATION_SUCCESS)
+        }
+
+        ${ConstVar('fs_SoundInfo', 'soundInfo', `{
+            channelCount,
+            sampleRate: toInt(${globs.sampleRate}),
+            bitDepth: 32,
+            encodingFormat: '',
+            endianness: '',
+            extraOptions: '',
+        }`)}
+        ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+            m,
+            soundInfo,
+        )`)}
+        ${ConstVar('string', 'url', `parseReadWriteFsOpts(
+            m,
+            soundInfo,
+            unhandledOptions
+        )`)}
+        if (url.length === 0) {
+            return
+        }
+        state.streamOperationId = fs_openSoundReadStream(
+            url,
+            soundInfo,
+            onStreamClose,
+        )
+        state.buffers = _FS_SOUND_STREAM_BUFFERS.get(state.streamOperationId)
+    `
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            buffers: [],
+            streamOperationId: -1,
+            readingStatus: 0,
+        }`)}
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({
@@ -87,24 +132,24 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
         args: { channelCount },
     },
 }) => ast`
-    switch(${state.readingStatus}) {
+    switch(${state}.readingStatus) {
         case 1: 
             ${functional.countTo(channelCount).map((i) => 
-                `${outs[i]} = buf_pullSample(${state.buffers}[${i}])`)}
+                `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
             break
             
         case 2: 
             ${functional.countTo(channelCount).map((i) => 
-                `${outs[i]} = buf_pullSample(${state.buffers}[${i}])`)}
-            if (${state.buffers}[0].pullAvailableLength === 0) {
+                `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
+            if (${state}.buffers[0].pullAvailableLength === 0) {
                 ${snds[channelCount]}(msg_bang())
-                ${state.readingStatus} = 3
+                ${state}.readingStatus = 3
             }
             break
 
         case 3: 
             ${functional.countTo(channelCount).map((i) => `${outs[i]} = 0`)}
-            ${state.readingStatus} = 0
+            ${state}.readingStatus = 0
             break
     }
 `
@@ -113,64 +158,36 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
     node,
     state,
-    globs,
 }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_getLength(m) >= 2) {
             if (msg_isStringToken(m, 0) 
                 && msg_readStringToken(m, 0) === 'open'
             ) {
-                if (${state.streamOperationId} !== -1) {
-                    ${state.readingStatus} = 3
-                    fs_closeSoundStream(${
-                        state.streamOperationId
-                    }, FS_OPERATION_SUCCESS)
-                }
-
-                ${ConstVar('fs_SoundInfo', 'soundInfo', `{
-                    channelCount: ${node.args.channelCount},
-                    sampleRate: toInt(${globs.sampleRate}),
-                    bitDepth: 32,
-                    encodingFormat: '',
-                    endianness: '',
-                    extraOptions: '',
-                }`)}
-                ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+                ${variableNames.openStream}(
+                    ${state},
                     m,
-                    soundInfo,
-                )`)}
-                ${ConstVar('string', 'url', `parseReadWriteFsOpts(
-                    m,
-                    soundInfo,
-                    unhandledOptions
-                )`)}
-                if (url.length === 0) {
-                    return
-                }
-                ${state.streamOperationId} = fs_openSoundReadStream(
-                    url,
-                    soundInfo,
-                    () => {
-                        ${state.streamOperationId} = -1
-                        if (${state.readingStatus} === 1) {
-                            ${state.readingStatus} = 2
+                    ${node.args.channelCount},
+                    ${AnonFunc()`
+                        ${state}.streamOperationId = -1
+                        if (${state}.readingStatus === 1) {
+                            ${state}.readingStatus = 2
                         } else {
-                            ${state.readingStatus} = 3
+                            ${state}.readingStatus = 3
                         }
-                    }
+                    `}
                 )
-                ${state.buffers} = _FS_SOUND_STREAM_BUFFERS.get(${state.streamOperationId})
                 return
             }
 
         } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
             if (msg_readFloatToken(m, 0) === 0) {
-                ${state.readingStatus} = 3
+                ${state}.readingStatus = 3
                 return
 
             } else {
-                if (${state.streamOperationId} !== -1) {
-                    ${state.readingStatus} = 1
+                if (${state}.streamOperationId !== -1) {
+                    ${state}.readingStatus = 1
                 } else {
                     console.log('[readsf~] start requested without prior open')
                 }
@@ -179,7 +196,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
             }
             
         } else if (msg_isAction(m, 'print')) {
-            console.log('[readsf~] reading = ' + ${state.readingStatus}.toString())
+            console.log('[readsf~] reading = ' + ${state}.readingStatus.toString())
             return
         }
     `,
@@ -187,16 +204,16 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
     generateLoop,
-    stateVariables,
     dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,
         bangUtils,
         stringMsgUtils,
         stdlib.fsReadSoundStream,
+        nodeCore,
     ],
 }
 

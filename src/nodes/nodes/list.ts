@@ -18,27 +18,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Class, DspGraph, Sequence, functional } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     operation: string
     operationArgs: Array<DspGraph.NodeArgument>
 }
-const stateVariables = {
-    currentList: 1,
-    splitPoint: 1,
-    funcSetSplitPoint: 1
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : implement missing list operations
 // ------------------------------- node builder ------------------------------ //
@@ -110,51 +104,48 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    state,
-    node: { args },
-}) => {
+const variableNames = generateVariableNamesNodeType('list', ['setSplitPoint'])
 
-    switch(args.operation) {
-        case 'split': 
-            return ast`
-                ${Var('Int', state.splitPoint, args.operationArgs[0])}
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Int', 'splitPoint'),
+        Var('Message', 'currentList'),
+    ]),
 
-                ${Func(state.funcSetSplitPoint, [
-                    Var('Float', 'value')
-                ], 'void')`
-                    ${state.splitPoint} = toInt(value)
-                `}
-            `
+    Func(variableNames.setSplitPoint, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Float', 'value'),
+    ], 'void')`
+        state.splitPoint = toInt(value)
+    `
+])
 
-        case 'trim': 
-        case 'length':
-            return ast``
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => ast`
+    ${ConstVar(variableNames.stateClass, state, `{
+        splitPoint: 0,
+        currentList: msg_create([]),
+    }`)}
 
-        case 'append':
-        case 'prepend':
-            return ast`
-                ${Var('Message', state.currentList, 'msg_create([])')}
-                {
-                    ${ConstVar('MessageTemplate', 'template', `[${
-                        args.operationArgs.map((arg) => 
-                            typeof arg === 'string' ? 
-                                `MSG_STRING_TOKEN,${arg.length}`
-                                : `MSG_FLOAT_TOKEN`).join(',')}]`)}
-        
-                    ${state.currentList} = msg_create(template)
-        
-                    ${args.operationArgs.map((arg, i) => 
-                        typeof arg === 'string' ? 
-                            `msg_writeStringToken(${state.currentList}, ${i}, "${arg}")`
-                            : `msg_writeFloatToken(${state.currentList}, ${i}, ${arg})`)}
-                }
-            `
-        
-        default: 
-            throw Error(`unknown operation ${args.operation}`)
-    }
-}
+    ${args.operation === 'split' ? 
+        `${state}.splitPoint = ${args.operationArgs[0]}`: null}
+
+    ${args.operation === 'append' || args.operation === 'prepend' ? ast` 
+        {
+            ${ConstVar('MessageTemplate', 'template', `[${
+                args.operationArgs.map((arg) => 
+                    typeof arg === 'string' ? 
+                        `MSG_STRING_TOKEN,${arg.length}`
+                        : `MSG_FLOAT_TOKEN`).join(',')}]`)}
+
+            ${state}.currentList = msg_create(template)
+
+            ${args.operationArgs.map((arg, i) => 
+                typeof arg === 'string' ? 
+                    `msg_writeStringToken(${state}.currentList, ${i}, "${arg}")`
+                    : `msg_writeFloatToken(${state}.currentList, ${i}, ${arg})`)}
+        }
+    `: null}
+`
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
@@ -166,29 +157,29 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     switch(args.operation) {
         case 'split':
             return {
-                '0': AnonFunc([Var('Message', 'm')], 'void')`
+                '0': AnonFunc([Var('Message', 'm')])`
                     ${prepareInMessage}
-                    if (msg_getLength(inMessage) < ${state.splitPoint}) {
+                    if (msg_getLength(inMessage) < ${state}.splitPoint) {
                         ${snds.$2}(m)
                         return
-                    } else if (msg_getLength(inMessage) === ${state.splitPoint}) {
+                    } else if (msg_getLength(inMessage) === ${state}.splitPoint) {
                         ${snds.$1}(msg_bang())
                         ${snds.$0}(m)
                         return
                     }
-                    ${ConstVar('Message', 'outMessage1', `msg_slice(inMessage, ${state.splitPoint}, msg_getLength(inMessage))`)}
-                    ${ConstVar('Message', 'outMessage0', `msg_slice(inMessage, 0, ${state.splitPoint})`)}
+                    ${ConstVar('Message', 'outMessage1', `msg_slice(inMessage, ${state}.splitPoint, msg_getLength(inMessage))`)}
+                    ${ConstVar('Message', 'outMessage0', `msg_slice(inMessage, 0, ${state}.splitPoint)`)}
                     ${snds.$1}(msg_getLength(outMessage1) === 0 ? msg_bang(): outMessage1)
                     ${snds.$0}(msg_getLength(outMessage0) === 0 ? msg_bang(): outMessage0)
                     return
                 `,
         
-                '1': coldFloatInletWithSetter(state.funcSetSplitPoint),
+                '1': coldFloatInletWithSetter(variableNames.setSplitPoint, state),
             }
 
         case 'trim':
             return {
-                '0': AnonFunc([Var('Message', 'm')], 'void')`
+                '0': AnonFunc([Var('Message', 'm')])`
                     ${snds.$0}(m)
                     return
                 `
@@ -196,7 +187,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
         case 'length':
             return {
-                '0': AnonFunc([Var('Message', 'm')], 'void')`
+                '0': AnonFunc([Var('Message', 'm')])`
                     if (msg_isBang(m)) {
                         ${snds.$0}(msg_floats([0]))
                     } else {
@@ -209,22 +200,22 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
         case 'append':
         case 'prepend':
             const appendPrependOutMessageCode = args.operation === 'prepend' ? 
-                `msg_concat(${state.currentList}, m)`
-                : `msg_concat(m, ${state.currentList})`
+                `msg_concat(${state}.currentList, m)`
+                : `msg_concat(m, ${state}.currentList)`
             
             return {
-                '0': AnonFunc([Var('Message', 'm')], 'void')`
+                '0': AnonFunc([Var('Message', 'm')])`
                     if (msg_isBang(m)) {
-                        ${snds.$0}(msg_getLength(${state.currentList}) === 0 ? msg_bang(): ${state.currentList})
+                        ${snds.$0}(msg_getLength(${state}.currentList) === 0 ? msg_bang(): ${state}.currentList)
                     } else {
-                        ${snds.$0}(msg_getLength(${state.currentList}) === 0 && msg_getLength(m) === 0 ? msg_bang(): ${appendPrependOutMessageCode})
+                        ${snds.$0}(msg_getLength(${state}.currentList) === 0 && msg_getLength(m) === 0 ? msg_bang(): ${appendPrependOutMessageCode})
                     }
                     return
                 `,
 
-                '1': AnonFunc([Var('Message', 'm')], 'void')`
+                '1': AnonFunc([Var('Message', 'm')])`
                     ${prepareInMessage}
-                    ${state.currentList} = inMessage
+                    ${state}.currentList = inMessage
                     return
                 `
             }
@@ -238,9 +229,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     generateMessageReceivers,
-    stateVariables,
-    generateDeclarations,
-    dependencies: [bangUtils, msgUtils]
+    generateInitialization,
+    dependencies: [bangUtils, msgUtils, nodeCore]
 }
 
 export { builder, nodeImplementation, NodeArguments }

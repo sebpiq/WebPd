@@ -27,11 +27,7 @@ import { Sequence } from '@webpd/compiler'
 interface NodeArguments {
     channelMapping: Array<number>
 }
-const stateVariables = {}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : set message not supported
 // ------------------------------- node builder ------------------------------ //
@@ -91,6 +87,6 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
     ])
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateLoop, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateLoop }
 
 export { builder, nodeImplementation, NodeArguments }

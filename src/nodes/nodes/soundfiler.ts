@@ -21,15 +21,13 @@
 import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { parseSoundFileOpenOpts } from '../global-code/fs'
-import { stdlib } from '@webpd/compiler'
+import { Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
-const stateVariables = {
-    operations: 1,
-    buildMessage1: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO: Implement -normalize for write operation
 // TODO: Implement output headersize
@@ -48,8 +46,17 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const sharedCode: GlobalCodeGenerator = () => 
-    Class('SoundfilerOperation', [
+const variableNames = generateVariableNamesNodeType('soundfiler', [
+    'Operation',
+    'buildMessage1',
+])
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var(`Map<fs_OperationId, ${variableNames.Operation}>`, 'operations')
+    ]),
+
+    Class(variableNames.Operation, [
         Var('string', 'url'),
         Var('Array<string>', 'arrayNames'),
         Var('boolean', 'resize'),
@@ -57,12 +64,9 @@ const sharedCode: GlobalCodeGenerator = () =>
         Var('Float', 'framesToWrite'),
         Var('Float', 'skip'),
         Var('fs_SoundInfo', 'soundInfo'),
-    ])
+    ]),
 
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state }) => ast`
-    ${ConstVar('Map<fs_OperationId, SoundfilerOperation>', state.operations, 'new Map()')}
-
-    ${Func(state.buildMessage1, [
+    Func(variableNames.buildMessage1, [
         Var('fs_SoundInfo', 'soundInfo')
     ], 'Message')`
         ${ConstVar('Message', 'm', `msg_create([
@@ -79,12 +83,19 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ sta
         msg_writeFloatToken(m, 3, Math.round(toFloat(soundInfo.bitDepth) / 8))
         msg_writeStringToken(m, 4, soundInfo.endianness)
         return m
-    `}
-`
+    `
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            operations: new Map(),
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (
             msg_getLength(m) >= 3 
             && msg_isStringToken(m, 0)
@@ -102,7 +113,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 endianness: '',
                 extraOptions: '',
             }`)}
-            ${ConstVar('SoundfilerOperation', 'operation', `{
+            ${ConstVar(variableNames.Operation, 'operation', `{
                 arrayNames: [],
                 resize: false,
                 maxSize: -1,
@@ -202,8 +213,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                         Var('fs_OperationStatus', 'status'),
                         Var('FloatArray[]', 'sound'),
                     ], 'void')`
-                        ${ConstVar('SoundfilerOperation', 'operation', `${state.operations}.get(id)`)}
-                        ${state.operations}.delete(id)
+                        ${ConstVar(variableNames.Operation, 'operation', `${state}.operations.get(id)`)}
+                        ${state}.operations.delete(id)
                         ${Var('Int', 'i', '0')}
                         ${Var('Float', 'maxFramesRead', '0')}
                         ${Var('Float', 'framesToRead', '0')}
@@ -242,12 +253,12 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                             )
                         }
     
-                        ${snds.$1}(${state.buildMessage1}(operation.soundInfo))
+                        ${snds.$1}(${variableNames.buildMessage1}(operation.soundInfo))
                         ${snds.$0}(msg_floats([maxFramesRead]))
                     `}
                 )`)}
 
-                ${state.operations}.set(id, operation)
+                ${state}.operations.set(id, operation)
 
             } else if (operationType === 'write') {
                 ${Var('Int', 'i', '0')}
@@ -295,9 +306,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                     Var('fs_OperationId', 'id'),
                     Var('fs_OperationStatus', 'status'),
                 ], 'void')`
-                    ${ConstVar('SoundfilerOperation', 'operation', `${state.operations}.get(id)`)}
-                    ${state.operations}.delete(id)
-                    ${snds.$1}(${state.buildMessage1}(operation.soundInfo))
+                    ${ConstVar(variableNames.Operation, 'operation', `${state}.operations.get(id)`)}
+                    ${state}.operations.delete(id)
+                    ${snds.$1}(${variableNames.buildMessage1}(operation.soundInfo))
                     ${snds.$0}(msg_floats([operation.framesToWrite]))
                 `}
 
@@ -308,7 +319,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                     callback
                 )`)}
 
-                ${state.operations}.set(id, operation)
+                ${state}.operations.set(id, operation)
             }
 
             return
@@ -318,15 +329,14 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateDeclarations,
+    generateInitialization,
     generateMessageReceivers,
-    stateVariables,
     dependencies: [
-        sharedCode,
         parseSoundFileOpenOpts,
         stdlib.commonsArrays,
         stdlib.fsReadSoundFile,
         stdlib.fsWriteSoundFile,
+        nodeCore,
     ],
 }
 

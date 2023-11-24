@@ -17,21 +17,19 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, stdlib, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Code, stdlib, functional, Func, Sequence } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { build, declareControlSendReceive, EMPTY_BUS_NAME, messageSetSendReceive, ControlsBaseNodeArguments, stateVariables } from './controls-base'
+import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCore, controlsCoreVariableNames } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils, msgUtils } from '../global-code/core'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { VariableName } from '@webpd/compiler/src/ast/types'
+import { generateVariableNamesNodeType } from '../variable-names'
 
-export type _NodeImplementation = NodeImplementation<
-    ControlsBaseNodeArguments,
-    typeof stateVariables
->
+export type _NodeImplementation = NodeImplementation<ControlsBaseNodeArguments>
 
 // TODO : use standard "unsupported message" from compile-generateDeclarations
 // ------------------------------- node builder ------------------------------ //
@@ -44,83 +42,105 @@ const builder: NodeBuilder<ControlsBaseNodeArguments> = {
 }
 
 const makeNodeImplementation = ({
+    name,
     initValue,
     messageMatch,
 }: {
+    name: string,
     initValue: Code,
     messageMatch?: (messageName: VariableName) => Code
 }): _NodeImplementation => {
 
     // ------------------------------- generateDeclarations ------------------------------ //
-    const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
-        const { 
-            state,
-            snds,
-        } = context
-        return ast`
-            ${Var('Message', state.value, initValue)}
-            
-            ${Func(state.funcMessageReceiver, [
-                Var('Message', 'm'),
-            ], 'void')`
-                ${messageSetSendReceive(context)}
-                else if (msg_isBang(m)) {
-                    ${snds.$0}(${state.value})
-                    if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
-                        msgBusPublish(${state.sendBusName}, ${state.value})
-                    }
-                    return
-                
-                } else if (
-                    msg_getTokenType(m, 0) === MSG_STRING_TOKEN
-                    && msg_readStringToken(m, 0) === 'set'
-                ) {
-                    ${ConstVar('Message', 'setMessage', 'msg_slice(m, 1, msg_getLength(m))')}
-                    ${functional.renderIf(messageMatch, 
-                        () => `if (${messageMatch('setMessage')}) {`)} 
-                            ${state.value} = setMessage    
-                            return
-                    ${functional.renderIf(messageMatch, 
-                        () => '}')}
+    const variableNames = generateVariableNamesNodeType(name, ['receiveMessage'])
 
-                } ${messageMatch ? 
-                    `else if (${messageMatch('m')}) {`: 
-                    `else {`}
-                
-                    ${state.value} = m
-                    ${snds.$0}(${state.value})
-                    if (${state.sendBusName} !== "${EMPTY_BUS_NAME}") {
-                        msgBusPublish(${state.sendBusName}, ${state.value})
-                    }
-                    return
+    const nodeCore: GlobalCodeGenerator = () => Sequence([
 
+        Func(variableNames.receiveMessage, [
+            Var(controlsCoreVariableNames.stateClass, 'state'),
+            Var('Message', 'm'),
+        ], 'void')`
+            if (msg_isBang(m)) {
+                state.messageSender(state.value)
+                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                    msgBusPublish(state.sendBusName, state.value)
                 }
-                throw new Error('unsupported message ' + msg_display(m))
-            `}
+                return
+            
+            } else if (
+                msg_getTokenType(m, 0) === MSG_STRING_TOKEN
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${ConstVar('Message', 'setMessage', 'msg_slice(m, 1, msg_getLength(m))')}
+                ${functional.renderIf(messageMatch, 
+                    () => `if (${messageMatch('setMessage')}) {`)} 
+                        state.value = setMessage    
+                        return
+                ${functional.renderIf(messageMatch, 
+                    () => '}')}
 
-            ${declareControlSendReceive(context)}
+            } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                return
+                
+            } ${messageMatch ? 
+                `else if (${messageMatch('m')}) {`: 
+                `else {`}
+            
+                state.value = m
+                state.messageSender(state.value)
+                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                    msgBusPublish(state.sendBusName, state.value)
+                }
+                return
+
+            }
+        `
+    ])
+
+    const generateInitialization: NodeImplementation<any>['generateInitialization'] = ({
+        state, 
+        node: { args },
+        snds,
+    }) => {
+        return ast`
+            ${Var(controlsCoreVariableNames.stateClass, state, `{
+                value: ${initValue},
+                receiveBusName: "${args.receiveBusName}",
+                sendBusName: "${args.sendBusName}",
+                messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
+                messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
+            }`)}
+        
+            commons_waitEngineConfigure(() => {
+                ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
+                    ${variableNames.receiveMessage}(${state}, m)
+                `}
+                ${state}.messageSender = ${snds.$0}
+                ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+            })
         `
     }
 
     // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) =>
+    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, snds }) =>
         ({
-            '0': AnonFunc([Var('Message', 'm')], 'void')`
-                ${state.funcMessageReceiver}(m)
+            '0': AnonFunc([Var('Message', 'm')])`
+                ${variableNames.receiveMessage}(${state}, m)
                 return
             `,
         })
 
     // ------------------------------------------------------------------- //
     return {
-        generateDeclarations,
+        generateInitialization,
         generateMessageReceivers,
-        stateVariables,
         dependencies: [
             bangUtils,
             messageBuses,
             msgUtils,
             stdlib.commonsWaitEngineConfigure,
+            controlsCore,
+            nodeCore,
         ],
     }
 }
@@ -133,14 +153,17 @@ const builders = {
 
 const nodeImplementations = {
     'floatatom': makeNodeImplementation({
+        name: 'floatatom',
         initValue: `msg_floats([0])`,
         messageMatch: (m) => `msg_isMatching(${m}, [MSG_FLOAT_TOKEN])`
     }),
     'symbolatom': makeNodeImplementation({
+        name: 'symbolatom',
         initValue: `msg_strings([''])`,
         messageMatch: (m) => `msg_isMatching(${m}, [MSG_STRING_TOKEN])`
     }),
     'listbox': makeNodeImplementation({
+        name: 'listbox',
         initValue: `msg_bang()`,
     })
 }

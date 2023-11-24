@@ -18,24 +18,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, ConstVar, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     delayName: string,
     maxDurationMsec: number,
 }
-const stateVariables = {
-    delayName: 1,
-    buffer: 1,
-    funcSetDelayName: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : default maxDurationMsec in Pd ? 
 // ------------------------------- node builder ------------------------------ //
@@ -61,50 +58,59 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ 
-    state, 
-    globs,
-    node: { args },
-}) => ast`
-    ${Var('string', state.delayName, '""')}
-    ${Var('buf_SoundBuffer', state.buffer, 'DELAY_BUFFERS_NULL')}
+const variableNames = generateVariableNamesNodeType('delwrite', ['setDelayName'])
 
-    ${Func(state.funcSetDelayName, [
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('string', 'delayName'), 
+        Var('buf_SoundBuffer', 'buffer'), 
+    ]),
+
+    Func(variableNames.setDelayName, [
+        Var(variableNames.stateClass, 'state'),
         Var('string', 'delayName')
     ], 'void')`
-        if (${state.delayName}.length) {
-            DELAY_BUFFERS_delete(${state.delayName})
+        if (state.delayName.length) {
+            DELAY_BUFFERS_delete(state.delayName)
         }
-        ${state.delayName} = delayName
-        if (${state.delayName}.length) {
-            DELAY_BUFFERS_set(${state.delayName}, ${state.buffer})
+        state.delayName = delayName
+        if (state.delayName.length) {
+            DELAY_BUFFERS_set(state.delayName, state.buffer)
         }
-    `}
+    `
+])
 
-    commons_waitEngineConfigure(() => {
-        ${state.buffer} = buf_create(
-            toInt(Math.ceil(computeUnitInSamples(
-                ${globs.sampleRate}, 
-                ${args.maxDurationMsec},
-                "msec"
-            )))
-        )
-        if ("${args.delayName}".length) {
-            ${state.funcSetDelayName}("${args.delayName}")
-        }
-    })
-`
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state, globs }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            delayName: '',
+            buffer: DELAY_BUFFERS_NULL,
+        }`)}
+
+        commons_waitEngineConfigure(() => {
+            ${state}.buffer = buf_create(
+                toInt(Math.ceil(computeUnitInSamples(
+                    ${globs.sampleRate}, 
+                    ${args.maxDurationMsec},
+                    "msec"
+                )))
+            )
+            if ("${args.delayName}".length) {
+                ${variableNames.setDelayName}(${state}, "${args.delayName}")
+            }
+        })
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => ast`
-    buf_writeSample(${state.buffer}, ${ins.$0})
+    buf_writeSample(${state}.buffer, ${ins.$0})
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
     '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
         if (msg_isAction(m, 'clear')) {
-            buf_clear(${state.buffer})
+            buf_clear(${state}.buffer)
             return
         }
     `
@@ -113,10 +119,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     generateLoop,
-    stateVariables,
     generateMessageReceivers,
-    generateDeclarations,
-    dependencies: [ computeUnitInSamples, delayBuffers, stringMsgUtils ]
+    generateInitialization,
+    dependencies: [ computeUnitInSamples, delayBuffers, stringMsgUtils, nodeCore ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

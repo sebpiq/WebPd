@@ -21,6 +21,7 @@ import {
     AudioSettings,
     CompilationSettings,
     createAssemblyScriptWasmEngine,
+    createJavaScriptEngine,
     Engine,
     FloatArray,
     getFloatArrayType,
@@ -69,10 +70,7 @@ const createEngine = async (
 ): Promise<Engine> => {
     switch (target) {
         case 'javascript':
-            return new Function(`
-                ${getArtefact(artefacts, 'compiledJs')}
-                return exports
-            `)() as Engine
+            return createJavaScriptEngine(getArtefact(artefacts, 'compiledJs'))
 
         case 'assemblyscript':
             return createAssemblyScriptWasmEngine(getArtefact(artefacts, 'wasm'))

@@ -31,7 +31,7 @@ const BIT_DEPTH = 64
 const BLOCK_SIZE = 1024 * 8
 const SAMPLE_RATE = 44100
 const CHANNEL_COUNT = { in: 2, out: 2 }
-const WAV_PREVIEW_DURATION = 15
+const WAV_PREVIEW_DURATION = 30
 
 const ENGINE_OPTIONS: ReadonlyArray<BuildFormat> = ['compiledJs', 'wasm']
 const DEFAULT_ENGINE: Task['engine'] = 'wasm'

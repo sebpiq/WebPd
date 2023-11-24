@@ -28,13 +28,9 @@ import {
     Message,
 } from '@webpd/compiler/src/run/types'
 import {
-    nodeImplementation as nodeImplementationSend,
-    builder as builderSend,
-} from './send'
-import {
-    nodeImplementation as nodeImplementationReceive,
-    builder as builderReceive,
-} from './receive'
+    nodeImplementations,
+    builders,
+} from './send-receive'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
@@ -48,7 +44,7 @@ describe('send / receive', () => {
     describe('builder [send]', () => {
         describe('translateArgs', () => {
             it('should handle args as expected', () => {
-                testNodeTranslateArgs(builderSend, [], {
+                testNodeTranslateArgs(builders['send'], [], {
                     busName: '',
                 })
             })
@@ -58,7 +54,7 @@ describe('send / receive', () => {
     describe('builder [receive]', () => {
         describe('translateArgs', () => {
             it('should handle args as expected', () => {
-                testNodeTranslateArgs(builderReceive, [], {
+                testNodeTranslateArgs(builders['receive'], [], {
                     busName: '',
                 })
             })
@@ -70,35 +66,30 @@ describe('send / receive', () => {
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
         ) => {
-            const nodeImplementations: NodeImplementations = {
-                'send': nodeImplementationSend,
-                'receive': nodeImplementationReceive,
-            }
-
             const graph = makeGraph({
                 send1: {
                     type: 'send',
-                    ...builderSend.build({ busName: 'BUS1' }),
+                    ...builders['send'].build({ busName: 'BUS1' }),
                     args: { busName: 'BUS1' },
                 },
                 send2: {
                     type: 'send',
-                    ...builderSend.build({ busName: 'BUS2' }),
+                    ...builders['send'].build({ busName: 'BUS2' }),
                     args: { busName: 'BUS2' },
                 },
                 receive1: {
                     type: 'receive',
-                    ...builderReceive.build({ busName: 'BUS1' }),
+                    ...builders['receive'].build({ busName: 'BUS1' }),
                     args: { busName: 'BUS1' },
                 },
                 receive2: {
                     type: 'receive',
-                    ...builderReceive.build({ busName: 'BUS2' }),
+                    ...builders['receive'].build({ busName: 'BUS2' }),
                     args: { busName: 'BUS2' },
                 },
                 receive2bis: {
                     type: 'receive',
-                    ...builderReceive.build({ busName: 'BUS2' }),
+                    ...builders['receive'].build({ busName: 'BUS2' }),
                     args: { busName: 'BUS2' },
                 },
             })

@@ -25,11 +25,7 @@ import { AnonFunc, Var } from '@webpd/compiler'
 interface NodeArguments {
     prefix: string
 }
-const stateVariables = {}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -51,14 +47,14 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, node: { args } }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node: { args } }) => ({
+    '0': AnonFunc([Var('Message', 'm')])`
         console.log("${args.prefix} " + msg_display(m))
         return
     `,
 })
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateMessageReceivers, stateVariables }
+const nodeImplementation: _NodeImplementation = { generateMessageReceivers }
 
 export { builder, nodeImplementation, NodeArguments }

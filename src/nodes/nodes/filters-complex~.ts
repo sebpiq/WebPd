@@ -18,26 +18,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { Code } from '@webpd/compiler'
+import { Class, Code, ConstVar, Sequence } from '@webpd/compiler'
 import { ast, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initCoeffRe: number
     initCoeffIm: number
 }
-const stateVariables = {
-    lastInputRe: 1,
-    lastInputIm: 1,
-    lastOutputRe: 1,
-    lastOutputIm: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : tests + cleaner implementations
 // TODO : separate cfilters with lastInputRe lastInputIm from the ones that don't need
@@ -103,14 +96,26 @@ const makeNodeImplementation = ({
 }): _NodeImplementation => {
 
     // ------------------------------- generateDeclarations ------------------------------ //
-    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-        state,
-    }) => ast`
-        ${Var('Float', state.lastOutputRe, 0)}
-        ${Var('Float', state.lastOutputIm, 0)}
-        ${Var('Float', state.lastInputRe, 0)}
-        ${Var('Float', state.lastInputIm, 0)}
-    `
+    const variableNames = generateVariableNamesNodeType('filter_c_t')
+
+    const nodeCore: GlobalCodeGenerator = () => Sequence([
+        Class(variableNames.stateClass, [
+            Var('Float', 'lastOutputRe'),
+            Var('Float', 'lastOutputIm'),
+            Var('Float', 'lastInputRe'),
+            Var('Float', 'lastInputIm'),
+        ]),
+    ])
+
+    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                lastOutputRe: 0,
+                lastOutputIm: 0,
+                lastInputRe: 0,
+                lastInputIm: 0,
+            }`)}
+        `
 
     // ------------------------------- generateLoop ------------------------------ //
     const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
@@ -119,30 +124,30 @@ const makeNodeImplementation = ({
             ins.$1, 
             ins.$2,
             ins.$3,
-            state.lastOutputRe, 
-            state.lastOutputIm, 
-            state.lastInputRe, 
-            state.lastInputIm
+            `${state}.lastOutputRe`, 
+            `${state}.lastOutputIm`, 
+            `${state}.lastInputRe`, 
+            `${state}.lastInputIm`
         )}
-        ${state.lastOutputIm} = ${outs.$1} = ${generateOperationIm(
+        ${state}.lastOutputIm = ${outs.$1} = ${generateOperationIm(
             ins.$0, 
             ins.$1,
             ins.$2,
             ins.$3,
-            state.lastOutputRe, 
-            state.lastOutputIm, 
-            state.lastInputRe, 
-            state.lastInputIm
+            `${state}.lastOutputRe`, 
+            `${state}.lastOutputIm`, 
+            `${state}.lastInputRe`, 
+            `${state}.lastInputIm`
         )}
-        ${state.lastOutputRe} = ${outs.$0}
-        ${state.lastInputRe} = ${ins.$0}
-        ${state.lastInputIm} = ${ins.$1}
+        ${state}.lastOutputRe    = ${outs.$0}
+        ${state}.lastInputRe = ${ins.$0}
+        ${state}.lastInputIm = ${ins.$1}
     `
 
     return {
+        generateInitialization,
         generateLoop,
-        stateVariables,
-        generateDeclarations,
+        dependencies: [nodeCore]
     }
 }
 

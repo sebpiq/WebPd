@@ -39,7 +39,7 @@ export interface NodeImplementationTestParameters {
 
 export const NODE_IMPLEMENTATION_TEST_PARAMETERS: Array<NodeImplementationTestParameters> =
     [
-        // { target: 'javascript', bitDepth: 32, floatArrayType: Float32Array },
+        { target: 'javascript', bitDepth: 32, floatArrayType: Float32Array },
         // { target: 'javascript', bitDepth: 64, floatArrayType: Float64Array },
         {
             target: 'assemblyscript',

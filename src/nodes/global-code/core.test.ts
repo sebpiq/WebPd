@@ -27,7 +27,7 @@ describe('global-code.core', () => {
     runTestSuite([
         {
             description: 'bangUtils > msg_isBang > should match given message %s',
-            testFunction: () => AnonFunc([], 'void')`
+            testFunction: () => AnonFunc()`
                 ${ConstVar('Message', 'message1', 'msg_create([MSG_STRING_TOKEN, 4])')}
                 msg_writeStringToken(message1, 0, 'bang')
                 assert_booleansEqual(msg_isBang(message1), true)
@@ -49,7 +49,7 @@ describe('global-code.core', () => {
 
         {
             description: 'bangUtils > msg_bang > should create bang message %s',
-            testFunction: () => AnonFunc([], 'void')`
+            testFunction: () => AnonFunc()`
                 ${ConstVar('Message', 'message', 'msg_bang()')}
                 assert_booleansEqual(msg_isMatching(message, [MSG_STRING_TOKEN]), true)
                 assert_stringsEqual(msg_readStringToken(message, 0), 'bang')
@@ -58,7 +58,7 @@ describe('global-code.core', () => {
 
         {
             description: 'msgUtils > msg_slice > should slice the message as expected %s',
-            testFunction: () => AnonFunc([], 'void')`
+            testFunction: () => AnonFunc()`
                 ${ConstVar('Message', 'message', 'msg_create([MSG_STRING_TOKEN, 3, MSG_STRING_TOKEN, 3, MSG_FLOAT_TOKEN])')}
                 msg_writeStringToken(message, 0, 'bla')
                 msg_writeStringToken(message, 1, 'blo')
@@ -86,7 +86,7 @@ describe('global-code.core', () => {
 
         {
             description: 'msgUtils > msg_concat > should concatenate 2 messages %s',
-            testFunction: () => AnonFunc([], 'void')`
+            testFunction: () => AnonFunc()`
                 ${ConstVar('Message', 'message1', 'msg_create([MSG_STRING_TOKEN, 3, MSG_STRING_TOKEN, 3, MSG_FLOAT_TOKEN])')}
                 msg_writeStringToken(message1, 0, 'bla')
                 msg_writeStringToken(message1, 1, 'blo')
@@ -117,7 +117,7 @@ describe('global-code.core', () => {
 
         {
             description: 'msgUtils > msg_shift > should remove first element from message %s',
-            testFunction: () => AnonFunc([], 'void')`
+            testFunction: () => AnonFunc()`
                 ${ConstVar('Message', 'message', 'msg_create([MSG_STRING_TOKEN, 3, MSG_STRING_TOKEN, 3, MSG_FLOAT_TOKEN])')}
                 msg_writeStringToken(message, 0, 'bla')
                 msg_writeStringToken(message, 1, 'blo')

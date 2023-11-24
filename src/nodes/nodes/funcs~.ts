@@ -23,7 +23,6 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
 
 interface NodeArguments {}
-const stateVariables = {}
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -40,12 +39,12 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
-    'abs~': { stateVariables, generateLoopInline: ({ ins }) => `Math.abs(${ins.$0})` },
-    'cos~': { stateVariables, generateLoopInline: ({ ins }) => `Math.cos(${ins.$0} * 2 * Math.PI)` },
-    'wrap~': { stateVariables, generateLoopInline: ({ ins }) => `(1 + (${ins.$0} % 1)) % 1` },
-    'sqrt~': { stateVariables, generateLoopInline: ({ ins }) => `${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0` },
-    'mtof~': { stateVariables, generateLoopInline: ({ ins }) => `mtof(${ins.$0})`, dependencies: [mtof] },
-    'ftom~': { stateVariables, generateLoopInline: ({ ins }) => `ftom(${ins.$0})`, dependencies: [ftom] },
+    'abs~': { generateLoopInline: ({ ins }) => `Math.abs(${ins.$0})` },
+    'cos~': { generateLoopInline: ({ ins }) => `Math.cos(${ins.$0} * 2 * Math.PI)` },
+    'wrap~': { generateLoopInline: ({ ins }) => `(1 + (${ins.$0} % 1)) % 1` },
+    'sqrt~': { generateLoopInline: ({ ins }) => `${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0` },
+    'mtof~': { generateLoopInline: ({ ins }) => `mtof(${ins.$0})`, dependencies: [mtof] },
+    'ftom~': { generateLoopInline: ({ ins }) => `ftom(${ins.$0})`, dependencies: [ftom] },
 }
 
 const builders = {

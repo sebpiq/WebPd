@@ -18,24 +18,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, ConstVar, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     maxValue: number
 }
-const stateVariables = {
-    maxValue: 1,
-    funcSetMaxValue: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : make seed work
 // ------------------------------- node builder ------------------------------ //
@@ -55,24 +50,35 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-    node,
-    state,
-}) => ast`
-    ${Var('Float', state.maxValue, node.args.maxValue)}
+const variableNames = generateVariableNamesNodeType('random', [
+    'setMaxValue',
+])
 
-    ${Func(state.funcSetMaxValue, [
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
         Var('Float', 'maxValue')
+    ]),
+
+    Func(variableNames.setMaxValue, [
+        Var(variableNames.stateClass, 'state'),
+        Var('Float', 'maxValue'),
     ], 'void')`
-        ${state.maxValue} = Math.max(maxValue, 0)
-    `}
-`
+        state.maxValue = Math.max(maxValue, 0)
+    `
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            maxValue: ${args.maxValue}
+        }`)}
+    `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
 const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')], 'void')`
+    '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
-            ${snds['0']}(msg_floats([Math.floor(Math.random() * ${state.maxValue})]))
+            ${snds['0']}(msg_floats([Math.floor(Math.random() * ${state}.maxValue)]))
             return
         } else if (
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
@@ -83,15 +89,17 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
         }
     `,
 
-    '1': coldFloatInletWithSetter(state.funcSetMaxValue),
+    '1': coldFloatInletWithSetter(variableNames.setMaxValue, state),
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     generateMessageReceivers,
-    stateVariables,
-    generateDeclarations,
-    dependencies: [bangUtils],
+    generateInitialization,
+    dependencies: [
+        bangUtils, 
+        nodeCore,
+    ],
 }
 
 export { builder, nodeImplementation, NodeArguments }

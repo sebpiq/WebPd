@@ -39,7 +39,7 @@ export const delayBuffers: GlobalCodeGeneratorWithSettings = {
         Func('DELAY_BUFFERS_get', 
             [
                 Var('string', 'delayName'),
-                Var('(event: string) => void', 'callback'),
+                Var('SkedCallback', 'callback'),
             ],
             'void'
         )`

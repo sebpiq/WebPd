@@ -18,16 +18,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { AnonFunc, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, ConstVar, Sequence, Var, ast } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
-const stateVariables = {
-    signalMemory: 1,
-    controlMemory: 1,
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
@@ -51,15 +49,27 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({ state }) => ast`
-    ${Var('Float', state.signalMemory, 0)}
-    ${Var('Float', state.controlMemory, 0)}
-`
+const variableNames = generateVariableNamesNodeType('samphold_t')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Float', 'signalMemory'),
+        Var('Float', 'controlMemory'),
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            signalMemory: 0,
+            controlMemory: 0,
+        }`)}
+    `
 
 // ------------------------------- generateLoop ------------------------------ //
 const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => ast`
-    ${state.signalMemory} = ${outs.$0} = ${ins.$1} < ${state.controlMemory} ? ${ins.$0}: ${state.signalMemory}
-    ${state.controlMemory} = ${ins.$1}
+    ${state}.signalMemory = ${outs.$0} = ${ins.$1} < ${state}.controlMemory ? ${ins.$0}: ${state}.signalMemory
+    ${state}.controlMemory = ${ins.$1}
 `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
@@ -69,21 +79,21 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
             && msg_readStringToken(m, 0) === 'set'
         ) {
-            ${state.signalMemory} = msg_readFloatToken(m, 1)
+            ${state}.signalMemory = msg_readFloatToken(m, 1)
             return
 
         } else if (
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
             && msg_readStringToken(m, 0) === 'reset'
         ) {
-            ${state.controlMemory} = msg_readFloatToken(m, 1)
+            ${state}.controlMemory = msg_readFloatToken(m, 1)
             return
 
         } else if (
             msg_isMatching(m, [MSG_STRING_TOKEN])
             && msg_readStringToken(m, 0) === 'reset'
         ) {
-            ${state.controlMemory} = 1e20
+            ${state}.controlMemory = 1e20
             return
         }
     `,
@@ -92,9 +102,11 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
     generateLoop,
-    stateVariables,
     generateMessageReceivers,
-    generateDeclarations,
+    generateInitialization,
+    dependencies: [
+        nodeCore,
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

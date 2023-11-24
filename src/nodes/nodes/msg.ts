@@ -18,19 +18,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Class, DspGraph, Sequence, functional } from '@webpd/compiler'
+import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { AstElement } from '@webpd/compiler/src/ast/types'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments { templates: Array<Array<DspGraph.NodeArgument>> }
-const stateVariables = {
-    outTemplates: 1,
-    outMessages: 1,
-    messageTransferFunctions: 1
-}
-type _NodeImplementation = NodeImplementation<NodeArguments, typeof stateVariables>
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : msg [ symbol $1 ( has the fllowing behavior :
 //      sends "" when receiving a number
@@ -69,9 +66,19 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = (context) => {
-    const { state, node } = context
-    const transferCodes = node.args.templates.map(
+const variableNames = generateVariableNamesNodeType('msg')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Array<MessageTemplate>', 'outTemplates'),
+        Var('Array<Message>', 'outMessages'),
+        Var('Array<(m: Message) => Message>', 'messageTransferFunctions'),
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = (context) => {
+    const { node: { args }, state } = context
+    const transferCodes = args.templates.map(
         (template, i) => buildMsgTransferCode(
             context,
             template,
@@ -80,23 +87,27 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = (conte
     )
 
     return ast`
-        ${Var('Array<MessageTemplate>', state.outTemplates, '[]')}
-        ${Var('Array<Message>', state.outMessages, '[]')}
+        ${ConstVar(variableNames.stateClass, state, `{
+            outTemplates: [],
+            outMessages: [],
+            messageTransferFunctions: [],
+        }`)}
+
         ${transferCodes
             .filter(({ inMessageUsed }) => !inMessageUsed)
             .map(({ outMessageCode }) => outMessageCode)
         }
         
-        ${ConstVar('Array<(m: Message) => Message>', state.messageTransferFunctions, ast`[
+        ${state}.messageTransferFunctions = [
             ${transferCodes.flatMap(({ inMessageUsed, outMessageCode }, i) => [
                 AnonFunc([
                     Var('Message', 'inMessage')
                 ], 'Message')`
                     ${inMessageUsed ? outMessageCode: null}
-                    return ${state.outMessages}[${i}]
+                    return ${state}.outMessages[${i}]
                 `, ','
             ])}
-        ]`)}
+        ]
     `
 }
 
@@ -106,22 +117,22 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     state,
 }) => {
     return {
-        '0': AnonFunc([Var('Message', 'm')], 'void')`
+        '0': AnonFunc([Var('Message', 'm')])`
             if (
                 msg_isStringToken(m, 0) 
                 && msg_readStringToken(m, 0) === 'set'
             ) {
-                ${state.outTemplates} = [[]]
+                ${state}.outTemplates = [[]]
                 for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
                     if (msg_isFloatToken(m, i)) {
-                        ${state.outTemplates}[0].push(MSG_FLOAT_TOKEN)
+                        ${state}.outTemplates[0].push(MSG_FLOAT_TOKEN)
                     } else {
-                        ${state.outTemplates}[0].push(MSG_STRING_TOKEN)
-                        ${state.outTemplates}[0].push(msg_readStringToken(m, i).length)
+                        ${state}.outTemplates[0].push(MSG_STRING_TOKEN)
+                        ${state}.outTemplates[0].push(msg_readStringToken(m, i).length)
                     }
                 }
 
-                ${ConstVar('Message', 'message', `msg_create(${state.outTemplates}[0])`)}
+                ${ConstVar('Message', 'message', `msg_create(${state}.outTemplates[0])`)}
                 for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
                     if (msg_isFloatToken(m, i)) {
                         msg_writeFloatToken(
@@ -133,16 +144,16 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                         )
                     }
                 }
-                ${state.outMessages}[0] = message
-                ${state.messageTransferFunctions}.splice(0, ${state.messageTransferFunctions}.length - 1)
-                ${state.messageTransferFunctions}[0] = ${AnonFunc([Var('Message', 'm')], 'Message')`
-                    return ${state.outMessages}[0]
+                ${state}.outMessages[0] = message
+                ${state}.messageTransferFunctions.splice(0, ${state}.messageTransferFunctions.length - 1)
+                ${state}.messageTransferFunctions[0] = ${AnonFunc([Var('Message', 'm')], 'Message')`
+                    return ${state}.outMessages[0]
                 `}
                 return
 
             } else {
-                for (${Var('Int', 'i', '0')}; i < ${state.messageTransferFunctions}.length; i++) {
-                    ${snds.$0}(${state.messageTransferFunctions}[i](m))
+                for (${Var('Int', 'i', '0')}; i < ${state}.messageTransferFunctions.length; i++) {
+                    ${snds.$0}(${state}.messageTransferFunctions[i](m))
                 }
                 return
             }
@@ -151,7 +162,11 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 }
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {generateDeclarations, generateMessageReceivers, stateVariables}
+const nodeImplementation: _NodeImplementation = {
+    generateInitialization, 
+    generateMessageReceivers,
+    dependencies: [nodeCore],
+}
 
 export { 
     builder,
@@ -160,12 +175,12 @@ export {
 }
 
 const buildMsgTransferCode = (
-    { state }: Parameters<_NodeImplementation['generateDeclarations']>[0],
+    { state }: Parameters<_NodeImplementation['generateInitialization']>[0],
     template: Array<DspGraph.NodeArgument>, 
     index: number,
 ) => {
-    const outTemplate = `${state.outTemplates}[${index}]`
-    const outMessage = `${state.outMessages}[${index}]`
+    const outTemplate = `${state}.outTemplates[${index}]`
+    const outMessage = `${state}.outMessages[${index}]`
     const operations = buildMessageTransferOperations(template)
     let outTemplateCode: Array<AstElement> = []
     let outMessageCode: Array<AstElement> = []

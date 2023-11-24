@@ -28,13 +28,9 @@ import {
 import { nodeImplementations, builders, NodeArguments } from './controls-atoms'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
-    nodeImplementation as nodeImplementationSend,
-    builder as builderSend,
-} from './send'
-import {
-    nodeImplementation as nodeImplementationReceive,
-    builder as builderReceive,
-} from './receive'
+    nodeImplementations as nodeImplementationsSendReceive,
+    builders as buildersSendReceive,
+} from './send-receive'
 import {
     CompilerTarget,
     AudioSettings,
@@ -98,8 +94,7 @@ describe('controls-atoms', () => {
             ) => {
                 const _nodeImplementations: NodeImplementations = {
                     ...nodeImplementations,
-                    send: nodeImplementationSend,
-                    receive: nodeImplementationReceive,
+                    ...nodeImplementationsSendReceive,
                 }
 
                 const graph = makeGraph({
@@ -110,12 +105,12 @@ describe('controls-atoms', () => {
                     },
                     send: {
                         type: 'send',
-                        ...builderSend.build({ busName: 'BUS_TO_CTRL' }),
+                        ...buildersSendReceive['send'].build({ busName: 'BUS_TO_CTRL' }),
                         args: { busName: 'BUS_TO_CTRL' },
                     },
                     receive: {
                         type: 'receive',
-                        ...builderReceive.build({ busName: 'BUS_FROM_CTRL' }),
+                        ...buildersSendReceive['receive'].build({ busName: 'BUS_FROM_CTRL' }),
                         args: { busName: 'BUS_FROM_CTRL' },
                     },
                 })

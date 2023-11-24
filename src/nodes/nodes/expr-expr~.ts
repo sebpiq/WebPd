@@ -18,8 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, stdlib, functional } from '@webpd/compiler'
+import { Code, stdlib, functional, Class } from '@webpd/compiler'
 import {
+    GlobalCodeGenerator,
     NodeImplementation,
     NodeImplementations,
     PrecompiledNodeCode,
@@ -33,19 +34,13 @@ import {
     messageTokenToString,
 } from '../type-arguments'
 import { AnonFunc, ast, ConstVar, Sequence, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     tokenizedExpressions: Array<Array<ExpressionToken>>
 }
-const stateVariables = {
-    floatInputs: 1,
-    stringInputs: 1,
-    outputs: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : Implement if (`if(<test>, <then>, <else>)`)
 // TODO : [expr random(0, 10000)] fails (no inlet), and random function doesn't exist
@@ -90,9 +85,19 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
+const variableNames = generateVariableNamesNodeType('expr')
+
+const nodeCore: GlobalCodeGenerator = () => Sequence([
+    Class(variableNames.stateClass, [
+        Var('Map<Int, Float>', 'floatInputs'),
+        Var('Map<Int, string>', 'stringInputs'),
+        Var('Array<Float>', 'outputs'),
+    ]),
+])
+
+const generateInitialization: _NodeImplementation['generateInitialization'] = ({
     node: { args, type },
-    state,
+    state
 }) => {
     const inputs = type === 'expr' ? 
         validateAndListInputsExpr(args.tokenizedExpressions)
@@ -100,13 +105,16 @@ const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
             .filter(({ type }) => type !== 'signal')
 
     return ast`
-        ${ConstVar('Map<Int, Float>', state.floatInputs, 'new Map()')}
-        ${ConstVar('Map<Int, string>', state.stringInputs, 'new Map()')}
-        ${ConstVar('Array<Float>', state.outputs, `new Array(${args.tokenizedExpressions.length})`)}
+        ${ConstVar(variableNames.stateClass, state, `{
+            floatInputs: new Map(),
+            stringInputs: new Map(),
+            outputs: new Array(${args.tokenizedExpressions.length}),
+        }`)}
+
         ${inputs.filter(input => input.type === 'float' || input.type === 'int')
-            .map(input => `${state.floatInputs}.set(${input.id}, 0)`)}
+            .map(input => `${state}.floatInputs.set(${input.id}, 0)`)}
         ${inputs.filter(input => input.type === 'string')
-            .map(input => `${state.stringInputs}.set(${input.id}, '')`)}
+            .map(input => `${state}.stringInputs.set(${input.id}, '')`)}
     `
 }
 
@@ -135,11 +143,11 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     const hasInput0 = inputs.length && inputs[0].id === 0
 
     return {
-        '0': AnonFunc([Var('Message', 'm')], 'void')`
+        '0': AnonFunc([Var('Message', 'm')])`
             if (!msg_isBang(m)) {
                 for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
-                    ${state.stringInputs}.set(i, messageTokenToString(m, i))
-                    ${state.floatInputs}.set(i, messageTokenToFloat(m, i))
+                    ${state}.stringInputs.set(i, messageTokenToString(m, i))
+                    ${state}.floatInputs.set(i, messageTokenToFloat(m, i))
                 }
             }
 
@@ -147,10 +155,10 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 type === 'expr', 
                 () => `
                     ${args.tokenizedExpressions.map((tokens, i) => 
-                        `${state.outputs}[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
+                        `${state}.outputs[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
             
                     ${args.tokenizedExpressions.map((_, i) => 
-                        `${snds[`${i}`]}(msg_floats([${state.outputs}[${i}]]))`)}
+                        `${snds[`${i}`]}(msg_floats([${state}.outputs[${i}]]))`)}
                 `
             )}
             
@@ -163,15 +171,17 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 if (type === 'float' || type === 'int') {
                     return [
                         `${id}`, 
-                        AnonFunc([Var('Message', 'm')], 'void')`
-                            ${state.floatInputs}.set(${id}, messageTokenToFloat(m, 0));return
+                        AnonFunc([Var('Message', 'm')])`
+                            ${state}.floatInputs.set(${id}, messageTokenToFloat(m, 0))
+                            return
                         `
                     ]
                 } else if (type === 'string') {
                     return [
                         `${id}`, 
-                        AnonFunc([Var('Message', 'm')], 'void')`
-                            ${state.stringInputs}.set(${id}, messageTokenToString(m, 0));return
+                        AnonFunc([Var('Message', 'm')])`
+                            ${state}.stringInputs.set(${id}, messageTokenToString(m, 0))
+                            return
                         `
                     ]
                 } else {
@@ -291,7 +301,7 @@ export const tokenizeExpression = (expression: string) => {
 }
 
 export const renderTokenizedExpression = (
-    state: { [Parameter in keyof typeof stateVariables]: string },
+    state: VariableName,
     ins: PrecompiledNodeCode['ins'] | null,
     tokens: Array<ExpressionToken>, 
 ): Code =>
@@ -299,16 +309,16 @@ export const renderTokenizedExpression = (
     '+(' + tokens.map(token => {
         switch(token.type) {
             case 'float':
-                return `${state.floatInputs}.get(${token.id})`
+                return `${state}.floatInputs.get(${token.id})`
             case 'signal':
                 if (ins === null) {
                     throw new Error(`invalid token signal received`)
                 }
                 return ins[token.id]
             case 'int':
-                return `roundFloatAsPdInt(${state.floatInputs}.get(${token.id}))`
+                return `roundFloatAsPdInt(${state}.floatInputs.get(${token.id}))`
             case 'string':
-                return `commons_getArray(${state.stringInputs}.get(${token.id}))`
+                return `commons_getArray(${state}.stringInputs.get(${token.id}))`
             case 'indexing-start':
                 return '[toInt('
             case 'indexing-end':
@@ -377,22 +387,20 @@ const preprocessExpression = (args: PdJson.NodeArgs): Array<string> => {
 }
 
 const nodeImplementations: NodeImplementations = {
-    'expr': {
+    expr: {
         generateMessageReceivers,
-        stateVariables,
-        generateDeclarations,
+        generateInitialization,
         dependencies: [
             messageTokenToString,
             messageTokenToFloat,
             roundFloatAsPdInt,
             bangUtils,
             stdlib.commonsArrays,
+            nodeCore,
         ],
     },
     'expr~': {
         generateMessageReceivers,
-        stateVariables,
-        generateDeclarations,
         generateLoop: loopExprTilde,
         dependencies: [
             messageTokenToString,
@@ -400,6 +408,7 @@ const nodeImplementations: NodeImplementations = {
             roundFloatAsPdInt,
             bangUtils,
             stdlib.commonsArrays,
+            nodeCore,
         ],
     },
 }

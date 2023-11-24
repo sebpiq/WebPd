@@ -33,6 +33,9 @@ describe('artefacts', () => {
                 'compiledAsc',
                 'wasm',
             ])
+            assert.deepStrictEqual(listBuildSteps('wasm', 'wav'), [
+                'wav',
+            ])
             assert.deepStrictEqual(listBuildSteps('pdJson', 'pdJson'), [])
         })
 
@@ -48,6 +51,9 @@ describe('artefacts', () => {
                 'dspGraph',
                 'compiledAsc',
                 'wasm',
+                'wav',
+            ])
+            assert.deepStrictEqual(listBuildSteps('wasm', 'wav', 'wasm'), [
                 'wav',
             ])
         })

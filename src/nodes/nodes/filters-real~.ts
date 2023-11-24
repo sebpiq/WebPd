@@ -18,23 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { Code } from '@webpd/compiler'
+import { Class, Code, ConstVar, Sequence } from '@webpd/compiler'
 import { ast, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initValue: number
 }
-const stateVariables = {
-    lastInput: 1,
-    lastOutput: 1,
-}
-type _NodeImplementation = NodeImplementation<
-    NodeArguments,
-    typeof stateVariables
->
+
+type _NodeImplementation = NodeImplementation<NodeArguments>
 
 // TODO : tests + cleaner implementations
 // TODO : separate rfilters with lastInput from the ones that don't need
@@ -72,23 +67,34 @@ const makeNodeImplementation = ({
 }): _NodeImplementation => {
 
     // ------------------------------- generateDeclarations ------------------------------ //
-    const generateDeclarations: _NodeImplementation['generateDeclarations'] = ({
-        state,
-    }) => ast`
-        ${Var('Float', state.lastOutput, 0)}
-        ${Var('Float', state.lastInput, 0)}
-    `
+    const variableNames = generateVariableNamesNodeType('filter_r_t')
+
+    const nodeCore: GlobalCodeGenerator = () => Sequence([
+        Class(variableNames.stateClass, [
+            Var('Float', 'lastOutput'),
+            Var('Float', 'lastInput'),
+        ]),
+    ])
+
+    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                lastOutput: 0,
+                lastInput: 0,
+            }`)}
+        `
+
 
     // ------------------------------- generateLoop ------------------------------ //
     const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
-        ${state.lastOutput} = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, state.lastOutput, state.lastInput)}
-        ${state.lastInput} = ${ins.$0}
+        ${state}.lastOutput = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, `${state}.lastOutput`, `${state}.lastInput`)}
+        ${state}.lastInput = ${ins.$0}
     `
 
     return {
+        generateInitialization,
         generateLoop,
-        stateVariables,
-        generateDeclarations,
+        dependencies: [nodeCore],
     }
 }
 
