@@ -171,10 +171,8 @@ const makeNodeImplementation = ({
                 ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
             })
 
-            ${functional.renderIf(
-                args.outputOnLoad, 
-                `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state}.valueFloat])))`
-            )}
+            ${args.outputOnLoad ? 
+                `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state}.valueFloat])))`: null}
         `
 
     // ------------------------------- generateMessageReceivers ------------------------------ //

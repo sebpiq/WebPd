@@ -151,16 +151,13 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
                 }
             }
 
-            ${functional.renderIf(
-                type === 'expr', 
-                () => `
-                    ${args.tokenizedExpressions.map((tokens, i) => 
-                        `${state}.outputs[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
-            
-                    ${args.tokenizedExpressions.map((_, i) => 
-                        `${snds[`${i}`]}(msg_floats([${state}.outputs[${i}]]))`)}
-                `
-            )}
+            ${type === 'expr' ? `
+                ${args.tokenizedExpressions.map((tokens, i) => 
+                    `${state}.outputs[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
+        
+                ${args.tokenizedExpressions.map((_, i) => 
+                    `${snds[`${i}`]}(msg_floats([${state}.outputs[${i}]]))`)}
+            `: null}
             
             return
         `,

@@ -72,12 +72,12 @@ const makeNodeImplementation = ({
                 && msg_readStringToken(m, 0) === 'set'
             ) {
                 ${ConstVar('Message', 'setMessage', 'msg_slice(m, 1, msg_getLength(m))')}
-                ${functional.renderIf(messageMatch, 
-                    () => `if (${messageMatch('setMessage')}) {`)} 
+                ${messageMatch ? 
+                    `if (${messageMatch('setMessage')}) {`: null} 
                         state.value = setMessage    
                         return
-                ${functional.renderIf(messageMatch, 
-                    () => '}')}
+                ${messageMatch ? 
+                    '}': null}
 
             } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
                 return

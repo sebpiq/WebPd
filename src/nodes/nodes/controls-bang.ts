@@ -86,10 +86,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
             ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
         })
 
-        ${functional.renderIf(
-            args.outputOnLoad, 
-            `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`
-        )}
+        ${args.outputOnLoad ? 
+            `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`: null}
     `
 
 // ------------------------------- generateMessageReceivers ------------------------------ //
