@@ -39,7 +39,7 @@ import {
 } from '../test-helpers'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import { executeCompilation } from '@webpd/compiler'
+import compile from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { ast } from '@webpd/compiler'
 
@@ -89,7 +89,7 @@ describe('throw~ / catch~', () => {
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth'],
             throwArgs: NodeArguments,
-            catchArgs: NodeArguments,
+            catchArgs: NodeArguments
         ) => {
             const nodeImplementations: NodeImplementations = {
                 ...nodeImplementationsThrowCatchSendReceive,
@@ -139,24 +139,22 @@ describe('throw~ / catch~', () => {
             })
 
             const channelCount = { out: 1, in: 0 }
-            const compilation = nodeImplementationsTestHelpers.makeCompilation({
-                target,
-                graph,
-                nodeImplementations,
-                settings: {
-                    inletCallerSpecs: {
-                        throw2: ['0_message'],
-                    },
-                    audio: {
-                        channelCount,
-                        bitDepth,
-                    },
-                }
+
+            const compileResult = compile(graph, nodeImplementations, target, {
+                inletCallerSpecs: {
+                    throw2: ['0_message'],
+                },
+                audio: {
+                    channelCount,
+                    bitDepth,
+                },
             })
 
-            const code = executeCompilation(compilation)
+            if (compileResult.status !== 0) {
+                throw new Error('Compilation failed')
+            }
 
-            return await createTestEngine(compilation.target, bitDepth, code)
+            return await createTestEngine(target, bitDepth, compileResult.code)
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
@@ -213,7 +211,8 @@ describe('throw~ / catch~', () => {
         ) => {
             const nodeImplementations: NodeImplementations = {
                 'send~': nodeImplementationsThrowCatchSendReceive['send~'],
-                'receive~': nodeImplementationsThrowCatchSendReceive['receive~'],
+                'receive~':
+                    nodeImplementationsThrowCatchSendReceive['receive~'],
                 'dac~': nodeImplementationDac,
                 counter: {
                     loop: ({ globs, outs }) =>
@@ -227,9 +226,7 @@ describe('throw~ / catch~', () => {
                 counter: {
                     type: 'counter',
                     sinks: {
-                        '0': [
-                            ['send', '0'],
-                        ],
+                        '0': [['send', '0']],
                     },
                     outlets: {
                         '0': { id: '0', type: 'signal' },
@@ -260,24 +257,22 @@ describe('throw~ / catch~', () => {
             })
 
             const channelCount = { out: 2, in: 0 }
-            const compilation = nodeImplementationsTestHelpers.makeCompilation({
-                target,
-                graph,
-                nodeImplementations,
-                settings: {
-                    inletCallerSpecs: {
-                        receive2: ['0'],
-                    },
-                    audio: {
-                        channelCount,
-                        bitDepth,
-                    },
-                }
+
+            const compileResult = compile(graph, nodeImplementations, target, {
+                inletCallerSpecs: {
+                    receive2: ['0'],
+                },
+                audio: {
+                    channelCount,
+                    bitDepth,
+                },
             })
 
-            const code = executeCompilation(compilation)
+            if (compileResult.status !== 0) {
+                throw new Error('Compilation failed')
+            }
 
-            return await createTestEngine(compilation.target, bitDepth, code)
+            return await createTestEngine(target, bitDepth, compileResult.code)
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
@@ -296,7 +291,12 @@ describe('throw~ / catch~', () => {
 
                 assert.deepStrictEqual(
                     nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[0, 0], [1, 1], [2, 2], [3, 3]]
+                    [
+                        [0, 0],
+                        [1, 1],
+                        [2, 2],
+                        [3, 3],
+                    ]
                 )
             }
         )
@@ -319,7 +319,12 @@ describe('throw~ / catch~', () => {
 
                 assert.deepStrictEqual(
                     nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[0, 0], [1, 0], [2, 0], [3, 0]]
+                    [
+                        [0, 0],
+                        [1, 0],
+                        [2, 0],
+                        [3, 0],
+                    ]
                 )
             }
         )

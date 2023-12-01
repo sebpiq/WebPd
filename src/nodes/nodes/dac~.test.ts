@@ -34,7 +34,7 @@ import {
     TEST_PATCH,
 } from '../test-helpers'
 import { nodeImplementation, builder } from './dac~'
-import { executeCompilation, functional } from '@webpd/compiler'
+import compile, { functional } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { PartialNode } from '../../compile-dsp-graph/types'
 import { Sequence } from '@webpd/compiler'
@@ -98,14 +98,17 @@ describe('dac~', () => {
             const nodeImplementations: NodeImplementations = {
                 'dac~': nodeImplementation,
                 counter: {
-                    loop: ({ globs, outs }) => Sequence([
-                        functional
-                            .countTo(args.channelMapping.length)
-                            .map(
-                                (i) =>
-                                    `${outs[`${i}`]} = toFloat(${globs.frame}) * Math.pow(10, ${i})`
-                            )
-                    ]),
+                    loop: ({ globs, outs }) =>
+                        Sequence([
+                            functional
+                                .countTo(args.channelMapping.length)
+                                .map(
+                                    (i) =>
+                                        `${outs[`${i}`]} = toFloat(${
+                                            globs.frame
+                                        }) * Math.pow(10, ${i})`
+                                ),
+                        ]),
                 },
             }
 
@@ -128,39 +131,31 @@ describe('dac~', () => {
             })
 
             const channelCount = { out: 4, in: 0 }
-            const compilation = nodeImplementationsTestHelpers.makeCompilation({
-                target,
-                graph,
-                nodeImplementations,
-                settings: {
-                    audio: {
-                        channelCount,
-                        bitDepth,
-                    },
-                }
+            const compileResult = compile(graph, nodeImplementations, target, {
+                audio: {
+                    channelCount,
+                    bitDepth,
+                },
             })
 
-            const code =
-                executeCompilation(compilation)
+            if (compileResult.status !== 0) {
+                throw new Error('Compilation failed')
+            }
 
-            return await createTestEngine(
-                compilation.target,
-                bitDepth,
-                code
-            )
+            return await createTestEngine(target, bitDepth, compileResult.code)
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should route the channels according to arguments %s',
             async ({ target, bitDepth }) => {
                 const engine = await createTestDacEngine(target, bitDepth, {
-                        channelMapping: [0, 3],
-                    })
+                    channelMapping: [0, 3],
+                })
                 assert.deepStrictEqual(
                     nodeImplementationsTestHelpers.roundNestedFloats(
                         await nodeImplementationsTestHelpers.generateFrames(
                             engine,
-                            4,
+                            4
                         )
                     ),
                     [
@@ -183,7 +178,7 @@ describe('dac~', () => {
                     nodeImplementationsTestHelpers.roundNestedFloats(
                         await nodeImplementationsTestHelpers.generateFrames(
                             engine,
-                            4,
+                            4
                         )
                     ),
                     [

@@ -39,6 +39,7 @@ import {
 import { Message } from '@webpd/compiler/src/run/types'
 import assert from 'assert'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile from '@webpd/compiler'
 
 const NODE_TYPES = ['symbolatom', 'listbox', 'floatatom'] as const
 
@@ -115,35 +116,32 @@ describe('controls-atoms', () => {
                     },
                 })
 
-                const compilation =
-                    nodeImplementationsTestHelpers.makeCompilation({
-                        target,
-                        graph,
-                        nodeImplementations: _nodeImplementations,
-                        settings: {
-                            audio: {
-                                bitDepth,
-                                channelCount: { in: 0, out: 0 },
-                            },
-                            inletCallerSpecs: {
-                                send: ['0'],
-                                control: ['0'],
-                            },
-                            outletListenerSpecs: {
-                                receive: ['0'],
-                                control: ['0'],
-                            },
+                const compileResult = compile(                        graph,
+                    _nodeImplementations,
+                    target,
+                    {
+                        audio: {
+                            bitDepth,
+                            channelCount: { in: 0, out: 0 },
                         },
-                    })
+                        inletCallerSpecs: {
+                            send: ['0'],
+                            control: ['0'],
+                        },
+                        outletListenerSpecs: {
+                            receive: ['0'],
+                            control: ['0'],
+                        },
+                    },)
 
-                const code =
-                    nodeImplementationsTestHelpers.executeCompilation(
-                        compilation
-                    )
+                if (compileResult.status !== 0) {
+                    throw new Error('Compilation failed')
+                }
+
                 const engine = await createTestEngine(
-                    compilation.target,
+                    target,
                     bitDepth,
-                    code
+                    compileResult.code
                 )
                 engine.configure(44100, 1)
                 return engine

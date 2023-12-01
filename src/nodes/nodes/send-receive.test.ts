@@ -22,7 +22,6 @@ import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helper
 import {
     AudioSettings,
     CompilerTarget,
-    NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
 import { Message } from '@webpd/compiler/src/run/types'
 import { nodeImplementations, builders } from './send-receive'
@@ -32,7 +31,7 @@ import {
 } from '../test-helpers'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import { executeCompilation } from '@webpd/compiler'
+import compile from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 
 describe('send / receive', () => {
@@ -89,32 +88,30 @@ describe('send / receive', () => {
                 },
             })
 
-            const compilation = nodeImplementationsTestHelpers.makeCompilation({
-                target,
-                graph,
-                nodeImplementations,
-                settings: {
-                    audio: {
-                        bitDepth,
-                        channelCount: { in: 0, out: 0 },
-                    },
-                    inletCallerSpecs: {
-                        send1: ['0', '1'],
-                        send2: ['0'],
-                    },
-                    outletListenerSpecs: {
-                        receive1: ['0'],
-                        receive2: ['0'],
-                        receive2bis: ['0'],
-                    },
+            const compileResult = compile(graph, nodeImplementations, target, {
+                audio: {
+                    bitDepth,
+                    channelCount: { in: 0, out: 0 },
+                },
+                inletCallerSpecs: {
+                    send1: ['0', '1'],
+                    send2: ['0'],
+                },
+                outletListenerSpecs: {
+                    receive1: ['0'],
+                    receive2: ['0'],
+                    receive2bis: ['0'],
                 },
             })
 
-            const code = executeCompilation(compilation)
+            if (compileResult.status !== 0) {
+                throw new Error('Compilation failed')
+            }
+
             const engine = await createTestEngine(
-                compilation.target,
+                target,
                 bitDepth,
-                code
+                compileResult.code
             )
             engine.configure(44100, 1)
             return engine

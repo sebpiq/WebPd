@@ -39,6 +39,7 @@ import {
 import { Message } from '@webpd/compiler/src/run/types'
 import assert from 'assert'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile from '@webpd/compiler'
 
 describe('controls-bang', () => {
     describe('builders', () => {
@@ -180,32 +181,29 @@ describe('controls-bang', () => {
                 },
             })
 
-            const compilation = nodeImplementationsTestHelpers.makeCompilation({
-                target,
-                graph,
-                settings: {
-                    audio: {
-                        bitDepth,
-                        channelCount: { in: 0, out: 0 },
-                    },
-                    inletCallerSpecs: {
-                        send: ['0'],
-                        bang: ['0'],
-                    },
-                    outletListenerSpecs: {
-                        receive: ['0'],
-                        bang: ['0'],
-                    },
+            const compileResult = compile(graph, _nodeImplementations, target, {
+                audio: {
+                    bitDepth,
+                    channelCount: { in: 0, out: 0 },
                 },
-                nodeImplementations: _nodeImplementations,
+                inletCallerSpecs: {
+                    send: ['0'],
+                    bang: ['0'],
+                },
+                outletListenerSpecs: {
+                    receive: ['0'],
+                    bang: ['0'],
+                },
             })
 
-            const code =
-                nodeImplementationsTestHelpers.executeCompilation(compilation)
+            if (compileResult.status !== 0) {
+                throw new Error('Compilation failed')
+            }
+
             const engine = await createTestEngine(
-                compilation.target,
+                target,
                 bitDepth,
-                code
+                compileResult.code
             )
             engine.configure(44100, 1)
             return engine

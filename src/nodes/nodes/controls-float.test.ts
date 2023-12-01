@@ -37,23 +37,13 @@ import {
     AudioSettings,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
-import {
-    Message,
-} from '@webpd/compiler/src/run/types'
+import { Message } from '@webpd/compiler/src/run/types'
 import assert from 'assert'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile from '@webpd/compiler'
 
-const NODE_TYPES_NUMBERS = [
-    'hsl',
-    'hradio',
-    'vsl',
-    'vradio',
-] as const
-const NODE_TYPES_ALL = [
-    ...NODE_TYPES_NUMBERS, 
-    'nbx', 
-    'tgl',
-] as const
+const NODE_TYPES_NUMBERS = ['hsl', 'hradio', 'vsl', 'vradio'] as const
+const NODE_TYPES_ALL = [...NODE_TYPES_NUMBERS, 'nbx', 'tgl'] as const
 
 const CONTROLS_TEST_PARAMETERS_NUMBERS = testParametersCombine<{
     nodeType: keyof typeof builders
@@ -75,14 +65,18 @@ describe('controls-float', () => {
                     receiveBusName: 'empty',
                     sendBusName: 'empty',
                 })
-                testNodeTranslateArgs(builders['nbx'], [-11, 11, 1, 22, 'RCV', 'SND'], {
-                    minValue: -11,
-                    maxValue: 11,
-                    initValue: 22,
-                    outputOnLoad: true,
-                    receiveBusName: 'RCV',
-                    sendBusName: 'SND',
-                })
+                testNodeTranslateArgs(
+                    builders['nbx'],
+                    [-11, 11, 1, 22, 'RCV', 'SND'],
+                    {
+                        minValue: -11,
+                        maxValue: 11,
+                        initValue: 22,
+                        outputOnLoad: true,
+                        receiveBusName: 'RCV',
+                        sendBusName: 'SND',
+                    }
+                )
                 // builderWithoutMin
                 testNodeTranslateArgs(builders['tgl'], [11, 0, 22], {
                     minValue: 0,
@@ -92,14 +86,18 @@ describe('controls-float', () => {
                     receiveBusName: 'empty',
                     sendBusName: 'empty',
                 })
-                testNodeTranslateArgs(builders['tgl'], [11, 1, 22, 'RCV', 'SND'], {
-                    minValue: 0,
-                    maxValue: 11,
-                    initValue: 22,
-                    outputOnLoad: true,
-                    receiveBusName: 'RCV',
-                    sendBusName: 'SND',
-                })
+                testNodeTranslateArgs(
+                    builders['tgl'],
+                    [11, 1, 22, 'RCV', 'SND'],
+                    {
+                        minValue: 0,
+                        maxValue: 11,
+                        initValue: 22,
+                        outputOnLoad: true,
+                        receiveBusName: 'RCV',
+                        sendBusName: 'SND',
+                    }
+                )
             })
         })
 
@@ -203,45 +201,48 @@ describe('controls-float', () => {
                     },
                     send: {
                         type: 'send',
-                        ...buildersSendReceive['send'].build({ busName: 'BUS_TO_CTRL' }),
+                        ...buildersSendReceive['send'].build({
+                            busName: 'BUS_TO_CTRL',
+                        }),
                         args: { busName: 'BUS_TO_CTRL' },
                     },
                     receive: {
                         type: 'receive',
-                        ...buildersSendReceive['receive'].build({ busName: 'BUS_FROM_CTRL' }),
+                        ...buildersSendReceive['receive'].build({
+                            busName: 'BUS_FROM_CTRL',
+                        }),
                         args: { busName: 'BUS_FROM_CTRL' },
                     },
                 })
 
-                const compilation =
-                    nodeImplementationsTestHelpers.makeCompilation({
-                        target,
-                        graph,
-                        nodeImplementations: _nodeImplementations,
-                        settings: {
-                            audio: {
-                                bitDepth,
-                                channelCount: { in: 0, out: 0 }
-                            },
-                            inletCallerSpecs: {
-                                send: ['0'],
-                                control: ['0'],
-                            },
-                            outletListenerSpecs: {
-                                receive: ['0'],
-                                control: ['0'],
-                            },
+                const compileResult = compile(
+                    graph,
+                    _nodeImplementations,
+                    target,
+                    {
+                        audio: {
+                            bitDepth,
+                            channelCount: { in: 0, out: 0 },
                         },
-                    })
+                        inletCallerSpecs: {
+                            send: ['0'],
+                            control: ['0'],
+                        },
+                        outletListenerSpecs: {
+                            receive: ['0'],
+                            control: ['0'],
+                        },
+                    }
+                )
 
-                const code =
-                    nodeImplementationsTestHelpers.executeCompilation(
-                        compilation
-                    )
+                if (compileResult.status !== 0) {
+                    throw new Error('Compilation failed')
+                }
+
                 const engine = await createTestEngine(
-                    compilation.target,
+                    target,
                     bitDepth,
-                    code
+                    compileResult.code
                 )
                 engine.configure(44100, 1)
                 return engine
@@ -278,7 +279,7 @@ describe('controls-float', () => {
             it.each(CONTROLS_TEST_PARAMETERS_ALL)(
                 'should send / receive messages to buses on bang %s',
                 async ({ target, bitDepth, nodeType }) => {
-                    const args = {...CONTROL_ARGS_DEFAULT}
+                    const args = { ...CONTROL_ARGS_DEFAULT }
                     if (nodeType === 'tgl') {
                         args['initValue'] = 0
                     }
@@ -303,8 +304,12 @@ describe('controls-float', () => {
                         receivedControl.push(msg)
 
                     engine.inletCallers.send['0'](['bang'])
-                    assert.deepStrictEqual(received, [[nodeType === 'tgl' ? args.maxValue : args.initValue]])
-                    assert.deepStrictEqual(receivedControl, [[nodeType === 'tgl' ? args.maxValue : args.initValue]])
+                    assert.deepStrictEqual(received, [
+                        [nodeType === 'tgl' ? args.maxValue : args.initValue],
+                    ])
+                    assert.deepStrictEqual(receivedControl, [
+                        [nodeType === 'tgl' ? args.maxValue : args.initValue],
+                    ])
                 }
             )
 

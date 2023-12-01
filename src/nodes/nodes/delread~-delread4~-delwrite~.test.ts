@@ -42,13 +42,10 @@ import {
     nodeImplementation as nodeImplementationDac,
     builder as builderDac,
 } from './dac~'
-import {
-    testNodeTranslateArgs,
-    testParametersCombine,
-} from '../test-helpers'
+import { testNodeTranslateArgs, testParametersCombine } from '../test-helpers'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import { executeCompilation } from '@webpd/compiler'
+import compile from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { ast } from '@webpd/compiler'
 
@@ -112,7 +109,8 @@ describe('delread~ / delwrite~', () => {
                 'dac~': nodeImplementationDac,
                 'sig~': nodeImplementationSig,
                 counter: {
-                    loop: ({ globs, outs }) => ast`${outs.$0} = toFloat(${globs.frame})`,
+                    loop: ({ globs, outs }) =>
+                        ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
 
@@ -133,7 +131,9 @@ describe('delread~ / delwrite~', () => {
                 },
                 delayTimeMsec: {
                     type: 'sig~',
-                    ...builderSig.build({ initValue: delreadArgs.initDelayMsec }),
+                    ...builderSig.build({
+                        initValue: delreadArgs.initDelayMsec,
+                    }),
                     args: { initValue: delreadArgs.initDelayMsec },
                     sinks: { '0': [['delayR', '0']] },
                 },
@@ -151,25 +151,27 @@ describe('delread~ / delwrite~', () => {
             })
 
             const channelCount = { out: 1, in: 0 }
-            const compilation = nodeImplementationsTestHelpers.makeCompilation({
-                target,
-                graph,
-                nodeImplementations,
-                settings: {
-                    inletCallerSpecs: {
-                        delayTimeMsec: ['0'],
-                        delayW: ['0_message'],
-                    },
-                    audio: {
-                        channelCount,
-                        bitDepth,
-                    },
-                }
+
+            const compileResult = compile(graph, nodeImplementations, target, {
+                inletCallerSpecs: {
+                    delayTimeMsec: ['0'],
+                    delayW: ['0_message'],
+                },
+                audio: {
+                    channelCount,
+                    bitDepth,
+                },
             })
 
-            const code = executeCompilation(compilation)
+            if (compileResult.status !== 0) {
+                throw new Error('Compilation failed')
+            }
 
-            const engine = await createTestEngine(compilation.target, bitDepth, code)
+            const engine = await createTestEngine(
+                target,
+                bitDepth,
+                compileResult.code
+            )
             engine.configure(SAMPLE_RATE, 1)
             return engine
         }
@@ -242,6 +244,5 @@ describe('delread~ / delwrite~', () => {
                 )
             }
         )
-
     })
 })

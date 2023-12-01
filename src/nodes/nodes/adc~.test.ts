@@ -34,7 +34,7 @@ import {
 } from '../test-helpers'
 import { builder, nodeImplementation as nodeImplementationAdc } from './adc~'
 import { nodeImplementation as nodeImplementationDac } from './dac~'
-import { executeCompilation, functional } from '@webpd/compiler'
+import compile, { functional } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { PartialNode } from '../../compile-dsp-graph/types'
 
@@ -126,20 +126,18 @@ describe('adc~', () => {
                 },
             })
 
-            const compilation = nodeImplementationsTestHelpers.makeCompilation({
-                target,
-                graph,
-                nodeImplementations,
-                settings: {
-                    audio: {
-                        channelCount,
-                        bitDepth,
-                    },
+            const compileResult = compile(graph, nodeImplementations, target, {
+                audio: {
+                    channelCount,
+                    bitDepth,
                 },
             })
 
-            const code = executeCompilation(compilation)
-            return await createTestEngine(compilation.target, bitDepth, code)
+            if (compileResult.status !== 0) {
+                throw new Error('Compilation failed')
+            }
+
+            return await createTestEngine(target, bitDepth, compileResult.code)
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
