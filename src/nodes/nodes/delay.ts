@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
@@ -54,118 +54,111 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ generateDeclarations ------------------------------ //
-    const variableNames = generateVariableNamesNodeType('delay', [
-        'setDelay',
-        'scheduleDelay',
-        'stop',
-    ])
+// ------------------------------- node implementation ------------------------------ //
+const variableNames = generateVariableNamesNodeType('delay', [
+    'setDelay',
+    'scheduleDelay',
+    'stop',
+])
 
-    const nodeCore: GlobalCodeGenerator = () => Sequence([
-        Class(variableNames.stateClass, [
-            Var('Float', 'delay', '0'),
-            Var('Float', 'sampleRatio', '1'),
-            Var('SkedId', 'scheduledBang', 'SKED_ID_NULL'),
-        ]),
+const nodeImplementation: _NodeImplementation = {
+    initialization: ({ node: { args }, state, globs }) => ast`
+        ${ConstVar(variableNames.stateClass, state, `{
+            delay: 0,
+            sampleRatio: 1,
+            scheduledBang: SKED_ID_NULL,
+        }`)}
 
-        Func(variableNames.setDelay, [
-            Var(variableNames.stateClass, 'state'),
-            Var('Float', 'delay'),
-        ], 'void')`
-            state.delay = Math.max(0, delay)
-        `,
+        commons_waitEngineConfigure(() => {
+            ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
+            ${variableNames.setDelay}(${state}, ${args.delay})
+        })
+    `,
 
-        Func(variableNames.scheduleDelay, [
-            Var(variableNames.stateClass, 'state'),
-            Var('SkedCallback', 'callback'),
-            Var('Int', 'currentFrame'),
-        ], 'void')`
-            if (state.scheduledBang !== SKED_ID_NULL) {
-                ${variableNames.stop}(state)
-            }
-            state.scheduledBang = commons_waitFrame(toInt(
-                Math.round(
-                    toFloat(currentFrame) + state.delay * state.sampleRatio)),
-                callback
-            )
-        `,
-
-        Func(variableNames.stop, [
-            Var(variableNames.stateClass, 'state'),
-        ], 'void')`
-            commons_cancelWaitFrame(state.scheduledBang)
-            state.scheduledBang = SKED_ID_NULL
-        `
-    ])
-    
-    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state, globs }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
-                delay: 0,
-                sampleRatio: 1,
-                scheduledBang: SKED_ID_NULL,
-            }`)}
-
-            commons_waitEngineConfigure(() => {
-                ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-                ${variableNames.setDelay}(${state}, ${args.delay})
-            })
-        `
-
-// ------------------------------ generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_getLength(m) === 1) {
-            if (msg_isStringToken(m, 0)) {
-                ${ConstVar('string', 'action', 'msg_readStringToken(m, 0)')}
-                if (action === 'bang' || action === 'start') {
+    messageReceivers: ({ state, globs, snds }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_getLength(m) === 1) {
+                if (msg_isStringToken(m, 0)) {
+                    ${ConstVar('string', 'action', 'msg_readStringToken(m, 0)')}
+                    if (action === 'bang' || action === 'start') {
+                        ${variableNames.scheduleDelay}(
+                            ${state}, 
+                            () => ${snds.$0}(msg_bang()),
+                            ${globs.frame},
+                        )
+                        return
+                    } else if (action === 'stop') {
+                        ${variableNames.stop}(${state})
+                        return
+                    }
+                    
+                } else if (msg_isFloatToken(m, 0)) {
+                    ${variableNames.setDelay}(${state}, msg_readFloatToken(m, 0))
                     ${variableNames.scheduleDelay}(
-                        ${state}, 
+                        ${state},
                         () => ${snds.$0}(msg_bang()),
                         ${globs.frame},
                     )
-                    return
-                } else if (action === 'stop') {
-                    ${variableNames.stop}(${state})
-                    return
+                    return 
                 }
-                
-            } else if (msg_isFloatToken(m, 0)) {
-                ${variableNames.setDelay}(${state}, msg_readFloatToken(m, 0))
-                ${variableNames.scheduleDelay}(
-                    ${state},
-                    () => ${snds.$0}(msg_bang()),
-                    ${globs.frame},
+            
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'tempo'
+            ) {
+                ${state}.sampleRatio = computeUnitInSamples(
+                    ${globs.sampleRate}, 
+                    msg_readFloatToken(m, 1), 
+                    msg_readStringToken(m, 2)
                 )
-                return 
+                return
             }
+        `,
         
-        } else if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
-            && msg_readStringToken(m, 0) === 'tempo'
-        ) {
-            ${state}.sampleRatio = computeUnitInSamples(
-                ${globs.sampleRate}, 
-                msg_readFloatToken(m, 1), 
-                msg_readStringToken(m, 2)
-            )
-            return
-        }
-    `,
-    
-    '1': coldFloatInletWithSetter(variableNames.setDelay, state)
-})
+        '1': coldFloatInletWithSetter(variableNames.setDelay, state)
+    }),
 
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
     dependencies: [
         computeUnitInSamples,
         bangUtils,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
-        nodeCore
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'delay', '0'),
+                Var('Float', 'sampleRatio', '1'),
+                Var('SkedId', 'scheduledBang', 'SKED_ID_NULL'),
+            ]),
+    
+            Func(variableNames.setDelay, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Float', 'delay'),
+            ], 'void')`
+                state.delay = Math.max(0, delay)
+            `,
+    
+            Func(variableNames.scheduleDelay, [
+                Var(variableNames.stateClass, 'state'),
+                Var('SkedCallback', 'callback'),
+                Var('Int', 'currentFrame'),
+            ], 'void')`
+                if (state.scheduledBang !== SKED_ID_NULL) {
+                    ${variableNames.stop}(state)
+                }
+                state.scheduledBang = commons_waitFrame(toInt(
+                    Math.round(
+                        toFloat(currentFrame) + state.delay * state.sampleRatio)),
+                    callback
+                )
+            `,
+    
+            Func(variableNames.stop, [
+                Var(variableNames.stateClass, 'state'),
+            ], 'void')`
+                commons_cancelWaitFrame(state.scheduledBang)
+                state.scheduledBang = SKED_ID_NULL
+            `
+        ])
     ],
 }
 

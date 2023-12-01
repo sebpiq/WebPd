@@ -71,13 +71,13 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
 
 // -------------------------------- send ----------------------------------- //
 const nodeImplementationSend: _NodeImplementation = {
-    generateInitialization: ({ node: { args }, state }) => 
+    initialization: ({ node: { args }, state }) => 
         ast`
             ${ConstVar(variableNames.stateClass, state, `{
                 busName: "${args.busName}",
             }`)}
         `,
-    generateMessageReceivers: ({
+    messageReceivers: ({
         state,
     }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -96,7 +96,7 @@ const nodeImplementationSend: _NodeImplementation = {
 
 // -------------------------------- receive ----------------------------------- //
 const nodeImplementationReceive: _NodeImplementation = {
-    generateInitialization: ({ node: { args }, snds }) => 
+    initialization: ({ node: { args }, snds }) => 
         ast`
             commons_waitEngineConfigure(() => {
                 msgBusSubscribe("${args.busName}", ${snds.$0})

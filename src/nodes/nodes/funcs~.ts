@@ -21,6 +21,7 @@
 import { NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
+import { ast } from '@webpd/compiler'
 
 interface NodeArguments {}
 
@@ -39,12 +40,12 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
-    'abs~': { generateLoopInline: ({ ins }) => `Math.abs(${ins.$0})` },
-    'cos~': { generateLoopInline: ({ ins }) => `Math.cos(${ins.$0} * 2 * Math.PI)` },
-    'wrap~': { generateLoopInline: ({ ins }) => `(1 + (${ins.$0} % 1)) % 1` },
-    'sqrt~': { generateLoopInline: ({ ins }) => `${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0` },
-    'mtof~': { generateLoopInline: ({ ins }) => `mtof(${ins.$0})`, dependencies: [mtof] },
-    'ftom~': { generateLoopInline: ({ ins }) => `ftom(${ins.$0})`, dependencies: [ftom] },
+    'abs~': { inlineLoop: ({ ins }) => ast`Math.abs(${ins.$0})` },
+    'cos~': { inlineLoop: ({ ins }) => ast`Math.cos(${ins.$0} * 2 * Math.PI)` },
+    'wrap~': { inlineLoop: ({ ins }) => ast`(1 + (${ins.$0} % 1)) % 1` },
+    'sqrt~': { inlineLoop: ({ ins }) => ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0` },
+    'mtof~': { inlineLoop: ({ ins }) => ast`mtof(${ins.$0})`, dependencies: [mtof] },
+    'ftom~': { inlineLoop: ({ ins }) => ast`ftom(${ins.$0})`, dependencies: [ftom] },
 }
 
 const builders = {

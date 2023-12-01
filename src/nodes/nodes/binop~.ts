@@ -22,6 +22,7 @@ import { NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { pow } from '../global-code/funcs'
+import { ast } from '@webpd/compiler'
 
 interface NodeArguments {
     value: number
@@ -55,28 +56,28 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
     },
 })
 
-// ------------------------------------------------------------------- //
+// ------------------------------- node implementation ------------------------------ //
 const nodeImplementations: NodeImplementations = {
     '+~': {
-        generateLoopInline: ({ ins }) => `${ins.$0} + ${ins.$1}`,
+        inlineLoop: ({ ins }) => ast`${ins.$0} + ${ins.$1}`,
     },
     '-~': {
-        generateLoopInline: ({ ins }) => `${ins.$0} - ${ins.$1}`,
+        inlineLoop: ({ ins }) => ast`${ins.$0} - ${ins.$1}`,
     },
     '*~': {
-        generateLoopInline: ({ ins }) => `${ins.$0} * ${ins.$1}`,
+        inlineLoop: ({ ins }) => ast`${ins.$0} * ${ins.$1}`,
     },
     '/~': {
-        generateLoopInline: ({ ins }) => `${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
+        inlineLoop: ({ ins }) => ast`${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
     },
     'min~': {
-        generateLoopInline: ({ ins }) => `Math.min(${ins.$0}, ${ins.$1})`,
+        inlineLoop: ({ ins }) => ast`Math.min(${ins.$0}, ${ins.$1})`,
     },
     'max~': {
-        generateLoopInline: ({ ins }) => `Math.max(${ins.$0}, ${ins.$1})`,
+        inlineLoop: ({ ins }) => ast`Math.max(${ins.$0}, ${ins.$1})`,
     },
     'pow~': {
-        generateLoopInline: ({ ins }) => `pow(${ins.$0}, ${ins.$1})`,
+        inlineLoop: ({ ins }) => ast`pow(${ins.$0}, ${ins.$1})`,
         dependencies: [pow],
     },
 }

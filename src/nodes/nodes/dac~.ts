@@ -66,29 +66,28 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({
-    ins,
-    globs,
-    node,
-    compilation: { audioSettings, target },
-}) => Sequence([
-    node.args.channelMapping
-        // Save the original index
-        .map((destination, i) => [destination, i])
-        // Ignore channels that are out of bounds
-        .filter(
-            ([destination]) =>
-                0 <= destination && destination < audioSettings.channelCount.out
-        )
-        .map(([destination, i]) =>
-            target === 'javascript'
-                ? `${globs.output}[${destination}][${globs.iterFrame}] = ${ins[`${i}`]}`
-                : `${globs.output}[${globs.iterFrame} + ${globs.blockSize} * ${destination}] = ${ins[`${i}`]}`
-        )
-])
-
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateLoop }
+// ------------------------------- node implementation ------------------------------ //
+const nodeImplementation: _NodeImplementation = { 
+    loop: ({
+        ins,
+        globs,
+        node,
+        compilation: { settings: { audio }, target },
+    }) => Sequence([
+        node.args.channelMapping
+            // Save the original index
+            .map((destination, i) => [destination, i])
+            // Ignore channels that are out of bounds
+            .filter(
+                ([destination]) =>
+                    0 <= destination && destination < audio.channelCount.out
+            )
+            .map(([destination, i]) =>
+                target === 'javascript'
+                    ? `${globs.output}[${destination}][${globs.iterFrame}] = ${ins[`${i}`]}`
+                    : `${globs.output}[${globs.iterFrame} + ${globs.blockSize} * ${destination}] = ${ins[`${i}`]}`
+            )
+    ])
+}
 
 export { builder, nodeImplementation, NodeArguments }

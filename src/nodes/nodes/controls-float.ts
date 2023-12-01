@@ -88,6 +88,7 @@ const builderWithoutMin: _NodeBuilder = {
     build,
 }
 
+// ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = ({
     prepareStoreValue,
     prepareStoreValueBang,
@@ -100,101 +101,95 @@ const makeNodeImplementation = ({
 
     const variableNames = generateVariableNamesNodeType(name, ['receiveMessage'])
 
-    const nodeCore: GlobalCodeGenerator = () => Sequence([
-
-        Func(variableNames.receiveMessage, [
-            Var(controlsCoreVariableNames.stateClass, 'state'),
-            Var('Message', 'm'),
-        ], 'void')`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${prepareStoreValue ? 
-                    `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 0)`)}`
-                    : `state.valueFloat = msg_readFloatToken(m, 0)`}
-                ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
-                state.messageSender(outMessage)
-                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                    msgBusPublish(state.sendBusName, outMessage)
-                }
-                return
-
-            } else if (msg_isBang(m)) {
-                ${prepareStoreValueBang ? 
-                    `state.valueFloat = ${prepareStoreValueBang(`state.valueFloat`)}`
-                : null}
-                ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
-                state.messageSender(outMessage)
-                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                    msgBusPublish(state.sendBusName, outMessage)
-                }
-                return
-
-            } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN]) 
-                && msg_readStringToken(m, 0) === 'set'
-            ) {
-                ${prepareStoreValue ? 
-                    `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 1)`)}`
-                    : `state.valueFloat = msg_readFloatToken(m, 1)`}
-                return
-            
-            } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
-                return
-            }
-        `
-    ])
-
-    // ------------------------------- generateDeclarations ------------------------------ //
-    const generateInitialization: _NodeImplementation['generateInitialization'] = ({
-        state,
-        snds,
-        node: { args },
-    }) =>
-        // There is a circular dependency problem between the state and snds.$0 so we can actually
-        // only use snds.$0 inside the callback of `commons_waitEngineConfigure`.
-        ast`
-            ${Var(controlsCoreVariableNames.stateClass, state, ast`{
-                minValue: ${args.minValue},
-                maxValue: ${args.maxValue},
-                valueFloat: ${args.initValue},
-                value: msg_create([]),
-                receiveBusName: "${args.receiveBusName}",
-                sendBusName: "${args.sendBusName}",
-                messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
-                messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
-            }`)}
-
-            commons_waitEngineConfigure(() => {
-                ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-                    ${variableNames.receiveMessage}(${state}, m)
-                `}
-                ${state}.messageSender = ${snds.$0}
-                ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
-            })
-
-            ${args.outputOnLoad ? 
-                `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state}.valueFloat])))`: null}
-        `
-
-    // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
-        state, 
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            ${variableNames.receiveMessage}(${state}, m)
-            return
-        `
-    })
-
     return {
-        generateInitialization,
-        generateMessageReceivers,
+        initialization: ({
+            state,
+            snds,
+            node: { args },
+        }) =>
+            // There is a circular dependency problem between the state and snds.$0 so we can actually
+            // only use snds.$0 inside the callback of `commons_waitEngineConfigure`.
+            ast`
+                ${Var(controlsCoreVariableNames.stateClass, state, ast`{
+                    minValue: ${args.minValue},
+                    maxValue: ${args.maxValue},
+                    valueFloat: ${args.initValue},
+                    value: msg_create([]),
+                    receiveBusName: "${args.receiveBusName}",
+                    sendBusName: "${args.sendBusName}",
+                    messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
+                    messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
+                }`)}
+    
+                commons_waitEngineConfigure(() => {
+                    ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
+                        ${variableNames.receiveMessage}(${state}, m)
+                    `}
+                    ${state}.messageSender = ${snds.$0}
+                    ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+                })
+    
+                ${args.outputOnLoad ? 
+                    `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state}.valueFloat])))`: null}
+            `,
+        
+        messageReceivers: ({ 
+            state, 
+        }) => ({
+            '0': AnonFunc([Var('Message', 'm')])`
+                ${variableNames.receiveMessage}(${state}, m)
+                return
+            `
+        }),
+
         dependencies: [
             bangUtils,
             messageBuses,
             stdlib.commonsWaitEngineConfigure,
             stdlib.commonsWaitFrame,
             controlsCore,
-            nodeCore,
+            () => Sequence([
+
+                Func(variableNames.receiveMessage, [
+                    Var(controlsCoreVariableNames.stateClass, 'state'),
+                    Var('Message', 'm'),
+                ], 'void')`
+                    if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                        ${prepareStoreValue ? 
+                            `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 0)`)}`
+                            : `state.valueFloat = msg_readFloatToken(m, 0)`}
+                        ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
+                        state.messageSender(outMessage)
+                        if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                            msgBusPublish(state.sendBusName, outMessage)
+                        }
+                        return
+        
+                    } else if (msg_isBang(m)) {
+                        ${prepareStoreValueBang ? 
+                            `state.valueFloat = ${prepareStoreValueBang(`state.valueFloat`)}`
+                        : null}
+                        ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
+                        state.messageSender(outMessage)
+                        if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                            msgBusPublish(state.sendBusName, outMessage)
+                        }
+                        return
+        
+                    } else if (
+                        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN]) 
+                        && msg_readStringToken(m, 0) === 'set'
+                    ) {
+                        ${prepareStoreValue ? 
+                            `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 1)`)}`
+                            : `state.valueFloat = msg_readFloatToken(m, 1)`}
+                        return
+                    
+                    } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                        return
+                    }
+                `
+            ]),
         ],
     }
 }

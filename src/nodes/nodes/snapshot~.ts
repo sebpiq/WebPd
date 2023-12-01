@@ -58,20 +58,20 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     ]),
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             currentValue: 0
         }`)}
     `
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state }) => ast`
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({ ins, state }) => ast`
     ${state}.currentValue = ${ins.$0}
 `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, snds }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state, snds }) => ({
     '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
         if (msg_isBang(m)) {
             ${snds.$0}(msg_floats([${state}.currentValue]))
@@ -82,9 +82,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateLoop,
-    generateMessageReceivers,
-    generateInitialization,
+    loop: loop,
+    messageReceivers: messageReceivers,
+    initialization: initialization,
     dependencies: [ 
         bangUtils,
         nodeCore,

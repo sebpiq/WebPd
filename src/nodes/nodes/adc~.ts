@@ -65,28 +65,27 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({
-    outs,
-    globs,
-    node,
-    compilation: { audioSettings, target },
-}) => Sequence([
-    node.args.channelMapping
-        // Save the original index 
-        .map((source, i) => [source, i])
-        // Ignore channels that are out of bounds
-        .filter(
-            ([source]) => 0 <= source && source < audioSettings.channelCount.in
-        )
-        .map(([source, i]) =>
-            target === 'javascript'
-                ? `${outs[`${i}`]} = ${globs.input}[${source}][${globs.iterFrame}]`
-                : `${outs[`${i}`]} = ${globs.input}[${globs.iterFrame} + ${globs.blockSize} * ${source}]`
-        )
-    ])
-
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateLoop }
+// ------------------------------- node implementation ------------------------------ //
+const nodeImplementation: _NodeImplementation = { 
+    loop: ({
+        outs,
+        globs,
+        node,
+        compilation: { settings: { audio }, target },
+    }) => Sequence([
+        node.args.channelMapping
+            // Save the original index 
+            .map((source, i) => [source, i])
+            // Ignore channels that are out of bounds
+            .filter(
+                ([source]) => 0 <= source && source < audio.channelCount.in
+            )
+            .map(([source, i]) =>
+                target === 'javascript'
+                    ? `${outs[`${i}`]} = ${globs.input}[${source}][${globs.iterFrame}]`
+                    : `${outs[`${i}`]} = ${globs.input}[${globs.iterFrame} + ${globs.blockSize} * ${source}]`
+            )
+        ])
+}
 
 export { builder, nodeImplementation, NodeArguments }

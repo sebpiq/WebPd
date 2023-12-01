@@ -46,8 +46,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node: { args } }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ node: { args } }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         console.log("${args.prefix} " + msg_display(m))
         return
@@ -55,6 +55,6 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 })
 
 // ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { generateMessageReceivers }
+const nodeImplementation: _NodeImplementation = { messageReceivers: messageReceivers }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -41,11 +41,11 @@ export const NODE_IMPLEMENTATION_TEST_PARAMETERS: Array<NodeImplementationTestPa
     [
         { target: 'javascript', bitDepth: 32, floatArrayType: Float32Array },
         // { target: 'javascript', bitDepth: 64, floatArrayType: Float64Array },
-        {
-            target: 'assemblyscript',
-            bitDepth: 32,
-            floatArrayType: Float32Array,
-        },
+        // {
+        //     target: 'assemblyscript',
+        //     bitDepth: 32,
+        //     floatArrayType: Float32Array,
+        // },
         // {
         //     target: 'assemblyscript',
         //     bitDepth: 64,

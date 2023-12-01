@@ -55,7 +55,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
 ])
 
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(
             variableNamesTabBase.stateClass, 
@@ -74,8 +74,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         })
     `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = (context) => {
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = (context) => {
     const { snds, state } = context
     return {
         '0': AnonFunc([Var('Message', 'm')])`
@@ -111,8 +111,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
+    initialization: initialization,
+    messageReceivers: messageReceivers,
     dependencies: [
         stdlib.commonsWaitEngineConfigure, 
         stdlib.commonsArrays,

@@ -101,7 +101,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
     `,
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             points: [],
@@ -112,8 +112,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         }`)}
     `
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => ast`
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({ outs, state, globs }) => ast`
     if (${state}.lineSegments.length) {
         if (toFloat(${globs.frame}) < ${state}.lineSegments[0].p0.x) {
 
@@ -133,8 +133,8 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs 
     ${outs.$0} = ${state}.currentValue
 `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
     if (
         msg_isMatching(m, [MSG_FLOAT_TOKEN])
@@ -164,9 +164,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateLoop,
-    generateMessageReceivers,
-    generateInitialization,
+    loop: loop,
+    messageReceivers: messageReceivers,
+    initialization: initialization,
     dependencies: [
         linesUtils, 
         computeUnitInSamples, 

@@ -51,15 +51,15 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     ]),
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             continueIter: true,
         }`)}
     `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, state }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
             ${state}.continueIter = true
@@ -89,8 +89,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateMessageReceivers,
-    generateInitialization,
+    messageReceivers: messageReceivers,
+    initialization: initialization,
     dependencies: [
         bangUtils,
         nodeCore,

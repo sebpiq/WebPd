@@ -217,18 +217,20 @@ describe('controls-float', () => {
                     nodeImplementationsTestHelpers.makeCompilation({
                         target,
                         graph,
-                        audioSettings: {
-                            bitDepth,
-                            channelCount: { in: 0, out: 0 }
-                        },
                         nodeImplementations: _nodeImplementations,
-                        inletCallerSpecs: {
-                            send: ['0'],
-                            control: ['0'],
-                        },
-                        outletListenerSpecs: {
-                            receive: ['0'],
-                            control: ['0'],
+                        settings: {
+                            audio: {
+                                bitDepth,
+                                channelCount: { in: 0, out: 0 }
+                            },
+                            inletCallerSpecs: {
+                                send: ['0'],
+                                control: ['0'],
+                            },
+                            outletListenerSpecs: {
+                                receive: ['0'],
+                                control: ['0'],
+                            },
                         },
                     })
 

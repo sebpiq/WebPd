@@ -116,7 +116,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
     `
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state, node: { args } }) => 
+const initialization: _NodeImplementation['initialization'] = ({ state, node: { args } }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             currentLine: ${variableNames.defaultLine},
@@ -125,8 +125,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         }`)}
     `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (
             msg_isMatching(m, [MSG_FLOAT_TOKEN])
@@ -150,8 +150,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
     '1': coldFloatInletWithSetter(variableNames.setNextDuration, state),
 })
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs }) => ast`
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({ outs, state, globs }) => ast`
     ${outs.$0} = ${state}.currentValue
     if (toFloat(${globs.frame}) < ${state}.currentLine.p1.x) {
         ${state}.currentValue += ${state}.currentLine.dy
@@ -163,9 +163,9 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ outs, state, globs 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
-    generateLoop,
+    initialization: initialization,
+    messageReceivers: messageReceivers,
+    loop: loop,
     dependencies: [stringMsgUtils, computeUnitInSamples, linesUtils, nodeCore],
 }
 

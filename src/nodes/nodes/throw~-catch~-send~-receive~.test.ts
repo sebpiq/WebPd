@@ -95,7 +95,7 @@ describe('throw~ / catch~', () => {
                 ...nodeImplementationsThrowCatchSendReceive,
                 'dac~': nodeImplementationDac,
                 counter: {
-                    generateLoop: ({ globs, outs }) =>
+                    loop: ({ globs, outs }) =>
                         ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
@@ -143,13 +143,15 @@ describe('throw~ / catch~', () => {
                 target,
                 graph,
                 nodeImplementations,
-                inletCallerSpecs: {
-                    throw2: ['0_message'],
-                },
-                audioSettings: {
-                    channelCount,
-                    bitDepth,
-                },
+                settings: {
+                    inletCallerSpecs: {
+                        throw2: ['0_message'],
+                    },
+                    audio: {
+                        channelCount,
+                        bitDepth,
+                    },
+                }
             })
 
             const code = executeCompilation(compilation)
@@ -214,7 +216,7 @@ describe('throw~ / catch~', () => {
                 'receive~': nodeImplementationsThrowCatchSendReceive['receive~'],
                 'dac~': nodeImplementationDac,
                 counter: {
-                    generateLoop: ({ globs, outs }) =>
+                    loop: ({ globs, outs }) =>
                         ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
@@ -262,13 +264,15 @@ describe('throw~ / catch~', () => {
                 target,
                 graph,
                 nodeImplementations,
-                inletCallerSpecs: {
-                    receive2: ['0'],
-                },
-                audioSettings: {
-                    channelCount,
-                    bitDepth,
-                },
+                settings: {
+                    inletCallerSpecs: {
+                        receive2: ['0'],
+                    },
+                    audio: {
+                        channelCount,
+                        bitDepth,
+                    },
+                }
             })
 
             const code = executeCompilation(compilation)

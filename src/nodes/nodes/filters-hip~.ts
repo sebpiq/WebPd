@@ -67,7 +67,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     ]),
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             previous: 0,
@@ -77,8 +77,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         }`)}
     `
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, globs }) => ast`
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({ ins, state, outs, globs }) => ast`
     ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
     ${state}.normal = 0.5 * (1 + ${state}.coeff)
     ${state}.current = ${ins.$0} + ${state}.coeff * ${state}.previous
@@ -87,8 +87,8 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs, g
 `
 
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateLoop,
+    initialization: initialization,
+    loop: loop,
     dependencies: [nodeCore],
 }
 

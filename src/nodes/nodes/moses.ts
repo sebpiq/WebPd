@@ -58,15 +58,15 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     ]),
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             threshold: ${args.threshold},
         }`)}
     `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, state }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
             ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
@@ -84,7 +84,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers, dependencies: [nodeCore] }
+    initialization: initialization,
+    messageReceivers: messageReceivers, dependencies: [nodeCore] }
 
 export { builder, nodeImplementation, NodeArguments }

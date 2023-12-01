@@ -95,7 +95,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     ]),
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({
+const initialization: _NodeImplementation['initialization'] = ({
     node: { args, type },
     state
 }) => {
@@ -118,8 +118,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
     `
 }
 
-// ------------------------------- generateLoop ------------------------------ //
-const loopExprTilde: _NodeImplementation['generateLoop'] = ({
+// ------------------------------- loop ------------------------------ //
+const loopExprTilde: _NodeImplementation['loop'] = ({
     node: { args },
     state,
     outs, 
@@ -129,8 +129,8 @@ const loopExprTilde: _NodeImplementation['generateLoop'] = ({
         `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)
 ) 
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ 
     snds, 
     state, 
     node: { args, type },
@@ -299,7 +299,7 @@ export const tokenizeExpression = (expression: string) => {
 
 export const renderTokenizedExpression = (
     state: VariableName,
-    ins: PrecompiledNodeCode['ins'] | null,
+    ins: PrecompiledNodeCode['generationContext']['signalIns'] | null,
     tokens: Array<ExpressionToken>, 
 ): Code =>
     // Add '+(' to convert for example boolean output to float
@@ -385,8 +385,8 @@ const preprocessExpression = (args: PdJson.NodeArgs): Array<string> => {
 
 const nodeImplementations: NodeImplementations = {
     expr: {
-        generateMessageReceivers,
-        generateInitialization,
+        messageReceivers: messageReceivers,
+        initialization: initialization,
         dependencies: [
             messageTokenToString,
             messageTokenToFloat,
@@ -397,8 +397,9 @@ const nodeImplementations: NodeImplementations = {
         ],
     },
     'expr~': {
-        generateMessageReceivers,
-        generateLoop: loopExprTilde,
+        messageReceivers: messageReceivers,
+        initialization: initialization,
+        loop: loopExprTilde,
         dependencies: [
             messageTokenToString,
             messageTokenToFloat,

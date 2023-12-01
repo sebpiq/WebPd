@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,13 +24,8 @@ import {
     CompilerTarget,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
-import {
-    Message,
-} from '@webpd/compiler/src/run/types'
-import {
-    nodeImplementations,
-    builders,
-} from './send-receive'
+import { Message } from '@webpd/compiler/src/run/types'
+import { nodeImplementations, builders } from './send-receive'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
@@ -64,7 +59,7 @@ describe('send / receive', () => {
     describe('implementation', () => {
         const createTestSndRcvEngine = async (
             target: CompilerTarget,
-            bitDepth: AudioSettings['bitDepth'],
+            bitDepth: AudioSettings['bitDepth']
         ) => {
             const graph = makeGraph({
                 send1: {
@@ -97,24 +92,30 @@ describe('send / receive', () => {
             const compilation = nodeImplementationsTestHelpers.makeCompilation({
                 target,
                 graph,
-                audioSettings: {
-                    bitDepth,
-                    channelCount: { in: 0, out: 0 }
-                },
                 nodeImplementations,
-                inletCallerSpecs: {
-                    send1: ['0', '1'],
-                    send2: ['0'],
+                settings: {
+                    audio: {
+                        bitDepth,
+                        channelCount: { in: 0, out: 0 },
+                    },
+                    inletCallerSpecs: {
+                        send1: ['0', '1'],
+                        send2: ['0'],
+                    },
+                    outletListenerSpecs: {
+                        receive1: ['0'],
+                        receive2: ['0'],
+                        receive2bis: ['0'],
+                    },
                 },
-                outletListenerSpecs: {
-                    receive1: ['0'],
-                    receive2: ['0'],
-                    receive2bis: ['0'],
-                }
             })
 
             const code = executeCompilation(compilation)
-            const engine = await createTestEngine(compilation.target, bitDepth, code)
+            const engine = await createTestEngine(
+                compilation.target,
+                bitDepth,
+                code
+            )
             engine.configure(44100, 1)
             return engine
         }
@@ -122,88 +123,64 @@ describe('send / receive', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send / receive messages as expected %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestSndRcvEngine(
-                    target,
-                    bitDepth,
-                )
+                const engine = await createTestSndRcvEngine(target, bitDepth)
 
                 const received1: Array<Message> = []
                 const received2: Array<Message> = []
 
-                engine.outletListeners.receive1['0'].onMessage = (msg) => received1.push(msg)
-                engine.outletListeners.receive2['0'].onMessage = (msg) => received2.push(msg)
+                engine.outletListeners.receive1['0'].onMessage = (msg) =>
+                    received1.push(msg)
+                engine.outletListeners.receive2['0'].onMessage = (msg) =>
+                    received2.push(msg)
 
                 engine.inletCallers.send1['0'](['blabla', 123])
-                assert.deepStrictEqual(
-                    received1,
-                    [['blabla', 123]]
-                )
+                assert.deepStrictEqual(received1, [['blabla', 123]])
 
                 engine.inletCallers.send2['0'](['blo'])
-                assert.deepStrictEqual(
-                    received2,
-                    [['blo']]
-                )
+                assert.deepStrictEqual(received2, [['blo']])
 
                 engine.inletCallers.send1['0'](['bang'])
-                assert.deepStrictEqual(
-                    received1,
-                    [['blabla', 123], ['bang']]
-                )
+                assert.deepStrictEqual(received1, [['blabla', 123], ['bang']])
             }
         )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change the bus when settings new bus name %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestSndRcvEngine(
-                    target,
-                    bitDepth,
-                )
+                const engine = await createTestSndRcvEngine(target, bitDepth)
 
                 const received1: Array<Message> = []
                 const received2: Array<Message> = []
 
-                engine.outletListeners.receive1['0'].onMessage = (msg) => received1.push(msg)
-                engine.outletListeners.receive2['0'].onMessage = (msg) => received2.push(msg)
+                engine.outletListeners.receive1['0'].onMessage = (msg) =>
+                    received1.push(msg)
+                engine.outletListeners.receive2['0'].onMessage = (msg) =>
+                    received2.push(msg)
 
                 engine.inletCallers.send1['1'](['BUS2'])
 
                 engine.inletCallers.send1['0']([666])
-                assert.deepStrictEqual(
-                    received1,
-                    []
-                )
-                assert.deepStrictEqual(
-                    received2,
-                    [[666]]
-                )
+                assert.deepStrictEqual(received1, [])
+                assert.deepStrictEqual(received2, [[666]])
             }
         )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send message to all receivers %s',
             async ({ target, bitDepth }) => {
-                const engine = await createTestSndRcvEngine(
-                    target,
-                    bitDepth,
-                )
+                const engine = await createTestSndRcvEngine(target, bitDepth)
 
                 const received2: Array<Message> = []
                 const received2bis: Array<Message> = []
 
-                engine.outletListeners.receive2['0'].onMessage = (msg) => received2.push(msg)
-                engine.outletListeners.receive2bis['0'].onMessage = (msg) => received2bis.push(msg)
+                engine.outletListeners.receive2['0'].onMessage = (msg) =>
+                    received2.push(msg)
+                engine.outletListeners.receive2bis['0'].onMessage = (msg) =>
+                    received2bis.push(msg)
 
                 engine.inletCallers.send2['0']([999])
-                assert.deepStrictEqual(
-                    received2,
-                    [[999]]
-                )
-                assert.deepStrictEqual(
-                    received2bis,
-                    [[999]]
-                )
+                assert.deepStrictEqual(received2, [[999]])
+                assert.deepStrictEqual(received2bis, [[999]])
             }
         )
     })

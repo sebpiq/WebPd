@@ -45,55 +45,52 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('change')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'currentValue'), 
-    ]),
-])
-
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            currentValue: ${args.initValue}
-        }`)}
-    `
-
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
-    snds,
-    state,
-}) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${ConstVar('Float', 'newValue', 'msg_readFloatToken(m, 0)')}
-            if (newValue !== ${state}.currentValue) {
-                ${state}.currentValue = newValue
-                ${snds[0]}(msg_floats([${state}.currentValue]))
-            }
-            return
-
-        } else if (msg_isBang(m)) {
-            ${snds[0]}(msg_floats([${state}.currentValue]))
-            return 
-
-        } else if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-            && msg_readStringToken(m, 0) === 'set'
-        ) {
-            ${state}.currentValue = msg_readFloatToken(m, 1)
-            return
-        }
-    `,
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
-    dependencies: [bangUtils, nodeCore],
+    initialization: ({ node: { args }, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                currentValue: ${args.initValue}
+            }`)}
+        `,
+
+    messageReceivers: ({
+        snds,
+        state,
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${ConstVar('Float', 'newValue', 'msg_readFloatToken(m, 0)')}
+                if (newValue !== ${state}.currentValue) {
+                    ${state}.currentValue = newValue
+                    ${snds[0]}(msg_floats([${state}.currentValue]))
+                }
+                return
+    
+            } else if (msg_isBang(m)) {
+                ${snds[0]}(msg_floats([${state}.currentValue]))
+                return 
+    
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${state}.currentValue = msg_readFloatToken(m, 1)
+                return
+            }
+        `,
+    }),
+
+    dependencies: [
+        bangUtils, 
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'currentValue'), 
+            ]),
+        ])
+    ],
 }
 
 export { builder, nodeImplementation, NodeArguments }

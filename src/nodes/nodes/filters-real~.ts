@@ -76,7 +76,7 @@ const makeNodeImplementation = ({
         ]),
     ])
 
-    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
         ast`
             ${ConstVar(variableNames.stateClass, state, `{
                 lastOutput: 0,
@@ -85,15 +85,15 @@ const makeNodeImplementation = ({
         `
 
 
-    // ------------------------------- generateLoop ------------------------------ //
-    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
+    // ------------------------------- loop ------------------------------ //
+    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => ast`
         ${state}.lastOutput = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, `${state}.lastOutput`, `${state}.lastInput`)}
         ${state}.lastInput = ${ins.$0}
     `
 
     return {
-        generateInitialization,
-        generateLoop,
+        initialization: initialization,
+        loop: loop,
         dependencies: [nodeCore],
     }
 }

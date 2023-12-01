@@ -57,8 +57,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, node: { args } }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, node: { args } }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         ${args.typeArguments.map((t, i) => [t, i] as [TypeArgument, number]).reverse().map(([t, reversedI]) =>
             `
@@ -82,7 +82,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateMessageReceivers,
+    messageReceivers: messageReceivers,
 }
 
 export { builder, nodeImplementation, NodeArguments }

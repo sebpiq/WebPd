@@ -112,7 +112,7 @@ describe('delread~ / delwrite~', () => {
                 'dac~': nodeImplementationDac,
                 'sig~': nodeImplementationSig,
                 counter: {
-                    generateLoop: ({ globs, outs }) => ast`${outs.$0} = toFloat(${globs.frame})`,
+                    loop: ({ globs, outs }) => ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
 
@@ -155,14 +155,16 @@ describe('delread~ / delwrite~', () => {
                 target,
                 graph,
                 nodeImplementations,
-                inletCallerSpecs: {
-                    delayTimeMsec: ['0'],
-                    delayW: ['0_message'],
-                },
-                audioSettings: {
-                    channelCount,
-                    bitDepth,
-                },
+                settings: {
+                    inletCallerSpecs: {
+                        delayTimeMsec: ['0'],
+                        delayW: ['0_message'],
+                    },
+                    audio: {
+                        channelCount,
+                        bitDepth,
+                    },
+                }
             })
 
             const code = executeCompilation(compilation)

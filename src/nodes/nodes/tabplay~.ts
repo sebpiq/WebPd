@@ -84,7 +84,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     `,
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(
             variableNamesTabBase.stateClass, 
@@ -103,8 +103,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         })
     `
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = (
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = (
     {state, snds, outs},
 ) => ast`
     if (${state}.readPosition < ${state}.readUntil) {
@@ -118,8 +118,8 @@ const generateLoop: _NodeImplementation['generateLoop'] = (
     }
 `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state, globs }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
             ${variableNames.play}(${state}, 0, ${state}.array.length)
@@ -162,9 +162,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
-    generateLoop,
+    initialization: initialization,
+    messageReceivers: messageReceivers,
+    loop: loop,
     dependencies: [
         bangUtils,
         stdlib.commonsWaitEngineConfigure,

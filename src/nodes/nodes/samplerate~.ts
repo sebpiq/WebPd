@@ -39,8 +39,8 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, snds }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ globs, snds }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) { 
             ${snds.$0}(msg_floats([${globs.sampleRate}])) 
@@ -51,7 +51,7 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateMessageReceivers,
+    messageReceivers: messageReceivers,
     dependencies: [bangUtils]
 }
 

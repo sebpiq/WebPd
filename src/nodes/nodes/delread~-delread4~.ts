@@ -81,7 +81,7 @@ const makeNodeImplementation = (): _NodeImplementation => {
         `
     ])
 
-    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
         ast`
             ${ConstVar(variableNames.stateClass, state, `{
                 delayName: '',
@@ -97,9 +97,9 @@ const makeNodeImplementation = (): _NodeImplementation => {
             })
         `
 
-    // ------------------------------- generateLoop ------------------------------ //
-    const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ globs, ins, state }) =>
-        `buf_readSample(${state}.buffer, toInt(Math.round(
+    // ------------------------------- loop ------------------------------ //
+    const inlineLoop: _NodeImplementation['inlineLoop'] = ({ globs, ins, state }) =>
+        ast`buf_readSample(${state}.buffer, toInt(Math.round(
             Math.min(
                 Math.max(computeUnitInSamples(${globs.sampleRate}, ${ins.$0}, "msec"), 0), 
                 toFloat(${state}.buffer.length - 1)
@@ -108,8 +108,8 @@ const makeNodeImplementation = (): _NodeImplementation => {
 
     // ------------------------------------------------------------------- //
     return {
-        generateInitialization,
-        generateLoopInline,
+        initialization: initialization,
+        inlineLoop: inlineLoop,
         dependencies: [
             computeUnitInSamples,
             delayBuffers,

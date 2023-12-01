@@ -177,7 +177,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
     `
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args, id }, state, snds }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args, id }, state, snds }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, ast`{
             currentLine: {
@@ -204,8 +204,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         })
     `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ 
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ 
     snds, 
     state,
 }) => ({
@@ -256,8 +256,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
+    initialization: initialization,
+    messageReceivers: messageReceivers,
     dependencies: [
         stringMsgUtils,
         computeUnitInSamples,

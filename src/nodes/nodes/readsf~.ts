@@ -114,7 +114,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
     `
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             buffers: [],
@@ -123,8 +123,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         }`)}
     `
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({
     state,
     snds,
     outs,
@@ -154,8 +154,8 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({
     }
 `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({
     node,
     state,
 }) => ({
@@ -204,9 +204,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
-    generateLoop,
+    initialization: initialization,
+    messageReceivers: messageReceivers,
+    loop: loop,
     dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,

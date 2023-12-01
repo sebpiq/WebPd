@@ -49,50 +49,46 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('clip')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'minValue'), 
-        Var('Float', 'maxValue'), 
-    ]),
-])
-
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            minValue: ${args.minValue},
-            maxValue: ${args.maxValue},
-        }`)}
-    `
-
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${snds[0]}(msg_floats([
-                Math.max(
-                    Math.min(
-                        ${state}.maxValue, 
-                        msg_readFloatToken(m, 0)
-                    ), 
-                    ${state}.minValue
-                )
-            ]))
-            return
-        }
-    `,
-
-    '1': coldFloatInlet(`${state}.minValue`),
-    '2': coldFloatInlet(`${state}.maxValue`),
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
-    dependencies: [nodeCore],
+    initialization: ({ node: { args }, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                minValue: ${args.minValue},
+                maxValue: ${args.maxValue},
+            }`)}
+        `,
+    
+    messageReceivers: ({ snds, state }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${snds[0]}(msg_floats([
+                    Math.max(
+                        Math.min(
+                            ${state}.maxValue, 
+                            msg_readFloatToken(m, 0)
+                        ), 
+                        ${state}.minValue
+                    )
+                ]))
+                return
+            }
+        `,
+    
+        '1': coldFloatInlet(`${state}.minValue`),
+        '2': coldFloatInlet(`${state}.maxValue`),
+    }),
+
+    dependencies: [
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'minValue'), 
+                Var('Float', 'maxValue'), 
+            ]),
+        ])
+    ],
 }
 
 export { builder, nodeImplementation, NodeArguments }

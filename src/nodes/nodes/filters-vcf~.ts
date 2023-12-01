@@ -105,7 +105,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
     `,
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             frequency: ${args.frequency},
@@ -119,8 +119,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         }`)}
     `
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => ast`
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => ast`
     ${variableNames.setFrequency}(${state}, ${ins.$1})
     ${state}.y = ${ins.$0} + ${state}.coef1 * ${state}.ym1 + ${state}.coef2 * ${state}.ym2
     ${outs.$1} = ${outs.$0} = ${state}.gain * ${state}.y
@@ -128,16 +128,16 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state })
     ${state}.ym1 = ${state}.y
 `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state }) => ({
     '2': coldFloatInletWithSetter(variableNames.setQ, state),
 })
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateLoop,
-    generateMessageReceivers,
+    initialization: initialization,
+    loop: loop,
+    messageReceivers: messageReceivers,
     dependencies: [nodeCore],
 }
 

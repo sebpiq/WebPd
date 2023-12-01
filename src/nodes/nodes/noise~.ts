@@ -20,7 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { AnonFunc, Var } from '@webpd/compiler'
+import { AnonFunc, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {}
 type _NodeImplementation = NodeImplementation<NodeArguments>
@@ -41,11 +41,11 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoopInline: _NodeImplementation['generateLoopInline'] = () => `Math.random() * 2 - 1`
+// ------------------------------- loop ------------------------------ //
+const inlineLoop: _NodeImplementation['inlineLoop'] = () => ast`Math.random() * 2 - 1`
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ globs }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (
             msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
@@ -59,8 +59,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    generateLoopInline, 
-    generateMessageReceivers,
+    inlineLoop: inlineLoop, 
+    messageReceivers: messageReceivers,
 }
 
 export { 

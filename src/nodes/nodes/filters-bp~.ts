@@ -116,7 +116,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
     `
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             frequency: ${args.frequency},
@@ -134,16 +134,16 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         })
     `
 
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, outs, state }) => ast`
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => ast`
     ${state}.y = ${ins.$0} + ${state}.coef1 * ${state}.ym1 + ${state}.coef2 * ${state}.ym2
     ${outs.$0} = ${state}.gain * ${state}.y
     ${state}.ym2 = ${state}.ym1
     ${state}.ym1 = ${state}.y
 `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state }) => ({
     '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
         if (
             msg_isMatching(m)
@@ -159,9 +159,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateLoop,
-    generateMessageReceivers,
-    generateInitialization,
+    loop: loop,
+    messageReceivers: messageReceivers,
+    initialization: initialization,
     dependencies: [nodeCore]
 }
 

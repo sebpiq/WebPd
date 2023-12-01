@@ -67,15 +67,15 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     `
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             maxValue: ${args.maxValue}
         }`)}
     `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds, state }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, state }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (msg_isBang(m)) {
             ${snds['0']}(msg_floats([Math.floor(Math.random() * ${state}.maxValue)]))
@@ -94,8 +94,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateMessageReceivers,
-    generateInitialization,
+    messageReceivers: messageReceivers,
+    initialization: initialization,
     dependencies: [
         bangUtils, 
         nodeCore,

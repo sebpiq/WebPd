@@ -86,15 +86,15 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     `
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             operations: new Map(),
         }`)}
     `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, globs, snds }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state, globs, snds }) => ({
     '0': AnonFunc([Var('Message', 'm')])`
         if (
             msg_getLength(m) >= 3 
@@ -329,8 +329,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
+    initialization: initialization,
+    messageReceivers: messageReceivers,
     dependencies: [
         parseSoundFileOpenOpts,
         stdlib.commonsArrays,

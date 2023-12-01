@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
@@ -46,38 +46,30 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('sig_t')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'currentValue')
-    ]),
-])
-
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            currentValue: ${args.initValue}
-        }`)}
-    `
-
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ state }) => 
-    `${state}.currentValue`
-
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
-    '0': coldFloatInlet(`${state}.currentValue`),
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateLoopInline,
-    generateMessageReceivers,
+    initialization: ({ node: { args }, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                currentValue: ${args.initValue}
+            }`)}
+        `,
+
+    inlineLoop: ({ state }) => 
+        ast`${state}.currentValue`,
+
+    messageReceivers: ({ state }) => ({
+        '0': coldFloatInlet(`${state}.currentValue`),
+    }),
+
     dependencies: [
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'currentValue')
+            ]),
+        ]),
     ]
 }
 

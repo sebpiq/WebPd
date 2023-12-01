@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, functional, Func, Sequence } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { stdlib, Func, Sequence } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
@@ -44,32 +44,15 @@ const builder: NodeBuilder<NodeArguments> = {
     build,
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('bang', ['receiveMessage'])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Func(variableNames.receiveMessage, [
-        Var(controlsCoreVariableNames.stateClass, 'state'),
-        Var('Message', 'm'),
-    ], 'void')`
-        if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
-            return
-        }
-        
-        ${ConstVar('Message', 'outMessage', 'msg_bang()')}
-        state.messageSender(outMessage)
-        if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-            msgBusPublish(state.sendBusName, outMessage)
-        }
-        return
-    `
-])
-    
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ 
-    snds,
-    state,
-    node: { args },
-}) => ast`
+const nodeImplementation: _NodeImplementation = {
+    initialization: ({ 
+        snds,
+        state,
+        node: { args },
+    }) => ast`
         ${Var(controlsCoreVariableNames.stateClass, state, `{
             value: msg_create([]),
             receiveBusName: "${args.receiveBusName}",
@@ -88,27 +71,38 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
 
         ${args.outputOnLoad ? 
             `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`: null}
-    `
-
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, snds }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        ${variableNames.receiveMessage}(${state}, m)
-        return
     `,
-})
+    
+    messageReceivers: ({ state }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            ${variableNames.receiveMessage}(${state}, m)
+            return
+        `,
+    }),
 
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateMessageReceivers,
     dependencies: [
         bangUtils,
         messageBuses,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
         controlsCore,
-        nodeCore,
+        () => Sequence([
+            Func(variableNames.receiveMessage, [
+                Var(controlsCoreVariableNames.stateClass, 'state'),
+                Var('Message', 'm'),
+            ], 'void')`
+                if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                    return
+                }
+                
+                ${ConstVar('Message', 'outMessage', 'msg_bang()')}
+                state.messageSender(outMessage)
+                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                    msgBusPublish(state.sendBusName, outMessage)
+                }
+                return
+            `
+        ]),
     ],
 }
 

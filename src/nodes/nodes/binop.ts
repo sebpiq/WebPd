@@ -56,16 +56,8 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
     }),
 })
 
-// ------------------------------ generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNamesBinopBase = generateVariableNamesNodeType('binopbase')
-
-const nodeCoreBinopBase: GlobalCodeGenerator = () =>
-    Sequence([
-        Class(variableNamesBinopBase.stateClass, [
-            Var('Float', 'leftOp'), 
-            Var('Float', 'rightOp')
-        ])
-    ])
 
 const makeNodeImplementation = ({
     operationName,
@@ -77,7 +69,7 @@ const makeNodeImplementation = ({
     operationName: string,
     generateOperation: (
         state: Parameters<
-            _NodeImplementation['generateMessageReceivers']
+            _NodeImplementation['messageReceivers']
         >[0]['state']
     ) => Code
     dependencies?: Array<GlobalCodeGenerator>
@@ -87,36 +79,17 @@ const makeNodeImplementation = ({
     
     const variableNames = generateVariableNamesNodeType(operationName, ['setLeft', 'setRight'])
 
-    const nodeCore: GlobalCodeGenerator = () =>
-        Sequence([
-            Func(variableNames.setLeft, [
-                Var(variableNamesBinopBase.stateClass, 'state'),
-                Var('Float', 'value'),
-            ], 'void')`
-                state.leftOp = ${prepareLeftOp ? prepareLeftOp: 'value'}
-            `,
-
-            Func(variableNames.setRight, [
-                Var(variableNamesBinopBase.stateClass, 'state'),
-                Var('Float', 'value'),
-            ], 'void')`
-                state.rightOp = ${prepareRightOp ? prepareRightOp: 'value'}
-            `,
-        ])
-
-    const generateInitialization: _NodeImplementation['generateInitialization'] =
-        ({ state, node: { args } }) => ast`
-            ${ConstVar(variableNamesBinopBase.stateClass, state, `{
+    return {
+        initialization: ({ state, node: { args } }) => ast`
+        ${ConstVar(variableNamesBinopBase.stateClass, state, `{
                 leftOp: 0,
                 rightOp: 0,
             }`)}
             ${variableNames.setLeft}(${state}, 0)
             ${variableNames.setRight}(${state}, ${args.value})
-        `
+        `,
 
-    // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] =
-        ({ state, snds }) => ({
+        messageReceivers: ({ state, snds }) => ({
             '0': AnonFunc([Var('Message', 'm')])`
                 if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                     ${variableNames.setLeft}(${state}, msg_readFloatToken(m, 0))
@@ -130,16 +103,31 @@ const makeNodeImplementation = ({
             `,
 
             '1': coldFloatInletWithSetter(variableNames.setRight, state),
-        })
+        }),
 
-    return {
-        generateMessageReceivers,
-        generateInitialization,
         dependencies: [
             bangUtils, 
             ...dependencies, 
-            nodeCoreBinopBase,
-            nodeCore,
+            () => Sequence([
+                Class(variableNamesBinopBase.stateClass, [
+                    Var('Float', 'leftOp'), 
+                    Var('Float', 'rightOp')
+                ]),
+
+                Func(variableNames.setLeft, [
+                    Var(variableNamesBinopBase.stateClass, 'state'),
+                    Var('Float', 'value'),
+                ], 'void')`
+                    state.leftOp = ${prepareLeftOp ? prepareLeftOp: 'value'}
+                `,
+
+                Func(variableNames.setRight, [
+                    Var(variableNamesBinopBase.stateClass, 'state'),
+                    Var('Float', 'value'),
+                ], 'void')`
+                    state.rightOp = ${prepareRightOp ? prepareRightOp: 'value'}
+                `,
+            ]),
         ],
     }
 }

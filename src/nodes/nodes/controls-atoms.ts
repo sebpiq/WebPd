@@ -41,6 +41,7 @@ const builder: NodeBuilder<ControlsBaseNodeArguments> = {
     build,
 }
 
+// ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = ({
     name,
     initValue,
@@ -51,58 +52,14 @@ const makeNodeImplementation = ({
     messageMatch?: (messageName: VariableName) => Code
 }): _NodeImplementation => {
 
-    // ------------------------------- generateDeclarations ------------------------------ //
     const variableNames = generateVariableNamesNodeType(name, ['receiveMessage'])
 
-    const nodeCore: GlobalCodeGenerator = () => Sequence([
-
-        Func(variableNames.receiveMessage, [
-            Var(controlsCoreVariableNames.stateClass, 'state'),
-            Var('Message', 'm'),
-        ], 'void')`
-            if (msg_isBang(m)) {
-                state.messageSender(state.value)
-                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                    msgBusPublish(state.sendBusName, state.value)
-                }
-                return
-            
-            } else if (
-                msg_getTokenType(m, 0) === MSG_STRING_TOKEN
-                && msg_readStringToken(m, 0) === 'set'
-            ) {
-                ${ConstVar('Message', 'setMessage', 'msg_slice(m, 1, msg_getLength(m))')}
-                ${messageMatch ? 
-                    `if (${messageMatch('setMessage')}) {`: null} 
-                        state.value = setMessage    
-                        return
-                ${messageMatch ? 
-                    '}': null}
-
-            } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
-                return
-                
-            } ${messageMatch ? 
-                `else if (${messageMatch('m')}) {`: 
-                `else {`}
-            
-                state.value = m
-                state.messageSender(state.value)
-                if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                    msgBusPublish(state.sendBusName, state.value)
-                }
-                return
-
-            }
-        `
-    ])
-
-    const generateInitialization: NodeImplementation<any>['generateInitialization'] = ({
-        state, 
-        node: { args },
-        snds,
-    }) => {
-        return ast`
+    return {
+        initialization: ({
+            state, 
+            node: { args },
+            snds,
+        }) => ast`
             ${Var(controlsCoreVariableNames.stateClass, state, `{
                 value: ${initValue},
                 receiveBusName: "${args.receiveBusName}",
@@ -118,29 +75,62 @@ const makeNodeImplementation = ({
                 ${state}.messageSender = ${snds.$0}
                 ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
             })
-        `
-    }
+        `,
 
-    // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state, snds }) =>
-        ({
+        messageReceivers: ({ state }) => ({
             '0': AnonFunc([Var('Message', 'm')])`
                 ${variableNames.receiveMessage}(${state}, m)
                 return
             `,
-        })
+        }),
 
-    // ------------------------------------------------------------------- //
-    return {
-        generateInitialization,
-        generateMessageReceivers,
         dependencies: [
             bangUtils,
             messageBuses,
             msgUtils,
             stdlib.commonsWaitEngineConfigure,
             controlsCore,
-            nodeCore,
+            () => Sequence([
+                Func(variableNames.receiveMessage, [
+                    Var(controlsCoreVariableNames.stateClass, 'state'),
+                    Var('Message', 'm'),
+                ], 'void')`
+                    if (msg_isBang(m)) {
+                        state.messageSender(state.value)
+                        if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                            msgBusPublish(state.sendBusName, state.value)
+                        }
+                        return
+                    
+                    } else if (
+                        msg_getTokenType(m, 0) === MSG_STRING_TOKEN
+                        && msg_readStringToken(m, 0) === 'set'
+                    ) {
+                        ${ConstVar('Message', 'setMessage', 'msg_slice(m, 1, msg_getLength(m))')}
+                        ${messageMatch ? 
+                            `if (${messageMatch('setMessage')}) {`: null} 
+                                state.value = setMessage    
+                                return
+                        ${messageMatch ? 
+                            '}': null}
+        
+                    } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                        return
+                        
+                    } ${messageMatch ? 
+                        `else if (${messageMatch('m')}) {`: 
+                        `else {`}
+                    
+                        state.value = m
+                        state.messageSender(state.value)
+                        if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
+                            msgBusPublish(state.sendBusName, state.value)
+                        }
+                        return
+        
+                    }
+                `
+            ]),
         ],
     }
 }

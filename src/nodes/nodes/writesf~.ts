@@ -88,7 +88,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     `,
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             operationId: -1,
@@ -102,8 +102,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
         }`)}
     `
     
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoop: _NodeImplementation['generateLoop'] = ({ state, ins, node: { args } }) => ast`
+// ------------------------------- loop ------------------------------ //
+const loop: _NodeImplementation['loop'] = ({ state, ins, node: { args } }) => ast`
     if (${state}.isWriting === true) {
         ${functional.countTo(args.channelCount).map((i) => 
             `${state}.block[${i}][${state}.cursor] = ${ins[i]}`)}
@@ -114,8 +114,8 @@ const generateLoop: _NodeImplementation['generateLoop'] = ({ state, ins, node: {
     }
 `
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ node, state, globs }) => ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({ node, state, globs }) => ({
     '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
         if (msg_getLength(m) >= 2) {
             if (
@@ -175,9 +175,9 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization, 
-    generateMessageReceivers, 
-    generateLoop, 
+    initialization: initialization, 
+    messageReceivers: messageReceivers, 
+    loop: loop, 
     dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,

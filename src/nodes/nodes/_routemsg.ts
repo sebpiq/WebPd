@@ -39,22 +39,19 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ snds }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${snds.$0}(m)
-            return
-        } else {
-            ${snds.$1}(m)
-            return
-        }
-    `,
-})
-
-// ------------------------------------------------------------------- //
+// ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    generateMessageReceivers,
+    messageReceivers: ({ snds }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${snds.$0}(m)
+                return
+            } else {
+                ${snds.$1}(m)
+                return
+            }
+        `,
+    }),
 }
 
 export { builder, nodeImplementation, NodeArguments }

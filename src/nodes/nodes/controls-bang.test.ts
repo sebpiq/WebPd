@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36,9 +36,7 @@ import {
     AudioSettings,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
-import {
-    Message,
-} from '@webpd/compiler/src/run/types'
+import { Message } from '@webpd/compiler/src/run/types'
 import assert from 'assert'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 
@@ -168,12 +166,16 @@ describe('controls-bang', () => {
                 },
                 send: {
                     type: 'send',
-                    ...buildersSendReceive['send'].build({ busName: 'BUS_TO_BANG' }),
+                    ...buildersSendReceive['send'].build({
+                        busName: 'BUS_TO_BANG',
+                    }),
                     args: { busName: 'BUS_TO_BANG' },
                 },
                 receive: {
                     type: 'receive',
-                    ...buildersSendReceive['receive'].build({ busName: 'BUS_FROM_BANG' }),
+                    ...buildersSendReceive['receive'].build({
+                        busName: 'BUS_FROM_BANG',
+                    }),
                     args: { busName: 'BUS_FROM_BANG' },
                 },
             })
@@ -181,19 +183,21 @@ describe('controls-bang', () => {
             const compilation = nodeImplementationsTestHelpers.makeCompilation({
                 target,
                 graph,
-                audioSettings: {
-                    bitDepth,
-                    channelCount: { in: 0, out: 0 }
+                settings: {
+                    audio: {
+                        bitDepth,
+                        channelCount: { in: 0, out: 0 },
+                    },
+                    inletCallerSpecs: {
+                        send: ['0'],
+                        bang: ['0'],
+                    },
+                    outletListenerSpecs: {
+                        receive: ['0'],
+                        bang: ['0'],
+                    },
                 },
                 nodeImplementations: _nodeImplementations,
-                inletCallerSpecs: {
-                    send: ['0'],
-                    bang: ['0'],
-                },
-                outletListenerSpecs: {
-                    receive: ['0'],
-                    bang: ['0'],
-                },
             })
 
             const code =

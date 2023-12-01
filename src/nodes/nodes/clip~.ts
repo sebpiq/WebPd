@@ -49,40 +49,34 @@ const builder: NodeBuilder<NodeArguments> = {
     })
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('clip_t')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'minValue'), 
-        Var('Float', 'maxValue'), 
-    ]),
-])
-
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            minValue: ${args.minValue},
-            maxValue: ${args.maxValue},
-        }`)}
-    `
-
-// ------------------------------- generateLoop ------------------------------ //
-const generateLoopInline: _NodeImplementation['generateLoopInline'] = ({ ins, state }) =>
-    `Math.max(Math.min(${state}.maxValue, ${ins.$0}), ${state}.minValue)`
-
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ state }) => ({
-    '1': coldFloatInlet(`${state}.minValue`),
-    '2': coldFloatInlet(`${state}.maxValue`),
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization,
-    generateLoopInline,
-    generateMessageReceivers,
-    dependencies: [nodeCore],
+    initialization: ({ node: { args }, state }) => 
+        ast`
+            ${ConstVar(variableNames.stateClass, state, `{
+                minValue: ${args.minValue},
+                maxValue: ${args.maxValue},
+            }`)}
+        `,
+
+    inlineLoop: ({ ins, state }) =>
+        ast`Math.max(Math.min(${state}.maxValue, ${ins.$0}), ${state}.minValue)`,
+    
+    messageReceivers: ({ state }) => ({
+        '1': coldFloatInlet(`${state}.minValue`),
+        '2': coldFloatInlet(`${state}.maxValue`),
+    })
+    ,
+    dependencies: [
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'minValue'), 
+                Var('Float', 'maxValue'), 
+            ]),
+        ])
+    ],
 }
 
 export { builder, nodeImplementation, NodeArguments }

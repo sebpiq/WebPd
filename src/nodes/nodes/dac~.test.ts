@@ -98,7 +98,7 @@ describe('dac~', () => {
             const nodeImplementations: NodeImplementations = {
                 'dac~': nodeImplementation,
                 counter: {
-                    generateLoop: ({ globs, outs }) => Sequence([
+                    loop: ({ globs, outs }) => Sequence([
                         functional
                             .countTo(args.channelMapping.length)
                             .map(
@@ -132,10 +132,12 @@ describe('dac~', () => {
                 target,
                 graph,
                 nodeImplementations,
-                audioSettings: {
-                    channelCount,
-                    bitDepth,
-                },
+                settings: {
+                    audio: {
+                        channelCount,
+                        bitDepth,
+                    },
+                }
             })
 
             const code =

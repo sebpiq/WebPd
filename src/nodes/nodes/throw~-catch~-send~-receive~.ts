@@ -111,7 +111,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     `
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
     ast`
         ${ConstVar(variableNames.stateClass, state, `{
             busName: '',
@@ -122,11 +122,11 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = ({
 
 // --------------------------------- throw~ ---------------------------------- //
 const nodeImplementationThrow: _NodeImplementation = {
-    generateInitialization,
-    generateLoop: ({ ins, state }) => ast`
+    initialization: initialization,
+    loop: ({ ins, state }) => ast`
         addAssignSignalBus(${state}.busName, ${ins.$0})
     `,
-    generateMessageReceivers: ({ state }) => ({
+    messageReceivers: ({ state }) => ({
         '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
@@ -145,8 +145,8 @@ const nodeImplementationThrow: _NodeImplementation = {
 
 // --------------------------------- catch~ ---------------------------------- //
 const nodeImplementationCatch: _NodeImplementation = {
-    generateInitialization,
-    generateLoop: ({
+    initialization: initialization,
+    loop: ({
         outs,
         state,
     }) => ast`
@@ -161,8 +161,8 @@ const nodeImplementationCatch: _NodeImplementation = {
 
 // --------------------------------- send~ ---------------------------------- //
 const nodeImplementationSend: _NodeImplementation = {
-    generateInitialization,
-    generateLoop: ({ state, ins }) => ast`
+    initialization: initialization,
+    loop: ({ state, ins }) => ast`
         setSignalBus(${state}.busName, ${ins.$0})
     `,
     dependencies: [
@@ -173,10 +173,10 @@ const nodeImplementationSend: _NodeImplementation = {
 
 // --------------------------------- receive~ ---------------------------------- //
 const nodeImplementationReceive: _NodeImplementation = {
-    generateInitialization,
-    generateLoopInline: ({ state }) => 
-        `readSignalBus(${state}.busName)`,
-    generateMessageReceivers: ({ state }) => ({
+    initialization: initialization,
+    inlineLoop: ({ state }) => 
+        ast`readSignalBus(${state}.busName)`,
+    messageReceivers: ({ state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])

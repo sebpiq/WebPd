@@ -87,7 +87,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
 
 const makeNodeImplementation = (setValueVariableName: VariableName): _NodeImplementation => {
 
-    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ node: { args }, state }) => 
+    const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
         ast`
             ${ConstVar(variableNames.stateClass, state, `{
                 value: 0,
@@ -95,8 +95,8 @@ const makeNodeImplementation = (setValueVariableName: VariableName): _NodeImplem
             ${setValueVariableName}(${state}, ${args.value})
         `
 
-    // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
+    // ------------------------------- messageReceivers ------------------------------ //
+    const messageReceivers: _NodeImplementation['messageReceivers'] = ({
         snds,
         state,
     }) => ({
@@ -117,8 +117,8 @@ const makeNodeImplementation = (setValueVariableName: VariableName): _NodeImplem
     })
 
     return {
-        generateInitialization,
-        generateMessageReceivers,        
+        initialization: initialization,
+        messageReceivers: messageReceivers,        
     }
 }
 

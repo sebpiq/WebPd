@@ -83,7 +83,7 @@ const makeNodeImplementation = ({
         `
     ])
 
-    const generateInitialization: _NodeImplementation['generateInitialization'] = ({ globs, state }) => 
+    const initialization: _NodeImplementation['initialization'] = ({ globs, state }) => 
         ast`
             ${ConstVar(variableNames.stateClass, state, `{
                 phase: 0,
@@ -95,21 +95,21 @@ const makeNodeImplementation = ({
             })
         `
 
-    // ------------------------------- generateLoop ------------------------------ //
-    const generateLoop: _NodeImplementation['generateLoop'] = ({ ins, state, outs }) => ast`
+    // ------------------------------- loop ------------------------------ //
+    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => ast`
         ${outs.$0} = ${generateOperation(`${state}.phase`)}
         ${state}.phase += (${state}.J * ${ins.$0})
     `
 
-    // ------------------------------- generateMessageReceivers ------------------------------ //
-    const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({ globs, state }) => ({
+    // ------------------------------- messageReceivers ------------------------------ //
+    const messageReceivers: _NodeImplementation['messageReceivers'] = ({ globs, state }) => ({
         '1': coldFloatInletWithSetter(variableNames.setPhase, state),
     })
 
     return {
-        generateInitialization,
-        generateMessageReceivers,
-        generateLoop,
+        initialization: initialization,
+        messageReceivers: messageReceivers,
+        loop: loop,
         dependencies: [
             stdlib.commonsWaitEngineConfigure, 
             nodeCore

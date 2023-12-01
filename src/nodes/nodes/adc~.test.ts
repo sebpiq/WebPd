@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
- * This file is part of WebPd 
+ * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,10 @@
 import assert from 'assert'
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
-import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/compile/types'
+import {
+    AudioSettings,
+    CompilerTarget,
+} from '@webpd/compiler/src/compile/types'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeBuild,
@@ -127,9 +130,11 @@ describe('adc~', () => {
                 target,
                 graph,
                 nodeImplementations,
-                audioSettings: {
-                    channelCount,
-                    bitDepth,
+                settings: {
+                    audio: {
+                        channelCount,
+                        bitDepth,
+                    },
                 },
             })
 

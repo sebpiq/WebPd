@@ -267,12 +267,11 @@ export const performBuildStep = async (
             const compileCodeResult = compile(
                 artefacts.dspGraph.graph,
                 nodeImplementations,
-                {
-                    target:
-                        target === 'compiledJs'
+                target === 'compiledJs'
                             ? 'javascript'
                             : 'assemblyscript',
-                    audioSettings,
+                {
+                    audio: audioSettings,
                     inletCallerSpecs: inletCallerSpecs || artefacts.dspGraph.inletCallerSpecs,
                     arrays: artefacts.dspGraph!.arrays,
                 }

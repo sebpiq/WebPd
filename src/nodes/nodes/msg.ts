@@ -76,7 +76,7 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     ]),
 ])
 
-const generateInitialization: _NodeImplementation['generateInitialization'] = (context) => {
+const initialization: _NodeImplementation['initialization'] = (context) => {
     const { node: { args }, state } = context
     const transferCodes = args.templates.map(
         (template, i) => buildMsgTransferCode(
@@ -111,8 +111,8 @@ const generateInitialization: _NodeImplementation['generateInitialization'] = (c
     `
 }
 
-// ------------------------------- generateMessageReceivers ------------------------------ //
-const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] = ({
+// ------------------------------- messageReceivers ------------------------------ //
+const messageReceivers: _NodeImplementation['messageReceivers'] = ({
     snds,
     state,
 }) => {
@@ -163,8 +163,8 @@ const generateMessageReceivers: _NodeImplementation['generateMessageReceivers'] 
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    generateInitialization, 
-    generateMessageReceivers,
+    initialization: initialization, 
+    messageReceivers: messageReceivers,
     dependencies: [nodeCore],
 }
 
@@ -175,7 +175,7 @@ export {
 }
 
 const buildMsgTransferCode = (
-    { state }: Parameters<_NodeImplementation['generateInitialization']>[0],
+    { state }: Parameters<_NodeImplementation['initialization']>[0],
     template: Array<DspGraph.NodeArgument>, 
     index: number,
 ) => {
