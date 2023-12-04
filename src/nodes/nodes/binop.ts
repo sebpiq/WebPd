@@ -107,13 +107,17 @@ const makeNodeImplementation = ({
 
         dependencies: [
             bangUtils, 
-            ...dependencies, 
+            ...dependencies,
+            // Shared code for all operators
             () => Sequence([
                 Class(variableNamesBinopBase.stateClass, [
                     Var('Float', 'leftOp'), 
                     Var('Float', 'rightOp')
-                ]),
+                ])
+            ]),
 
+            // Operator-dependent code
+            () => Sequence([
                 Func(variableNames.setLeft, [
                     Var(variableNamesBinopBase.stateClass, 'state'),
                     Var('Float', 'value'),

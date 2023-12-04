@@ -110,7 +110,7 @@ const makeNodeImplementation = ({
             // There is a circular dependency problem between the state and snds.$0 so we can actually
             // only use snds.$0 inside the callback of `commons_waitEngineConfigure`.
             ast`
-                ${Var(controlsCoreVariableNames.stateClass, state, ast`{
+                ${ConstVar(controlsCoreVariableNames.stateClass, state, ast`{
                     minValue: ${args.minValue},
                     maxValue: ${args.maxValue},
                     valueFloat: ${args.initValue},

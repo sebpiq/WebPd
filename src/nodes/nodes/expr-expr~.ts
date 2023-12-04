@@ -84,7 +84,7 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('expr')
 
 const nodeCore: GlobalCodeGenerator = () => Sequence([
@@ -118,7 +118,6 @@ const initialization: _NodeImplementation['initialization'] = ({
     `
 }
 
-// ------------------------------- loop ------------------------------ //
 const loopExprTilde: _NodeImplementation['loop'] = ({
     node: { args },
     state,
@@ -129,7 +128,6 @@ const loopExprTilde: _NodeImplementation['loop'] = ({
         `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)
 ) 
 
-// ------------------------------- messageReceivers ------------------------------ //
 const messageReceivers: _NodeImplementation['messageReceivers'] = ({ 
     snds, 
     state, 

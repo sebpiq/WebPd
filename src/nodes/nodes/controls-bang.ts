@@ -53,7 +53,7 @@ const nodeImplementation: _NodeImplementation = {
         state,
         node: { args },
     }) => ast`
-        ${Var(controlsCoreVariableNames.stateClass, state, `{
+        ${ConstVar(controlsCoreVariableNames.stateClass, state, `{
             value: msg_create([]),
             receiveBusName: "${args.receiveBusName}",
             sendBusName: "${args.sendBusName}",

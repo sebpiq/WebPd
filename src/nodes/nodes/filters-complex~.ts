@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { Class, Code, ConstVar, Sequence } from '@webpd/compiler'
@@ -69,6 +69,7 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
+// ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = ({
     generateOperationRe,
     generateOperationIm,
@@ -94,60 +95,54 @@ const makeNodeImplementation = ({
         lastInputIm: Code,
     ) => Code,
 }): _NodeImplementation => {
-
-    // ------------------------------- generateDeclarations ------------------------------ //
     const variableNames = generateVariableNamesNodeType('filter_c_t')
 
-    const nodeCore: GlobalCodeGenerator = () => Sequence([
-        Class(variableNames.stateClass, [
-            Var('Float', 'lastOutputRe'),
-            Var('Float', 'lastOutputIm'),
-            Var('Float', 'lastInputRe'),
-            Var('Float', 'lastInputIm'),
-        ]),
-    ])
-
-    const initialization: _NodeImplementation['initialization'] = ({ state }) => 
-        ast`
+    return {
+        initialization: ({ state }) => ast`
             ${ConstVar(variableNames.stateClass, state, `{
                 lastOutputRe: 0,
                 lastOutputIm: 0,
                 lastInputRe: 0,
                 lastInputIm: 0,
             }`)}
-        `
+        `,
 
-    // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => ast`
-        ${outs.$0} = ${generateOperationRe(
-            ins.$0, 
-            ins.$1, 
-            ins.$2,
-            ins.$3,
-            `${state}.lastOutputRe`, 
-            `${state}.lastOutputIm`, 
-            `${state}.lastInputRe`, 
-            `${state}.lastInputIm`
-        )}
-        ${state}.lastOutputIm = ${outs.$1} = ${generateOperationIm(
-            ins.$0, 
-            ins.$1,
-            ins.$2,
-            ins.$3,
-            `${state}.lastOutputRe`, 
-            `${state}.lastOutputIm`, 
-            `${state}.lastInputRe`, 
-            `${state}.lastInputIm`
-        )}
-        ${state}.lastOutputRe    = ${outs.$0}
-        ${state}.lastInputRe = ${ins.$0}
-        ${state}.lastInputIm = ${ins.$1}
-    `
+        loop: ({ ins, state, outs }) => ast`
+            ${outs.$0} = ${generateOperationRe(
+                ins.$0, 
+                ins.$1, 
+                ins.$2,
+                ins.$3,
+                `${state}.lastOutputRe`, 
+                `${state}.lastOutputIm`, 
+                `${state}.lastInputRe`, 
+                `${state}.lastInputIm`
+            )}
+            ${state}.lastOutputIm = ${outs.$1} = ${generateOperationIm(
+                ins.$0, 
+                ins.$1,
+                ins.$2,
+                ins.$3,
+                `${state}.lastOutputRe`, 
+                `${state}.lastOutputIm`, 
+                `${state}.lastInputRe`, 
+                `${state}.lastInputIm`
+            )}
+            ${state}.lastOutputRe    = ${outs.$0}
+            ${state}.lastInputRe = ${ins.$0}
+            ${state}.lastInputIm = ${ins.$1}
+        `,
 
-    return {
-        initialization: initialization,
-        loop: loop,
-        dependencies: [nodeCore]
+        dependencies: [
+            () => Sequence([
+                Class(variableNames.stateClass, [
+                    Var('Float', 'lastOutputRe'),
+                    Var('Float', 'lastOutputIm'),
+                    Var('Float', 'lastInputRe'),
+                    Var('Float', 'lastInputIm'),
+                ]),
+            ])
+        ]
     }
 }
 

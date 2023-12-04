@@ -56,33 +56,12 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
+// ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = (): _NodeImplementation => {
-    // ------------------------------- generateDeclarations ------------------------------ //
     const variableNames = generateVariableNamesNodeType('delread', ['setDelayName'])
 
-    const nodeCore: GlobalCodeGenerator = () => Sequence([
-        Class(variableNames.stateClass, [
-            Var('string', 'delayName'), 
-            Var('buf_SoundBuffer', 'buffer'), 
-        ]),
-
-        Func(variableNames.setDelayName, [
-            Var(variableNames.stateClass, 'state'),
-            Var('string', 'delayName'),
-            Var('SkedCallback', 'callback'),
-        ], 'void')`
-            if (state.delayName.length) {
-                state.buffer = DELAY_BUFFERS_NULL
-            }
-            state.delayName = delayName
-            if (state.delayName.length) {
-                DELAY_BUFFERS_get(state.delayName, callback)
-            }
-        `
-    ])
-
-    const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-        ast`
+    return {
+        initialization: ({ node: { args }, state }) => ast`
             ${ConstVar(variableNames.stateClass, state, `{
                 delayName: '',
                 buffer: DELAY_BUFFERS_NULL,
@@ -95,27 +74,40 @@ const makeNodeImplementation = (): _NodeImplementation => {
                     })
                 }
             })
-        `
+        `,
 
-    // ------------------------------- loop ------------------------------ //
-    const inlineLoop: _NodeImplementation['inlineLoop'] = ({ globs, ins, state }) =>
-        ast`buf_readSample(${state}.buffer, toInt(Math.round(
+        inlineLoop: ({ globs, ins, state }) => ast`buf_readSample(${state}.buffer, toInt(Math.round(
             Math.min(
                 Math.max(computeUnitInSamples(${globs.sampleRate}, ${ins.$0}, "msec"), 0), 
                 toFloat(${state}.buffer.length - 1)
             )
-        )))`
+        )))`,
 
-    // ------------------------------------------------------------------- //
-    return {
-        initialization: initialization,
-        inlineLoop: inlineLoop,
         dependencies: [
             computeUnitInSamples,
             delayBuffers,
             stdlib.commonsWaitEngineConfigure,
             stdlib.bufWriteRead,
-            nodeCore,
+            () => Sequence([
+                Class(variableNames.stateClass, [
+                    Var('string', 'delayName'), 
+                    Var('buf_SoundBuffer', 'buffer'), 
+                ]),
+        
+                Func(variableNames.setDelayName, [
+                    Var(variableNames.stateClass, 'state'),
+                    Var('string', 'delayName'),
+                    Var('SkedCallback', 'callback'),
+                ], 'void')`
+                    if (state.delayName.length) {
+                        state.buffer = DELAY_BUFFERS_NULL
+                    }
+                    state.delayName = delayName
+                    if (state.delayName.length) {
+                        DELAY_BUFFERS_get(state.delayName, callback)
+                    }
+                `
+            ]),
         ],
     }
 
