@@ -93,14 +93,16 @@ describe('send / receive', () => {
                     bitDepth,
                     channelCount: { in: 0, out: 0 },
                 },
-                inletCallerSpecs: {
-                    send1: ['0', '1'],
-                    send2: ['0'],
-                },
-                outletListenerSpecs: {
-                    receive1: ['0'],
-                    receive2: ['0'],
-                    receive2bis: ['0'],
+                io: {
+                    messageReceivers: {
+                        send1: { portletIds: ['0', '1'] },
+                        send2: { portletIds: ['0'] },
+                    },
+                    messageSenders: {
+                        receive1: { portletIds: ['0'] },
+                        receive2: { portletIds: ['0'] },
+                        receive2bis: { portletIds: ['0'] },
+                    },
                 },
             })
 
@@ -125,18 +127,18 @@ describe('send / receive', () => {
                 const received1: Array<Message> = []
                 const received2: Array<Message> = []
 
-                engine.outletListeners.receive1['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive1['0'].onMessage = (msg) =>
                     received1.push(msg)
-                engine.outletListeners.receive2['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2['0'].onMessage = (msg) =>
                     received2.push(msg)
 
-                engine.inletCallers.send1['0'](['blabla', 123])
+                engine.io.messageReceivers.send1['0'](['blabla', 123])
                 assert.deepStrictEqual(received1, [['blabla', 123]])
 
-                engine.inletCallers.send2['0'](['blo'])
+                engine.io.messageReceivers.send2['0'](['blo'])
                 assert.deepStrictEqual(received2, [['blo']])
 
-                engine.inletCallers.send1['0'](['bang'])
+                engine.io.messageReceivers.send1['0'](['bang'])
                 assert.deepStrictEqual(received1, [['blabla', 123], ['bang']])
             }
         )
@@ -149,14 +151,14 @@ describe('send / receive', () => {
                 const received1: Array<Message> = []
                 const received2: Array<Message> = []
 
-                engine.outletListeners.receive1['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive1['0'].onMessage = (msg) =>
                     received1.push(msg)
-                engine.outletListeners.receive2['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2['0'].onMessage = (msg) =>
                     received2.push(msg)
 
-                engine.inletCallers.send1['1'](['BUS2'])
+                engine.io.messageReceivers.send1['1'](['BUS2'])
 
-                engine.inletCallers.send1['0']([666])
+                engine.io.messageReceivers.send1['0']([666])
                 assert.deepStrictEqual(received1, [])
                 assert.deepStrictEqual(received2, [[666]])
             }
@@ -170,12 +172,12 @@ describe('send / receive', () => {
                 const received2: Array<Message> = []
                 const received2bis: Array<Message> = []
 
-                engine.outletListeners.receive2['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2['0'].onMessage = (msg) =>
                     received2.push(msg)
-                engine.outletListeners.receive2bis['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2bis['0'].onMessage = (msg) =>
                     received2bis.push(msg)
 
-                engine.inletCallers.send2['0']([999])
+                engine.io.messageReceivers.send2['0']([999])
                 assert.deepStrictEqual(received2, [[999]])
                 assert.deepStrictEqual(received2bis, [[999]])
             }

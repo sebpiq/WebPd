@@ -22,6 +22,7 @@ import {
     CompilationSettings,
     DspGraph,
     NodeImplementations,
+    Compilation,
 } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
@@ -36,7 +37,7 @@ export interface Artefacts {
         graph: DspGraph.Graph
         arrays: DspGraph.Arrays
         pd: PdJson.Pd
-        inletCallerSpecs?: CompilationSettings['inletCallerSpecs']
+        io: Compilation['settings']['io']
     }
     compiledJs?: string
     compiledAsc?: string
@@ -57,5 +58,5 @@ export interface BuildSettings {
     nodeBuilders: NodeBuilders
     nodeImplementations: NodeImplementations
     abstractionLoader: AbstractionLoader
-    inletCallerSpecs?: CompilationSettings['inletCallerSpecs']
+    io?: CompilationSettings['io']
 }

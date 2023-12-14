@@ -186,13 +186,15 @@ describe('controls-bang', () => {
                     bitDepth,
                     channelCount: { in: 0, out: 0 },
                 },
-                inletCallerSpecs: {
-                    send: ['0'],
-                    bang: ['0'],
-                },
-                outletListenerSpecs: {
-                    receive: ['0'],
-                    bang: ['0'],
+                io: {
+                    messageReceivers: {
+                        send: { portletIds: ['0'] },
+                        bang: { portletIds: ['0'] },
+                    },
+                    messageSenders: {
+                        receive: { portletIds: ['0'] },
+                        bang: { portletIds: ['0'] },
+                    },
                 },
             })
 
@@ -221,12 +223,12 @@ describe('controls-bang', () => {
                 const received: Array<Message> = []
                 const receivedControl: Array<Message> = []
 
-                engine.outletListeners.receive['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                     received.push(msg)
-                engine.outletListeners.bang['0'].onMessage = (msg) =>
+                engine.io.messageSenders.bang['0'].onMessage = (msg) =>
                     receivedControl.push(msg)
 
-                engine.inletCallers.send['0']([666])
+                engine.io.messageReceivers.send['0']([666])
                 assert.deepStrictEqual(received, [['bang']])
                 assert.deepStrictEqual(receivedControl, [['bang']])
             }
@@ -244,22 +246,22 @@ describe('controls-bang', () => {
                 const received: Array<Message> = []
                 const receivedControl: Array<Message> = []
 
-                engine.outletListeners.receive['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                     received.push(msg)
-                engine.outletListeners.bang['0'].onMessage = (msg) =>
+                engine.io.messageSenders.bang['0'].onMessage = (msg) =>
                     receivedControl.push(msg)
 
-                engine.inletCallers.send['0']([666])
+                engine.io.messageReceivers.send['0']([666])
                 assert.deepStrictEqual(received, [])
                 assert.deepStrictEqual(receivedControl, [])
 
-                engine.inletCallers.bang['0'](['receive', 'BUS_TO_BANG'])
-                engine.inletCallers.send['0']([888])
+                engine.io.messageReceivers.bang['0'](['receive', 'BUS_TO_BANG'])
+                engine.io.messageReceivers.send['0']([888])
                 assert.deepStrictEqual(received, [])
                 assert.deepStrictEqual(receivedControl, [['bang']])
 
-                engine.inletCallers.bang['0'](['send', 'BUS_FROM_BANG'])
-                engine.inletCallers.bang['0']([999])
+                engine.io.messageReceivers.bang['0'](['send', 'BUS_FROM_BANG'])
+                engine.io.messageReceivers.bang['0']([999])
                 assert.deepStrictEqual(received, [['bang']])
                 assert.deepStrictEqual(receivedControl, [['bang'], ['bang']])
             }

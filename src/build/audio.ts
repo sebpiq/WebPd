@@ -19,7 +19,6 @@
  */
 import {
     AudioSettings,
-    CompilationSettings,
     CompilerTarget,
     createAssemblyScriptWasmEngine,
     createJavaScriptEngine,

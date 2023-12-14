@@ -22,13 +22,17 @@ import compile from '@webpd/compiler'
 import parse from '@webpd/pd-parser'
 import appGenerator from '../app-generator/generate-app'
 import {
-    collectGuiControlsInletCallerSpecs,
     discoverGuiControls,
 } from '../app-generator/gui-controls'
+import { collectIoMessageReceiversFromGui, collectIoMessageReceiversFromSendNodes } from '../app-generator/collect-message-receivers'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
 import { compileAsc } from './asc'
 import { renderWav } from './audio'
-import { UnknownNodeTypeError, getArtefact, stringifyArrayBuffer } from './helpers'
+import {
+    UnknownNodeTypeError,
+    getArtefact,
+    stringifyArrayBuffer,
+} from './helpers'
 import { Artefacts, BuildSettings } from './types'
 import { BuildFormat, listBuildSteps } from './formats'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes'
@@ -50,27 +54,23 @@ export type BuildResult = BuildSuccess | BuildFailure
 /**
  * Simple build function to compile a Pd patch into compiled code
  * that can be directly run into a web app.
- * 
+ *
  * Throws an error if the build fails.
- * 
+ *
  * @see performBuildStep
  */
 export const buildRunnable = async (
     pdFile: string,
     format: 'compiledJs' | 'wasm' = 'compiledJs',
-    settings: BuildSettings,
+    settings: BuildSettings
 ) => {
     if (!['wasm', 'compiledJs'].includes(format)) {
         throw new Error(`Invalid out format ${format}`)
     }
 
-    const artefacts: Artefacts = { 'pd': pdFile }
+    const artefacts: Artefacts = { pd: pdFile }
     for (const step of listBuildSteps('pd', format)) {
-        const result = await performBuildStep(
-            artefacts,
-            step, 
-            settings
-        )
+        const result = await performBuildStep(artefacts, step, settings)
         if (result.status === 1) {
             throw new Error(`Build failed : ${result.errors.join('\n')}`)
         }
@@ -108,7 +108,7 @@ export const createArtefacts = (): Artefacts => ({})
 /**
  * Helper to unpack an artefact from an ArrayBuffer into its correct format.
  * Useful for example to load artefacts from files or http requests.
- * 
+ *
  * @returns a new artefacts object.
  */
 export const loadArtefact = (
@@ -130,30 +130,38 @@ export const loadArtefact = (
                 dspGraph: JSON.parse(stringifyArrayBuffer(artefactBuffer)),
             }
         case 'compiledJs':
-            return { ...artefacts, compiledJs: stringifyArrayBuffer(artefactBuffer) }
+            return {
+                ...artefacts,
+                compiledJs: stringifyArrayBuffer(artefactBuffer),
+            }
         case 'compiledAsc':
-            return { ...artefacts, compiledAsc: stringifyArrayBuffer(artefactBuffer) }
+            return {
+                ...artefacts,
+                compiledAsc: stringifyArrayBuffer(artefactBuffer),
+            }
         case 'wasm':
             return { ...artefacts, wasm: artefactBuffer }
         case 'wav':
             return { ...artefacts, wav: new Uint8Array(artefactBuffer) }
 
         default:
-            throw new Error(`Unexpected format for preloading ${artefactFormat}`)
+            throw new Error(
+                `Unexpected format for preloading ${artefactFormat}`
+            )
     }
 }
 
 /**
  * A helper to perform a build step on a given artefacts object.
- * If the build is successful, the artefacts object is updated in place with 
+ * If the build is successful, the artefacts object is updated in place with
  * the newly built artefact.
- * 
- * Beware that this can only build one step at a time. If targetting a given format 
+ *
+ * Beware that this can only build one step at a time. If targetting a given format
  * requires multiple steps, you need to call this function multiple times with intermediate targets.
- * 
+ *
  * @see fromPatch
- * 
- * @param artefacts 
+ *
+ * @param artefacts
  * @param target
  * @param settings
  */
@@ -165,7 +173,7 @@ export const performBuildStep = async (
         nodeImplementations,
         audioSettings,
         renderAudioSettings,
-        inletCallerSpecs,
+        io = {},
         abstractionLoader,
     }: BuildSettings
 ): Promise<BuildResult> => {
@@ -208,25 +216,37 @@ export const performBuildStep = async (
             }
 
             if (toDspGraphResult.status === 0) {
+                // If io.messageReceivers are not defined, we infer them by
+                // discovering UI controls and generating messageReceivers for each one.
+                if (!io.messageReceivers) {
+                    const { controls } = discoverGuiControls(
+                        toDspGraphResult.pd
+                    )
+                    
+                    io.messageReceivers = {
+                        ...collectIoMessageReceiversFromGui(
+                            controls,
+                            toDspGraphResult.graph
+                        ),
+                        ...collectIoMessageReceiversFromSendNodes(
+                            toDspGraphResult.pd,
+                            toDspGraphResult.graph
+                        )
+                    }
+                }
+
                 artefacts.dspGraph = {
                     graph: toDspGraphResult.graph,
                     arrays: toDspGraphResult.arrays,
                     pd: toDspGraphResult.pd,
+                    io: {
+                        messageReceivers: {},
+                        messageSenders: {},
+                        ...io,
+                    },
                 }
 
-                // If inletCallerSpecs are not defined, we infer them by 
-                // discovering UI controls and generating inlet callers for each one.
-                if (!inletCallerSpecs) {
-                    const { controls } = discoverGuiControls(
-                        artefacts.dspGraph.pd,
-                    )
-                    artefacts.dspGraph.inletCallerSpecs = collectGuiControlsInletCallerSpecs(
-                        controls,
-                        artefacts.dspGraph!.graph
-                    )
-                }
                 return { status: 0, warnings }
-
             } else {
                 const unknownNodeTypes = Object.values(
                     toDspGraphResult.abstractionsLoadingErrors
@@ -267,12 +287,10 @@ export const performBuildStep = async (
             const compileCodeResult = compile(
                 artefacts.dspGraph.graph,
                 nodeImplementations,
-                target === 'compiledJs'
-                            ? 'javascript'
-                            : 'assemblyscript',
+                target === 'compiledJs' ? 'javascript' : 'assemblyscript',
                 {
                     audio: audioSettings,
-                    inletCallerSpecs: inletCallerSpecs || artefacts.dspGraph.inletCallerSpecs,
+                    io: artefacts.dspGraph.io,
                     arrays: artefacts.dspGraph!.arrays,
                 }
             )
@@ -306,7 +324,7 @@ export const performBuildStep = async (
             artefacts.wav = await renderWav(
                 renderAudioSettings.previewDurationSeconds,
                 artefacts,
-                {...audioSettings, ...renderAudioSettings}
+                { ...audioSettings, ...renderAudioSettings }
             )
             return { status: 0, warnings: [] }
 
@@ -326,8 +344,8 @@ const _makeUnknownNodeTypeMessage = (nodeTypeSet: Set<string>) => [
 ]
 
 const _makeParseErrorMessages = (
-    errorOrWarnings: Array<{ message: string; lineIndex: number} >
-) => errorOrWarnings.map(
-    ({ message, lineIndex }) => `line ${lineIndex + 1} : ${message}`
-)
-
+    errorOrWarnings: Array<{ message: string; lineIndex: number }>
+) =>
+    errorOrWarnings.map(
+        ({ message, lineIndex }) => `line ${lineIndex + 1} : ${message}`
+    )

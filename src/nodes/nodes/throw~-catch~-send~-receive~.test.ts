@@ -141,8 +141,10 @@ describe('throw~ / catch~', () => {
             const channelCount = { out: 1, in: 0 }
 
             const compileResult = compile(graph, nodeImplementations, target, {
-                inletCallerSpecs: {
-                    throw2: ['0_message'],
+                io: {
+                    messageReceivers: {
+                        throw2: { portletIds: ['0_message'] },
+                    },
                 },
                 audio: {
                     channelCount,
@@ -192,7 +194,7 @@ describe('throw~ / catch~', () => {
                     }
                 )
 
-                engine.inletCallers.throw2['0_message'](['set', 'unknown_bus'])
+                engine.io.messageReceivers.throw2['0_message'](['set', 'unknown_bus'])
 
                 assert.deepStrictEqual(
                     nodeImplementationsTestHelpers.generateFrames(engine, 4),
@@ -259,8 +261,10 @@ describe('throw~ / catch~', () => {
             const channelCount = { out: 2, in: 0 }
 
             const compileResult = compile(graph, nodeImplementations, target, {
-                inletCallerSpecs: {
-                    receive2: ['0'],
+                io: {
+                    messageReceivers: {
+                        receive2: { portletIds: ['0'] },
+                    },
                 },
                 audio: {
                     channelCount,
@@ -315,7 +319,7 @@ describe('throw~ / catch~', () => {
                     }
                 )
 
-                engine.inletCallers.receive2['0'](['set', 'unknown_bus'])
+                engine.io.messageReceivers.receive2['0'](['set', 'unknown_bus'])
 
                 assert.deepStrictEqual(
                     nodeImplementationsTestHelpers.generateFrames(engine, 4),

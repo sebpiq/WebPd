@@ -17,10 +17,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { PdJson } from '@webpd/pd-parser'
 import { Artefacts } from '../build/types'
+import { IoMessageSpecMetadata } from './collect-message-receivers'
 import WEBPD_RUNTIME_CODE from './runtime.generated.js.txt'
-import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {
@@ -172,7 +171,7 @@ const bareBonesApp = (settings: Settings) => {
             // 
             const sendMsgToWebPd = (nodeId, portletId, message) => {
                 webpdNode.port.postMessage({
-                    type: 'inletCaller',
+                    type: 'io:messageReceiver',
                     payload: {
                         nodeId,
                         portletId,
@@ -184,20 +183,30 @@ const bareBonesApp = (settings: Settings) => {
             // Here is an index of objects IDs to which you can send messages, with hints so you can find the right ID.
             // Note that by default only GUI objects (bangs, sliders, etc ...) are available.${
                 artefacts.dspGraph 
-                && artefacts.dspGraph.inletCallerSpecs 
-                && Object.keys(artefacts.dspGraph.inletCallerSpecs).length ? 
-                    Object.entries(artefacts.dspGraph.inletCallerSpecs)
-                        .flatMap(([nodeId, portletIds]) => portletIds.map(portletId => {
-                            const pdNode = resolvePdNodeFromGraphNodeId(artefacts.pdJson!, nodeId)
-                            if (!pdNode) {
-                                throw new Error(`Failed to resolve pd node`)
-                            }
+                && artefacts.dspGraph.io 
+                && Object.keys(artefacts.dspGraph.io.messageReceivers).length ? 
+                    Object.entries(artefacts.dspGraph.io.messageReceivers)
+                        .map(([nodeId, {portletIds, metadata: _metadata}]) => portletIds.map(portletId => {
+                            const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
+                            if (!metadata) {
+                                return ''
+                            } else if (metadata.group === 'gui') {
                             return `
             //  - nodeId "${nodeId}" portletId "${portletId}"
-            //      * type "${pdNode.type}"
-            //      * args ${JSON.stringify(pdNode.args)}`
-            + ((pdNode.layout as any).label ? `
-            //      * label "${(pdNode.layout as any).label}"` : '')
+            //      * type "${metadata.type}"
+            //      * args ${JSON.stringify(metadata.args)}${
+                metadata.label ? `
+            //      * label "${metadata.label}"` : ''}
+            `
+                            } else if (metadata.group === 'send') {
+                                return `
+            //  - nodeId "${nodeId}" portletId "${portletId}"
+            //      * type "send"
+            //      * send "${metadata.name}"
+            `
+                            } else {
+                                return ''
+                            }
                         })).join('')
                 : `
             // EMPTY (did you place a GUI object in your patch ?)
@@ -219,18 +228,4 @@ const bareBonesApp = (settings: Settings) => {
     }
 
     return generatedApp
-}
-
-const resolvePdNodeFromGraphNodeId = (
-    pd: PdJson.Pd,
-    graphNodeId: PdJson.LocalId
-): PdJson.Node | null => {
-    let node: PdJson.Node = null
-    Object.entries(pd.patches).some(([patchId, patch]) => {
-        node = Object.values(patch.nodes).find(
-            (node) => buildGraphNodeId(patchId, node.id) === graphNodeId
-        )
-        return !!node
-    })
-    return node
 }

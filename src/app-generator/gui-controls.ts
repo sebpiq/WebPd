@@ -17,9 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { CompilationSettings, DspGraph } from '@webpd/compiler'
 import { CONTROL_TYPE, PdJson } from '@webpd/pd-parser'
-import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 
 export interface Point {
     x: number
@@ -186,26 +184,6 @@ export const traverseGuiControls = (
             func(control)
         }
     })
-}
-
-export const collectGuiControlsInletCallerSpecs = (
-    controls: Array<ControlTree>,
-    graph: DspGraph.Graph
-) => {
-    const inletCallerSpecs: CompilationSettings['inletCallerSpecs'] = {}
-    traverseGuiControls(controls, (control) => {
-        const nodeId = buildGraphNodeId(control.patch.id, control.node.id)
-        const portletId = '0'
-        // Important because some nodes are deleted at dsp-graph compilation.
-        // and if we declare inletCallerSpec for them it will cause error.
-        // TODO : maybe the compiler should detect this instead of doing it here ?
-        if (!graph[nodeId]) {
-            return
-        }
-        inletCallerSpecs[nodeId] = inletCallerSpecs[nodeId] || []
-        inletCallerSpecs[nodeId].push(portletId)
-    })
-    return inletCallerSpecs
 }
 
 export const makeTranslationTransform = (fromPoint: Point, toPoint: Point) => {

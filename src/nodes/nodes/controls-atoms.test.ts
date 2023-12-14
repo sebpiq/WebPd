@@ -106,17 +106,22 @@ describe('controls-atoms', () => {
                     },
                     send: {
                         type: 'send',
-                        ...buildersSendReceive['send'].build({ busName: 'BUS_TO_CTRL' }),
+                        ...buildersSendReceive['send'].build({
+                            busName: 'BUS_TO_CTRL',
+                        }),
                         args: { busName: 'BUS_TO_CTRL' },
                     },
                     receive: {
                         type: 'receive',
-                        ...buildersSendReceive['receive'].build({ busName: 'BUS_FROM_CTRL' }),
+                        ...buildersSendReceive['receive'].build({
+                            busName: 'BUS_FROM_CTRL',
+                        }),
                         args: { busName: 'BUS_FROM_CTRL' },
                     },
                 })
 
-                const compileResult = compile(                        graph,
+                const compileResult = compile(
+                    graph,
                     _nodeImplementations,
                     target,
                     {
@@ -124,15 +129,18 @@ describe('controls-atoms', () => {
                             bitDepth,
                             channelCount: { in: 0, out: 0 },
                         },
-                        inletCallerSpecs: {
-                            send: ['0'],
-                            control: ['0'],
+                        io: {
+                            messageReceivers: {
+                                send: { portletIds: ['0'] },
+                                control: { portletIds: ['0'] },
+                            },
+                            messageSenders: {
+                                receive: { portletIds: ['0'] },
+                                control: { portletIds: ['0'] },
+                            },
                         },
-                        outletListenerSpecs: {
-                            receive: ['0'],
-                            control: ['0'],
-                        },
-                    },)
+                    }
+                )
 
                 if (compileResult.status !== 0) {
                     throw new Error('Compilation failed')
@@ -164,12 +172,12 @@ describe('controls-atoms', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.outletListeners.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                         received.push(msg)
-                    engine.outletListeners.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
                         receivedControl.push(msg)
 
-                    engine.inletCallers.send['0'](
+                    engine.io.messageReceivers.send['0'](
                         getTestMessage(nodeType, [666])
                     )
                     assert.deepStrictEqual(received, [
@@ -198,19 +206,19 @@ describe('controls-atoms', () => {
                     )
 
                     // Initialize value
-                    engine.inletCallers.control['0'](
+                    engine.io.messageReceivers.control['0'](
                         getTestMessage(nodeType, [789])
                     )
 
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.outletListeners.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                         received.push(msg)
-                    engine.outletListeners.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
                         receivedControl.push(msg)
 
-                    engine.inletCallers.send['0'](['bang'])
+                    engine.io.messageReceivers.send['0'](['bang'])
                     assert.deepStrictEqual(received, [
                         getTestMessage(nodeType, [789]),
                     ])
@@ -237,19 +245,22 @@ describe('controls-atoms', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.outletListeners.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                         received.push(msg)
-                    engine.outletListeners.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
                         receivedControl.push(msg)
 
-                    engine.inletCallers.send['0'](
+                    engine.io.messageReceivers.send['0'](
                         getTestMessage(nodeType, [666])
                     )
                     assert.deepStrictEqual(received, [])
                     assert.deepStrictEqual(receivedControl, [])
 
-                    engine.inletCallers.control['0'](['receive', 'BUS_TO_CTRL'])
-                    engine.inletCallers.send['0'](
+                    engine.io.messageReceivers.control['0']([
+                        'receive',
+                        'BUS_TO_CTRL',
+                    ])
+                    engine.io.messageReceivers.send['0'](
                         getTestMessage(nodeType, [888])
                     )
                     assert.deepStrictEqual(received, [])
@@ -257,8 +268,11 @@ describe('controls-atoms', () => {
                         getTestMessage(nodeType, [888]),
                     ])
 
-                    engine.inletCallers.control['0'](['send', 'BUS_FROM_CTRL'])
-                    engine.inletCallers.control['0'](
+                    engine.io.messageReceivers.control['0']([
+                        'send',
+                        'BUS_FROM_CTRL',
+                    ])
+                    engine.io.messageReceivers.control['0'](
                         getTestMessage(nodeType, [999])
                     )
                     assert.deepStrictEqual(received, [

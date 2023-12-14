@@ -20,9 +20,9 @@
 export {
     discoverGuiControls,
     traverseGuiControls,
-    collectGuiControlsInletCallerSpecs,
     ControlTree,
     Control,
     ControlContainer,
     Comment,
 } from './gui-controls'
+export { collectIoMessageReceiversFromGui } from './collect-message-receivers'

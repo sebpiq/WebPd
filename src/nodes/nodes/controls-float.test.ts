@@ -224,14 +224,16 @@ describe('controls-float', () => {
                             bitDepth,
                             channelCount: { in: 0, out: 0 },
                         },
-                        inletCallerSpecs: {
-                            send: ['0'],
-                            control: ['0'],
-                        },
-                        outletListenerSpecs: {
-                            receive: ['0'],
-                            control: ['0'],
-                        },
+                        io: {
+                            messageReceivers: {
+                                send: {portletIds: ['0']},
+                                control: {portletIds: ['0']},
+                            },
+                            messageSenders: {
+                                receive: {portletIds: ['0']},
+                                control: {portletIds: ['0']},
+                            },
+                        }
                     }
                 )
 
@@ -265,12 +267,12 @@ describe('controls-float', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.outletListeners.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                         received.push(msg)
-                    engine.outletListeners.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
                         receivedControl.push(msg)
 
-                    engine.inletCallers.send['0']([666])
+                    engine.io.messageReceivers.send['0']([666])
                     assert.deepStrictEqual(received, [[666]])
                     assert.deepStrictEqual(receivedControl, [[666]])
                 }
@@ -298,12 +300,12 @@ describe('controls-float', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.outletListeners.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                         received.push(msg)
-                    engine.outletListeners.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
                         receivedControl.push(msg)
 
-                    engine.inletCallers.send['0'](['bang'])
+                    engine.io.messageReceivers.send['0'](['bang'])
                     assert.deepStrictEqual(received, [
                         [nodeType === 'tgl' ? args.maxValue : args.initValue],
                     ])
@@ -330,22 +332,22 @@ describe('controls-float', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.outletListeners.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
                         received.push(msg)
-                    engine.outletListeners.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
                         receivedControl.push(msg)
 
-                    engine.inletCallers.send['0']([666])
+                    engine.io.messageReceivers.send['0']([666])
                     assert.deepStrictEqual(received, [])
                     assert.deepStrictEqual(receivedControl, [])
 
-                    engine.inletCallers.control['0'](['receive', 'BUS_TO_CTRL'])
-                    engine.inletCallers.send['0']([888])
+                    engine.io.messageReceivers.control['0'](['receive', 'BUS_TO_CTRL'])
+                    engine.io.messageReceivers.send['0']([888])
                     assert.deepStrictEqual(received, [])
                     assert.deepStrictEqual(receivedControl, [[888]])
 
-                    engine.inletCallers.control['0'](['send', 'BUS_FROM_CTRL'])
-                    engine.inletCallers.control['0']([999])
+                    engine.io.messageReceivers.control['0'](['send', 'BUS_FROM_CTRL'])
+                    engine.io.messageReceivers.control['0']([999])
                     assert.deepStrictEqual(received, [[999]])
                     assert.deepStrictEqual(receivedControl, [[888], [999]])
                 }

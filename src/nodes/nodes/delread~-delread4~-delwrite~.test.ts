@@ -153,9 +153,11 @@ describe('delread~ / delwrite~', () => {
             const channelCount = { out: 1, in: 0 }
 
             const compileResult = compile(graph, nodeImplementations, target, {
-                inletCallerSpecs: {
-                    delayTimeMsec: ['0'],
-                    delayW: ['0_message'],
+                io: {
+                    messageReceivers: {
+                        delayTimeMsec: { portletIds: ['0'] },
+                        delayW: { portletIds: ['0_message'] },
+                    },
                 },
                 audio: {
                     channelCount,
@@ -199,7 +201,7 @@ describe('delread~ / delwrite~', () => {
                 )
 
                 // Change the delay 2 samples
-                engine.inletCallers['delayTimeMsec']['0']([
+                engine.io.messageReceivers['delayTimeMsec']['0']([
                     (2 * 1000) / SAMPLE_RATE,
                 ])
 
@@ -233,10 +235,10 @@ describe('delread~ / delwrite~', () => {
                 )
 
                 // Change the delay 2 samples
-                engine.inletCallers['delayTimeMsec']['0']([
+                engine.io.messageReceivers['delayTimeMsec']['0']([
                     (3 * 1000) / SAMPLE_RATE,
                 ])
-                engine.inletCallers['delayW']['0_message'](['clear'])
+                engine.io.messageReceivers['delayW']['0_message'](['clear'])
 
                 assert.deepStrictEqual(
                     nodeImplementationsTestHelpers.generateFrames(engine, 4),
