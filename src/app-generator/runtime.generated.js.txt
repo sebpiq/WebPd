@@ -1601,35 +1601,6 @@ var WebPdRuntime = (function (exports) {
       return false;
   };
 
-  var run = async (audioContext, compiledPatch, settings) => {
-      const { messageHandler } = settings;
-      const webpdNode = new WebPdWorkletNode(audioContext);
-      webpdNode.port.onmessage = (msg) => messageHandler(webpdNode, msg);
-      if (typeof compiledPatch === 'string') {
-          webpdNode.port.postMessage({
-              type: 'code:JS',
-              payload: {
-                  jsCode: compiledPatch,
-              },
-          });
-      }
-      else {
-          webpdNode.port.postMessage({
-              type: 'code:WASM',
-              payload: {
-                  wasmBuffer: compiledPatch,
-              },
-          });
-      }
-      return webpdNode;
-  };
-  const createDefaultSettings = (patchUrl) => {
-      const rootUrl = urlDirName(patchUrl);
-      return {
-          messageHandler: (node, message) => index(node, message, { rootUrl }),
-      };
-  };
-
   /*
    * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
    *
@@ -2733,7 +2704,7 @@ var WebPdRuntime = (function (exports) {
       return instanceAndModule.instance;
   };
 
-  const readMetadata$1 = async (wasmBuffer) => {
+  const readMetadata$2 = async (wasmBuffer) => {
       // In order to read metadata, we need to introspect the module to get the imports
       const inputImports = {};
       const wasmModule = WebAssembly.Module.imports(new WebAssembly.Module(wasmBuffer));
@@ -2833,13 +2804,51 @@ var WebPdRuntime = (function (exports) {
       });
   };
 
-  const readMetadata = async (target, compiled) => {
+  const readMetadata$1 = async (target, compiled) => {
       switch (target) {
           case 'assemblyscript':
-              return readMetadata$1(compiled);
+              return readMetadata$2(compiled);
           case 'javascript':
               return createEngine(compiled).metadata;
       }
+  };
+
+  const createDefaultSettings = (patchUrl) => {
+      const rootUrl = urlDirName(patchUrl);
+      return {
+          messageHandler: (node, message) => index(node, message, { rootUrl }),
+      };
+  };
+  const readMetadata = (compiledPatch) => {
+      if (typeof compiledPatch === 'string') {
+          return readMetadata$1('javascript', compiledPatch);
+      }
+      else {
+          return readMetadata$1('assemblyscript', compiledPatch);
+      }
+  };
+
+  var run = async (audioContext, compiledPatch, settings) => {
+      const { messageHandler } = settings;
+      const webpdNode = new WebPdWorkletNode(audioContext);
+      webpdNode.port.onmessage = (msg) => messageHandler(webpdNode, msg);
+      if (typeof compiledPatch === 'string') {
+          webpdNode.port.postMessage({
+              type: 'code:JS',
+              payload: {
+                  jsCode: compiledPatch,
+              },
+          });
+      }
+      else {
+          webpdNode.port.postMessage({
+              type: 'code:WASM',
+              payload: {
+                  wasmBuffer: compiledPatch,
+              },
+          });
+      }
+      return webpdNode;
   };
 
   exports.createDefaultSettings = createDefaultSettings;

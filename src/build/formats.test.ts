@@ -62,10 +62,10 @@ describe('formats', () => {
     describe('listOutputFormats', () => {
         it('should find all out formats for a given in format', () => {
             assert.deepStrictEqual(listOutputFormats('compiledJs'), new Set([
-                'wav', 'appTemplate'
+                'wav', 'app'
             ]))
             assert.deepStrictEqual(listOutputFormats('dspGraph'), new Set([
-                'compiledJs', 'wav', 'compiledAsc', 'wasm', 'appTemplate'
+                'compiledJs', 'wav', 'compiledAsc', 'wasm', 'app'
             ]))
             assert.deepStrictEqual(listOutputFormats('wav'), new Set())
         })
@@ -98,8 +98,8 @@ describe('formats', () => {
             assert.deepStrictEqual(_traverseBuildTree(BUILD_TREE, []), [
                 ['pd', 'pdJson', 'dspGraph', 'compiledJs', 'wav'],
                 ['pd', 'pdJson', 'dspGraph', 'compiledAsc', 'wasm', 'wav'],
-                ['pd', 'pdJson', 'dspGraph', 'compiledAsc', 'wasm', 'appTemplate'],
-                ['pd', 'pdJson', 'dspGraph', 'compiledJs', 'appTemplate'],
+                ['pd', 'pdJson', 'dspGraph', 'compiledAsc', 'wasm', 'app'],
+                ['pd', 'pdJson', 'dspGraph', 'compiledJs', 'app'],
             ])
         })
     })

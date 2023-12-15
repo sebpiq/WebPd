@@ -132,7 +132,7 @@ const bareBonesApp = (settings: Settings) => {
                 webpdNode = await WebPdRuntime.run(
                     audioContext, 
                     patch, 
-                    WebPdRuntime.createDefaultSettings('./${compiledPatchFilename}'),
+                    WebPdRuntime.defaultSettingsForRun('./${compiledPatchFilename}'),
                 )
                 webpdNode.connect(audioContext.destination)
 
@@ -190,11 +190,11 @@ const bareBonesApp = (settings: Settings) => {
                             const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
                             if (!metadata) {
                                 return ''
-                            } else if (metadata.group === 'gui') {
+                            } else if (metadata.group === 'control') {
                             return `
             //  - nodeId "${nodeId}" portletId "${portletId}"
             //      * type "${metadata.type}"
-            //      * args ${JSON.stringify(metadata.args)}${
+            //      * position ${JSON.stringify(metadata.position)}${
                 metadata.label ? `
             //      * label "${metadata.label}"` : ''}
             `

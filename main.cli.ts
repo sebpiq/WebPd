@@ -35,7 +35,7 @@ const WAV_PREVIEW_DURATION = 30
 
 const ENGINE_OPTIONS: ReadonlyArray<BuildFormat> = ['compiledJs', 'wasm']
 const DEFAULT_ENGINE: Task['engine'] = 'wasm'
-const FORMAT_OUT_WITH_ENGINE: ReadonlyArray<BuildFormat> = ['wav', 'appTemplate']
+const FORMAT_OUT_WITH_ENGINE: ReadonlyArray<BuildFormat> = ['wav', 'app']
 
 interface Task {
     inFilepath: string
@@ -120,7 +120,7 @@ const assertValidOutFilepath = async (
     outFormat: BuildFormat
 ) => {
     switch (outFormat) {
-        case 'appTemplate':
+        case 'app':
             ifConditionThenExitError(
                 !isDirectorySync(outFilepath),
                 `Format ${outFormat} requires a directory as output path`
@@ -175,11 +175,11 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                 written.push(outFilepath)
                 break
 
-            case 'appTemplate':
-                const appTemplate = getArtefact(artefacts, outFormat)
-                for (let filename of Object.keys(appTemplate)) {
+            case 'app':
+                const app = getArtefact(artefacts, outFormat)
+                for (let filename of Object.keys(app)) {
                     const filepath = path.resolve(outFilepath, filename)
-                    const fileContents = appTemplate[filename]
+                    const fileContents = app[filename]
                     await fs.promises.writeFile(
                         filepath,
                         typeof fileContents === 'string'
@@ -194,7 +194,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
             process.stdout.write(`\nCreated file ` + colors.bold(filepath))
         })
 
-        if (outFormat === 'appTemplate') {
+        if (outFormat === 'app') {
             process.stdout.write(
                 colors.grey('\n\nWeb app compiled ! Start it by running :\n') +
                     colors.blue(`\tnpx http-server ${outFilepath}\n`) + 
@@ -323,7 +323,7 @@ const main = (): void => {
                     [
                         'wasm',
                         'compiledJs',
-                        'appTemplate',
+                        'app',
                         'wav',
                     ] as Array<BuildFormat>
                 )
@@ -345,7 +345,7 @@ const main = (): void => {
         (colors as any).brightMagenta('\n~ Usage examples ~') +
             '\nGenerating a web page embedding myPatch.pd in path/to/folder : ' +
             colors.blue(
-                '\nwebpd -i myPatch.pd -o path/to/folder -f appTemplate'
+                '\nwebpd -i myPatch.pd -o path/to/folder -f app'
             ) +
             '\nGenerating a wav preview of myPatch.pd : ' +
             colors.blue('\nwebpd -i myPatch.pd -o myPatch.wav')
@@ -402,7 +402,7 @@ const main = (): void => {
         }
 
         ifConditionThenExitError(
-            outFormat === 'appTemplate' && !isDirectorySync(outFilepath),
+            outFormat === 'app' && !isDirectorySync(outFilepath),
             `Generating an app requires output path to be a directory`
         )
 

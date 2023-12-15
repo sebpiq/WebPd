@@ -3,6 +3,7 @@ import { createArtefacts, performBuildStep } from './build'
 import assert from 'assert'
 import { IoMessageSpecs } from '@webpd/compiler/src/compile/types'
 import { builders as buildersSendReceive } from '../nodes/nodes/send-receive'
+import { builders as buildersControlsFloat } from '../nodes/nodes/controls-float'
 import { builder } from '../nodes/nodes/msg'
 
 describe('build', () => {
@@ -32,6 +33,16 @@ describe('build', () => {
                                     y: 44,
                                 },
                             },
+                            '3': {
+                                type: 'hsl',
+                                args: [0, 127, 1, 44.4, 'empty', 'empty'],
+                                nodeClass: 'control',
+                                layout: {
+                                    x: 55,
+                                    y: 66,
+                                    label: 'blu-hsl',
+                                } as any,
+                            },
                         },
                     },
                 },
@@ -49,6 +60,7 @@ describe('build', () => {
                 },
                 nodeBuilders: {
                     msg: builder,
+                    hsl: buildersControlsFloat.hsl,
                     send: buildersSendReceive.send,
                 },
                 nodeImplementations: {},
@@ -62,11 +74,10 @@ describe('build', () => {
                     n_0_1: {
                         portletIds: ['0'],
                         metadata: {
-                            group: 'gui',
+                            group: 'control',
                             type: 'msg',
-                            args: ['bli'],
-                            position: [11, 22],
                             label: 'bli-msg',
+                            position: [11, 22],
                         },
                     },
                     n_0_2: {
@@ -75,6 +86,18 @@ describe('build', () => {
                             group: 'send',
                             name: 'bla',
                             position: [33, 44],
+                        },
+                    },
+                    n_0_3: {
+                        portletIds: ['0'],
+                        metadata: {
+                            group: 'control:float',
+                            type: 'hsl',
+                            label: 'blu-hsl',
+                            minValue: 0,
+                            maxValue: 127,
+                            initValue: 44.4,
+                            position: [55, 66],
                         },
                     },
                 }

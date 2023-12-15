@@ -78,7 +78,7 @@ export const buildRunnable = async (
     return artefacts[format]
 }
 
-export const createDefaultSettings = (): BuildSettings => ({
+export const defaultSettingsForBuild = (): BuildSettings => ({
     audioSettings: {
         channelCount: {
             in: 2,
@@ -328,8 +328,8 @@ export const performBuildStep = async (
             )
             return { status: 0, warnings: [] }
 
-        case 'appTemplate':
-            artefacts.appTemplate = appGenerator('bare-bones', artefacts)
+        case 'app':
+            artefacts.app = appGenerator('bare-bones', artefacts)
             return { status: 0, warnings: [] }
 
         default:

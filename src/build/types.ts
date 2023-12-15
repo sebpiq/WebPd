@@ -43,7 +43,7 @@ export interface Artefacts {
     compiledAsc?: string
     wasm?: ArrayBuffer
     wav?: Uint8Array
-    appTemplate?: { [filename: string]: string | ArrayBuffer }
+    app?: { [filename: string]: string | ArrayBuffer }
 }
 
 export interface RenderAudioSettings {

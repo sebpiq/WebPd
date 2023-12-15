@@ -19,11 +19,11 @@
  */
 
 import { AbstractionLoader, Settings, UnknownNodeTypeError, makeAbstractionLoader } from "../build"
-import { createDefaultSettings as createDefaultSettingsGeneral } from "../build/build"
+import { defaultSettingsForBuild as defaultSettingsForBuildBase } from "../build/build"
 import { urlDirName } from "./url-helpers"
 
-export const createDefaultSettings = (patchUrl: string): Settings => ({
-    ...createDefaultSettingsGeneral(),
+export const defaultSettingsForBuild = (patchUrl: string): Settings => ({
+    ...defaultSettingsForBuildBase(),
     abstractionLoader: makeUrlAbstractionLoader(patchUrl),
 })
 

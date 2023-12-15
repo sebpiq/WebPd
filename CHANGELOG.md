@@ -1,3 +1,13 @@
+1.0.0-alpha.5
+---------------
+
+- Optimized engine (JS : file size -20% / load time -20% / run time -50% | WASM : file size -7% / load time -60% / run time -7%)
+    - inlining loop calculation where possible
+    - store node states in objects instead of globs
+    - refactored entirely NodeImplementation
+- objects `[tabread~]`, `[tabread~]`, `[symbol]`
+- in CLI : renamed `appTemplate` format to `app`
+
 1.0.0-alpha.4
 ---------------
 

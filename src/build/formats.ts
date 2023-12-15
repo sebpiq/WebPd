@@ -49,7 +49,7 @@ export const BUILD_FORMATS = {
         extensions: ['.wav'],
         description: 'An audio preview of your patch',
     },
-    appTemplate: {
+    app: {
         extensions: [] as Array<string>,
         description: 'Complete web app embedding your compiled WebPd patch',
     },
@@ -62,8 +62,8 @@ export const BUILD_TREE: BuildTree = [
     [
         ['compiledJs', 'wav'],
         ['compiledAsc', 'wasm', 'wav'],
-        ['compiledAsc', 'wasm', 'appTemplate'],
-        ['compiledJs', 'appTemplate'],
+        ['compiledAsc', 'wasm', 'app'],
+        ['compiledJs', 'app'],
     ],
 ]
 

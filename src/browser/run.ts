@@ -22,12 +22,10 @@ import { Code } from '@webpd/compiler'
 import { WasmBuffer } from '../build/types'
 import {
     WebPdWorkletNode,
-    fsWeb,
     WebPdWorkletNodeMessageHandler,
 } from '@webpd/runtime'
-import { urlDirName } from './url-helpers'
 
-interface Settings {
+export interface Settings {
     messageHandler: (
         node: WebPdWorkletNode,
         ...rest: Parameters<WebPdWorkletNodeMessageHandler>
@@ -62,9 +60,3 @@ export default async (
     return webpdNode
 }
 
-export const createDefaultSettings = (patchUrl: string): Settings => {
-    const rootUrl = urlDirName(patchUrl)
-    return {
-        messageHandler: (node, message) => fsWeb(node, message, { rootUrl }),
-    }
-}

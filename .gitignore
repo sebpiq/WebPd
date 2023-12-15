@@ -3,3 +3,4 @@ tmp/*
 bin
 dist
 tsconfig-generated-for-rollup.json
+benchmarks

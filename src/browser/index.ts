@@ -19,5 +19,6 @@
  */
 
 export { default as initialize } from "./initialize"
-export { createDefaultSettings as createDefaultBuildSettings, makeUrlAbstractionLoader } from './build'
-export { default as run, createDefaultSettings as createDefaultRunSettings } from './run'
+export { defaultSettingsForBuild, makeUrlAbstractionLoader } from './build-helpers'
+export { default as run } from './run'
+export { defaultSettingsForRun, readMetadata } from './run-helpers'

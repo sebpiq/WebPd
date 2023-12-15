@@ -19,7 +19,6 @@
  */
 import {
     stdlib,
-    functional,
     Code,
     Sequence,
     AnonFunc,
@@ -27,10 +26,8 @@ import {
     Var,
     ast,
     Func,
-    Class,
 } from '@webpd/compiler'
 import {
-    GlobalCodeGenerator,
     NodeImplementation,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'

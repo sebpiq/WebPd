@@ -1,18 +1,30 @@
 import { DspGraph, CompilationSettings } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
-import {
-    ControlTree,
-    traverseGuiControls,
-} from './gui-controls'
+import { ControlTree, traverseGuiControls } from './gui-controls'
 import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 import { NodeArguments } from '../nodes/nodes/send-receive'
+import { builders } from '../nodes/nodes/controls-float'
 
-interface IoMessageSpecMetadataGui {
-    group: 'gui'
+const FLOAT_CONTROL_TYPES = Object.keys(builders)
+
+interface IoMessageSpecMetadataControlBase {
+    group: string
     type: PdJson.NodeType
-    args: PdJson.Node['args']
     position: [number, number]
     label?: string
+}
+
+interface IoMessageSpecMetadataControlFloat
+    extends IoMessageSpecMetadataControlBase {
+    group: 'control:float'
+    initValue: number
+    minValue: number
+    maxValue: number
+}
+
+interface IoMessageSpecMetadataControl
+    extends IoMessageSpecMetadataControlBase {
+    group: 'control'
 }
 
 interface IoMessageSpecMetadataSend {
@@ -21,7 +33,10 @@ interface IoMessageSpecMetadataSend {
     position: [number, number]
 }
 
-export type IoMessageSpecMetadata = IoMessageSpecMetadataGui | IoMessageSpecMetadataSend
+export type IoMessageSpecMetadata =
+    | IoMessageSpecMetadataControl
+    | IoMessageSpecMetadataControlFloat
+    | IoMessageSpecMetadataSend
 
 export const collectIoMessageReceiversFromSendNodes = (
     pdJson: PdJson.Pd,
@@ -39,23 +54,25 @@ export const collectIoMessageReceiversFromSendNodes = (
             // TODO : maybe the compiler should detect this instead of doing it here ?
             !!node
         ) {
-            const layout = pdNode.layout || {}
-            const metadata: IoMessageSpecMetadataSend = {
-                group: 'send',
-                name: (node.args as NodeArguments).busName,
-                position:
-                    layout.x !== undefined && layout.y !== undefined
-                        ? [layout.x, layout.y]
-                        : undefined,
-            }
-            messageReceivers[nodeId] = messageReceivers[nodeId] || {
-                portletIds: [],
-                metadata: metadata as any,
+            if (!messageReceivers[nodeId]) {
+                const layout = pdNode.layout || {}
+                const metadata: IoMessageSpecMetadataSend = {
+                    group: 'send',
+                    name: (node.args as NodeArguments).busName,
+                    position:
+                        layout.x !== undefined && layout.y !== undefined
+                            ? [layout.x, layout.y]
+                            : undefined,
+                }
+                messageReceivers[nodeId] = {
+                    portletIds: [],
+                    metadata: metadata as any,
+                }
             }
             messageReceivers[nodeId].portletIds.push('0')
         }
     })
-    
+
     return messageReceivers
 }
 
@@ -65,28 +82,42 @@ export const collectIoMessageReceiversFromGui = (
 ) => {
     const messageReceivers: CompilationSettings['io']['messageReceivers'] = {}
     traverseGuiControls(controls, (control) => {
-        const nodeId = buildGraphNodeId(control.patch.id, control.node.id)
         const portletId = '0'
-        // Important because some nodes are deleted at dsp-graph compilation.
-        // and if we declare messageReceivers for them it will cause error.
-        // TODO : maybe the compiler should detect this instead of doing it here ?
-        if (!graph[nodeId]) {
-            return
-        }
-        const layout = control.node.layout || {}
-        const metadata: IoMessageSpecMetadataGui = {
-            group: 'gui',
-            type: control.node.type,
-            label: (layout as any).label,
-            position:
-                layout.x !== undefined && layout.y !== undefined
-                    ? [layout.x, layout.y]
-                    : undefined,
-            args: control.node.args,
-        }
-        messageReceivers[nodeId] = messageReceivers[nodeId] || {
-            portletIds: [],
-            metadata: metadata as any,
+        const nodeId = buildGraphNodeId(control.patch.id, control.node.id)
+
+        if (!messageReceivers[nodeId]) {
+            const node = graph[nodeId]
+            // Important because some nodes are deleted at dsp-graph compilation.
+            // and if we declare messageReceivers for them it will cause error.
+            // TODO : maybe the compiler should detect this instead of doing it here ?
+            if (!node) {
+                return
+            }
+            const layout = control.node.layout || {}
+            let metadata: IoMessageSpecMetadataControl | IoMessageSpecMetadataControlFloat = {
+                group: 'control',
+                type: control.node.type,
+                label: (layout as any).label,
+                position:
+                    layout.x !== undefined && layout.y !== undefined
+                        ? [layout.x, layout.y]
+                        : undefined,
+            }
+    
+            if (FLOAT_CONTROL_TYPES.includes(control.node.type)) {
+                metadata = {
+                    ...metadata,
+                    group: 'control:float',
+                    initValue: node.args.initValue,
+                    minValue: node.args.minValue,
+                    maxValue: node.args.maxValue,
+                }
+            }
+    
+            messageReceivers[nodeId] = {
+                portletIds: [],
+                metadata: metadata as any,
+            }
         }
         messageReceivers[nodeId].portletIds.push(portletId)
     })
