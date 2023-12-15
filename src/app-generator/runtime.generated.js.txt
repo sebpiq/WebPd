@@ -2813,7 +2813,7 @@ var WebPdRuntime = (function (exports) {
       }
   };
 
-  const createDefaultSettings = (patchUrl) => {
+  const defaultSettingsForRun = (patchUrl) => {
       const rootUrl = urlDirName(patchUrl);
       return {
           messageHandler: (node, message) => index(node, message, { rootUrl }),
@@ -2851,7 +2851,7 @@ var WebPdRuntime = (function (exports) {
       return webpdNode;
   };
 
-  exports.createDefaultSettings = createDefaultSettings;
+  exports.defaultSettingsForRun = defaultSettingsForRun;
   exports.initialize = initialize;
   exports.readMetadata = readMetadata;
   exports.run = run;

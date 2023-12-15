@@ -8,7 +8,8 @@
         "preserveConstEnums": true,
         "sourceMap": false,
         "declaration": true,
-        "declarationDir": "/home/spiq/code/webpd/WebPd/dist/types"
+        "declarationDir": "/home/spiq/code/webpd/WebPd/dist/types",
+        "resolveJsonModule": true
     },
     "typeRoots": ["./node_modules/@types"],
     "include": [
@@ -16,5 +17,5 @@
         "*.d.ts",
         "src",
         "@types/**/*.d.ts"
-    ]
+    ],
 }

@@ -1,0 +1,315 @@
+{
+  "graph": {
+    "n_0_0": {
+      "id": "n_0_0",
+      "type": "osc~",
+      "args": {
+        "frequency": 0
+      },
+      "sources": {
+        "0": [
+          {
+            "nodeId": "m_n_0_0_0_sig",
+            "portletId": "0"
+          }
+        ]
+      },
+      "sinks": {
+        "0": [
+          {
+            "nodeId": "n_0_2",
+            "portletId": "0"
+          },
+          {
+            "nodeId": "n_0_2",
+            "portletId": "1"
+          }
+        ]
+      },
+      "inlets": {
+        "0": {
+          "type": "signal",
+          "id": "0"
+        },
+        "1": {
+          "type": "message",
+          "id": "1"
+        }
+      },
+      "outlets": {
+        "0": {
+          "type": "signal",
+          "id": "0"
+        }
+      }
+    },
+    "n_0_1": {
+      "id": "n_0_1",
+      "type": "nbx",
+      "args": {
+        "minValue": -1e+37,
+        "maxValue": 1e+37,
+        "sendBusName": "empty",
+        "receiveBusName": "empty",
+        "initValue": 220,
+        "outputOnLoad": true
+      },
+      "sources": {},
+      "sinks": {
+        "0": [
+          {
+            "nodeId": "m_n_0_0_0__routemsg",
+            "portletId": "0"
+          }
+        ]
+      },
+      "inlets": {
+        "0": {
+          "type": "message",
+          "id": "0"
+        }
+      },
+      "outlets": {
+        "0": {
+          "type": "message",
+          "id": "0"
+        }
+      },
+      "isPushingMessages": true
+    },
+    "n_0_2": {
+      "id": "n_0_2",
+      "type": "dac~",
+      "args": {
+        "channelMapping": [
+          0,
+          1
+        ]
+      },
+      "sources": {
+        "0": [
+          {
+            "nodeId": "n_0_0",
+            "portletId": "0"
+          }
+        ],
+        "1": [
+          {
+            "nodeId": "n_0_0",
+            "portletId": "0"
+          }
+        ]
+      },
+      "sinks": {},
+      "inlets": {
+        "0": {
+          "type": "signal",
+          "id": "0"
+        },
+        "1": {
+          "type": "signal",
+          "id": "1"
+        }
+      },
+      "outlets": {},
+      "isPullingSignal": true
+    },
+    "m_n_0_0_0_sig": {
+      "id": "m_n_0_0_0_sig",
+      "type": "sig~",
+      "args": {
+        "initValue": 0
+      },
+      "sources": {
+        "0": [
+          {
+            "nodeId": "m_n_0_0_0__routemsg",
+            "portletId": "0"
+          }
+        ]
+      },
+      "sinks": {
+        "0": [
+          {
+            "nodeId": "n_0_0",
+            "portletId": "0"
+          }
+        ]
+      },
+      "inlets": {
+        "0": {
+          "type": "message",
+          "id": "0"
+        }
+      },
+      "outlets": {
+        "0": {
+          "type": "signal",
+          "id": "0"
+        }
+      }
+    },
+    "m_n_0_0_0__routemsg": {
+      "id": "m_n_0_0_0__routemsg",
+      "type": "_routemsg",
+      "args": {},
+      "sources": {
+        "0": [
+          {
+            "nodeId": "n_0_1",
+            "portletId": "0"
+          }
+        ]
+      },
+      "sinks": {
+        "0": [
+          {
+            "nodeId": "m_n_0_0_0_sig",
+            "portletId": "0"
+          }
+        ]
+      },
+      "inlets": {
+        "0": {
+          "type": "message",
+          "id": "0"
+        }
+      },
+      "outlets": {
+        "0": {
+          "type": "message",
+          "id": "0"
+        },
+        "1": {
+          "type": "message",
+          "id": "1"
+        }
+      }
+    }
+  },
+  "arrays": {},
+  "pd": {
+    "patches": {
+      "0": {
+        "id": "0",
+        "isRoot": true,
+        "layout": {
+          "windowX": 0,
+          "windowY": 0,
+          "windowWidth": 450,
+          "windowHeight": 300
+        },
+        "args": [],
+        "nodes": {
+          "0": {
+            "id": "0",
+            "type": "osc~",
+            "args": [],
+            "layout": {
+              "x": 99,
+              "y": 73
+            },
+            "nodeClass": "generic"
+          },
+          "1": {
+            "id": "1",
+            "type": "nbx",
+            "args": [
+              -1e+37,
+              1e+37,
+              1,
+              220,
+              "",
+              ""
+            ],
+            "layout": {
+              "x": 99,
+              "y": 43,
+              "widthInChars": 5,
+              "height": 14,
+              "log": 0,
+              "label": "",
+              "labelX": 0,
+              "labelY": -8,
+              "labelFont": "0",
+              "labelFontSize": 10,
+              "bgColor": "#fcfcfc",
+              "fgColor": "#000000",
+              "labelColor": "#000000",
+              "logHeight": "256"
+            },
+            "nodeClass": "control"
+          },
+          "2": {
+            "id": "2",
+            "type": "dac~",
+            "args": [],
+            "layout": {
+              "x": 99,
+              "y": 106
+            },
+            "nodeClass": "generic"
+          }
+        },
+        "connections": [
+          {
+            "source": {
+              "nodeId": "0",
+              "portletId": 0
+            },
+            "sink": {
+              "nodeId": "2",
+              "portletId": 0
+            }
+          },
+          {
+            "source": {
+              "nodeId": "0",
+              "portletId": 0
+            },
+            "sink": {
+              "nodeId": "2",
+              "portletId": 1
+            }
+          },
+          {
+            "source": {
+              "nodeId": "1",
+              "portletId": 0
+            },
+            "sink": {
+              "nodeId": "0",
+              "portletId": 0
+            }
+          }
+        ],
+        "inlets": [],
+        "outlets": []
+      }
+    },
+    "arrays": {},
+    "rootPatchId": "0"
+  },
+  "io": {
+    "messageReceivers": {
+      "n_0_1": {
+        "portletIds": [
+          "0"
+        ],
+        "metadata": {
+          "group": "control:float",
+          "type": "nbx",
+          "label": "",
+          "position": [
+            99,
+            43
+          ],
+          "initValue": 220,
+          "minValue": -1e+37,
+          "maxValue": 1e+37
+        }
+      }
+    },
+    "messageSenders": {}
+  }
+}

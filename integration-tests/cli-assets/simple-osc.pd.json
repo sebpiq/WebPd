@@ -1,0 +1,102 @@
+{
+  "rootPatchId": "0",
+  "patches": {
+    "0": {
+      "id": "0",
+      "isRoot": true,
+      "layout": {
+        "windowX": 0,
+        "windowY": 0,
+        "windowWidth": 450,
+        "windowHeight": 300
+      },
+      "args": [],
+      "nodes": {
+        "0": {
+          "id": "0",
+          "type": "osc~",
+          "args": [],
+          "layout": {
+            "x": 99,
+            "y": 73
+          },
+          "nodeClass": "generic"
+        },
+        "1": {
+          "id": "1",
+          "type": "nbx",
+          "args": [
+            -1e+37,
+            1e+37,
+            1,
+            220,
+            "",
+            ""
+          ],
+          "layout": {
+            "x": 99,
+            "y": 43,
+            "widthInChars": 5,
+            "height": 14,
+            "log": 0,
+            "label": "",
+            "labelX": 0,
+            "labelY": -8,
+            "labelFont": "0",
+            "labelFontSize": 10,
+            "bgColor": "#fcfcfc",
+            "fgColor": "#000000",
+            "labelColor": "#000000",
+            "logHeight": "256"
+          },
+          "nodeClass": "control"
+        },
+        "2": {
+          "id": "2",
+          "type": "dac~",
+          "args": [],
+          "layout": {
+            "x": 99,
+            "y": 106
+          },
+          "nodeClass": "generic"
+        }
+      },
+      "connections": [
+        {
+          "source": {
+            "nodeId": "0",
+            "portletId": 0
+          },
+          "sink": {
+            "nodeId": "2",
+            "portletId": 0
+          }
+        },
+        {
+          "source": {
+            "nodeId": "0",
+            "portletId": 0
+          },
+          "sink": {
+            "nodeId": "2",
+            "portletId": 1
+          }
+        },
+        {
+          "source": {
+            "nodeId": "1",
+            "portletId": 0
+          },
+          "sink": {
+            "nodeId": "0",
+            "portletId": 0
+          }
+        }
+      ],
+      "inlets": [],
+      "outlets": []
+    }
+  },
+  "arrays": {}
+}

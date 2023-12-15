@@ -190,7 +190,7 @@ const bareBonesApp = (settings: Settings) => {
                             const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
                             if (!metadata) {
                                 return ''
-                            } else if (metadata.group === 'control') {
+                            } else if (metadata.group === 'control' || metadata.group === 'control:float') {
                             return `
             //  - nodeId "${nodeId}" portletId "${portletId}"
             //      * type "${metadata.type}"
