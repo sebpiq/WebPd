@@ -15,8 +15,8 @@ describe('cli', () => {
     const SNAPSHOTS_PATHS = {
         pdJson: resolve(__dirname, 'cli-assets', 'simple-osc.pd.json'),
         dspGraph: resolve(__dirname, 'cli-assets', 'simple-osc.dsp-graph.json'),
-        compiledJs: resolve(__dirname, 'cli-assets', 'simple-osc.js'),
-        compiledAsc: resolve(__dirname, 'cli-assets', 'simple-osc.asc'),
+        javascript: resolve(__dirname, 'cli-assets', 'simple-osc.js'),
+        assemblyscript: resolve(__dirname, 'cli-assets', 'simple-osc.asc'),
         wasm: resolve(__dirname, 'cli-assets', 'simple-osc.wasm'),
         wav: resolve(__dirname, 'cli-assets', 'simple-osc.wav'),
         app: resolve(__dirname, 'cli-assets', 'simple-osc-app'),
@@ -53,13 +53,13 @@ describe('cli', () => {
         it('should generate a js file', async () => {
             const outPath = resolve(TMP_DIR, 'test-patch.js')
             await exec(`node ${CLI_PATH} -i ${PATCH_PATH} -o ${outPath}`)
-            await assertFileContentSame(outPath, SNAPSHOTS_PATHS.compiledJs, 'utf8')
+            await assertFileContentSame(outPath, SNAPSHOTS_PATHS.javascript, 'utf8')
         })
 
         it('should generate an asc file', async () => {
             const outPath = resolve(TMP_DIR, 'test-patch.asc')
             await exec(`node ${CLI_PATH} -i ${PATCH_PATH} -o ${outPath}`)
-            await assertFileContentSame(outPath, SNAPSHOTS_PATHS.compiledAsc, 'utf8')
+            await assertFileContentSame(outPath, SNAPSHOTS_PATHS.assemblyscript, 'utf8')
         })
 
         it('should generate a wasm file', async () => {

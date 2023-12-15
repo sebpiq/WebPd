@@ -33,13 +33,13 @@ const SAMPLE_RATE = 44100
 const CHANNEL_COUNT = { in: 2, out: 2 }
 const WAV_PREVIEW_DURATION = 30
 
-const ENGINE_OPTIONS: ReadonlyArray<BuildFormat> = ['compiledJs', 'wasm']
+const ENGINE_OPTIONS: ReadonlyArray<BuildFormat> = ['javascript', 'wasm']
 const DEFAULT_ENGINE: Task['engine'] = 'wasm'
 const FORMAT_OUT_WITH_ENGINE: ReadonlyArray<BuildFormat> = ['wav', 'app']
 
 interface Task {
     inFilepath: string
-    engine: 'compiledJs' | 'wasm'
+    engine: 'javascript' | 'wasm'
     inFormat: BuildFormat
     outFilepath: string | null
     outFormat: BuildFormat
@@ -150,8 +150,8 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                 written.push(outFilepath)
                 break
 
-            case 'compiledJs':
-            case 'compiledAsc':
+            case 'javascript':
+            case 'assemblyscript':
                 await fs.promises.writeFile(
                     outFilepath!,
                     getArtefact(artefacts, outFormat)
@@ -322,7 +322,7 @@ const main = (): void => {
                 (
                     [
                         'wasm',
-                        'compiledJs',
+                        'javascript',
                         'app',
                         'wav',
                     ] as Array<BuildFormat>

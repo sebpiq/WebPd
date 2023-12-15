@@ -61,10 +61,10 @@ export type BuildResult = BuildSuccess | BuildFailure
  */
 export const buildRunnable = async (
     pdFile: string,
-    format: 'compiledJs' | 'wasm' = 'compiledJs',
+    format: 'javascript' | 'wasm' = 'javascript',
     settings: BuildSettings
 ) => {
-    if (!['wasm', 'compiledJs'].includes(format)) {
+    if (!['wasm', 'javascript'].includes(format)) {
         throw new Error(`Invalid out format ${format}`)
     }
 
@@ -129,15 +129,15 @@ export const loadArtefact = (
                 ...artefacts,
                 dspGraph: JSON.parse(stringifyArrayBuffer(artefactBuffer)),
             }
-        case 'compiledJs':
+        case 'javascript':
             return {
                 ...artefacts,
-                compiledJs: stringifyArrayBuffer(artefactBuffer),
+                javascript: stringifyArrayBuffer(artefactBuffer),
             }
-        case 'compiledAsc':
+        case 'assemblyscript':
             return {
                 ...artefacts,
-                compiledAsc: stringifyArrayBuffer(artefactBuffer),
+                assemblyscript: stringifyArrayBuffer(artefactBuffer),
             }
         case 'wasm':
             return { ...artefacts, wasm: artefactBuffer }
@@ -282,12 +282,12 @@ export const performBuildStep = async (
                 }
             }
 
-        case 'compiledJs':
-        case 'compiledAsc':
+        case 'javascript':
+        case 'assemblyscript':
             const compileCodeResult = compile(
                 artefacts.dspGraph.graph,
                 nodeImplementations,
-                target === 'compiledJs' ? 'javascript' : 'assemblyscript',
+                target,
                 {
                     audio: audioSettings,
                     io: artefacts.dspGraph.io,
@@ -295,10 +295,10 @@ export const performBuildStep = async (
                 }
             )
             if (compileCodeResult.status === 0) {
-                if (target === 'compiledJs') {
-                    artefacts.compiledJs = compileCodeResult.code
+                if (target === 'javascript') {
+                    artefacts.javascript = compileCodeResult.code
                 } else {
-                    artefacts.compiledAsc = compileCodeResult.code
+                    artefacts.assemblyscript = compileCodeResult.code
                 }
                 return { status: 0, warnings: [] }
             } else {
@@ -308,7 +308,7 @@ export const performBuildStep = async (
         case 'wasm':
             try {
                 artefacts.wasm = await compileAsc(
-                    getArtefact(artefacts, 'compiledAsc'),
+                    getArtefact(artefacts, 'assemblyscript'),
                     audioSettings.bitDepth
                 )
             } catch (err: any) {

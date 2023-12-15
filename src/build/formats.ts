@@ -33,11 +33,11 @@ export const BUILD_FORMATS = {
         extensions: ['.dsp-graph.json'],
         description: 'WebPd DSP graph',
     },
-    compiledJs: {
+    javascript: {
         extensions: ['.js'],
         description: 'JavaScript WebPd module',
     },
-    compiledAsc: {
+    assemblyscript: {
         extensions: ['.asc'],
         description: 'AssemblyScript DSP code',
     },
@@ -60,10 +60,10 @@ export const BUILD_TREE: BuildTree = [
     'pdJson',
     'dspGraph',
     [
-        ['compiledJs', 'wav'],
-        ['compiledAsc', 'wasm', 'wav'],
-        ['compiledAsc', 'wasm', 'app'],
-        ['compiledJs', 'app'],
+        ['javascript', 'wav'],
+        ['assemblyscript', 'wasm', 'wav'],
+        ['assemblyscript', 'wasm', 'app'],
+        ['javascript', 'app'],
     ],
 ]
 

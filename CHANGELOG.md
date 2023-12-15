@@ -6,7 +6,7 @@
     - store node states in objects instead of globs
     - refactored entirely NodeImplementation
 - objects `[tabread~]`, `[tabread~]`, `[symbol]`
-- in CLI : renamed `appTemplate` format to `app`
+- in CLI : renamed `appTemplate` format to `app`, `compiledJs` to `javascript` and `compiledAsc` to `assemblyscript`
 
 1.0.0-alpha.4
 ---------------

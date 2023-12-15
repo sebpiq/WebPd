@@ -45,10 +45,10 @@ export default (template: Template, artefacts: Artefacts): GeneratedApp => {
 
 const bareBonesApp = (settings: Settings) => {
     const { artefacts } = settings
-    if (!artefacts.compiledJs && !artefacts.wasm) {
-        throw new Error(`Needs at least compiledJs or wasm to run`)
+    if (!artefacts.javascript && !artefacts.wasm) {
+        throw new Error(`Needs at least javascript or wasm to run`)
     }
-    const compiledPatchFilename = artefacts.compiledJs
+    const compiledPatchFilename = artefacts.javascript
         ? 'patch.js'
         : 'patch.wasm'
     // prettier-ignore
@@ -109,7 +109,7 @@ const bareBonesApp = (settings: Settings) => {
 
                 // Fetch the patch code
                 response = await fetch('${compiledPatchFilename}')
-                patch = await ${artefacts.compiledJs ? 
+                patch = await ${artefacts.javascript ? 
                     'response.text()': 'response.arrayBuffer()'}
 
                 // Comment this if you don't need audio input
@@ -221,8 +221,8 @@ const bareBonesApp = (settings: Settings) => {
 </html>`
     }
 
-    if (artefacts.compiledJs) {
-        generatedApp[compiledPatchFilename] = artefacts.compiledJs
+    if (artefacts.javascript) {
+        generatedApp[compiledPatchFilename] = artefacts.javascript
     } else {
         generatedApp[compiledPatchFilename] = artefacts.wasm
     }

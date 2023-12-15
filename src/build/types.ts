@@ -39,8 +39,8 @@ export interface Artefacts {
         pd: PdJson.Pd
         io: Compilation['settings']['io']
     }
-    compiledJs?: string
-    compiledAsc?: string
+    javascript?: string
+    assemblyscript?: string
     wasm?: ArrayBuffer
     wav?: Uint8Array
     app?: { [filename: string]: string | ArrayBuffer }

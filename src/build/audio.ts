@@ -38,7 +38,7 @@ export const renderWav = async (
     audioSettings: CombinedAudioSettings
 ) => {
     let target: CompilerTarget = 'assemblyscript'
-    if (!artefacts.wasm && !artefacts.compiledJs) {
+    if (!artefacts.wasm && !artefacts.javascript) {
         throw new Error(`Need compiled wasm or compiled js to render wav`)
     }
     if (!artefacts.wasm) {
@@ -70,7 +70,7 @@ const createEngine = async (
 ): Promise<Engine> => {
     switch (target) {
         case 'javascript':
-            return createJavaScriptEngine(getArtefact(artefacts, 'compiledJs'))
+            return createJavaScriptEngine(getArtefact(artefacts, 'javascript'))
 
         case 'assemblyscript':
             return createAssemblyScriptWasmEngine(getArtefact(artefacts, 'wasm'))

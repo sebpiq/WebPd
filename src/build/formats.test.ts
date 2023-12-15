@@ -26,11 +26,11 @@ describe('formats', () => {
 
     describe('listBuildSteps', () => {
         it('should build the task list between inFormat and outFormat', () => {
-            assert.deepStrictEqual(listBuildSteps('compiledJs', 'wav'), [
+            assert.deepStrictEqual(listBuildSteps('javascript', 'wav'), [
                 'wav',
             ])
             assert.deepStrictEqual(listBuildSteps('dspGraph', 'wasm'), [
-                'compiledAsc',
+                'assemblyscript',
                 'wasm',
             ])
             assert.deepStrictEqual(listBuildSteps('wasm', 'wav'), [
@@ -40,16 +40,16 @@ describe('formats', () => {
         })
 
         it('should filter with intermediate step', () => {
-            assert.deepStrictEqual(listBuildSteps('pd', 'wav', 'compiledJs'), [
+            assert.deepStrictEqual(listBuildSteps('pd', 'wav', 'javascript'), [
                 'pdJson',
                 'dspGraph',
-                'compiledJs',
+                'javascript',
                 'wav',
             ])
-            assert.deepStrictEqual(listBuildSteps('pd', 'wav', 'compiledAsc'), [
+            assert.deepStrictEqual(listBuildSteps('pd', 'wav', 'assemblyscript'), [
                 'pdJson',
                 'dspGraph',
-                'compiledAsc',
+                'assemblyscript',
                 'wasm',
                 'wav',
             ])
@@ -61,11 +61,11 @@ describe('formats', () => {
 
     describe('listOutputFormats', () => {
         it('should find all out formats for a given in format', () => {
-            assert.deepStrictEqual(listOutputFormats('compiledJs'), new Set([
+            assert.deepStrictEqual(listOutputFormats('javascript'), new Set([
                 'wav', 'app'
             ]))
             assert.deepStrictEqual(listOutputFormats('dspGraph'), new Set([
-                'compiledJs', 'wav', 'compiledAsc', 'wasm', 'app'
+                'javascript', 'wav', 'assemblyscript', 'wasm', 'app'
             ]))
             assert.deepStrictEqual(listOutputFormats('wav'), new Set())
         })
@@ -81,8 +81,8 @@ describe('formats', () => {
     describe('_findBuildPaths', () => {
         it('should find paths properly in the build tree', () => {
             assert.deepStrictEqual(_findBuildPaths(BUILD_TREE, 'wav', []), [
-                ['pd', 'pdJson', 'dspGraph', 'compiledJs', 'wav'],
-                ['pd', 'pdJson', 'dspGraph', 'compiledAsc', 'wasm', 'wav'],
+                ['pd', 'pdJson', 'dspGraph', 'javascript', 'wav'],
+                ['pd', 'pdJson', 'dspGraph', 'assemblyscript', 'wasm', 'wav'],
             ])
 
             assert.deepStrictEqual(_findBuildPaths(BUILD_TREE, 'dspGraph', []), [
@@ -96,10 +96,10 @@ describe('formats', () => {
     describe('_traverseBuildTree', () => {
         it('should find all paths in the build tree', () => {
             assert.deepStrictEqual(_traverseBuildTree(BUILD_TREE, []), [
-                ['pd', 'pdJson', 'dspGraph', 'compiledJs', 'wav'],
-                ['pd', 'pdJson', 'dspGraph', 'compiledAsc', 'wasm', 'wav'],
-                ['pd', 'pdJson', 'dspGraph', 'compiledAsc', 'wasm', 'app'],
-                ['pd', 'pdJson', 'dspGraph', 'compiledJs', 'app'],
+                ['pd', 'pdJson', 'dspGraph', 'javascript', 'wav'],
+                ['pd', 'pdJson', 'dspGraph', 'assemblyscript', 'wasm', 'wav'],
+                ['pd', 'pdJson', 'dspGraph', 'assemblyscript', 'wasm', 'app'],
+                ['pd', 'pdJson', 'dspGraph', 'javascript', 'app'],
             ])
         })
     })
