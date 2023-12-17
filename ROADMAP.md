@@ -3,7 +3,7 @@
 NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI objects.
 
 ```
-131 object implemented : 
+133 object supported (incomplete implementation for some) : 
 [pd]
 [inlet]
 [outlet]
@@ -136,6 +136,9 @@ NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI
 [cnv]
 [block~]
 [openpanel]
+[symbol]
+[tabread~]
+[tabread4~]
 ```
 
 ### Planned features v1.0.0

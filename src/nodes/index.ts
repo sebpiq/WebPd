@@ -33,6 +33,7 @@ import * as line from './nodes/line'
 import * as funcsTilde from './nodes/funcs~'
 import * as tabread from './nodes/tabread'
 import * as tabwrite from './nodes/tabwrite'
+import * as tabreadTilde from './nodes/tabread~-tabread4~'
 import * as tabplayTilde from './nodes/tabplay~'
 import * as readsfTilde from './nodes/readsf~'
 import * as writesfTilde from './nodes/writesf~'
@@ -90,6 +91,8 @@ const NODE_BUILDERS: NodeBuilders = {
     ...delreadTilde.builders,
     ...throwCatchSendReceiveTilde.builders,
     ...sendReceive.builders,
+    ...sendReceive.builders,
+    ...tabreadTilde.builders,
     'noise~': noiseTilde.builder,
     'snapshot~': snapshotTilde.builder,
     'sig~': sigTilde.builder,
@@ -173,6 +176,7 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     ...delreadTilde.nodeImplementations,
     ...throwCatchSendReceiveTilde.nodeImplementations,
     ...sendReceive.nodeImplementations,
+    ...tabreadTilde.nodeImplementations,
     'noise~': noiseTilde.nodeImplementation,
     'snapshot~': snapshotTilde.nodeImplementation,
     'sig~': sigTilde.nodeImplementation,

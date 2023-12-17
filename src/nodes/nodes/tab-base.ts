@@ -21,15 +21,15 @@
 import { GlobalCodeGenerator } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { AnonFunc, Class, Func, Sequence, Var } from '@webpd/compiler'
+import { Class, Func, Sequence, Var, ConstVar } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 import { _NodeImplementation } from './controls-float'
 
-interface NodeArgumentsTabBase {
+export interface NodeArguments {
     arrayName: string
 }
 
-export const translateArgsTabBase: NodeBuilder<NodeArgumentsTabBase>['translateArgs'] =
+export const translateArgsTabBase: NodeBuilder<NodeArguments>['translateArgs'] =
     (pdNode) => ({
         arrayName: assertOptionalString(pdNode.args[0]) || '',
     })
@@ -38,9 +38,12 @@ export const variableNamesTabBase = generateVariableNamesNodeType('tabbase', [
     'setArrayName',
     'createState',
     'prepareIndex',
+    'emptyArray',
 ])
 
 export const nodeCoreTabBase: GlobalCodeGenerator = () => Sequence([
+    ConstVar('FloatArray', variableNamesTabBase.emptyArray, 'createFloatArray(1)'),
+
     Class(variableNamesTabBase.stateClass, [
         Var('FloatArray', 'array'),
         Var('string', 'arrayName'),
@@ -54,7 +57,7 @@ export const nodeCoreTabBase: GlobalCodeGenerator = () => Sequence([
         Var('string', 'arrayName'),
     ], variableNamesTabBase.stateClass)`
         return {
-            array: createFloatArray(0),
+            array: ${variableNamesTabBase.emptyArray},
             arrayName,
             arrayChangesSubscription: SKED_ID_NULL,
             readPosition: 0,
@@ -72,7 +75,7 @@ export const nodeCoreTabBase: GlobalCodeGenerator = () => Sequence([
             commons_cancelArrayChangesSubscription(state.arrayChangesSubscription)
         }
         state.arrayName = arrayName
-        state.array = createFloatArray(0)
+        state.array = ${variableNamesTabBase.emptyArray}
         commons_subscribeArrayChanges(arrayName, callback)
     `,
 

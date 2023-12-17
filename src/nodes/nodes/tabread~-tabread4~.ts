@@ -20,30 +20,41 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { nodeCoreTabBase, translateArgsTabBase, variableNamesTabBase, NodeArguments } from './tab-base'
-import { ConstVar, Sequence, stdlib } from '@webpd/compiler'
-import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
+import { assertOptionalString } from '../validation'
+import { bangUtils, stringMsgUtils } from '../global-code/core'
+import { Sequence, stdlib } from '@webpd/compiler'
+import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
+import { nodeCoreTabBase, variableNamesTabBase, NodeArguments } from './tab-base'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
+// TODO : tabread4 interpolation algorithm
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
-    translateArgs: translateArgsTabBase,
+    translateArgs: (pdNode) => ({
+        arrayName: assertOptionalString(pdNode.args[0]) || '',
+    }),
     build: () => ({
         inlets: {
-            '0': { type: 'message', id: '0' },
-            '1': { type: 'message', id: '1' },
+            '0': { type: 'signal', id: '0' },
+            '0_message': { type: 'message', id: '0_message' },
         },
-        outlets: {},
+        outlets: {
+            '0': { type: 'signal', id: '0' },
+        },
     }),
+    configureMessageToSignalConnection: (inletId) => {
+        if (inletId === '0') {
+            return { reroutedMessageInletId: '0_message' }
+        }
+        return undefined
+    },
 }
 
-// ------------------------------ generateDeclarations ------------------------------ //
-const variableNames = generateVariableNamesNodeType('tabwrite', [
+// ------------------------------ node implementation ------------------------------ //
+const variableNames = generateVariableNamesNodeType('tabread_t', [
     'setArrayNameFinalize',
-    'setWritePosition',
 ])
 
 const nodeImplementation: _NodeImplementation = {
@@ -65,40 +76,31 @@ const nodeImplementation: _NodeImplementation = {
         })
     `,
 
-    messageReceivers: (context) => {
-        const { state } = context
-        return {
-            '0': AnonFunc([Var('Message', 'm')])`
-                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
-                    if (${state}.array.length === 0) {
-                        return
+    messageReceivers: ({ state }) => ({
+        '0_message': AnonFunc([Var('Message', 'm')])`
+            if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${variableNamesTabBase.setArrayName}(
+                    ${state},
+                    msg_readStringToken(m, 1),
+                    () => ${variableNames.setArrayNameFinalize}(${state}),
+                )
+                return
     
-                    } else {
-                        ${state}.array[${state}.writePosition] = msg_readFloatToken(m, 0)
-                        return
-                    }
-    
-                } else if (
-                    msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                    && msg_readStringToken(m, 0) === 'set'
-                ) {
-                    ${variableNamesTabBase.setArrayName}(
-                        ${state}, 
-                        msg_readStringToken(m, 1),
-                        () => ${variableNames.setArrayNameFinalize}(${state}),
-                    )
-                    return
-            
-                }
-            `,
-    
-            '1': coldFloatInletWithSetter(variableNames.setWritePosition, state)
-        }
-    },
+            }
+        `,
+    }),
 
+    inlineLoop: ({ ins, state }) => 
+        ast`${state}.array[Math.max(Math.min(Math.floor(${ins.$0}), ${state}.array.length - 1), 0)]`,
+    
     dependencies: [
-        stdlib.commonsWaitEngineConfigure, 
+        bangUtils,
+        stdlib.commonsWaitEngineConfigure,
         stdlib.commonsArrays,
+        stringMsgUtils,
         nodeCoreTabBase,
         () => Sequence([
             Func(variableNames.setArrayNameFinalize, [
@@ -106,19 +108,22 @@ const nodeImplementation: _NodeImplementation = {
             ], 'void')`
                 state.array = commons_getArray(state.arrayName)
             `,
-        
-            Func(variableNames.setWritePosition, [
-                Var(variableNamesTabBase.stateClass, 'state'),
-                Var('Float', 'writePosition')
-            ], 'void')`
-                state.writePosition = ${variableNamesTabBase.prepareIndex}(writePosition, state.array.length)
-            `
         ]),
-    ]
+    ],
+}
+
+const builders = {
+    'tabread~': builder,
+    'tabread4~': builder,
+}
+
+const nodeImplementations = {
+    'tabread~': nodeImplementation,
+    'tabread4~': nodeImplementation,
 }
 
 export { 
-    builder,
-    nodeImplementation,
+    builders,
+    nodeImplementations,
     NodeArguments,
 }

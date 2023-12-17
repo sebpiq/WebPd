@@ -18,16 +18,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
-import { nodeCoreTabBase, variableNamesTabBase } from './tab-base'
-
-interface NodeArguments { arrayName: string }
+import { nodeCoreTabBase, variableNamesTabBase, NodeArguments } from './tab-base'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
@@ -48,44 +46,15 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ generateDeclarations ------------------------------ //
+// ------------------------------ node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('tabplay_t', [
     'setArrayNameFinalize',
     'play',
     'stop',
 ])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Func(variableNames.setArrayNameFinalize, [
-        Var(variableNamesTabBase.stateClass, 'state'),
-    ], 'void')`
-        state.array = commons_getArray(state.arrayName)
-        state.readPosition = state.array.length
-        state.readUntil = state.array.length
-    `,
-
-    Func(variableNames.play, [
-        Var(variableNamesTabBase.stateClass, 'state'),
-        Var('Int', 'playFrom'),
-        Var('Int', 'playTo'),
-    ], 'void')`
-        state.readPosition = playFrom
-        state.readUntil = toInt(Math.min(
-            toFloat(playTo), 
-            toFloat(state.array.length),
-        ))
-    `,
-
-    Func(variableNames.stop, [
-        Var(variableNamesTabBase.stateClass, 'state'),
-    ], 'void')`
-        state.readPosition = 0
-        state.readUntil = 0
-    `,
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
+const nodeImplementation: _NodeImplementation = {
+    initialization: ({ node: { args }, state }) => ast`
         ${ConstVar(
             variableNamesTabBase.stateClass, 
             state, 
@@ -101,77 +70,95 @@ const initialization: _NodeImplementation['initialization'] = ({ node: { args },
                 )
             }
         })
-    `
+    `,
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = (
-    {state, snds, outs},
-) => ast`
-    if (${state}.readPosition < ${state}.readUntil) {
-        ${outs.$0} = ${state}.array[${state}.readPosition]
-        ${state}.readPosition++
-        if (${state}.readPosition >= ${state}.readUntil) {
-            ${snds.$1}(msg_bang())
-        }
-    } else {
-        ${outs.$0} = 0
-    }
-`
+    messageReceivers: ({ state }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isBang(m)) {
+                ${variableNames.play}(${state}, 0, ${state}.array.length)
+                return 
+                
+            } else if (msg_isAction(m, 'stop')) {
+                ${variableNames.stop}(${state})
+                return 
+    
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${variableNamesTabBase.setArrayName}(
+                    ${state},
+                    msg_readStringToken(m, 1),
+                    () => ${variableNames.setArrayNameFinalize}(${state}),
+                )
+                return
+    
+            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${variableNames.play}(
+                    ${state},
+                    toInt(msg_readFloatToken(m, 0)), 
+                    ${state}.array.length
+                )
+                return 
+    
+            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
+                ${ConstVar('Int', 'fromSample', `toInt(msg_readFloatToken(m, 0))`)}
+                ${variableNames.play}(
+                    ${state},
+                    fromSample,
+                    fromSample + toInt(msg_readFloatToken(m, 1)),
+                )
+                return
+            }
+        `,
+    }),
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state, globs }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isBang(m)) {
-            ${variableNames.play}(${state}, 0, ${state}.array.length)
-            return 
-            
-        } else if (msg_isAction(m, 'stop')) {
-            ${variableNames.stop}(${state})
-            return 
-
-        } else if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-            && msg_readStringToken(m, 0) === 'set'
-        ) {
-            ${variableNamesTabBase.setArrayName}(
-                ${state},
-                msg_readStringToken(m, 1),
-                () => ${variableNames.setArrayNameFinalize}(${state}),
-            )
-            return
-
-        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${variableNames.play}(
-                ${state},
-                toInt(msg_readFloatToken(m, 0)), 
-                ${state}.array.length
-            )
-            return 
-
-        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
-            ${ConstVar('Int', 'fromSample', `toInt(msg_readFloatToken(m, 0))`)}
-            ${variableNames.play}(
-                ${state},
-                fromSample,
-                fromSample + toInt(msg_readFloatToken(m, 1)),
-            )
-            return
+    loop: ({ state, snds, outs }) => ast`
+        if (${state}.readPosition < ${state}.readUntil) {
+            ${outs.$0} = ${state}.array[${state}.readPosition]
+            ${state}.readPosition++
+            if (${state}.readPosition >= ${state}.readUntil) {
+                ${snds.$1}(msg_bang())
+            }
+        } else {
+            ${outs.$0} = 0
         }
     `,
-})
 
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    initialization: initialization,
-    messageReceivers: messageReceivers,
-    loop: loop,
     dependencies: [
         bangUtils,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsArrays,
         stringMsgUtils,
         nodeCoreTabBase,
-        nodeCore,
+        () => Sequence([
+            Func(variableNames.setArrayNameFinalize, [
+                Var(variableNamesTabBase.stateClass, 'state'),
+            ], 'void')`
+                state.array = commons_getArray(state.arrayName)
+                state.readPosition = state.array.length
+                state.readUntil = state.array.length
+            `,
+        
+            Func(variableNames.play, [
+                Var(variableNamesTabBase.stateClass, 'state'),
+                Var('Int', 'playFrom'),
+                Var('Int', 'playTo'),
+            ], 'void')`
+                state.readPosition = playFrom
+                state.readUntil = toInt(Math.min(
+                    toFloat(playTo), 
+                    toFloat(state.array.length),
+                ))
+            `,
+        
+            Func(variableNames.stop, [
+                Var(variableNamesTabBase.stateClass, 'state'),
+            ], 'void')`
+                state.readPosition = 0
+                state.readUntil = 0
+            `,
+        ]),
     ],
 }
 
