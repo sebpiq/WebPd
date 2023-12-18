@@ -92,4 +92,10 @@ describe('cli', () => {
             }
         })
     })
+
+    describe('options', () => {
+        it('should support the --check-support option', async () => {
+            await assert.doesNotReject(() => exec(`node ${CLI_PATH} --check-support -i ${PATCH_PATH}`))
+        })
+    })
 })

@@ -416,11 +416,14 @@ const main = (): void => {
                 `Option --check-support requires .pd input`
             )
             outFormat = outFormat || 'pdJson'
+            
         } else if (!outFilepath) {
             exitError('Please specify an ouput using -o option.')
+
+        } else {
+            assertValidOutFilepath(outFilepath, outFormat)
         }
 
-        assertValidOutFilepath(outFilepath, outFormat)
 
         const abstractionLoader = makeCliAbstractionLoader(
             path.dirname(inFilepath)
