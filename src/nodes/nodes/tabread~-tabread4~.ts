@@ -94,7 +94,7 @@ const nodeImplementation: _NodeImplementation = {
     }),
 
     inlineLoop: ({ ins, state }) => 
-        ast`${state}.array[Math.max(Math.min(Math.floor(${ins.$0}), ${state}.array.length - 1), 0)]`,
+        ast`${state}.array[toInt(Math.max(Math.min(Math.floor(${ins.$0}), ${state}.array.length - 1), 0))]`,
     
     dependencies: [
         bangUtils,

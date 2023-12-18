@@ -5,7 +5,7 @@ import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 import { NodeArguments } from '../nodes/nodes/send-receive'
 import { builders } from '../nodes/nodes/controls-float'
 
-const FLOAT_CONTROL_TYPES = Object.keys(builders)
+const FLOAT_CONTROL_TYPES = [...Object.keys(builders), 'floatatom']
 
 interface IoMessageSpecMetadataControlBase {
     group: string
