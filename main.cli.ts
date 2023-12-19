@@ -5,18 +5,12 @@ import { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
 import * as path from 'path'
 import fs from 'fs'
-import {
-    Artefacts,
-    BuildSettings,
-} from './src/build/types'
+import { Artefacts, BuildSettings } from './src/build/types'
 import { BuildFormat } from './src/build/formats'
 import { BUILD_FORMATS } from './src/build/formats'
 import { setAsc } from './src/build/asc'
 import { analysePd } from './src/build/reports'
-import {
-    performBuildStep,
-    loadArtefact,
-} from './src/build/build'
+import { performBuildStep, loadArtefact } from './src/build/build'
 import { listBuildSteps, guessFormat } from './src/build/formats'
 import {
     getArtefact,
@@ -51,6 +45,10 @@ const consoleLogHeader = (message: string) =>
 
 const consoleLogEm = (message: string) =>
     process.stdout.write(colors.bold(message))
+
+const colorOption = (str: string) => colors.underline(str)
+
+const colorExample = (str: string) => colors.cyan(str)
 
 const checkSupportPdJson = async (
     pdJson: PdJson.Pd,
@@ -152,6 +150,7 @@ const writeOutFile = async (task: Task): Promise<Task> => {
 
             case 'javascript':
             case 'assemblyscript':
+            case 'wav':
                 await fs.promises.writeFile(
                     outFilepath!,
                     getArtefact(artefacts, outFormat)
@@ -163,14 +162,6 @@ const writeOutFile = async (task: Task): Promise<Task> => {
                 await fs.promises.writeFile(
                     outFilepath!,
                     Buffer.from(getArtefact(artefacts, outFormat))
-                )
-                written.push(outFilepath)
-                break
-
-            case 'wav':
-                await fs.promises.writeFile(
-                    outFilepath!,
-                    getArtefact(artefacts, outFormat)
                 )
                 written.push(outFilepath)
                 break
@@ -197,8 +188,13 @@ const writeOutFile = async (task: Task): Promise<Task> => {
         if (outFormat === 'app') {
             process.stdout.write(
                 colors.grey('\n\nWeb app compiled ! Start it by running :\n') +
-                    colors.blue(`\tnpx http-server ${outFilepath}\n`) + 
-                    colors.grey(`For documentation, open ${path.resolve(outFilepath, 'index.html')} in a code editor.\n`)
+                    colorExample(`\tnpx http-server ${outFilepath}\n`) +
+                    colors.grey(
+                        `For documentation, open ${path.resolve(
+                            outFilepath,
+                            'index.html'
+                        )} in a code editor.\n`
+                    )
             )
         }
     }
@@ -214,20 +210,23 @@ const makeCliAbstractionLoader = (rootDirPath: string): AbstractionLoader =>
         return (await fs.promises.readFile(filepath)).toString()
     })
 
-const executeTask = async (task: Task, settings: BuildSettings): Promise<Task> => {
+const executeTask = async (
+    task: Task,
+    settings: BuildSettings
+): Promise<Task> => {
     const { inFilepath, inFormat, outFormat, engine } = task
     const inString = await readInFile(inFilepath)
     const artefacts = loadArtefact(task.artefacts, inString, inFormat)
 
-    const buildSteps = FORMAT_OUT_WITH_ENGINE.includes(outFormat) ? 
-        listBuildSteps(inFormat, outFormat, engine): 
-        listBuildSteps(inFormat, outFormat)
-    
+    const buildSteps = FORMAT_OUT_WITH_ENGINE.includes(outFormat)
+        ? listBuildSteps(inFormat, outFormat, engine)
+        : listBuildSteps(inFormat, outFormat)
+
     ifConditionThenExitError(
         buildSteps === null,
         `Not able to convert from ${inFormat} to ${outFormat}`
     )
-    
+
     // Remove first step as it corresponds with the input file.
     for (let buildStep of buildSteps!) {
         consoleLogHeader(`Building ${buildStep} `)
@@ -306,8 +305,8 @@ const main = (): void => {
                 (['pd', 'wasm'] as Array<BuildFormat>)
                     .map(
                         (format) =>
-                            `\n  ${BUILD_FORMATS[format].extensions.join(
-                                ', '
+                            `\n${colorOption(
+                                BUILD_FORMATS[format].extensions.join(', ')
                             )} - ${BUILD_FORMATS[format].description}`
                     )
                     .join('')
@@ -319,23 +318,20 @@ const main = (): void => {
         .option(
             '-f, --output-format <format>',
             'Select an output format. If not provided, the format will be inferred from output filename. Available formats :' +
-                (
-                    [
-                        'wasm',
-                        'javascript',
-                        'app',
-                        'wav',
-                    ] as Array<BuildFormat>
-                )
+                (['wasm', 'javascript', 'app', 'wav'] as Array<BuildFormat>)
                     .map(
                         (format) =>
-                            `\n  ${format} - ${BUILD_FORMATS[format].description}`
+                            `\n${colorOption(format)} - ${
+                                BUILD_FORMATS[format].description
+                            }`
                     )
                     .join('')
         )
         .option(
             '--engine <engine>',
-            `Select an engine for audio generation (default "${DEFAULT_ENGINE}"). Engines supported : \n  ${ENGINE_OPTIONS.join('\n  ')}`
+            `Select an engine for audio generation (default "${DEFAULT_ENGINE}"). Engines supported : ${ENGINE_OPTIONS.map(
+                (opt) => colorOption(opt)
+            ).join(', ')}`
         )
         .option('--check-support')
         .option('--whats-implemented')
@@ -343,12 +339,10 @@ const main = (): void => {
     program.addHelpText(
         'after',
         (colors as any).brightMagenta('\n~ Usage examples ~') +
-            '\nGenerating a web page embedding myPatch.pd in path/to/folder : ' +
-            colors.blue(
-                '\nwebpd -i myPatch.pd -o path/to/folder -f app'
-            ) +
-            '\nGenerating a wav preview of myPatch.pd : ' +
-            colors.blue('\nwebpd -i myPatch.pd -o myPatch.wav')
+            '\n  Generating a web page embedding myPatch.pd in path/to/folder : ' +
+            colorExample('\n    webpd -i myPatch.pd -o path/to/folder -f app') +
+            '\n  Generating a wav preview of myPatch.pd : ' +
+            colorExample('\n    webpd -i myPatch.pd -o myPatch.wav')
     )
     program.showHelpAfterError('(add --help for additional information)')
 
@@ -416,14 +410,11 @@ const main = (): void => {
                 `Option --check-support requires .pd input`
             )
             outFormat = outFormat || 'pdJson'
-            
         } else if (!outFilepath) {
             exitError('Please specify an ouput using -o option.')
-
         } else {
             assertValidOutFilepath(outFilepath, outFormat)
         }
-
 
         const abstractionLoader = makeCliAbstractionLoader(
             path.dirname(inFilepath)
@@ -474,7 +465,6 @@ const main = (): void => {
                     (colors as any).brightMagenta.bold('\n~ done ~\n')
                 )
             })
-    
     }
 }
 
