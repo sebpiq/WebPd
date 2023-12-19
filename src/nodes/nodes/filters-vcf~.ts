@@ -93,7 +93,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
         Var('Float', 'frequency'),
     ], 'void')`
         state.frequency = (frequency < 0.001) ? 10: frequency
-        ${variableNames.updateCoefs}()
+        ${variableNames.updateCoefs}(state)
     `,
 
     Func(variableNames.setQ, [
@@ -101,7 +101,7 @@ const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
         Var('Float', 'Q'),
     ], 'void')`
         state.Q = Math.max(Q, 0)
-        ${variableNames.updateCoefs}()
+        ${variableNames.updateCoefs}(state)
     `,
 ])
 
