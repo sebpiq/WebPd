@@ -430,7 +430,7 @@ var WebPdRuntime = (function (exports) {
       astType: 'Var',
       name,
       type: typeName,
-      value: _prepareVarValue$1(value),
+      value: value !== undefined ? _prepareVarValue$1(value) : undefined,
   });
   const ConstVar$1 = (typeName, name, value) => _preventToString$1({
       astType: 'ConstVar',
@@ -1652,7 +1652,7 @@ var WebPdRuntime = (function (exports) {
       astType: 'Var',
       name,
       type: typeName,
-      value: _prepareVarValue(value),
+      value: value !== undefined ? _prepareVarValue(value) : undefined,
   });
   const ConstVar = (typeName, name, value) => _preventToString({
       astType: 'ConstVar',
