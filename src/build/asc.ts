@@ -30,7 +30,7 @@ let ASC: any = null
  */
 export const setAsc = (asc: any) => ASC = asc
 
-export const compileAsc = async (
+export const compileAssemblyscript = async (
     code: string,
     bitDepth: BuildSettings['audioSettings']['bitDepth']
 ): Promise<WasmBuffer> => {

@@ -9,7 +9,8 @@
   },
   "files": [
     "bin/cli.mjs",
-    "dist"
+    "dist",
+    "webpd.png"
   ],
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "WebPd is a compiler for audio programming language Pure Data allowing to run .pd patches on web pages.",

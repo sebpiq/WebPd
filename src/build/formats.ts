@@ -38,7 +38,7 @@ export const BUILD_FORMATS = {
         description: 'JavaScript WebPd module',
     },
     assemblyscript: {
-        extensions: ['.asc'],
+        extensions: ['.as'],
         description: 'AssemblyScript DSP code',
     },
     wasm: {

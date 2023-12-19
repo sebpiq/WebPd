@@ -22,3 +22,4 @@ export { default as initialize } from "./initialize"
 export { defaultSettingsForBuild, makeUrlAbstractionLoader } from './build-helpers'
 export { default as run } from './run'
 export { defaultSettingsForRun, readMetadata } from './run-helpers'
+export { urlDirName } from './url-helpers'

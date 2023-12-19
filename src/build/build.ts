@@ -26,7 +26,7 @@ import {
 } from '../app-generator/gui-controls'
 import { collectIoMessageReceiversFromGui, collectIoMessageReceiversFromSendNodes } from '../app-generator/collect-message-receivers'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
-import { compileAsc } from './asc'
+import { compileAssemblyscript } from './asc'
 import { renderWav } from './audio'
 import {
     UnknownNodeTypeError,
@@ -307,7 +307,7 @@ export const performBuildStep = async (
 
         case 'wasm':
             try {
-                artefacts.wasm = await compileAsc(
+                artefacts.wasm = await compileAssemblyscript(
                     getArtefact(artefacts, 'assemblyscript'),
                     audioSettings.bitDepth
                 )

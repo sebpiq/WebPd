@@ -18,32 +18,36 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AbstractionLoader, Settings, UnknownNodeTypeError, makeAbstractionLoader } from "../build"
-import { defaultSettingsForBuild as defaultSettingsForBuildBase } from "../build/build"
-import { urlDirName } from "./url-helpers"
+import {
+    AbstractionLoader,
+    Settings,
+    UnknownNodeTypeError,
+    makeAbstractionLoader,
+} from '../build'
+import { defaultSettingsForBuild as defaultSettingsForBuildBase } from '../build/build'
 
-export const defaultSettingsForBuild = (patchUrl: string): Settings => ({
+export const defaultSettingsForBuild = (rootUrl: string): Settings => ({
     ...defaultSettingsForBuildBase(),
-    abstractionLoader: makeUrlAbstractionLoader(patchUrl),
+    abstractionLoader: makeUrlAbstractionLoader(rootUrl),
 })
 
 /**
- * Helper to build an abstraction loader from a patch url.
- * The returned loader will : 
- * - use the root url of the patch to resolve relative paths for abstractions.
+ * Helper to build an abstraction loader from a root url.
+ * The returned loader will :
+ * - use the root url to resolve relative paths for abstractions.
  * - suffix all abstraction names with .pd if they don't already have an extension.
- * 
- * @param patchUrl 
- * @returns 
+ *
+ * @param rootUrl
+ * @returns
  */
-export const makeUrlAbstractionLoader = (patchUrl: string): AbstractionLoader => {
-    const rootUrl = urlDirName(patchUrl)
-    return makeAbstractionLoader(async (nodeType) => {
-        const url = `${rootUrl}/${(nodeType.endsWith('.pd') ? nodeType : `${nodeType}.pd`)}`
+export const makeUrlAbstractionLoader = (rootUrl: string): AbstractionLoader =>
+    makeAbstractionLoader(async (nodeType) => {
+        const url = `${rootUrl}/${
+            nodeType.endsWith('.pd') ? nodeType : `${nodeType}.pd`
+        }`
         const response = await fetch(url)
         if (!response.ok) {
             throw new UnknownNodeTypeError(nodeType)
         }
         return await response.text()
     })
-}
