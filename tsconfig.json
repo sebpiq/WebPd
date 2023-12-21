@@ -2,10 +2,7 @@
     "extends": "./node_modules/@webpd/dev/tsconfig.json",
     "include": [
         "main.cli.ts",
-        "src/index.ts",
-        "src",
-        "@types/**/*.d.ts",
-        "*.d.ts",
+        "./src/**/*.ts"
     ],
     "compilerOptions": {
         "resolveJsonModule": true
