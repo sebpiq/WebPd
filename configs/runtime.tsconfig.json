@@ -16,6 +16,7 @@
         "checkJs": true,
         "resolveJsonModule": true
     },
-    "typeRoots": ["./node_modules/@types"],
-    "include": ["@types/**/*.d.ts", "../main.runtime.ts"]
+    "include": [
+        "../main.runtime.ts"
+    ]
 }

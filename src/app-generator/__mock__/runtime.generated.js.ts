@@ -26,5 +26,5 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 export default readFileSync(
-    resolve(__dirname, '../runtime.generated.js.txt')
+    resolve(__dirname, '../assets/runtime.js.txt')
 ).toString()

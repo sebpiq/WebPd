@@ -19,7 +19,7 @@
  */
 import { Artefacts } from '../build/types'
 import { IoMessageSpecMetadata } from './collect-message-receivers'
-import WEBPD_RUNTIME_CODE from './runtime.generated.js.txt'
+import WEBPD_RUNTIME_CODE from '../assets/runtime.js.txt'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {

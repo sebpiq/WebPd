@@ -15,7 +15,7 @@ export default {
     },
     plugins: [
         string({
-            include: ['./src/app-generator/runtime.generated.js.txt'],
+            include: ['./src/assets/*'],
         }),
         typescript({
             compilerOptions: {

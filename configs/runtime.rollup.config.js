@@ -8,7 +8,7 @@ import commonjs from '@rollup/plugin-commonjs'
 export default {
     input: 'main.runtime.ts',
     output: {
-        file: 'src/app-generator/runtime.generated.js.txt',
+        file: 'src/assets/runtime.js.txt',
         format: 'iife',
         name: 'WebPdRuntime',
     },
