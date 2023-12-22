@@ -3,22 +3,25 @@ import json from '@rollup/plugin-json'
 import nodeResolve from '@rollup/plugin-node-resolve'
 import { visualizer } from 'rollup-plugin-visualizer'
 import commonjs from '@rollup/plugin-commonjs'
+import path from 'path'
+import { CONFIGS_DIR, SRC_DIR, TMP_DIR } from './paths.js'
 
-// rollup.config.js
 export default {
-    input: 'main.runtime.ts',
+    input: path.resolve(SRC_DIR, 'runtime.main.ts'),
     output: {
-        file: 'src/assets/runtime.js.txt',
+        file: path.resolve(SRC_DIR, 'assets', 'runtime.js.txt'),
         format: 'iife',
         name: 'WebPdRuntime',
     },
     plugins: [
-        typescript({ tsconfig: './configs/runtime.tsconfig.json' }),
+        typescript({
+            tsconfig: path.resolve(CONFIGS_DIR, 'runtime.tsconfig.json'),
+        }),
         nodeResolve(),
         commonjs(),
         visualizer({
             template: 'network',
-            filename: './tmp/runtime-rollup-stats.html',
+            filename: path.resolve(TMP_DIR, 'runtime.rollup-stats.html'),
         }),
         json(),
     ],

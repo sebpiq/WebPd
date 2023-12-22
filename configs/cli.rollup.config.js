@@ -4,11 +4,13 @@ import nodeResolve from '@rollup/plugin-node-resolve'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { string } from 'rollup-plugin-string'
 import commonjs from '@rollup/plugin-commonjs'
+import path from 'path'
+import { CONFIGS_DIR, SRC_DIR, TMP_DIR, BIN_DIR } from './paths.js'
 
 export default {
-    input: 'main.cli.ts',
+    input: path.resolve(SRC_DIR, 'cli.main.ts'),
     output: {
-        file: 'bin/cli.mjs',
+        file: path.resolve(BIN_DIR, 'cli.mjs'),
         format: 'es',
         banner: '#!/usr/bin/env node',
         sourcemap: true,
@@ -18,15 +20,13 @@ export default {
             include: ['./src/assets/*'],
         }),
         typescript({
-            compilerOptions: {
-                declaration: false,
-            },
+            tsconfig: path.resolve(CONFIGS_DIR, 'cli.tsconfig.json'),
         }),
         nodeResolve(),
         commonjs(),
         visualizer({
             template: 'network',
-            filename: './tmp/bin-rollup-stats.html',
+            filename: path.resolve(TMP_DIR, 'cli.rollup-stats.html'),
         }),
         json(),
     ],

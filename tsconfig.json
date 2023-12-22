@@ -1,7 +1,6 @@
 {
     "extends": "./node_modules/@webpd/dev/tsconfig.json",
     "include": [
-        "main.cli.ts",
         "./src/**/*.ts"
     ],
     "compilerOptions": {

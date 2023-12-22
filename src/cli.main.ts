@@ -1,24 +1,24 @@
 import colors from 'colors/safe'
-import packageInfo from './package.json'
+import packageInfo from '../package.json'
 import asc from 'assemblyscript/dist/asc.js'
 import { PdJson } from '@webpd/pd-parser'
 import { program } from 'commander'
 import * as path from 'path'
 import fs from 'fs'
-import { Artefacts, BuildSettings } from './src/build/types'
-import { BuildFormat } from './src/build/formats'
-import { BUILD_FORMATS } from './src/build/formats'
-import { setAsc } from './src/build/asc'
-import { analysePd } from './src/build/reports'
-import { performBuildStep, loadArtefact } from './src/build/build'
-import { listBuildSteps, guessFormat } from './src/build/formats'
+import { Artefacts, BuildSettings } from './build/types'
+import { BuildFormat } from './build/formats'
+import { BUILD_FORMATS } from './build/formats'
+import { setAsc } from './build/asc'
+import { analysePd } from './build/reports'
+import { performBuildStep, loadArtefact } from './build/build'
+import { listBuildSteps, guessFormat } from './build/formats'
 import {
     getArtefact,
     makeAbstractionLoader,
     UnknownNodeTypeError,
-} from './src/build/helpers'
-import { AbstractionLoader } from './src/compile-dsp-graph/instantiate-abstractions'
-import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from './src/nodes/index'
+} from './build/helpers'
+import { AbstractionLoader } from './compile-dsp-graph/instantiate-abstractions'
+import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from './nodes/index'
 setAsc(asc)
 
 const BIT_DEPTH = 64
