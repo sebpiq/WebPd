@@ -51,11 +51,6 @@ export interface Comment {
     text: string
 }
 
-export const getPdNode = (
-    pdJson: PdJson.Pd,
-    [patchId, nodeId]: [PdJson.GlobalId, PdJson.LocalId]
-) => pdJson.patches[patchId].nodes[nodeId]
-
 export const discoverGuiControls = (pdJson: PdJson.Pd) => {
     const rootPatch = pdJson.patches[pdJson.rootPatchId]
     return {

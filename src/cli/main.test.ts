@@ -10,16 +10,16 @@ const __dirname = path.dirname(fileURLToPath(new URL(import.meta.url)))
 const exec = promisify(execCallback)
 
 describe('cli', () => {
-    const CLI_PATH = resolve(__dirname, '..', 'bin', 'cli.mjs')
-    const PATCH_PATH = resolve(__dirname, 'cli-assets', 'simple-osc.pd')
+    const CLI_PATH = resolve(__dirname, '..', '..', 'bin', 'cli.mjs')
+    const PATCH_PATH = resolve(__dirname, 'test-assets', 'simple-osc.pd')
     const SNAPSHOTS_PATHS = {
-        pdJson: resolve(__dirname, 'cli-assets', 'simple-osc.pd.json'),
-        dspGraph: resolve(__dirname, 'cli-assets', 'simple-osc.dsp-graph.json'),
-        javascript: resolve(__dirname, 'cli-assets', 'simple-osc.js'),
-        assemblyscript: resolve(__dirname, 'cli-assets', 'simple-osc.as'),
-        wasm: resolve(__dirname, 'cli-assets', 'simple-osc.wasm'),
-        wav: resolve(__dirname, 'cli-assets', 'simple-osc.wav'),
-        app: resolve(__dirname, 'cli-assets', 'simple-osc-app'),
+        pdJson: resolve(__dirname, 'test-assets', 'simple-osc.pd.json'),
+        dspGraph: resolve(__dirname, 'test-assets', 'simple-osc.dsp-graph.json'),
+        javascript: resolve(__dirname, 'test-assets', 'simple-osc.js'),
+        assemblyscript: resolve(__dirname, 'test-assets', 'simple-osc.as'),
+        wasm: resolve(__dirname, 'test-assets', 'simple-osc.wasm'),
+        wav: resolve(__dirname, 'test-assets', 'simple-osc.wav'),
+        app: resolve(__dirname, 'test-assets', 'simple-osc-app'),
     }
     const TMP_DIR = './tmp'
 

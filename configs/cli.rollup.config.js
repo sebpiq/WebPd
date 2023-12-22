@@ -8,7 +8,7 @@ import path from 'path'
 import { CONFIGS_DIR, SRC_DIR, TMP_DIR, BIN_DIR } from './paths.js'
 
 export default {
-    input: path.resolve(SRC_DIR, 'cli.main.ts'),
+    input: path.resolve(SRC_DIR, 'cli', 'main.ts'),
     output: {
         file: path.resolve(BIN_DIR, 'cli.mjs'),
         format: 'es',
