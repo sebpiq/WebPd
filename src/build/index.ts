@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-export { setAsc } from './asc'
+export { setAsc } from './build-wasm'
 export {
     makeAbstractionLoader,
     UnknownNodeTypeError,
@@ -45,3 +45,4 @@ export {
     NODE_IMPLEMENTATIONS,
 } from '../nodes/index'
 export { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
+export { collectIoMessageReceiversFromGui, collectIoMessageReceiversFromSendNodes } from './io'

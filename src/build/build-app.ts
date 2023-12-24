@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Artefacts } from '../build/types'
-import { IoMessageSpecMetadata } from './collect-message-receivers'
+import { Artefacts } from './types'
+import { IoMessageSpecMetadata } from './io'
 import WEBPD_RUNTIME_CODE from '../assets/runtime.js.txt'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
@@ -28,31 +28,20 @@ export interface Settings {
 
 export type GeneratedApp = { [filename: string]: string | ArrayBuffer }
 
-type Template = 'bare-bones'
-
-export default (template: Template, artefacts: Artefacts): GeneratedApp => {
-    switch (template) {
-        case 'bare-bones':
-            const generated = bareBonesApp({ artefacts })
-            return {
-                ...generated,
-                [WEBPD_RUNTIME_FILENAME]: WEBPD_RUNTIME_CODE,
-            }
-        default:
-            throw new Error(`Unknown template ${template}`)
-    }
-}
-
-const bareBonesApp = (settings: Settings) => {
-    const { artefacts } = settings
+export default (artefacts: Artefacts): GeneratedApp => {
     if (!artefacts.javascript && !artefacts.wasm) {
         throw new Error(`Needs at least javascript or wasm to run`)
     }
     const compiledPatchFilename = artefacts.javascript
         ? 'patch.js'
         : 'patch.wasm'
-    // prettier-ignore
+
     const generatedApp: GeneratedApp = {
+        [WEBPD_RUNTIME_FILENAME]: WEBPD_RUNTIME_CODE,
+        [compiledPatchFilename]: artefacts.javascript
+            ? artefacts.javascript
+            : artefacts.wasm,
+        // prettier-ignore
         'index.html': `
 <!DOCTYPE html>
 <html lang="en">
@@ -218,14 +207,7 @@ const bareBonesApp = (settings: Settings) => {
 
         </script>
     </body>
-</html>`
+</html>`,
     }
-
-    if (artefacts.javascript) {
-        generatedApp[compiledPatchFilename] = artefacts.javascript
-    } else {
-        generatedApp[compiledPatchFilename] = artefacts.wasm
-    }
-
     return generatedApp
 }

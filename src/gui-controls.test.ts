@@ -21,9 +21,9 @@ import { PdJson } from '@webpd/pd-parser'
 import { makePd } from '@webpd/pd-parser/src/test-helpers'
 import assert from 'assert'
 import {
-    makeTranslationTransform,
-    computeRectanglesIntersection,
-    isPointInsideRectangle,
+    _makeTranslationTransform,
+    _computeRectanglesIntersection,
+    _isPointInsideRectangle,
     _discoverGuiControlsRecursive,
 } from './gui-controls'
 
@@ -237,9 +237,9 @@ describe('math-utils', () => {
         })
     })
 
-    describe('makeTranslationTransform', () => {
+    describe('_makeTranslationTransform', () => {
         it('should compute proper transform function', () => {
-            const transform = makeTranslationTransform(
+            const transform = _makeTranslationTransform(
                 { x: 1, y: 2 },
                 { x: 10, y: -4 }
             )
@@ -248,10 +248,10 @@ describe('math-utils', () => {
         })
     })
 
-    describe('isPointInsideRectangle', () => {
+    describe('_isPointInsideRectangle', () => {
         it('should return true if point is inside rectangle', () => {
             assert.strictEqual(
-                isPointInsideRectangle(
+                _isPointInsideRectangle(
                     { x: 9, y: 2.5 },
                     {
                         topLeft: { x: 1, y: 2 },
@@ -264,7 +264,7 @@ describe('math-utils', () => {
 
         it('should return false if point is outside rectangle', () => {
             assert.strictEqual(
-                isPointInsideRectangle(
+                _isPointInsideRectangle(
                     { x: 19, y: 2.5 },
                     {
                         topLeft: { x: 1, y: 2 },
@@ -277,7 +277,7 @@ describe('math-utils', () => {
 
         it('should return true if point is on rectangle border', () => {
             assert.strictEqual(
-                isPointInsideRectangle(
+                _isPointInsideRectangle(
                     { x: 9, y: 13 },
                     {
                         topLeft: { x: 1, y: 2 },
@@ -289,10 +289,10 @@ describe('math-utils', () => {
         })
     })
 
-    describe('computeRectanglesIntersection', () => {
+    describe('_computeRectanglesIntersection', () => {
         it('should compute intersection for simple intersecting rectangles', () => {
             assert.deepStrictEqual(
-                computeRectanglesIntersection(
+                _computeRectanglesIntersection(
                     {
                         topLeft: { x: 1, y: 2 },
                         bottomRight: { x: 10, y: 13 },
@@ -311,7 +311,7 @@ describe('math-utils', () => {
 
         it('should compute intersection for one rectangle inside the other', () => {
             assert.deepStrictEqual(
-                computeRectanglesIntersection(
+                _computeRectanglesIntersection(
                     {
                         topLeft: { x: 1, y: 2 },
                         bottomRight: { x: 10, y: 13 },
@@ -330,7 +330,7 @@ describe('math-utils', () => {
 
         it('should work with infinity rectangle', () => {
             assert.deepStrictEqual(
-                computeRectanglesIntersection(
+                _computeRectanglesIntersection(
                     {
                         topLeft: { x: -Infinity, y: -Infinity },
                         bottomRight: { x: Infinity, y: Infinity },
@@ -349,7 +349,7 @@ describe('math-utils', () => {
 
         it('should compute empty intersection for disjoint rectangles', () => {
             assert.deepStrictEqual(
-                computeRectanglesIntersection(
+                _computeRectanglesIntersection(
                     {
                         topLeft: { x: 1, y: 2 },
                         bottomRight: { x: 10, y: 13 },

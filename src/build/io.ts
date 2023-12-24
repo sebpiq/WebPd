@@ -1,6 +1,6 @@
 import { DspGraph, CompilationSettings } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
-import { ControlTree, traverseGuiControls } from './gui-controls'
+import { ControlTree, traverseGuiControls } from '../gui-controls'
 import { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
 import { NodeArguments } from '../nodes/nodes/send-receive'
 import { builders } from '../nodes/nodes/controls-float'

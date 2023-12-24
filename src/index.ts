@@ -1,5 +1,5 @@
 export * as Build from './build'
-export * as AppGenerator from './app-generator'
+export * as GuiControls from './gui-controls'
 export * as Browser from './browser'
 
 export { DspGraph, Message } from '@webpd/compiler'

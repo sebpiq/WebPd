@@ -94,7 +94,7 @@ export const _discoverGuiControlsRecursive = (
             const subpatchLayout = _assertPatchLayout(subpatch.layout)
 
             // 1. we convert all coordinates to the subpatch coords system
-            const toSubpatchCoords = makeTranslationTransform(
+            const toSubpatchCoords = _makeTranslationTransform(
                 { x: nodeLayout.x, y: nodeLayout.y },
                 { x: subpatchLayout.viewportX, y: subpatchLayout.viewportY }
             )
@@ -109,7 +109,7 @@ export const _discoverGuiControlsRecursive = (
             }
             const subpatchViewport = {
                 topLeft,
-                bottomRight: sumPoints(topLeft, {
+                bottomRight: _sumPoints(topLeft, {
                     x: subpatchLayout.viewportWidth,
                     y: subpatchLayout.viewportHeight,
                 }),
@@ -117,7 +117,7 @@ export const _discoverGuiControlsRecursive = (
 
             // 2. we compute the visible intersection in the subpatch coords system
             // and call the function for the subpatch
-            const visibleSubpatchViewport = computeRectanglesIntersection(
+            const visibleSubpatchViewport = _computeRectanglesIntersection(
                 parentViewport,
                 subpatchViewport
             )
@@ -145,7 +145,7 @@ export const _discoverGuiControlsRecursive = (
         } else if (node.type in CONTROL_TYPE && node.nodeClass === 'control') {
             const nodeLayout = _assertNodeLayout(node.layout)
             if (
-                !isPointInsideRectangle(
+                !_isPointInsideRectangle(
                     {
                         x: nodeLayout.x,
                         y: nodeLayout.y,
@@ -181,7 +181,7 @@ export const traverseGuiControls = (
     })
 }
 
-export const makeTranslationTransform = (fromPoint: Point, toPoint: Point) => {
+export const _makeTranslationTransform = (fromPoint: Point, toPoint: Point) => {
     const xOffset = toPoint.x - fromPoint.x
     const yOffset = toPoint.y - fromPoint.y
     return (fromPoint: Point) => {
@@ -192,12 +192,12 @@ export const makeTranslationTransform = (fromPoint: Point, toPoint: Point) => {
     }
 }
 
-export const sumPoints = (p1: Point, p2: Point) => ({
+const _sumPoints = (p1: Point, p2: Point) => ({
     x: p1.x + p2.x,
     y: p1.y + p2.y,
 })
 
-export const computeRectanglesIntersection = (r1: Rectangle, r2: Rectangle) => {
+export const _computeRectanglesIntersection = (r1: Rectangle, r2: Rectangle) => {
     const topLeft = {
         x: Math.max(r1.topLeft.x, r2.topLeft.x),
         y: Math.max(r1.topLeft.y, r2.topLeft.y),
@@ -213,7 +213,7 @@ export const computeRectanglesIntersection = (r1: Rectangle, r2: Rectangle) => {
     }
 }
 
-export const isPointInsideRectangle = (p: Point, r: Rectangle) =>
+export const _isPointInsideRectangle = (p: Point, r: Rectangle) =>
     r.topLeft.x <= p.x &&
     p.x <= r.bottomRight.x &&
     r.topLeft.y <= p.y &&

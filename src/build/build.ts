@@ -20,14 +20,14 @@
 
 import compile from '@webpd/compiler'
 import parse from '@webpd/pd-parser'
-import appGenerator from '../app-generator/generate-app'
+import buildApp from './build-app'
 import {
     discoverGuiControls,
-} from '../app-generator/gui-controls'
-import { collectIoMessageReceiversFromGui, collectIoMessageReceiversFromSendNodes } from '../app-generator/collect-message-receivers'
+} from '../gui-controls'
+import { collectIoMessageReceiversFromGui, collectIoMessageReceiversFromSendNodes } from './io'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
-import { compileAssemblyscript } from './asc'
-import { renderWav } from './audio'
+import { compileAssemblyscript } from './build-wasm'
+import { renderWav } from './build-audio'
 import {
     UnknownNodeTypeError,
     getArtefact,
@@ -329,7 +329,7 @@ export const performBuildStep = async (
             return { status: 0, warnings: [] }
 
         case 'app':
-            artefacts.app = appGenerator('bare-bones', artefacts)
+            artefacts.app = buildApp(artefacts)
             return { status: 0, warnings: [] }
 
         default:
