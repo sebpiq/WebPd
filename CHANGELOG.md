@@ -12,6 +12,7 @@
     - refactored entirely NodeImplementation
 - objects `[tabread~]`, `[tabread4~]`, `[symbol]`
 - in CLI : renamed `appTemplate` format to `app`, `compiledJs` to `javascript` and `compiledAsc` to `assemblyscript`
+- added GUI info to compiled patch metadata for easier introspection of I/O
 
 1.0.0-alpha.4
 ---------------
