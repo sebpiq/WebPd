@@ -1,3 +1,8 @@
+1.0.0-alpha.7
+---------------
+
+- Incremented assemblyscript version from 0.25.x to 0.27.x
+
 1.0.0-alpha.6
 ---------------
 
