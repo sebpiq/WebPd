@@ -18,9 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { AnonFunc, Class, ConstVar, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Sequence, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
@@ -48,64 +48,54 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('samphold_t')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'signalMemory'),
-        Var('Float', 'controlMemory'),
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const nodeImplementation: _NodeImplementation = {
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', `{
             signalMemory: 0,
             controlMemory: 0,
-        }`)}
-    `
+        }`),
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, outs, state }) => ast`
-    ${state}.signalMemory = ${outs.$0} = ${ins.$1} < ${state}.controlMemory ? ${ins.$0}: ${state}.signalMemory
-    ${state}.controlMemory = ${ins.$1}
-`
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state, globs }) => ({
-    '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
-        if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-            && msg_readStringToken(m, 0) === 'set'
-        ) {
-            ${state}.signalMemory = msg_readFloatToken(m, 1)
-            return
-
-        } else if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-            && msg_readStringToken(m, 0) === 'reset'
-        ) {
-            ${state}.controlMemory = msg_readFloatToken(m, 1)
-            return
-
-        } else if (
-            msg_isMatching(m, [MSG_STRING_TOKEN])
-            && msg_readStringToken(m, 0) === 'reset'
-        ) {
-            ${state}.controlMemory = 1e20
-            return
-        }
+    loop: ({ ins, outs, state }) => ast`
+        ${state}.signalMemory = ${outs.$0} = ${ins.$1} < ${state}.controlMemory ? ${ins.$0}: ${state}.signalMemory
+        ${state}.controlMemory = ${ins.$1}
     `,
-})
 
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    loop: loop,
-    messageReceivers: messageReceivers,
-    initialization: initialization,
+    messageReceivers: ({ state, globs }) => ({
+        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+            if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${state}.signalMemory = msg_readFloatToken(m, 1)
+                return
+    
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+                && msg_readStringToken(m, 0) === 'reset'
+            ) {
+                ${state}.controlMemory = msg_readFloatToken(m, 1)
+                return
+    
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'reset'
+            ) {
+                ${state}.controlMemory = 1e20
+                return
+            }
+        `,
+    }),
+
     dependencies: [
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'signalMemory'),
+                Var('Float', 'controlMemory'),
+            ]),
+        ]),
     ]
 }
 

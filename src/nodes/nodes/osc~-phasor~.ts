@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, Code, ConstVar, Sequence, stdlib } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { Class, Code, Sequence, stdlib } from '@webpd/compiler'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
@@ -54,6 +54,7 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
+// ------------------------------ node implementation ------------------------------ //
 const makeNodeImplementation = ({
     name,
     coeff,
@@ -64,57 +65,51 @@ const makeNodeImplementation = ({
     generateOperation: (phase: Code) => Code,
 }): _NodeImplementation => {
 
-    // ------------------------------ generateDeclarations ------------------------------ //
     const variableNames = generateVariableNamesNodeType(name, [
         'setPhase'
     ])
 
-    const nodeCore: GlobalCodeGenerator = () => Sequence([
-        Class(variableNames.stateClass, [
-            Var('Float', 'phase'),
-            Var('Float', 'J'),
-        ]),
-
-        Func(variableNames.setPhase, [
-            Var(variableNames.stateClass, 'state'),
-            Var('Float', 'phase'),
-        ], 'void')`
-            state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}
-        `
-    ])
-
-    const initialization: _NodeImplementation['initialization'] = ({ globs, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
+    const nodeImplementation: _NodeImplementation = {
+        stateInitialization: () => 
+            Var(variableNames.stateClass, '', `{
                 phase: 0,
                 J: 0,
-            }`)}
-            
+            }`),
+
+        initialization: ({ globs, state }) => ast`
             commons_waitEngineConfigure(() => {
                 ${state}.J = ${coeff ? `${coeff}`: '1'} / ${globs.sampleRate}
             })
-        `
+        `,
 
-    // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => ast`
-        ${outs.$0} = ${generateOperation(`${state}.phase`)}
-        ${state}.phase += (${state}.J * ${ins.$0})
-    `
+        messageReceivers: ({ state }) => ({
+            '1': coldFloatInletWithSetter(variableNames.setPhase, state),
+        }),
 
-    // ------------------------------- messageReceivers ------------------------------ //
-    const messageReceivers: _NodeImplementation['messageReceivers'] = ({ globs, state }) => ({
-        '1': coldFloatInletWithSetter(variableNames.setPhase, state),
-    })
+        loop: ({ ins, state, outs }) => ast`
+            ${outs.$0} = ${generateOperation(`${state}.phase`)}
+            ${state}.phase += (${state}.J * ${ins.$0})
+        `,
 
-    return {
-        initialization: initialization,
-        messageReceivers: messageReceivers,
-        loop: loop,
         dependencies: [
             stdlib.commonsWaitEngineConfigure, 
-            nodeCore
+            () => Sequence([
+                Class(variableNames.stateClass, [
+                    Var('Float', 'phase'),
+                    Var('Float', 'J'),
+                ]),
+        
+                Func(variableNames.setPhase, [
+                    Var(variableNames.stateClass, 'state'),
+                    Var('Float', 'phase'),
+                ], 'void')`
+                    state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}
+                `
+            ])
         ]
     }
+
+    return nodeImplementation
 }
 
 // ------------------------------------------------------------------- //

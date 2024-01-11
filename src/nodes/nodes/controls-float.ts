@@ -99,6 +99,18 @@ const makeNodeImplementation = ({
     const variableNames = generateVariableNamesNodeType(name, ['receiveMessage'])
 
     return {
+        stateInitialization: ({ node: { args }}) => 
+            Var(controlsCoreVariableNames.stateClass, '', `{
+                minValue: ${args.minValue},
+                maxValue: ${args.maxValue},
+                valueFloat: ${args.initValue},
+                value: msg_create([]),
+                receiveBusName: "${args.receiveBusName}",
+                sendBusName: "${args.sendBusName}",
+                messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
+                messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
+            }`),
+
         initialization: ({
             state,
             snds,
@@ -106,18 +118,8 @@ const makeNodeImplementation = ({
         }) =>
             // There is a circular dependency problem between the state and snds.$0 so we can actually
             // only use snds.$0 inside the callback of `commons_waitEngineConfigure`.
-            ast`
-                ${ConstVar(controlsCoreVariableNames.stateClass, state, ast`{
-                    minValue: ${args.minValue},
-                    maxValue: ${args.maxValue},
-                    valueFloat: ${args.initValue},
-                    value: msg_create([]),
-                    receiveBusName: "${args.receiveBusName}",
-                    sendBusName: "${args.sendBusName}",
-                    messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
-                    messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
-                }`)}
-    
+            // TODO : assemblyscript-upgrade - this is probably no true anymore.
+            ast`    
                 commons_waitEngineConfigure(() => {
                     ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
                         ${variableNames.receiveMessage}(${state}, m)
@@ -146,7 +148,6 @@ const makeNodeImplementation = ({
             stdlib.commonsWaitFrame,
             controlsCore,
             () => Sequence([
-
                 Func(variableNames.receiveMessage, [
                     Var(controlsCoreVariableNames.stateClass, 'state'),
                     Var('Message', 'm'),

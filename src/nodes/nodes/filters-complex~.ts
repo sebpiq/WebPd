@@ -98,14 +98,13 @@ const makeNodeImplementation = ({
     const variableNames = generateVariableNamesNodeType('filter_c_t')
 
     return {
-        initialization: ({ state }) => ast`
-            ${ConstVar(variableNames.stateClass, state, `{
+        stateInitialization: () => 
+            Var(variableNames.stateClass, '', `{
                 lastOutputRe: 0,
                 lastOutputIm: 0,
                 lastInputRe: 0,
                 lastInputIm: 0,
-            }`)}
-        `,
+            }`),
 
         loop: ({ ins, state, outs }) => ast`
             ${outs.$0} = ${generateOperationRe(

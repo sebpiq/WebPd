@@ -18,20 +18,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, ConstVar, Sequence } from '@webpd/compiler'
+import { Class, Sequence } from '@webpd/compiler'
 import {
-    GlobalCodeGenerator,
     NodeImplementation,
     NodeImplementations,
 } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
-import { roundFloatAsPdInt } from '../global-code/numbers'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 import { VariableName } from '@webpd/compiler/src/ast/types'
+import { roundFloatAsPdInt } from '../global-code/numbers'
 
 interface NodeArguments {
     value: number
@@ -58,67 +57,67 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
-
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('float_int', [
     'setValueInt', 
     'setValueFloat'
 ])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'value')
-    ]),
-
-    Func(variableNames.setValueInt, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Float', 'value'),
-    ], 'void')`
-        state.value = roundFloatAsPdInt(value)
-    `,
-
-    Func(variableNames.setValueFloat, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Float', 'value'),
-    ], 'void')`
-        state.value = value
-    `
-])
-
 const makeNodeImplementation = (setValueVariableName: VariableName): _NodeImplementation => {
-
-    const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
-                value: 0,
-            }`)}
-            ${setValueVariableName}(${state}, ${args.value})
-        `
-
-    // ------------------------------- messageReceivers ------------------------------ //
-    const messageReceivers: _NodeImplementation['messageReceivers'] = ({
-        snds,
-        state,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${setValueVariableName}(${state}, msg_readFloatToken(m, 0))
-                ${snds.$0}(msg_floats([${state}.value]))
-                return 
-
-            } else if (msg_isBang(m)) {
-                ${snds.$0}(msg_floats([${state}.value]))
-                return
-                
-            }
-        `,
-
-        '1': coldFloatInletWithSetter(setValueVariableName, state),
-    })
-
     return {
-        initialization: initialization,
-        messageReceivers: messageReceivers,        
+        stateInitialization: () => 
+            Var(variableNames.stateClass, '', `{
+                value: 0,
+            }`),
+
+        initialization: ({ node: { args }, state }) => 
+            ast`
+                ${setValueVariableName}(${state}, ${args.value})
+            `,
+        
+        messageReceivers: ({
+            snds,
+            state,
+        }) => ({
+            '0': AnonFunc([Var('Message', 'm')])`
+                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                    ${setValueVariableName}(${state}, msg_readFloatToken(m, 0))
+                    ${snds.$0}(msg_floats([${state}.value]))
+                    return 
+    
+                } else if (msg_isBang(m)) {
+                    ${snds.$0}(msg_floats([${state}.value]))
+                    return
+                    
+                }
+            `,
+    
+            '1': coldFloatInletWithSetter(setValueVariableName, state),
+        }),
+
+        dependencies: [
+            roundFloatAsPdInt,
+            bangUtils,
+            () => Sequence([
+                Class(variableNames.stateClass, [
+                    Var('Float', 'value')
+                ]),
+            
+                Func(variableNames.setValueInt, [
+                    Var(variableNames.stateClass, 'state'),
+                    Var('Float', 'value'),
+                ], 'void')`
+                    state.value = roundFloatAsPdInt(value)
+                `,
+            
+                Func(variableNames.setValueFloat, [
+                    Var(variableNames.stateClass, 'state'),
+                    Var('Float', 'value'),
+                ], 'void')`
+                    state.value = value
+                `
+            ])
+        ],
     }
 }
 
@@ -131,14 +130,8 @@ const builders = {
 }
 
 const nodeImplementations: NodeImplementations = {
-    float: {
-        ...makeNodeImplementation(variableNames.setValueFloat),
-        dependencies: [bangUtils, nodeCore],
-    },
-    int: {
-        ...makeNodeImplementation(variableNames.setValueInt),
-        dependencies: [roundFloatAsPdInt, bangUtils, nodeCore],
-    },
+    float: makeNodeImplementation(variableNames.setValueFloat),
+    int: makeNodeImplementation(variableNames.setValueInt),
 }
 
 export { builders, nodeImplementations, NodeArguments }

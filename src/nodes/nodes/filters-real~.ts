@@ -18,10 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { Class, Code, ConstVar, Sequence } from '@webpd/compiler'
+import { Class, Code, Sequence } from '@webpd/compiler'
 import { ast, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
@@ -55,6 +55,7 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
+// ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = ({
     generateOperation,
 }: {
@@ -65,36 +66,28 @@ const makeNodeImplementation = ({
         lastInput: Code,
     ) => Code
 }): _NodeImplementation => {
-
-    // ------------------------------- generateDeclarations ------------------------------ //
     const variableNames = generateVariableNamesNodeType('filter_r_t')
 
-    const nodeCore: GlobalCodeGenerator = () => Sequence([
-        Class(variableNames.stateClass, [
-            Var('Float', 'lastOutput'),
-            Var('Float', 'lastInput'),
-        ]),
-    ])
-
-    const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
+    return {
+        stateInitialization: () => 
+            Var(variableNames.stateClass, '', `{
                 lastOutput: 0,
                 lastInput: 0,
-            }`)}
-        `
+            }`),
 
+        loop: ({ ins, state, outs }) => ast`
+            ${state}.lastOutput = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, `${state}.lastOutput`, `${state}.lastInput`)}
+            ${state}.lastInput = ${ins.$0}
+        `,
 
-    // ------------------------------- loop ------------------------------ //
-    const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => ast`
-        ${state}.lastOutput = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, `${state}.lastOutput`, `${state}.lastInput`)}
-        ${state}.lastInput = ${ins.$0}
-    `
-
-    return {
-        initialization: initialization,
-        loop: loop,
-        dependencies: [nodeCore],
+        dependencies: [
+            () => Sequence([
+                Class(variableNames.stateClass, [
+                    Var('Float', 'lastOutput'),
+                    Var('Float', 'lastInput'),
+                ]),
+            ])
+        ],
     }
 }
 

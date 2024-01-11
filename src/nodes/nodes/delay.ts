@@ -62,13 +62,13 @@ const variableNames = generateVariableNamesNodeType('delay', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ node: { args }, state, globs }) => ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            delay: 0,
-            sampleRatio: 1,
-            scheduledBang: SKED_ID_NULL,
-        }`)}
+    stateInitialization: () => Var(variableNames.stateClass, '', `{
+        delay: 0,
+        sampleRatio: 1,
+        scheduledBang: SKED_ID_NULL,
+    }`),
 
+    initialization: ({ node: { args }, state, globs }) => ast`
         commons_waitEngineConfigure(() => {
             ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
             ${variableNames.setDelay}(${state}, ${args.delay})

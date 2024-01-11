@@ -19,7 +19,7 @@
  */
 
 import { stdlib, functional, Class, Func, Sequence } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
@@ -62,158 +62,148 @@ const builder: NodeBuilder<NodeArguments> = {
     })
 }
 
-// ------------------------------ generateDeclarations ------------------------------ //
+// ------------------------------ node implementations ------------------------------ //
 const variableNames = generateVariableNamesNodeType('readsf_t', [
     'openStream',
 ])
 
-const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Array<buf_SoundBuffer>', 'buffers'),
-        Var('fs_OperationId', 'streamOperationId'),
-        Var('Int', 'readingStatus'),
-    ]),
-
-    Func(variableNames.openStream, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Message', 'm'),
-        Var('Int', 'channelCount'),
-        Var('fs_OperationCallback', 'onStreamClose'),
-    ], 'void')`
-        if (state.streamOperationId !== -1) {
-            state.readingStatus = 3
-            fs_closeSoundStream(state.streamOperationId, FS_OPERATION_SUCCESS)
-        }
-
-        ${ConstVar('fs_SoundInfo', 'soundInfo', `{
-            channelCount,
-            sampleRate: toInt(${globs.sampleRate}),
-            bitDepth: 32,
-            encodingFormat: '',
-            endianness: '',
-            extraOptions: '',
-        }`)}
-        ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
-            m,
-            soundInfo,
-        )`)}
-        ${ConstVar('string', 'url', `parseReadWriteFsOpts(
-            m,
-            soundInfo,
-            unhandledOptions
-        )`)}
-        if (url.length === 0) {
-            return
-        }
-        state.streamOperationId = fs_openSoundReadStream(
-            url,
-            soundInfo,
-            onStreamClose,
-        )
-        state.buffers = _FS_SOUND_STREAM_BUFFERS.get(state.streamOperationId)
-    `
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const nodeImplementation: _NodeImplementation = {
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', `{
             buffers: [],
             streamOperationId: -1,
             readingStatus: 0,
-        }`)}
-    `
+        }`),
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({
-    state,
-    snds,
-    outs,
-    node: {
-        args: { channelCount },
-    },
-}) => ast`
-    switch(${state}.readingStatus) {
-        case 1: 
-            ${functional.countTo(channelCount).map((i) => 
-                `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
-            break
-            
-        case 2: 
-            ${functional.countTo(channelCount).map((i) => 
-                `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
-            if (${state}.buffers[0].pullAvailableLength === 0) {
-                ${snds[channelCount]}(msg_bang())
-                ${state}.readingStatus = 3
-            }
-            break
-
-        case 3: 
-            ${functional.countTo(channelCount).map((i) => `${outs[i]} = 0`)}
-            ${state}.readingStatus = 0
-            break
-    }
-`
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({
-    node,
-    state,
-}) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_getLength(m) >= 2) {
-            if (msg_isStringToken(m, 0) 
-                && msg_readStringToken(m, 0) === 'open'
-            ) {
-                ${variableNames.openStream}(
-                    ${state},
-                    m,
-                    ${node.args.channelCount},
-                    ${AnonFunc()`
-                        ${state}.streamOperationId = -1
-                        if (${state}.readingStatus === 1) {
-                            ${state}.readingStatus = 2
-                        } else {
-                            ${state}.readingStatus = 3
-                        }
-                    `}
-                )
-                return
-            }
-
-        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            if (msg_readFloatToken(m, 0) === 0) {
-                ${state}.readingStatus = 3
-                return
-
-            } else {
-                if (${state}.streamOperationId !== -1) {
-                    ${state}.readingStatus = 1
-                } else {
-                    console.log('[readsf~] start requested without prior open')
+    messageReceivers: ({
+        node,
+        state,
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_getLength(m) >= 2) {
+                if (msg_isStringToken(m, 0) 
+                    && msg_readStringToken(m, 0) === 'open'
+                ) {
+                    ${variableNames.openStream}(
+                        ${state},
+                        m,
+                        ${node.args.channelCount},
+                        ${AnonFunc()`
+                            ${state}.streamOperationId = -1
+                            if (${state}.readingStatus === 1) {
+                                ${state}.readingStatus = 2
+                            } else {
+                                ${state}.readingStatus = 3
+                            }
+                        `}
+                    )
+                    return
                 }
+    
+            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                if (msg_readFloatToken(m, 0) === 0) {
+                    ${state}.readingStatus = 3
+                    return
+    
+                } else {
+                    if (${state}.streamOperationId !== -1) {
+                        ${state}.readingStatus = 1
+                    } else {
+                        console.log('[readsf~] start requested without prior open')
+                    }
+                    return
+    
+                }
+                
+            } else if (msg_isAction(m, 'print')) {
+                console.log('[readsf~] reading = ' + ${state}.readingStatus.toString())
                 return
-
             }
-            
-        } else if (msg_isAction(m, 'print')) {
-            console.log('[readsf~] reading = ' + ${state}.readingStatus.toString())
-            return
+        `,
+    }),
+
+    loop: ({
+        state,
+        snds,
+        outs,
+        node: {
+            args: { channelCount },
+        },
+    }) => ast`
+        switch(${state}.readingStatus) {
+            case 1: 
+                ${functional.countTo(channelCount).map((i) => 
+                    `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
+                break
+                
+            case 2: 
+                ${functional.countTo(channelCount).map((i) => 
+                    `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
+                if (${state}.buffers[0].pullAvailableLength === 0) {
+                    ${snds[channelCount]}(msg_bang())
+                    ${state}.readingStatus = 3
+                }
+                break
+    
+            case 3: 
+                ${functional.countTo(channelCount).map((i) => `${outs[i]} = 0`)}
+                ${state}.readingStatus = 0
+                break
         }
     `,
-})
 
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    initialization: initialization,
-    messageReceivers: messageReceivers,
-    loop: loop,
     dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,
         bangUtils,
         stringMsgUtils,
         stdlib.fsReadSoundStream,
-        nodeCore,
+        ({ globs }) => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Array<buf_SoundBuffer>', 'buffers'),
+                Var('fs_OperationId', 'streamOperationId'),
+                Var('Int', 'readingStatus'),
+            ]),
+        
+            Func(variableNames.openStream, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Message', 'm'),
+                Var('Int', 'channelCount'),
+                Var('fs_OperationCallback', 'onStreamClose'),
+            ], 'void')`
+                if (state.streamOperationId !== -1) {
+                    state.readingStatus = 3
+                    fs_closeSoundStream(state.streamOperationId, FS_OPERATION_SUCCESS)
+                }
+        
+                ${ConstVar('fs_SoundInfo', 'soundInfo', `{
+                    channelCount,
+                    sampleRate: toInt(${globs.sampleRate}),
+                    bitDepth: 32,
+                    encodingFormat: '',
+                    endianness: '',
+                    extraOptions: '',
+                }`)}
+                ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+                    m,
+                    soundInfo,
+                )`)}
+                ${ConstVar('string', 'url', `parseReadWriteFsOpts(
+                    m,
+                    soundInfo,
+                    unhandledOptions
+                )`)}
+                if (url.length === 0) {
+                    return
+                }
+                state.streamOperationId = fs_openSoundReadStream(
+                    url,
+                    soundInfo,
+                    onStreamClose,
+                )
+                state.buffers = _FS_SOUND_STREAM_BUFFERS.get(state.streamOperationId)
+            `
+        ]),
     ],
 }
 

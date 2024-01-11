@@ -19,14 +19,13 @@
  */
 
 import {
-    GlobalCodeGenerator,
     NodeImplementation,
 } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { messageBuses } from '../global-code/buses'
-import { AnonFunc, Class, ConstVar, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Sequence, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -54,56 +53,48 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('symbol')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('string', 'value')
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            value: "${args.value}"
-        }`)}
-    `
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({
-    snds,
-    state,
-}) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isBang(m)) {
-            ${snds.$0}(msg_strings([${state}.value]))
-            return
-
-        } else if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
-            ${state}.value = msg_readStringToken(m, 0)
-            ${snds.$0}(msg_strings([${state}.value]))
-            return
-
-        }
-    `,
-
-    '1': AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
-            ${state}.value = msg_readStringToken(m, 0)
-            return 
-        }
-    `,
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messageReceivers: messageReceivers,
-    initialization: initialization,
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
+            value: "${args.value}"
+        }`),
+
+    messageReceivers: ({
+        snds,
+        state,
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isBang(m)) {
+                ${snds.$0}(msg_strings([${state}.value]))
+                return
+    
+            } else if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
+                ${state}.value = msg_readStringToken(m, 0)
+                ${snds.$0}(msg_strings([${state}.value]))
+                return
+    
+            }
+        `,
+    
+        '1': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
+                ${state}.value = msg_readStringToken(m, 0)
+                return 
+            }
+        `,
+    }),
+
     dependencies: [
         bangUtils, 
         messageBuses,
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('string', 'value')
+            ]),
+        ]),
     ]
 }
 

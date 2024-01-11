@@ -50,12 +50,10 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('sig_t')
 
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ node: { args }, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
-                currentValue: ${args.initValue}
-            }`)}
-        `,
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
+            currentValue: ${args.initValue}
+        }`),
 
     inlineLoop: ({ state }) => 
         ast`${state}.currentValue`,

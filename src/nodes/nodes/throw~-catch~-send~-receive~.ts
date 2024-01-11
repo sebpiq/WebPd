@@ -92,7 +92,7 @@ const builderCatch: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('throw_catch_send_receive_t', ['setBusName'])
 
 const nodeCore: GlobalCodeGenerator = () => Sequence([
@@ -111,21 +111,28 @@ const nodeCore: GlobalCodeGenerator = () => Sequence([
     `
 ])
 
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const baseNodeImplementation: _NodeImplementation = {
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', `{
             busName: '',
-        }`)}
+        }`),
+    
+    initialization: ({ node: { args }, state }) => 
+        ast`
+            ${variableNames.setBusName}(${state}, "${args.busName}")
+        `,
+}
 
-        ${variableNames.setBusName}(${state}, "${args.busName}")
-    `
 
-// --------------------------------- throw~ ---------------------------------- //
+
+// --------------------------------- node implementation - throw~ ---------------------------------- //
 const nodeImplementationThrow: _NodeImplementation = {
-    initialization: initialization,
+    ...baseNodeImplementation,
+
     loop: ({ ins, state }) => ast`
         addAssignSignalBus(${state}.busName, ${ins.$0})
     `,
+
     messageReceivers: ({ state }) => ({
         '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
             if (
@@ -137,15 +144,17 @@ const nodeImplementationThrow: _NodeImplementation = {
             }
         `
     }),
+
     dependencies: [ 
         signalBuses, 
         nodeCore,
     ]
 }
 
-// --------------------------------- catch~ ---------------------------------- //
+// --------------------------------- node implementation - catch~ ---------------------------------- //
 const nodeImplementationCatch: _NodeImplementation = {
-    initialization: initialization,
+    ...baseNodeImplementation,
+
     loop: ({
         outs,
         state,
@@ -153,29 +162,34 @@ const nodeImplementationCatch: _NodeImplementation = {
         ${outs.$0} = readSignalBus(${state}.busName)
         resetSignalBus(${state}.busName)
     `,
+
     dependencies: [
         signalBuses, 
         nodeCore
     ],
 }
 
-// --------------------------------- send~ ---------------------------------- //
+// --------------------------------- node implementation - send~ ---------------------------------- //
 const nodeImplementationSend: _NodeImplementation = {
-    initialization: initialization,
+    ...baseNodeImplementation,
+
     loop: ({ state, ins }) => ast`
         setSignalBus(${state}.busName, ${ins.$0})
     `,
+
     dependencies: [
         signalBuses, 
         nodeCore
     ],
 }
 
-// --------------------------------- receive~ ---------------------------------- //
+// --------------------------------- node implementation - receive~ ---------------------------------- //
 const nodeImplementationReceive: _NodeImplementation = {
-    initialization: initialization,
+    ...baseNodeImplementation,
+
     inlineLoop: ({ state }) => 
         ast`readSignalBus(${state}.busName)`,
+    
     messageReceivers: ({ state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (
@@ -187,13 +201,14 @@ const nodeImplementationReceive: _NodeImplementation = {
             }
         `
     }),
+
     dependencies: [
         signalBuses,
         nodeCore,
     ]
 }
 
-// ------------------------------------------------------------------- //
+// -------------------------------------------------------------------------------------------- //
 const builders = {
     'throw~': builderThrow,
     'catch~': builderCatch,

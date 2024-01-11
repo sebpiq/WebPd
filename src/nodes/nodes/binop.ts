@@ -80,11 +80,12 @@ const makeNodeImplementation = ({
     const variableNames = generateVariableNamesNodeType(operationName, ['setLeft', 'setRight'])
 
     return {
+        stateInitialization: () => Var(variableNamesBinopBase.stateClass, '', `{
+            leftOp: 0,
+            rightOp: 0,
+        }`),
+        
         initialization: ({ state, node: { args } }) => ast`
-        ${ConstVar(variableNamesBinopBase.stateClass, state, `{
-                leftOp: 0,
-                rightOp: 0,
-            }`)}
             ${variableNames.setLeft}(${state}, 0)
             ${variableNames.setRight}(${state}, ${args.value})
         `,

@@ -511,18 +511,24 @@ let n_0_0_OUTS_0: Float = 0
         let INPUT: FloatArray = createFloatArray(0)
         let OUTPUT: FloatArray = createFloatArray(0)
 
-        
-                const n_0_1_STATE: n_State_control = {
-                    minValue: -1e+37,
-                    maxValue: 1e+37,
-                    valueFloat: 220,
-                    value: msg_create([]),
-                    receiveBusName: "empty",
-                    sendBusName: "empty",
-                    messageReceiver: n_control_defaultMessageHandler,
-                    messageSender: n_control_defaultMessageHandler,
-                }
-    
+        const n_0_1_STATE: n_State_control = {
+                minValue: -1e+37,
+                maxValue: 1e+37,
+                valueFloat: 220,
+                value: msg_create([]),
+                receiveBusName: "empty",
+                sendBusName: "empty",
+                messageReceiver: n_control_defaultMessageHandler,
+                messageSender: n_control_defaultMessageHandler,
+            }
+const m_n_0_0_0_sig_STATE: n_State_sig_t = {
+            currentValue: 0
+        }
+const n_0_0_STATE: n_State_osc_t = {
+            phase: 0,
+            J: 0,
+        }
+            
                 commons_waitEngineConfigure(() => {
                     n_0_1_STATE.messageReceiver = function (m: Message): void {
                         n_nbx_receiveMessage(n_0_1_STATE, m)
@@ -535,15 +541,6 @@ let n_0_0_OUTS_0: Float = 0
             
 
 
-            const m_n_0_0_0_sig_STATE: n_State_sig_t = {
-                currentValue: 0
-            }
-        
-
-            const n_0_0_STATE: n_State_osc_t = {
-                phase: 0,
-                J: 0,
-            }
             
             commons_waitEngineConfigure(() => {
                 n_0_0_STATE.J = 2 * Math.PI / SAMPLE_RATE

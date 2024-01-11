@@ -12,13 +12,11 @@ import { setAsc } from '../build/build-wasm'
 import { analysePd } from '../build/reports'
 import { performBuildStep, loadArtefact } from '../build/build'
 import { listBuildSteps, guessFormat } from '../build/formats'
-import {
-    getArtefact,
-    makeAbstractionLoader,
-    UnknownNodeTypeError,
-} from '../build/helpers'
+import { getArtefact } from '../build/helpers'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes/index'
+import { isDirectorySync, isFileSync } from '../nodejs/fs-helpers'
+import { makeCliAbstractionLoader } from '../nodejs/build-helpers'
 setAsc(asc)
 
 const BIT_DEPTH = 64
@@ -50,6 +48,8 @@ const colorOption = (str: string) => colors.underline(str)
 
 const colorExample = (str: string) => colors.cyan(str)
 
+const colorError = (str: string) => colors.red(str)
+
 const checkSupportPdJson = async (
     pdJson: PdJson.Pd,
     abstractionLoader: AbstractionLoader,
@@ -79,7 +79,7 @@ const checkSupportPdJson = async (
     if (isSupported) {
         process.stdout.write(colors.green(`\n✓ (supported)`))
     } else {
-        process.stdout.write(colors.red(`\n✘ (not supported)`))
+        process.stdout.write(colorError(`\n✘ (not supported)`))
     }
 }
 
@@ -201,15 +201,6 @@ const writeOutFile = async (task: Task): Promise<Task> => {
     return task
 }
 
-const makeCliAbstractionLoader = (rootDirPath: string): AbstractionLoader =>
-    makeAbstractionLoader(async (nodeType: PdJson.NodeType) => {
-        const filepath = path.resolve(rootDirPath, `${nodeType}.pd`)
-        if (!isFileSync(filepath)) {
-            throw new UnknownNodeTypeError(nodeType)
-        }
-        return (await fs.promises.readFile(filepath)).toString()
-    })
-
 const executeTask = async (
     task: Task,
     settings: BuildSettings
@@ -234,7 +225,7 @@ const executeTask = async (
         if (result.status === 0) {
             process.stdout.write(colors.green(`✓`))
         } else {
-            process.stdout.write(colors.red(`✘ (failed)`))
+            process.stdout.write(colorError(`✘ (failed)`))
         }
 
         result.warnings.forEach((message) =>
@@ -242,7 +233,7 @@ const executeTask = async (
         )
         if (result.status === 1) {
             result.errors.forEach((message) =>
-                process.stderr.write('\n' + colors.red('ERROR : ' + message))
+                process.stderr.write('\n' + colorError('error: ' + message))
             )
             process.stdout.write(`\n`)
             process.exit(1)
@@ -258,37 +249,8 @@ const ifConditionThenExitError = (test: boolean, msg: string) => {
 }
 
 const exitError = (msg: string) => {
-    process.stderr.write('\n' + colors.red('ERROR : ' + msg) + '\n\n')
+    process.stderr.write('\n' + colorError('error: ' + msg) + '\n\n')
     process.exit(1)
-}
-
-const pathStatsSync = (filepath: string) => {
-    try {
-        return fs.statSync(filepath)
-    } catch (err: any) {
-        if (err.code === 'ENOENT') {
-            return null
-        }
-        throw err
-    }
-}
-
-const isDirectorySync = (filepath: string) => {
-    let fileStats: fs.Stats | null = pathStatsSync(filepath)
-    if (!fileStats) {
-        return false
-    } else {
-        return fileStats.isDirectory()
-    }
-}
-
-const isFileSync = (filepath: string) => {
-    let fileStats: fs.Stats | null = pathStatsSync(filepath)
-    if (!fileStats) {
-        return false
-    } else {
-        return fileStats.isFile()
-    }
 }
 
 const main = (): void => {
@@ -335,16 +297,20 @@ const main = (): void => {
         )
         .option('--check-support')
         .option('--whats-implemented')
-
-    program.addHelpText(
-        'after',
-        (colors as any).brightMagenta('\n~ Usage examples ~') +
-            '\n  Generating a web page embedding myPatch.pd in path/to/folder : ' +
-            colorExample('\n    webpd -i myPatch.pd -o path/to/folder -f app') +
-            '\n  Generating a wav preview of myPatch.pd : ' +
-            colorExample('\n    webpd -i myPatch.pd -o myPatch.wav')
-    )
-    program.showHelpAfterError('(add --help for additional information)')
+        .addHelpText(
+            'after',
+            (colors as any).brightMagenta('\n~ Usage examples ~') +
+                '\n  Generating a web page embedding myPatch.pd in path/to/folder : ' +
+                colorExample(
+                    '\n    webpd -i myPatch.pd -o path/to/folder -f app'
+                ) +
+                '\n  Generating a wav preview of myPatch.pd : ' +
+                colorExample('\n    webpd -i myPatch.pd -o myPatch.wav')
+        )
+        .showHelpAfterError('(add --help for additional information)')
+        .configureOutput({
+            outputError: (str, write) => write('\n' + colorError(str) + '\n'),
+        })
 
     if (process.argv.length < 3) {
         program.outputHelp()

@@ -18,10 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Class, ConstVar, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Sequence, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
@@ -49,45 +49,35 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('snapshot_t')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'currentValue')
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            currentValue: 0
-        }`)}
-    `
-
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, state }) => ast`
-    ${state}.currentValue = ${ins.$0}
-`
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state, snds }) => ({
-    '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
-        if (msg_isBang(m)) {
-            ${snds.$0}(msg_floats([${state}.currentValue]))
-            return 
-        }
-    `,
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    loop: loop,
-    messageReceivers: messageReceivers,
-    initialization: initialization,
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', `{
+            currentValue: 0
+        }`),
+
+    loop: ({ ins, state }) => ast`
+        ${state}.currentValue = ${ins.$0}
+    `,
+
+    messageReceivers: ({ state, snds }) => ({
+        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+            if (msg_isBang(m)) {
+                ${snds.$0}(msg_floats([${state}.currentValue]))
+                return 
+            }
+        `,
+    }),
+
     dependencies: [ 
         bangUtils,
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'currentValue')
+            ]),
+        ]),
     ]
 }
 

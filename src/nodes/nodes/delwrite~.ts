@@ -61,24 +61,13 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('delwrite', ['setDelayName'])
 
 const nodeImplementation: _NodeImplementation = {
-    loop: ({ ins, state }) => 
-        ast`buf_writeSample(${state}.buffer, ${ins.$0})`,
-
-    messageReceivers: ({ state }) => ({
-        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
-            if (msg_isAction(m, 'clear')) {
-                buf_clear(${state}.buffer)
-                return
-            }
-        `
-    }),
-
-    initialization: ({ node: { args }, state, globs }) => ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
             delayName: '',
             buffer: DELAY_BUFFERS_NULL,
-        }`)}
+        }`),
 
+    initialization: ({ node: { args }, state, globs }) => ast`
         commons_waitEngineConfigure(() => {
             ${state}.buffer = buf_create(
                 toInt(Math.ceil(computeUnitInSamples(
@@ -93,6 +82,18 @@ const nodeImplementation: _NodeImplementation = {
         })
     `,
 
+    loop: ({ ins, state }) => 
+        ast`buf_writeSample(${state}.buffer, ${ins.$0})`,
+
+    messageReceivers: ({ state }) => ({
+        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+            if (msg_isAction(m, 'clear')) {
+                buf_clear(${state}.buffer)
+                return
+            }
+        `
+    }),
+    
     dependencies: [ 
         computeUnitInSamples, 
         delayBuffers, 

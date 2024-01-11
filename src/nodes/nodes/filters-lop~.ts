@@ -58,47 +58,40 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('lop_t', ['setFreq'])
 
-const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'previous'),
-        Var('Float', 'coeff'),
-    ]),
-
-    Func(variableNames.setFreq, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Float', 'freq'),
-    ], 'void')`
-        state.coeff = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
-    `
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const nodeImplementation: _NodeImplementation = {
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', `{
             previous: 0,
             coeff: 0,
-        }`)}
-    `
+        }`),
 
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ ins, state, outs }) => ast`
-    ${variableNames.setFreq}(${state}, ${ins.$1})
-    ${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous
-`
+    loop: ({ ins, state, outs }) => ast`
+        ${variableNames.setFreq}(${state}, ${ins.$1})
+        ${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous
+    `,
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ state }) => ({
-    '1': coldFloatInletWithSetter(variableNames.setFreq, state),
-})
+    messageReceivers: ({ state }) => ({
+        '1': coldFloatInletWithSetter(variableNames.setFreq, state),
+    }),
 
-const nodeImplementation: _NodeImplementation = {
-    initialization: initialization,
-    loop: loop,
-    messageReceivers: messageReceivers,
-    dependencies: [nodeCore],
+    dependencies: [
+        ({ globs }) => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'previous'),
+                Var('Float', 'coeff'),
+            ]),
+        
+            Func(variableNames.setFreq, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Float', 'freq'),
+            ], 'void')`
+                state.coeff = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
+            `
+        ])
+    ],
 }
 
 // ------------------------------------------------------------------- //

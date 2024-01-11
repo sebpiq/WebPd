@@ -60,23 +60,15 @@ const builderReceive: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// -------------------------------- node implementation - send ----------------------------------- //
 const variableNames = generateVariableNamesNodeType('send')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('string', 'busName')
-    ]),
-])
-
-// -------------------------------- send ----------------------------------- //
 const nodeImplementationSend: _NodeImplementation = {
-    initialization: ({ node: { args }, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
-                busName: "${args.busName}",
-            }`)}
-        `,
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
+            busName: "${args.busName}",
+        }`),
+        
     messageReceivers: ({
         state,
     }) => ({
@@ -87,14 +79,19 @@ const nodeImplementationSend: _NodeImplementation = {
     
         '1': coldStringInlet(`${state}.busName`)
     }),
+
     dependencies: [
         messageBuses, 
         stdlib.commonsWaitEngineConfigure,
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('string', 'busName')
+            ]),
+        ]),
     ],
 }
 
-// -------------------------------- receive ----------------------------------- //
+// -------------------------------- node implementation - receive ----------------------------------- //
 const nodeImplementationReceive: _NodeImplementation = {
     initialization: ({ node: { args }, snds }) => 
         ast`
@@ -102,13 +99,14 @@ const nodeImplementationReceive: _NodeImplementation = {
                 msgBusSubscribe("${args.busName}", ${snds.$0})
             })
         `,
+    
     dependencies: [
         messageBuses, 
         stdlib.commonsWaitEngineConfigure,
     ],
 }
 
-
+// ------------------------------------------------------------------------ //
 const builders = {
     send: builderSend,
     receive: builderReceive,

@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { AnonFunc, Class, ConstVar, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Func, Sequence, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -47,47 +47,39 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('spigot', ['setIsClosed'])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'isClosed')
-    ]),
-
-    Func(variableNames.setIsClosed, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Float', 'value'),
-    ], 'void')`
-        state.isClosed = (value === 0)
-    `
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            isClosed: ${args.isClosed ? 'true': 'false'}
-        }`)}
-    `
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (!${state}.isClosed) {
-            ${snds.$0}(m)
-        }
-        return
-    `,
-
-    '1': coldFloatInletWithSetter(variableNames.setIsClosed, state),
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    initialization: initialization,
-    messageReceivers: messageReceivers,
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
+            isClosed: ${args.isClosed ? 'true': 'false'}
+        }`),
+
+    messageReceivers: ({ snds, state }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (!${state}.isClosed) {
+                ${snds.$0}(m)
+            }
+            return
+        `,
+
+        '1': coldFloatInletWithSetter(variableNames.setIsClosed, state),
+    }),
+
     dependencies: [
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'isClosed')
+            ]),
+        
+            Func(variableNames.setIsClosed, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Float', 'value'),
+            ], 'void')`
+                state.isClosed = (value === 0)
+            `
+        ]),
     ]
 }
 

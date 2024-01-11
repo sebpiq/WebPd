@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
@@ -48,43 +48,37 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
-
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('moses')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'threshold')
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            threshold: ${args.threshold},
-        }`)}
-    `
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
-            if (value >= ${state}.threshold) {
-                ${snds[1]}(msg_floats([value]))
-            } else {
-                ${snds[0]}(msg_floats([value]))
-            }
-            return
-        }
-    `,
-
-    '1': coldFloatInlet(`${state}.threshold`),
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    initialization: initialization,
-    messageReceivers: messageReceivers, dependencies: [nodeCore] }
+    stateInitialization: ({ node: { args }}) => Var(variableNames.stateClass, '', `{
+        threshold: ${args.threshold},
+    }`),
+
+    messageReceivers: ({ snds, state }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
+                if (value >= ${state}.threshold) {
+                    ${snds[1]}(msg_floats([value]))
+                } else {
+                    ${snds[0]}(msg_floats([value]))
+                }
+                return
+            }
+        `,
+    
+        '1': coldFloatInlet(`${state}.threshold`),
+    }),
+
+    dependencies: [
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'threshold')
+            ]),
+        ])
+    ] 
+}
 
 export { builder, nodeImplementation, NodeArguments }

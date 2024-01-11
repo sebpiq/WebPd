@@ -87,104 +87,118 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('expr')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Map<Int, Float>', 'floatInputs'),
-        Var('Map<Int, string>', 'stringInputs'),
-        Var('Array<Float>', 'outputs'),
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = ({
-    node: { args, type },
-    state
-}) => {
-    const inputs = type === 'expr' ? 
-        validateAndListInputsExpr(args.tokenizedExpressions)
-        : validateAndListInputsExprTilde(args.tokenizedExpressions)
-            .filter(({ type }) => type !== 'signal')
-
-    return ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const nodeImplementationExpr: _NodeImplementation = {
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
             floatInputs: new Map(),
             stringInputs: new Map(),
             outputs: new Array(${args.tokenizedExpressions.length}),
-        }`)}
+        }`),
 
-        ${inputs.filter(input => input.type === 'float' || input.type === 'int')
-            .map(input => `${state}.floatInputs.set(${input.id}, 0)`)}
-        ${inputs.filter(input => input.type === 'string')
-            .map(input => `${state}.stringInputs.set(${input.id}, '')`)}
-    `
+    initialization: ({
+        node: { args, type },
+        state
+    }) => {
+        const inputs = type === 'expr' ? 
+            validateAndListInputsExpr(args.tokenizedExpressions)
+            : validateAndListInputsExprTilde(args.tokenizedExpressions)
+                .filter(({ type }) => type !== 'signal')
+    
+        return ast`
+            ${inputs.filter(input => input.type === 'float' || input.type === 'int')
+                .map(input => `${state}.floatInputs.set(${input.id}, 0)`)}
+            ${inputs.filter(input => input.type === 'string')
+                .map(input => `${state}.stringInputs.set(${input.id}, '')`)}
+        `
+    },
+
+    messageReceivers: ({ 
+        snds, 
+        state, 
+        node: { args, type },
+    }) => {
+        const inputs = type === 'expr' ? 
+            validateAndListInputsExpr(args.tokenizedExpressions)
+            : validateAndListInputsExprTilde(args.tokenizedExpressions)
+                .filter(({ type }) => type !== 'signal')
+        
+        const hasInput0 = inputs.length && inputs[0].id === 0
+    
+        return {
+            '0': AnonFunc([Var('Message', 'm')])`
+                if (!msg_isBang(m)) {
+                    for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
+                        ${state}.stringInputs.set(i, messageTokenToString(m, i))
+                        ${state}.floatInputs.set(i, messageTokenToFloat(m, i))
+                    }
+                }
+    
+                ${type === 'expr' ? `
+                    ${args.tokenizedExpressions.map((tokens, i) => 
+                        `${state}.outputs[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
+            
+                    ${args.tokenizedExpressions.map((_, i) => 
+                        `${snds[`${i}`]}(msg_floats([${state}.outputs[${i}]]))`)}
+                `: null}
+                
+                return
+            `,
+    
+            ...functional.mapArray(
+                inputs.slice(hasInput0 ? 1 : 0), 
+                ({ id, type }) => {
+                    if (type === 'float' || type === 'int') {
+                        return [
+                            `${id}`, 
+                            AnonFunc([Var('Message', 'm')])`
+                                ${state}.floatInputs.set(${id}, messageTokenToFloat(m, 0))
+                                return
+                            `
+                        ]
+                    } else if (type === 'string') {
+                        return [
+                            `${id}`, 
+                            AnonFunc([Var('Message', 'm')])`
+                                ${state}.stringInputs.set(${id}, messageTokenToString(m, 0))
+                                return
+                            `
+                        ]
+                    } else {
+                        throw new Error(`invalid input type ${type}`)
+                    }
+                }
+            )
+        }
+    },
+
+    dependencies: [
+        messageTokenToString,
+        messageTokenToFloat,
+        roundFloatAsPdInt,
+        bangUtils,
+        stdlib.commonsArrays,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Map<Int, Float>', 'floatInputs'),
+                Var('Map<Int, string>', 'stringInputs'),
+                Var('Array<Float>', 'outputs'),
+            ]),
+        ]),
+    ],
 }
 
-const loopExprTilde: _NodeImplementation['loop'] = ({
-    node: { args },
-    state,
-    outs, 
-    ins,
-}) => Sequence(
-    args.tokenizedExpressions.map((tokens, i) => 
-        `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)
-) 
+const nodeImplementationExprTilde: _NodeImplementation = {
+    ...nodeImplementationExpr,
 
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ 
-    snds, 
-    state, 
-    node: { args, type },
-}) => {
-    const inputs = type === 'expr' ? 
-        validateAndListInputsExpr(args.tokenizedExpressions)
-        : validateAndListInputsExprTilde(args.tokenizedExpressions)
-            .filter(({ type }) => type !== 'signal')
-    
-    const hasInput0 = inputs.length && inputs[0].id === 0
-
-    return {
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (!msg_isBang(m)) {
-                for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
-                    ${state}.stringInputs.set(i, messageTokenToString(m, i))
-                    ${state}.floatInputs.set(i, messageTokenToFloat(m, i))
-                }
-            }
-
-            ${type === 'expr' ? `
-                ${args.tokenizedExpressions.map((tokens, i) => 
-                    `${state}.outputs[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
-        
-                ${args.tokenizedExpressions.map((_, i) => 
-                    `${snds[`${i}`]}(msg_floats([${state}.outputs[${i}]]))`)}
-            `: null}
-            
-            return
-        `,
-
-        ...functional.mapArray(
-            inputs.slice(hasInput0 ? 1 : 0), 
-            ({ id, type }) => {
-                if (type === 'float' || type === 'int') {
-                    return [
-                        `${id}`, 
-                        AnonFunc([Var('Message', 'm')])`
-                            ${state}.floatInputs.set(${id}, messageTokenToFloat(m, 0))
-                            return
-                        `
-                    ]
-                } else if (type === 'string') {
-                    return [
-                        `${id}`, 
-                        AnonFunc([Var('Message', 'm')])`
-                            ${state}.stringInputs.set(${id}, messageTokenToString(m, 0))
-                            return
-                        `
-                    ]
-                } else {
-                    throw new Error(`invalid input type ${type}`)
-                }
-            }
-        )
-    }
+    loop: ({
+        node: { args },
+        state,
+        outs, 
+        ins,
+    }) => Sequence(
+        args.tokenizedExpressions.map((tokens, i) => 
+            `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)
+    ),
 }
 
 // ------------------------------------------------------------------- //
@@ -382,31 +396,8 @@ const preprocessExpression = (args: PdJson.NodeArgs): Array<string> => {
 }
 
 const nodeImplementations: NodeImplementations = {
-    expr: {
-        messageReceivers: messageReceivers,
-        initialization: initialization,
-        dependencies: [
-            messageTokenToString,
-            messageTokenToFloat,
-            roundFloatAsPdInt,
-            bangUtils,
-            stdlib.commonsArrays,
-            nodeCore,
-        ],
-    },
-    'expr~': {
-        messageReceivers: messageReceivers,
-        initialization: initialization,
-        loop: loopExprTilde,
-        dependencies: [
-            messageTokenToString,
-            messageTokenToFloat,
-            roundFloatAsPdInt,
-            bangUtils,
-            stdlib.commonsArrays,
-            nodeCore,
-        ],
-    },
+    expr: nodeImplementationExpr,
+    'expr~': nodeImplementationExprTilde,
 }
 
 const builders = {

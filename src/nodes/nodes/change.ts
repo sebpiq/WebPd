@@ -49,12 +49,10 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('change')
 
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ node: { args }, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
-                currentValue: ${args.initValue}
-            }`)}
-        `,
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
+            currentValue: ${args.initValue}
+        }`),
 
     messageReceivers: ({
         snds,

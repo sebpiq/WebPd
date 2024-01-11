@@ -19,7 +19,7 @@
  */
 
 import { stdlib, functional, Class, Sequence } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
@@ -63,34 +63,14 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------ generateDeclarations ------------------------------ //
+// ------------------------------ node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('writesf_t', [
     'flushBlock'
 ])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('fs_OperationId', 'operationId'),
-        Var('boolean', 'isWriting'),
-        Var('Array<FloatArray>', 'block'),
-        Var('Int', 'cursor'),
-    ]),
-
-    Func(variableNames.flushBlock, [
-        Var(variableNames.stateClass, 'state'),
-    ], 'void')`
-        ${ConstVar('Array<FloatArray>', 'block', '[]')}
-        for (${Var('Int', 'i', '0')}; i < state.block.length; i++) {
-            block.push(state.block[i].subarray(0, state.cursor))
-        }
-        fs_sendSoundStreamData(state.operationId, block)
-        state.cursor = 0
-    `,
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const nodeImplementation: _NodeImplementation = {
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
             operationId: -1,
             isWriting: false,
             cursor: 0,
@@ -99,91 +79,101 @@ const initialization: _NodeImplementation['initialization'] = ({ node: { args },
                     `createFloatArray(${BLOCK_SIZE})`
                 ).join(',')}
             ],
-        }`)}
-    `
-    
-// ------------------------------- loop ------------------------------ //
-const loop: _NodeImplementation['loop'] = ({ state, ins, node: { args } }) => ast`
-    if (${state}.isWriting === true) {
-        ${functional.countTo(args.channelCount).map((i) => 
-            `${state}.block[${i}][${state}.cursor] = ${ins[i]}`)}
-        ${state}.cursor++
-        if (${state}.cursor === ${BLOCK_SIZE}) {
-            ${variableNames.flushBlock}(${state})
+        }`),
+
+    loop: ({ state, ins, node: { args } }) => ast`
+        if (${state}.isWriting === true) {
+            ${functional.countTo(args.channelCount).map((i) => 
+                `${state}.block[${i}][${state}.cursor] = ${ins[i]}`)}
+            ${state}.cursor++
+            if (${state}.cursor === ${BLOCK_SIZE}) {
+                ${variableNames.flushBlock}(${state})
+            }
         }
-    }
-`
+    `, 
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ node, state, globs }) => ({
-    '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
-        if (msg_getLength(m) >= 2) {
-            if (
-                msg_isStringToken(m, 0) 
-                && msg_readStringToken(m, 0) === 'open'
-            ) {
-                if (${state}.operationId !== -1) {
-                    fs_closeSoundStream(${state}.operationId, FS_OPERATION_SUCCESS)
-                }
-
-                ${ConstVar('fs_SoundInfo', 'soundInfo', `{
-                    channelCount: ${node.args.channelCount},
-                    sampleRate: toInt(${globs.sampleRate}),
-                    bitDepth: 32,
-                    encodingFormat: '',
-                    endianness: '',
-                    extraOptions: '',
-                }`)}
-                ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
-                    m,
-                    soundInfo,
-                )`)}
-                ${ConstVar('string', 'url', `parseReadWriteFsOpts(
-                    m,
-                    soundInfo,
-                    unhandledOptions
-                )`)}
-                if (url.length === 0) {
+    messageReceivers: ({ node, state, globs }) => ({
+        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+            if (msg_getLength(m) >= 2) {
+                if (
+                    msg_isStringToken(m, 0) 
+                    && msg_readStringToken(m, 0) === 'open'
+                ) {
+                    if (${state}.operationId !== -1) {
+                        fs_closeSoundStream(${state}.operationId, FS_OPERATION_SUCCESS)
+                    }
+    
+                    ${ConstVar('fs_SoundInfo', 'soundInfo', `{
+                        channelCount: ${node.args.channelCount},
+                        sampleRate: toInt(${globs.sampleRate}),
+                        bitDepth: 32,
+                        encodingFormat: '',
+                        endianness: '',
+                        extraOptions: '',
+                    }`)}
+                    ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+                        m,
+                        soundInfo,
+                    )`)}
+                    ${ConstVar('string', 'url', `parseReadWriteFsOpts(
+                        m,
+                        soundInfo,
+                        unhandledOptions
+                    )`)}
+                    if (url.length === 0) {
+                        return
+                    }
+                    ${state}.operationId = fs_openSoundWriteStream(
+                        url,
+                        soundInfo,
+                        () => {
+                            ${variableNames.flushBlock}(${state})
+                            ${state}.operationId = -1
+                        }
+                    )
                     return
                 }
-                ${state}.operationId = fs_openSoundWriteStream(
-                    url,
-                    soundInfo,
-                    () => {
-                        ${variableNames.flushBlock}(${state})
-                        ${state}.operationId = -1
-                    }
-                )
+    
+            } else if (msg_isAction(m, 'start')) {
+                    ${state}.isWriting = true
+                    return
+    
+            } else if (msg_isAction(m, 'stop')) {
+                ${variableNames.flushBlock}(${state})
+                ${state}.isWriting = false
                 return
-            }
-
-        } else if (msg_isAction(m, 'start')) {
-                ${state}.isWriting = true
+    
+            } else if (msg_isAction(m, 'print')) {
+                console.log('[writesf~] writing = ' + ${state}.isWriting.toString())
                 return
+            }    
+        `
+    }), 
 
-        } else if (msg_isAction(m, 'stop')) {
-            ${variableNames.flushBlock}(${state})
-            ${state}.isWriting = false
-            return
-
-        } else if (msg_isAction(m, 'print')) {
-            console.log('[writesf~] writing = ' + ${state}.isWriting.toString())
-            return
-        }    
-    `
-})
-
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    initialization: initialization, 
-    messageReceivers: messageReceivers, 
-    loop: loop, 
     dependencies: [
         parseSoundFileOpenOpts,
         parseReadWriteFsOpts,
         stringMsgUtils,
         stdlib.fsWriteSoundStream,
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('fs_OperationId', 'operationId'),
+                Var('boolean', 'isWriting'),
+                Var('Array<FloatArray>', 'block'),
+                Var('Int', 'cursor'),
+            ]),
+        
+            Func(variableNames.flushBlock, [
+                Var(variableNames.stateClass, 'state'),
+            ], 'void')`
+                ${ConstVar('Array<FloatArray>', 'block', '[]')}
+                for (${Var('Int', 'i', '0')}; i < state.block.length; i++) {
+                    block.push(state.block[i].subarray(0, state.cursor))
+                }
+                fs_sendSoundStreamData(state.operationId, block)
+                state.cursor = 0
+            `,
+        ]),
     ],
 }
 

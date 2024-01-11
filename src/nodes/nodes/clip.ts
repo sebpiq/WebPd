@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
-import { AnonFunc, ast, Class, ConstVar, Sequence, Var } from '@webpd/compiler'
+import { AnonFunc, Class, Sequence, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -53,13 +53,11 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('clip')
 
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ node: { args }, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
-                minValue: ${args.minValue},
-                maxValue: ${args.maxValue},
-            }`)}
-        `,
+    stateInitialization: ({ node: { args }}) => 
+        Var(variableNames.stateClass, '', `{
+            minValue: ${args.minValue},
+            maxValue: ${args.maxValue},
+        }`),
     
     messageReceivers: ({ snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`

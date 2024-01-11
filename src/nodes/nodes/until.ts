@@ -18,10 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Class, ConstVar, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Sequence, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
@@ -42,58 +42,50 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('until')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('boolean', 'continueIter')
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            continueIter: true,
-        }`)}
-    `
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, state }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isBang(m)) {
-            ${state}.continueIter = true
-            while (${state}.continueIter) {
-                ${snds[0]}(msg_bang())
-            }
-            return
-
-        } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${state}.continueIter = true
-            ${Var('Int', 'maxIterCount', 'toInt(msg_readFloatToken(m, 0))')}
-            ${Var('Int', 'iterCount', '0')}
-            while (${state}.continueIter && iterCount++ < maxIterCount) {
-                ${snds[0]}(msg_bang())
-            }
-            return
-        }
-    `,
-
-    '1': AnonFunc([Var('Message', 'm')])`
-        if (msg_isBang(m)) {
-            ${state}.continueIter = false
-            return
-        }
-    `,
-})
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messageReceivers: messageReceivers,
-    initialization: initialization,
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', `{
+            continueIter: true,
+        }`),
+    
+    messageReceivers: ({ snds, state }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isBang(m)) {
+                ${state}.continueIter = true
+                while (${state}.continueIter) {
+                    ${snds[0]}(msg_bang())
+                }
+                return
+    
+            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${state}.continueIter = true
+                ${Var('Int', 'maxIterCount', 'toInt(msg_readFloatToken(m, 0))')}
+                ${Var('Int', 'iterCount', '0')}
+                while (${state}.continueIter && iterCount++ < maxIterCount) {
+                    ${snds[0]}(msg_bang())
+                }
+                return
+            }
+        `,
+    
+        '1': AnonFunc([Var('Message', 'm')])`
+            if (msg_isBang(m)) {
+                ${state}.continueIter = false
+                return
+            }
+        `,
+    }),
+
     dependencies: [
         bangUtils,
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('boolean', 'continueIter')
+            ]),
+        ]),
     ],
 }
 

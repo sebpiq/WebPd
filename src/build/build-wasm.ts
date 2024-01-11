@@ -39,7 +39,6 @@ export const compileAssemblyscript = async (
     }
     const compileOptions: any = {
         optimizeLevel: 3,
-        debug: true,
         runtime: 'incremental',
         exportRuntime: true,
         sourceMap: true,

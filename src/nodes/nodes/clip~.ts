@@ -53,13 +53,11 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('clip_t')
 
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ node: { args }, state }) => 
-        ast`
-            ${ConstVar(variableNames.stateClass, state, `{
-                minValue: ${args.minValue},
-                maxValue: ${args.maxValue},
-            }`)}
-        `,
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
+            minValue: ${args.minValue},
+            maxValue: ${args.maxValue},
+        }`),
 
     inlineLoop: ({ ins, state }) =>
         ast`Math.max(Math.min(${state}.maxValue, ${ins.$0}), ${state}.minValue)`,

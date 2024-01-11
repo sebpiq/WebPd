@@ -58,13 +58,10 @@ const variableNames = generateVariableNamesNodeType('tabread_t', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ node: { args }, state }) => ast`
-        ${ConstVar(
-            variableNamesTabBase.stateClass, 
-            state, 
-            `${variableNamesTabBase.createState}("${args.arrayName}")`
-        )}
+    stateInitialization: ({ node: { args }}) => 
+        Var(variableNamesTabBase.stateClass, '', `${variableNamesTabBase.createState}("${args.arrayName}")`),
 
+    initialization: ({ state }) => ast`
         commons_waitEngineConfigure(() => {
             if (${state}.arrayName.length) {
                 ${variableNamesTabBase.setArrayName}(

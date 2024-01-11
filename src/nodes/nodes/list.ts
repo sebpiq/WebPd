@@ -19,7 +19,7 @@
  */
 
 import { Class, DspGraph, Sequence, functional } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { bangUtils, msgUtils } from '../global-code/core'
@@ -106,131 +106,130 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- generateDeclarations ------------------------------ //
 const variableNames = generateVariableNamesNodeType('list', ['setSplitPoint'])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Int', 'splitPoint'),
-        Var('Message', 'currentList'),
-    ]),
+const nodeImplementation: _NodeImplementation = {
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', `{
+            splitPoint: 0,
+            currentList: msg_create([]),
+        }`),
 
-    Func(variableNames.setSplitPoint, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Float', 'value'),
-    ], 'void')`
-        state.splitPoint = toInt(value)
-    `
-])
+    initialization: ({ node: { args }, state }) => ast`
+        ${args.operation === 'split' ? 
+            `${state}.splitPoint = ${args.operationArgs[0]}`: null}
 
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => ast`
-    ${ConstVar(variableNames.stateClass, state, `{
-        splitPoint: 0,
-        currentList: msg_create([]),
-    }`)}
+        ${args.operation === 'append' || args.operation === 'prepend' ? ast` 
+            {
+                ${ConstVar('MessageTemplate', 'template', `[${
+                    args.operationArgs.map((arg) => 
+                        typeof arg === 'string' ? 
+                            `MSG_STRING_TOKEN,${arg.length}`
+                            : `MSG_FLOAT_TOKEN`).join(',')}]`)}
 
-    ${args.operation === 'split' ? 
-        `${state}.splitPoint = ${args.operationArgs[0]}`: null}
+                ${state}.currentList = msg_create(template)
 
-    ${args.operation === 'append' || args.operation === 'prepend' ? ast` 
-        {
-            ${ConstVar('MessageTemplate', 'template', `[${
-                args.operationArgs.map((arg) => 
+                ${args.operationArgs.map((arg, i) => 
                     typeof arg === 'string' ? 
-                        `MSG_STRING_TOKEN,${arg.length}`
-                        : `MSG_FLOAT_TOKEN`).join(',')}]`)}
+                        `msg_writeStringToken(${state}.currentList, ${i}, "${arg}")`
+                        : `msg_writeFloatToken(${state}.currentList, ${i}, ${arg})`)}
+            }
+        `: null}
+    `,
 
-            ${state}.currentList = msg_create(template)
-
-            ${args.operationArgs.map((arg, i) => 
-                typeof arg === 'string' ? 
-                    `msg_writeStringToken(${state}.currentList, ${i}, "${arg}")`
-                    : `msg_writeFloatToken(${state}.currentList, ${i}, ${arg})`)}
-        }
-    `: null}
-`
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ 
-    snds, 
-    state,
-    node: { args } 
-}) => {
-    const prepareInMessage = ConstVar('Message', 'inMessage', `msg_isBang(m) ? msg_create([]): m`)
-    switch(args.operation) {
-        case 'split':
-            return {
-                '0': AnonFunc([Var('Message', 'm')])`
-                    ${prepareInMessage}
-                    if (msg_getLength(inMessage) < ${state}.splitPoint) {
-                        ${snds.$2}(m)
+    messageReceivers: ({ 
+        snds, 
+        state,
+        node: { args } 
+    }) => {
+        const prepareInMessage = ConstVar('Message', 'inMessage', `msg_isBang(m) ? msg_create([]): m`)
+        switch(args.operation) {
+            case 'split':
+                return {
+                    '0': AnonFunc([Var('Message', 'm')])`
+                        ${prepareInMessage}
+                        if (msg_getLength(inMessage) < ${state}.splitPoint) {
+                            ${snds.$2}(m)
+                            return
+                        } else if (msg_getLength(inMessage) === ${state}.splitPoint) {
+                            ${snds.$1}(msg_bang())
+                            ${snds.$0}(m)
+                            return
+                        }
+                        ${ConstVar('Message', 'outMessage1', `msg_slice(inMessage, ${state}.splitPoint, msg_getLength(inMessage))`)}
+                        ${ConstVar('Message', 'outMessage0', `msg_slice(inMessage, 0, ${state}.splitPoint)`)}
+                        ${snds.$1}(msg_getLength(outMessage1) === 0 ? msg_bang(): outMessage1)
+                        ${snds.$0}(msg_getLength(outMessage0) === 0 ? msg_bang(): outMessage0)
                         return
-                    } else if (msg_getLength(inMessage) === ${state}.splitPoint) {
-                        ${snds.$1}(msg_bang())
+                    `,
+            
+                    '1': coldFloatInletWithSetter(variableNames.setSplitPoint, state),
+                }
+    
+            case 'trim':
+                return {
+                    '0': AnonFunc([Var('Message', 'm')])`
                         ${snds.$0}(m)
                         return
-                    }
-                    ${ConstVar('Message', 'outMessage1', `msg_slice(inMessage, ${state}.splitPoint, msg_getLength(inMessage))`)}
-                    ${ConstVar('Message', 'outMessage0', `msg_slice(inMessage, 0, ${state}.splitPoint)`)}
-                    ${snds.$1}(msg_getLength(outMessage1) === 0 ? msg_bang(): outMessage1)
-                    ${snds.$0}(msg_getLength(outMessage0) === 0 ? msg_bang(): outMessage0)
-                    return
-                `,
+                    `
+                }
+    
+            case 'length':
+                return {
+                    '0': AnonFunc([Var('Message', 'm')])`
+                        if (msg_isBang(m)) {
+                            ${snds.$0}(msg_floats([0]))
+                        } else {
+                            ${snds.$0}(msg_floats([toFloat(msg_getLength(m))]))
+                        }
+                        return
+                    `
+                }
+    
+            case 'append':
+            case 'prepend':
+                const appendPrependOutMessageCode = args.operation === 'prepend' ? 
+                    `msg_concat(${state}.currentList, m)`
+                    : `msg_concat(m, ${state}.currentList)`
+                
+                return {
+                    '0': AnonFunc([Var('Message', 'm')])`
+                        if (msg_isBang(m)) {
+                            ${snds.$0}(msg_getLength(${state}.currentList) === 0 ? msg_bang(): ${state}.currentList)
+                        } else {
+                            ${snds.$0}(msg_getLength(${state}.currentList) === 0 && msg_getLength(m) === 0 ? msg_bang(): ${appendPrependOutMessageCode})
+                        }
+                        return
+                    `,
+    
+                    '1': AnonFunc([Var('Message', 'm')])`
+                        ${prepareInMessage}
+                        ${state}.currentList = inMessage
+                        return
+                    `
+                }
+    
+            case 'length':
+            default: 
+                throw new Error(`unknown list operation ${args.operation}`)
+        }
+    },
+
+    dependencies: [
+        bangUtils, 
+        msgUtils, 
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Int', 'splitPoint'),
+                Var('Message', 'currentList'),
+            ]),
         
-                '1': coldFloatInletWithSetter(variableNames.setSplitPoint, state),
-            }
-
-        case 'trim':
-            return {
-                '0': AnonFunc([Var('Message', 'm')])`
-                    ${snds.$0}(m)
-                    return
-                `
-            }
-
-        case 'length':
-            return {
-                '0': AnonFunc([Var('Message', 'm')])`
-                    if (msg_isBang(m)) {
-                        ${snds.$0}(msg_floats([0]))
-                    } else {
-                        ${snds.$0}(msg_floats([toFloat(msg_getLength(m))]))
-                    }
-                    return
-                `
-            }
-
-        case 'append':
-        case 'prepend':
-            const appendPrependOutMessageCode = args.operation === 'prepend' ? 
-                `msg_concat(${state}.currentList, m)`
-                : `msg_concat(m, ${state}.currentList)`
-            
-            return {
-                '0': AnonFunc([Var('Message', 'm')])`
-                    if (msg_isBang(m)) {
-                        ${snds.$0}(msg_getLength(${state}.currentList) === 0 ? msg_bang(): ${state}.currentList)
-                    } else {
-                        ${snds.$0}(msg_getLength(${state}.currentList) === 0 && msg_getLength(m) === 0 ? msg_bang(): ${appendPrependOutMessageCode})
-                    }
-                    return
-                `,
-
-                '1': AnonFunc([Var('Message', 'm')])`
-                    ${prepareInMessage}
-                    ${state}.currentList = inMessage
-                    return
-                `
-            }
-
-        case 'length':
-        default: 
-            throw new Error(`unknown list operation ${args.operation}`)
-    }
-}
-
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    messageReceivers: messageReceivers,
-    initialization: initialization,
-    dependencies: [bangUtils, msgUtils, nodeCore]
+            Func(variableNames.setSplitPoint, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Float', 'value'),
+            ], 'void')`
+                state.splitPoint = toInt(value)
+            `
+        ])    
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

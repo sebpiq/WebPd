@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, DspGraph, Sequence, functional } from '@webpd/compiler'
+import { Class, DspGraph, Sequence } from '@webpd/compiler'
 import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
@@ -65,107 +65,102 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ generateDeclarations ------------------------------ //
+// ------------------------------ node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('msg')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Array<MessageTemplate>', 'outTemplates'),
-        Var('Array<Message>', 'outMessages'),
-        Var('Array<(m: Message) => Message>', 'messageTransferFunctions'),
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = (context) => {
-    const { node: { args }, state } = context
-    const transferCodes = args.templates.map(
-        (template, i) => buildMsgTransferCode(
-            context,
-            template,
-            i
-        )
-    )
-
-    return ast`
-        ${ConstVar(variableNames.stateClass, state, `{
-            outTemplates: [],
-            outMessages: [],
-            messageTransferFunctions: [],
-        }`)}
-
-        ${transferCodes
-            .filter(({ inMessageUsed }) => !inMessageUsed)
-            .map(({ outMessageCode }) => outMessageCode)
-        }
-        
-        ${state}.messageTransferFunctions = [
-            ${transferCodes.flatMap(({ inMessageUsed, outMessageCode }, i) => [
-                AnonFunc([
-                    Var('Message', 'inMessage')
-                ], 'Message')`
-                    ${inMessageUsed ? outMessageCode: null}
-                    return ${state}.outMessages[${i}]
-                `, ','
-            ])}
-        ]
-    `
-}
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({
-    snds,
-    state,
-}) => {
-    return {
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (
-                msg_isStringToken(m, 0) 
-                && msg_readStringToken(m, 0) === 'set'
-            ) {
-                ${state}.outTemplates = [[]]
-                for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
-                    if (msg_isFloatToken(m, i)) {
-                        ${state}.outTemplates[0].push(MSG_FLOAT_TOKEN)
-                    } else {
-                        ${state}.outTemplates[0].push(MSG_STRING_TOKEN)
-                        ${state}.outTemplates[0].push(msg_readStringToken(m, i).length)
-                    }
-                }
-
-                ${ConstVar('Message', 'message', `msg_create(${state}.outTemplates[0])`)}
-                for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
-                    if (msg_isFloatToken(m, i)) {
-                        msg_writeFloatToken(
-                            message, i - 1, msg_readFloatToken(m, i)
-                        )
-                    } else {
-                        msg_writeStringToken(
-                            message, i - 1, msg_readStringToken(m, i)
-                        )
-                    }
-                }
-                ${state}.outMessages[0] = message
-                ${state}.messageTransferFunctions.splice(0, ${state}.messageTransferFunctions.length - 1)
-                ${state}.messageTransferFunctions[0] = ${AnonFunc([Var('Message', 'm')], 'Message')`
-                    return ${state}.outMessages[0]
-                `}
-                return
-
-            } else {
-                for (${Var('Int', 'i', '0')}; i < ${state}.messageTransferFunctions.length; i++) {
-                    ${snds.$0}(${state}.messageTransferFunctions[i](m))
-                }
-                return
-            }
-        `,
-    }
-}
-
-// ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    initialization: initialization, 
-    messageReceivers: messageReceivers,
-    dependencies: [nodeCore],
+
+    stateInitialization: () => Var(variableNames.stateClass, '', `{
+        outTemplates: [],
+        outMessages: [],
+        messageTransferFunctions: [],
+    }`),
+
+    initialization: (context) => {
+        const { node: { args }, state } = context
+        const transferCodes = args.templates.map(
+            (template, i) => buildMsgTransferCode(
+                context,
+                template,
+                i
+            )
+        )
+    
+        return ast`
+            ${transferCodes
+                .filter(({ inMessageUsed }) => !inMessageUsed)
+                .map(({ outMessageCode }) => outMessageCode)
+            }
+            
+            ${state}.messageTransferFunctions = [
+                ${transferCodes.flatMap(({ inMessageUsed, outMessageCode }, i) => [
+                    AnonFunc([
+                        Var('Message', 'inMessage')
+                    ], 'Message')`
+                        ${inMessageUsed ? outMessageCode: null}
+                        return ${state}.outMessages[${i}]
+                    `, ','
+                ])}
+            ]
+        `
+    }, 
+
+    messageReceivers: ({
+        snds,
+        state,
+    }) => {
+        return {
+            '0': AnonFunc([Var('Message', 'm')])`
+                if (
+                    msg_isStringToken(m, 0) 
+                    && msg_readStringToken(m, 0) === 'set'
+                ) {
+                    ${state}.outTemplates = [[]]
+                    for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
+                        if (msg_isFloatToken(m, i)) {
+                            ${state}.outTemplates[0].push(MSG_FLOAT_TOKEN)
+                        } else {
+                            ${state}.outTemplates[0].push(MSG_STRING_TOKEN)
+                            ${state}.outTemplates[0].push(msg_readStringToken(m, i).length)
+                        }
+                    }
+    
+                    ${ConstVar('Message', 'message', `msg_create(${state}.outTemplates[0])`)}
+                    for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
+                        if (msg_isFloatToken(m, i)) {
+                            msg_writeFloatToken(
+                                message, i - 1, msg_readFloatToken(m, i)
+                            )
+                        } else {
+                            msg_writeStringToken(
+                                message, i - 1, msg_readStringToken(m, i)
+                            )
+                        }
+                    }
+                    ${state}.outMessages[0] = message
+                    ${state}.messageTransferFunctions.splice(0, ${state}.messageTransferFunctions.length - 1)
+                    ${state}.messageTransferFunctions[0] = ${AnonFunc([Var('Message', 'm')], 'Message')`
+                        return ${state}.outMessages[0]
+                    `}
+                    return
+    
+                } else {
+                    for (${Var('Int', 'i', '0')}; i < ${state}.messageTransferFunctions.length; i++) {
+                        ${snds.$0}(${state}.messageTransferFunctions[i](m))
+                    }
+                    return
+                }
+            `,
+        }
+    },
+
+    dependencies: [() => Sequence([
+        Class(variableNames.stateClass, [
+            Var('Array<MessageTemplate>', 'outTemplates'),
+            Var('Array<Message>', 'outMessages'),
+            Var('Array<(m: Message) => Message>', 'messageTransferFunctions'),
+        ]),
+    ])],
 }
 
 export { 
@@ -173,6 +168,8 @@ export {
     nodeImplementation,
     NodeArguments,
 }
+
+// ---------------------------------------------------------------------------- //
 
 const buildMsgTransferCode = (
     { state }: Parameters<_NodeImplementation['initialization']>[0],

@@ -48,19 +48,20 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('bang', ['receiveMessage'])
 
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ 
-        snds,
-        state,
-        node: { args },
-    }) => ast`
-        ${ConstVar(controlsCoreVariableNames.stateClass, state, `{
+    stateInitialization: ({ node: { args }}) => 
+        Var(controlsCoreVariableNames.stateClass, '', `{
             value: msg_create([]),
             receiveBusName: "${args.receiveBusName}",
             sendBusName: "${args.sendBusName}",
             messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
             messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
-        }`)}
-    
+        }`),
+
+    initialization: ({ 
+        snds,
+        state,
+        node: { args },
+    }) => ast`
         commons_waitEngineConfigure(() => {
             ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
                 ${variableNames.receiveMessage}(${state}, m)

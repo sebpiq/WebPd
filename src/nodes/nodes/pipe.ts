@@ -19,7 +19,7 @@
  */
 
 import { stdlib, functional, Sequence } from '@webpd/compiler'
-import { NodeImplementation, GlobalCodeGenerator } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
@@ -79,7 +79,7 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('pipe', [
     'prepareMessageScheduling',
     'sendMessages',
@@ -89,116 +89,9 @@ const variableNames = generateVariableNamesNodeType('pipe', [
     'dummyScheduledMessage',
 ])
 
-const nodeCore: GlobalCodeGenerator = ({ globs }) => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Int', 'delay'),
-        Var('Array<Message>', 'outputMessages'),
-        Var(`Array<${variableNames.ScheduledMessage}>`, 'scheduledMessages'),
-        Var('Array<(m: Message) => void>', 'snds'),
-    ]),
-
-    Class(variableNames.ScheduledMessage, [
-        Var('Message', 'message'), 
-        Var('Int', 'frame'), 
-        Var('SkedId', 'skedId'), 
-    ]),
-
-    ConstVar(variableNames.ScheduledMessage, variableNames.dummyScheduledMessage, `{
-        message: msg_create([]),
-        frame: 0,
-        skedId: SKED_ID_NULL,
-    }`),
-
-    Func(variableNames.prepareMessageScheduling, [
-        Var(variableNames.stateClass, 'state'),
-        Var('SkedCallback', 'callback'),
-    ], 'Int')`
-        ${Var('Int', 'insertIndex', '0')}
-        ${Var('Int', 'frame', `${globs.frame} + state.delay`)}
-        ${Var('SkedId', 'skedId', 'SKED_ID_NULL')}
-
-        while (
-            insertIndex < state.scheduledMessages.length 
-            && state.scheduledMessages[insertIndex].frame <= frame
-        ) {
-            insertIndex++
-        }
-
-        ${''
-        // If there was not yet a callback scheduled for that frame, we schedule it.
-        }
-        if (
-            insertIndex === 0 || 
-            (
-                insertIndex > 0 
-                && state.scheduledMessages[insertIndex - 1].frame !== frame
-            )
-        ) {
-            skedId = commons_waitFrame(frame, callback)
-        }
-
-        ${''
-        // !!! Array.splice insertion is not supported by assemblyscript, so : 
-        // 1. We grow arrays to their post-insertion size by using `push`
-        // 2. We use `copyWithin` to move old elements to their final position.
-        // 3. Instantiate new messages in the newly created holes.
-        }
-        for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
-            state.scheduledMessages.push(${variableNames.dummyScheduledMessage})
-        }
-        state.scheduledMessages.copyWithin(
-            (insertIndex + 1) * state.snds.length, 
-            insertIndex * state.snds.length
-        )
-        for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
-            state.scheduledMessages[insertIndex + i] = {
-                message: ${variableNames.dummyScheduledMessage}.message,
-                frame,
-                skedId,
-            }
-        }
-
-        return insertIndex
-    `,
-
-    Func(variableNames.sendMessages, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Int', 'toFrame'),
-    ], 'void')`
-        ${Var('Int', 'i', 0)}
-        while (
-            state.scheduledMessages.length 
-            && state.scheduledMessages[0].frame <= toFrame
-        ) {
-            for (i = 0; i < state.snds.length; i++) {
-                // Snds are already reversed
-                state.snds[i](state.scheduledMessages.shift().message)
-            }
-        }
-    `,
-
-    Func(variableNames.clear, [
-        Var(variableNames.stateClass, 'state'),
-    ], 'void')`
-        ${Var('Int', 'i', '0')}
-        ${ConstVar('Int', 'length', `state.scheduledMessages.length`)}
-        for (i; i < length; i++) {
-            commons_cancelWaitFrame(state.scheduledMessages[i].skedId)
-        }
-        state.scheduledMessages = []
-    `,
-
-    Func(variableNames.setDelay, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Float', 'delay'),
-    ], 'void')`
-        state.delay = toInt(Math.round(delay / 1000 * ${globs.sampleRate}))
-    `,
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args, id }, state, snds }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const nodeImplementation: _NodeImplementation = {
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
             delay: 0,
             outputMessages: [${
                 args.typeArguments
@@ -207,85 +100,83 @@ const initialization: _NodeImplementation['initialization'] = ({ node: { args, i
                         : `msg_strings(["${value}"])`).join(',')
             }],
             scheduledMessages: [],
-            snds: [${functional.countTo(args.typeArguments.length)
+            snds: [],
+        }`),
+    
+    initialization: ({ node: { args }, state, snds }) => 
+        ast`
+            commons_waitEngineConfigure(() => {
+                ${variableNames.setDelay}(${state}, ${args.delay})
+                ${state}.snds = [${functional.countTo(args.typeArguments.length)
                     .reverse()
                     .map((i) => snds[i]).join(', ')
-            }],
-        }`)}
+                }]
+            })
+        `,
 
-        commons_waitEngineConfigure(() => {
-            ${variableNames.setDelay}(${state}, ${args.delay})
-        })
-    `
-
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ 
-    node: { args }, 
-    state, 
-    globs,
-}) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isAction(m, 'clear')) {
-            ${variableNames.clear}(${state})
-            return 
-
-        } else if (msg_isAction(m, 'flush')) {
-            if (${state}.scheduledMessages.length) {
-                ${variableNames.sendMessages}(
-                    ${state}, 
-                    ${state}.scheduledMessages[${state}.scheduledMessages.length - 1].frame
-                )
-            }
-            return
-
-        } else {
-            ${ConstVar('Message', 'inMessage', 'msg_isBang(m) ? msg_create([]): m')}
-            ${ConstVar('Int', 'insertIndex', `${variableNames.prepareMessageScheduling}(
-                ${state}, 
-                () => {
-                    ${variableNames.sendMessages}(${state}, ${globs.frame})
-                },
-            )`)}
-
-            ${args.typeArguments.slice(0).reverse()
-                .map<[number, TypeArgument]>(([typeArg], i) => [args.typeArguments.length - i - 1, typeArg])
-                .map(([iReverse, typeArg], i) => 
-                    ast`
-                        if (msg_getLength(inMessage) > ${iReverse}) {
-                            ${state}.scheduledMessages[insertIndex + ${i}].message = 
-                                ${renderMessageTransfer(typeArg, 'inMessage', iReverse)}
-                            ${state}.outputMessages[${iReverse}] 
-                                = ${state}.scheduledMessages[insertIndex + ${i}].message
-                        } else {
-                            ${state}.scheduledMessages[insertIndex + ${i}].message 
-                                = ${state}.outputMessages[${iReverse}]
-                        }
-                    `
-                )
-            }
-
-            return
-        }
-    `,
-
-    ...functional.mapArray(
-        args.typeArguments.slice(1), 
-        ([typeArg], i) => [
-            `${i + 1}`, 
-            AnonFunc([Var('Message', 'm')])`
-                ${state}.outputMessages[${i + 1}] = ${renderMessageTransfer(typeArg, 'm', 0)}
+    messageReceivers: ({ 
+        node: { args }, 
+        state, 
+        globs,
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isAction(m, 'clear')) {
+                ${variableNames.clear}(${state})
+                return 
+    
+            } else if (msg_isAction(m, 'flush')) {
+                if (${state}.scheduledMessages.length) {
+                    ${variableNames.sendMessages}(
+                        ${state}, 
+                        ${state}.scheduledMessages[${state}.scheduledMessages.length - 1].frame
+                    )
+                }
                 return
-            `
-        ]
-    ),
-
-    [args.typeArguments.length]: coldFloatInletWithSetter(variableNames.setDelay, state)
-})
-
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    messageReceivers: messageReceivers,
-    initialization: initialization,
+    
+            } else {
+                ${ConstVar('Message', 'inMessage', 'msg_isBang(m) ? msg_create([]): m')}
+                ${ConstVar('Int', 'insertIndex', `${variableNames.prepareMessageScheduling}(
+                    ${state}, 
+                    () => {
+                        ${variableNames.sendMessages}(${state}, ${globs.frame})
+                    },
+                )`)}
+    
+                ${args.typeArguments.slice(0).reverse()
+                    .map<[number, TypeArgument]>(([typeArg], i) => [args.typeArguments.length - i - 1, typeArg])
+                    .map(([iReverse, typeArg], i) => 
+                        ast`
+                            if (msg_getLength(inMessage) > ${iReverse}) {
+                                ${state}.scheduledMessages[insertIndex + ${i}].message = 
+                                    ${renderMessageTransfer(typeArg, 'inMessage', iReverse)}
+                                ${state}.outputMessages[${iReverse}] 
+                                    = ${state}.scheduledMessages[insertIndex + ${i}].message
+                            } else {
+                                ${state}.scheduledMessages[insertIndex + ${i}].message 
+                                    = ${state}.outputMessages[${iReverse}]
+                            }
+                        `
+                    )
+                }
+    
+                return
+            }
+        `,
+    
+        ...functional.mapArray(
+            args.typeArguments.slice(1), 
+            ([typeArg], i) => [
+                `${i + 1}`, 
+                AnonFunc([Var('Message', 'm')])`
+                    ${state}.outputMessages[${i + 1}] = ${renderMessageTransfer(typeArg, 'm', 0)}
+                    return
+                `
+            ]
+        ),
+    
+        [args.typeArguments.length]: coldFloatInletWithSetter(variableNames.setDelay, state)
+    }),
+    
     dependencies: [
         messageTokenToFloat, 
         messageTokenToString,
@@ -293,7 +184,112 @@ const nodeImplementation: _NodeImplementation = {
         stringMsgUtils,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
-        nodeCore,
+        ({ globs }) => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Int', 'delay'),
+                Var('Array<Message>', 'outputMessages'),
+                Var(`Array<${variableNames.ScheduledMessage}>`, 'scheduledMessages'),
+                Var('Array<(m: Message) => void>', 'snds'),
+            ]),
+        
+            Class(variableNames.ScheduledMessage, [
+                Var('Message', 'message'), 
+                Var('Int', 'frame'), 
+                Var('SkedId', 'skedId'), 
+            ]),
+        
+            ConstVar(variableNames.ScheduledMessage, variableNames.dummyScheduledMessage, `{
+                message: msg_create([]),
+                frame: 0,
+                skedId: SKED_ID_NULL,
+            }`),
+        
+            Func(variableNames.prepareMessageScheduling, [
+                Var(variableNames.stateClass, 'state'),
+                Var('SkedCallback', 'callback'),
+            ], 'Int')`
+                ${Var('Int', 'insertIndex', '0')}
+                ${Var('Int', 'frame', `${globs.frame} + state.delay`)}
+                ${Var('SkedId', 'skedId', 'SKED_ID_NULL')}
+        
+                while (
+                    insertIndex < state.scheduledMessages.length 
+                    && state.scheduledMessages[insertIndex].frame <= frame
+                ) {
+                    insertIndex++
+                }
+        
+                ${''
+                // If there was not yet a callback scheduled for that frame, we schedule it.
+                }
+                if (
+                    insertIndex === 0 || 
+                    (
+                        insertIndex > 0 
+                        && state.scheduledMessages[insertIndex - 1].frame !== frame
+                    )
+                ) {
+                    skedId = commons_waitFrame(frame, callback)
+                }
+        
+                ${''
+                // !!! Array.splice insertion is not supported by assemblyscript, so : 
+                // 1. We grow arrays to their post-insertion size by using `push`
+                // 2. We use `copyWithin` to move old elements to their final position.
+                // 3. Instantiate new messages in the newly created holes.
+                }
+                for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
+                    state.scheduledMessages.push(${variableNames.dummyScheduledMessage})
+                }
+                state.scheduledMessages.copyWithin(
+                    (insertIndex + 1) * state.snds.length, 
+                    insertIndex * state.snds.length
+                )
+                for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
+                    state.scheduledMessages[insertIndex + i] = {
+                        message: ${variableNames.dummyScheduledMessage}.message,
+                        frame,
+                        skedId,
+                    }
+                }
+        
+                return insertIndex
+            `,
+        
+            Func(variableNames.sendMessages, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Int', 'toFrame'),
+            ], 'void')`
+                ${Var('Int', 'i', 0)}
+                while (
+                    state.scheduledMessages.length 
+                    && state.scheduledMessages[0].frame <= toFrame
+                ) {
+                    for (i = 0; i < state.snds.length; i++) {
+                        // Snds are already reversed
+                        state.snds[i](state.scheduledMessages.shift().message)
+                    }
+                }
+            `,
+        
+            Func(variableNames.clear, [
+                Var(variableNames.stateClass, 'state'),
+            ], 'void')`
+                ${Var('Int', 'i', '0')}
+                ${ConstVar('Int', 'length', `state.scheduledMessages.length`)}
+                for (i; i < length; i++) {
+                    commons_cancelWaitFrame(state.scheduledMessages[i].skedId)
+                }
+                state.scheduledMessages = []
+            `,
+        
+            Func(variableNames.setDelay, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Float', 'delay'),
+            ], 'void')`
+                state.delay = toInt(Math.round(delay / 1000 * ${globs.sampleRate}))
+            `,
+        ]),
     ],
 }
 

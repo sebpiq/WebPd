@@ -19,11 +19,11 @@
  */
 
 import { Class, functional, Sequence } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
-import { AnonFunc, ast, ConstVar, Var } from '@webpd/compiler'
+import { AnonFunc, ConstVar, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -72,19 +72,12 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
+// ------------------------------- node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('pack')
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Array<Float>', 'floatValues'),
-        Var('Array<string>', 'stringValues'),
-    ]),
-])
-
-const initialization: _NodeImplementation['initialization'] = ({ node: { args }, state }) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+const nodeImplementation: _NodeImplementation = { 
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
             floatValues: [${
                 args.typeArguments.map(([typeArg, defaultValue]) => 
                     typeArg === 'float' ? defaultValue: 0
@@ -95,70 +88,69 @@ const initialization: _NodeImplementation['initialization'] = ({ node: { args },
                     typeArg === 'symbol' ? `"${defaultValue}"`: '""'
                 ).join(',')
             }]
-        }`)}
-    `
+        }`),
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, state, node }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (!msg_isBang(m)) {
-            for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
-                ${state}.stringValues[i] = messageTokenToString(m, i)
-                ${state}.floatValues[i] = messageTokenToFloat(m, i)
+    messageReceivers: ({ snds, state, node }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (!msg_isBang(m)) {
+                for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
+                    ${state}.stringValues[i] = messageTokenToString(m, i)
+                    ${state}.floatValues[i] = messageTokenToFloat(m, i)
+                }
             }
-        }
-
-        ${ConstVar('MessageTemplate', 'template', `[${
-            node.args.typeArguments.map(([typeArg], i) => 
+    
+            ${ConstVar('MessageTemplate', 'template', `[${
+                node.args.typeArguments.map(([typeArg], i) => 
+                    typeArg === 'symbol' ? 
+                        `MSG_STRING_TOKEN, ${state}.stringValues[${i}].length`
+                        : `MSG_FLOAT_TOKEN`
+                    ).join(',')
+            }]`)}
+    
+            ${ConstVar('Message', 'messageOut', 'msg_create(template)')}
+    
+            ${node.args.typeArguments.map(([typeArg], i) => 
                 typeArg === 'symbol' ? 
-                    `MSG_STRING_TOKEN, ${state}.stringValues[${i}].length`
-                    : `MSG_FLOAT_TOKEN`
-                ).join(',')
-        }]`)}
-
-        ${ConstVar('Message', 'messageOut', 'msg_create(template)')}
-
-        ${node.args.typeArguments.map(([typeArg], i) => 
-            typeArg === 'symbol' ? 
-                `msg_writeStringToken(messageOut, ${i}, ${state}.stringValues[${i}])`
-                : `msg_writeFloatToken(messageOut, ${i}, ${state}.floatValues[${i}])`)}
-
-        ${snds[0]}(messageOut)
-        return
-    `,
-
-    ...functional.mapArray(node.args.typeArguments.slice(1), ([typeArg], i) => {
-        if (typeArg === 'symbol') {
-            return [
-                `${i + 1}`, 
-                AnonFunc([Var('Message', 'm')])`
-                    ${state}.stringValues[${i + 1}] = messageTokenToString(m, 0)
-                    return
-                `
-            ]
-        } else if (typeArg === 'float') {
-            return [
-                `${i + 1}`, 
-                AnonFunc([Var('Message', 'm')])`
-                    ${state}.floatValues[${i + 1}] = messageTokenToFloat(m, 0)
-                    return
-                `
-            ]
-        } else {
-            throw new Error(`Unsupported type argument ${typeArg}`)
-        }
+                    `msg_writeStringToken(messageOut, ${i}, ${state}.stringValues[${i}])`
+                    : `msg_writeFloatToken(messageOut, ${i}, ${state}.floatValues[${i}])`)}
+    
+            ${snds[0]}(messageOut)
+            return
+        `,
+    
+        ...functional.mapArray(node.args.typeArguments.slice(1), ([typeArg], i) => {
+            if (typeArg === 'symbol') {
+                return [
+                    `${i + 1}`, 
+                    AnonFunc([Var('Message', 'm')])`
+                        ${state}.stringValues[${i + 1}] = messageTokenToString(m, 0)
+                        return
+                    `
+                ]
+            } else if (typeArg === 'float') {
+                return [
+                    `${i + 1}`, 
+                    AnonFunc([Var('Message', 'm')])`
+                        ${state}.floatValues[${i + 1}] = messageTokenToFloat(m, 0)
+                        return
+                    `
+                ]
+            } else {
+                throw new Error(`Unsupported type argument ${typeArg}`)
+            }
+        }),
     }),
-})
 
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { 
-    messageReceivers: messageReceivers,
-    initialization: initialization,
     dependencies: [ 
         messageTokenToString, 
         messageTokenToFloat, 
         bangUtils, 
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Array<Float>', 'floatValues'),
+                Var('Array<string>', 'stringValues'),
+            ]),
+        ]),
     ]
 }
 

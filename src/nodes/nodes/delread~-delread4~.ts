@@ -61,12 +61,13 @@ const makeNodeImplementation = (): _NodeImplementation => {
     const variableNames = generateVariableNamesNodeType('delread', ['setDelayName'])
 
     return {
-        initialization: ({ node: { args }, state }) => ast`
-            ${ConstVar(variableNames.stateClass, state, `{
+        stateInitialization: () => 
+            Var(variableNames.stateClass, '', `{
                 delayName: '',
                 buffer: DELAY_BUFFERS_NULL,
-            }`)}
+            }`),
 
+        initialization: ({ node: { args }, state }) => ast`
             commons_waitEngineConfigure(() => {
                 if ("${args.delayName}".length) {
                     ${variableNames.setDelayName}(${state}, "${args.delayName}", () => {

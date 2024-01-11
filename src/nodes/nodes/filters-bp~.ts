@@ -67,8 +67,8 @@ const variableNames = generateVariableNamesNodeType('filter_bp_t', [
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    initialization: ({ node: { args }, state }) => ast`
-        ${ConstVar(variableNames.stateClass, state, `{
+    stateInitialization: ({ node: { args } }) => 
+        Var(variableNames.stateClass, '', `{
             frequency: ${args.frequency},
             Q: ${args.Q},
             coef1: 0,
@@ -77,8 +77,9 @@ const nodeImplementation: _NodeImplementation = {
             y: 0,
             ym1: 0,
             ym2: 0,
-        }`)}
-
+        }`),
+    
+    initialization: ({ node: { args }, state }) => ast`
         commons_waitEngineConfigure(() => {
             ${variableNames.updateCoefs}(${state})
         })

@@ -18,13 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { Class, ConstVar, Sequence, stdlib } from '@webpd/compiler'
+import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
@@ -54,117 +54,113 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------ generateDeclarations ------------------------------ //
+// ------------------------------ node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('metro', [
     'setRate',
     'scheduleNextTick',
     'stop',
 ])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('Float', 'rate'),
-        Var('Float', 'sampleRatio'),
-        Var('Int', 'skedId'),
-        Var('Float', 'realNextTick'),
-        Var('(m: Message) => void', 'snd0'),
-        Var('SkedCallback', 'tickCallback'),
-    ]),
-
-    // Time units are all expressed in samples here
-    Func(variableNames.setRate, [
-        Var(variableNames.stateClass, 'state'),
-        Var('Float', 'rate'),
-    ], 'void')`
-        state.rate = Math.max(rate, 0)
-    `,
-
-    Func(variableNames.scheduleNextTick, [
-        Var(variableNames.stateClass, 'state'),
-    ], 'void')`
-        state.snd0(msg_bang())
-        state.realNextTick = state.realNextTick + state.rate * state.sampleRatio
-        state.skedId = commons_waitFrame(
-            toInt(Math.round(state.realNextTick)), 
-            state.tickCallback,
-        )
-    `,
-
-    Func(variableNames.stop, [
-        Var(variableNames.stateClass, 'state'),
-    ], 'void')`
-        if (state.skedId !== SKED_ID_NULL) {
-            commons_cancelWaitFrame(state.skedId)
-            state.skedId = SKED_ID_NULL
-        }
-        state.realNextTick = 0
-    `,
-])
-
-const initialization: _NodeImplementation['initialization'] = ({
-    node: { args }, 
-    state, 
-    globs, 
-    snds,
-}) => 
-    ast`
-        ${ConstVar(variableNames.stateClass, state, ast`{
+const nodeImplementation: _NodeImplementation = {
+    stateInitialization: () => 
+        Var(variableNames.stateClass, '', ast`{
             rate: 0,
             sampleRatio: 1,
             skedId: SKED_ID_NULL,
             realNextTick: -1,
-            snd0: ${snds.$0},
+            snd0: ${AnonFunc([Var('Message', 'm')])``},
             tickCallback: ${AnonFunc()``},
-        }`)}
+        }`),
 
-        commons_waitEngineConfigure(() => {
-            ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-            ${variableNames.setRate}(${state}, ${args.rate})
-            ${state}.tickCallback = ${AnonFunc()`
-                ${variableNames.scheduleNextTick}(${state})
-            `}
-        })
-    `
-
-// ------------------------------ messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ 
-    state, 
-    globs, 
-}) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_getLength(m) === 1) {
-            if (
-                (msg_isFloatToken(m, 0) && msg_readFloatToken(m, 0) === 0)
-                || msg_isAction(m, 'stop')
-            ) {
-                ${variableNames.stop}(${state})
-                return
-
-            } else if (
-                msg_isFloatToken(m, 0)
-                || msg_isBang(m)
-            ) {
-                ${state}.realNextTick = toFloat(${globs.frame})
-                ${variableNames.scheduleNextTick}(${state})
-                return
+    initialization: ({
+        node: { args }, 
+        state, 
+        globs, 
+        snds,
+    }) => 
+        ast`
+            commons_waitEngineConfigure(() => {
+                ${state}.snd0 = ${snds.$0}
+                ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
+                ${variableNames.setRate}(${state}, ${args.rate})
+                ${state}.tickCallback = ${AnonFunc()`
+                    ${variableNames.scheduleNextTick}(${state})
+                `}
+            })
+        `,
+    
+    messageReceivers: ({ 
+        state, 
+        globs, 
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_getLength(m) === 1) {
+                if (
+                    (msg_isFloatToken(m, 0) && msg_readFloatToken(m, 0) === 0)
+                    || msg_isAction(m, 'stop')
+                ) {
+                    ${variableNames.stop}(${state})
+                    return
+    
+                } else if (
+                    msg_isFloatToken(m, 0)
+                    || msg_isBang(m)
+                ) {
+                    ${state}.realNextTick = toFloat(${globs.frame})
+                    ${variableNames.scheduleNextTick}(${state})
+                    return
+                }
             }
-        }
-    `,
+        `,
+    
+        '1': coldFloatInletWithSetter(variableNames.setRate, state),
+    }),
 
-    '1': coldFloatInletWithSetter(variableNames.setRate, state),
-})
-
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = {
-    initialization: initialization,
-    messageReceivers: messageReceivers,
     dependencies: [
         computeUnitInSamples,
         bangUtils,
         stringMsgUtils,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
-        nodeCore,
+        () => Sequence([
+            Class(variableNames.stateClass, [
+                Var('Float', 'rate'),
+                Var('Float', 'sampleRatio'),
+                Var('Int', 'skedId'),
+                Var('Float', 'realNextTick'),
+                Var('(m: Message) => void', 'snd0'),
+                Var('SkedCallback', 'tickCallback'),
+            ]),
+        
+            // Time units are all expressed in samples here
+            Func(variableNames.setRate, [
+                Var(variableNames.stateClass, 'state'),
+                Var('Float', 'rate'),
+            ], 'void')`
+                state.rate = Math.max(rate, 0)
+            `,
+        
+            Func(variableNames.scheduleNextTick, [
+                Var(variableNames.stateClass, 'state'),
+            ], 'void')`
+                state.snd0(msg_bang())
+                state.realNextTick = state.realNextTick + state.rate * state.sampleRatio
+                state.skedId = commons_waitFrame(
+                    toInt(Math.round(state.realNextTick)), 
+                    state.tickCallback,
+                )
+            `,
+        
+            Func(variableNames.stop, [
+                Var(variableNames.stateClass, 'state'),
+            ], 'void')`
+                if (state.skedId !== SKED_ID_NULL) {
+                    commons_cancelWaitFrame(state.skedId)
+                    state.skedId = SKED_ID_NULL
+                }
+                state.realNextTick = 0
+            `,
+        ]),
     ],
 }
 
