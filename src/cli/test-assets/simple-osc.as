@@ -1,10 +1,15 @@
 
+        const metadata: string = '{"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"ioRcv_n_0_1_0"}},"messageSenders":{}}}}}'
+        
         let F: Int = 0
 let FRAME: Int = 0
 let BLOCK_SIZE: Int = 0
 let SAMPLE_RATE: Float = 0
 let NULL_SIGNAL: Float = 0
 function SND_TO_NULL(m: Message): void {}
+        let INPUT: FloatArray = createFloatArray(0)
+        let OUTPUT: FloatArray = createFloatArray(0)
+
         
                 type FloatArray = Float64Array
                 type Float = f64
@@ -459,8 +464,28 @@ phase: Float
 J: Float
 }
 function n_osc_t_setPhase(state: n_State_osc_t, phase: Float): void {
-            state.phase = phase % 1.0 * 2 * Math.PI
+                    state.phase = phase % 1.0 * 2 * Math.PI
+                }
+
+        
+
+        const n_0_1_STATE: n_State_control = {
+                minValue: -1e+37,
+                maxValue: 1e+37,
+                valueFloat: 220,
+                value: msg_create([]),
+                receiveBusName: "empty",
+                sendBusName: "empty",
+                messageReceiver: n_control_defaultMessageHandler,
+                messageSender: n_control_defaultMessageHandler,
+            }
+const m_n_0_0_0_sig_STATE: n_State_sig_t = {
+            currentValue: 0
         }
+const n_0_0_STATE: n_State_osc_t = {
+                phase: 0,
+                J: 0,
+            }
         
 function n_0_1_RCVS_0(m: Message): void {
                                 
@@ -502,32 +527,9 @@ let n_0_0_OUTS_0: Float = 0
 
 
 
-        
-
         function ioRcv_n_0_1_0(m: Message): void {n_0_1_RCVS_0(m)}
         
 
-        const metadata: string = '{"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"ioRcv_n_0_1_0"}},"messageSenders":{}}}}}'
-        let INPUT: FloatArray = createFloatArray(0)
-        let OUTPUT: FloatArray = createFloatArray(0)
-
-        const n_0_1_STATE: n_State_control = {
-                minValue: -1e+37,
-                maxValue: 1e+37,
-                valueFloat: 220,
-                value: msg_create([]),
-                receiveBusName: "empty",
-                sendBusName: "empty",
-                messageReceiver: n_control_defaultMessageHandler,
-                messageSender: n_control_defaultMessageHandler,
-            }
-const m_n_0_0_0_sig_STATE: n_State_sig_t = {
-            currentValue: 0
-        }
-const n_0_0_STATE: n_State_osc_t = {
-            phase: 0,
-            J: 0,
-        }
             
                 commons_waitEngineConfigure(() => {
                     n_0_1_STATE.messageReceiver = function (m: Message): void {
@@ -541,7 +543,7 @@ const n_0_0_STATE: n_State_osc_t = {
             
 
 
-            
+
             commons_waitEngineConfigure(() => {
                 n_0_0_STATE.J = 2 * Math.PI / SAMPLE_RATE
             })
@@ -565,9 +567,9 @@ const n_0_0_STATE: n_State_osc_t = {
         for (F = 0; F < BLOCK_SIZE; F++) {
             _commons_emitFrame(FRAME)
             
-        n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
-        n_0_0_STATE.phase += (n_0_0_STATE.J * m_n_0_0_0_sig_STATE.currentValue)
-    
+            n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
+            n_0_0_STATE.phase += (n_0_0_STATE.J * m_n_0_0_0_sig_STATE.currentValue)
+        
 OUTPUT[F + BLOCK_SIZE * 0] = n_0_0_OUTS_0
 OUTPUT[F + BLOCK_SIZE * 1] = n_0_0_OUTS_0
             FRAME++

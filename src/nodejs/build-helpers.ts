@@ -37,7 +37,7 @@ import fs from 'fs'
  * @param rootUrl
  * @returns
  */
-export const makeCliAbstractionLoader = (
+export const makeFsAbstractionLoader = (
     rootDirPath: string
 ): AbstractionLoader =>
     makeAbstractionLoader(async (nodeType: PdJson.NodeType) => {

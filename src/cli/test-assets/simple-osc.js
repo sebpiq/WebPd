@@ -5,6 +5,7 @@ let BLOCK_SIZE = 0
 let SAMPLE_RATE = 0
 let NULL_SIGNAL = 0
 function SND_TO_NULL(m) {}
+
         
                 const i32 = (v) => v
                 const f32 = i32
@@ -277,8 +278,28 @@ function n_nbx_receiveMessage(state, m) {
 
 
 function n_osc_t_setPhase(state, phase) {
-            state.phase = phase % 1.0 * 2 * Math.PI
+                    state.phase = phase % 1.0 * 2 * Math.PI
+                }
+
+        
+
+        const n_0_1_STATE = {
+                minValue: -1e+37,
+                maxValue: 1e+37,
+                valueFloat: 220,
+                value: msg_create([]),
+                receiveBusName: "empty",
+                sendBusName: "empty",
+                messageReceiver: n_control_defaultMessageHandler,
+                messageSender: n_control_defaultMessageHandler,
+            }
+const m_n_0_0_0_sig_STATE = {
+            currentValue: 0
         }
+const n_0_0_STATE = {
+                phase: 0,
+                J: 0,
+            }
         
 function n_0_1_RCVS_0(m) {
                                 
@@ -320,28 +341,9 @@ let n_0_0_OUTS_0 = 0
 
 
 
-        
-
         function ioRcv_n_0_1_0(m) {n_0_1_RCVS_0(m)}
         
 
-        const n_0_1_STATE = {
-                minValue: -1e+37,
-                maxValue: 1e+37,
-                valueFloat: 220,
-                value: msg_create([]),
-                receiveBusName: "empty",
-                sendBusName: "empty",
-                messageReceiver: n_control_defaultMessageHandler,
-                messageSender: n_control_defaultMessageHandler,
-            }
-const m_n_0_0_0_sig_STATE = {
-            currentValue: 0
-        }
-const n_0_0_STATE = {
-            phase: 0,
-            J: 0,
-        }
             
                 commons_waitEngineConfigure(() => {
                     n_0_1_STATE.messageReceiver = function (m) {
@@ -355,7 +357,7 @@ const n_0_0_STATE = {
             
 
 
-            
+
             commons_waitEngineConfigure(() => {
                 n_0_0_STATE.J = 2 * Math.PI / SAMPLE_RATE
             })
@@ -376,9 +378,9 @@ const n_0_0_STATE = {
         for (F = 0; F < BLOCK_SIZE; F++) {
             _commons_emitFrame(FRAME)
             
-        n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
-        n_0_0_STATE.phase += (n_0_0_STATE.J * m_n_0_0_0_sig_STATE.currentValue)
-    
+            n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
+            n_0_0_STATE.phase += (n_0_0_STATE.J * m_n_0_0_0_sig_STATE.currentValue)
+        
 OUTPUT[0][F] = n_0_0_OUTS_0
 OUTPUT[1][F] = n_0_0_OUTS_0
             FRAME++

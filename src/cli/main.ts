@@ -16,7 +16,7 @@ import { getArtefact } from '../build/helpers'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes/index'
 import { isDirectorySync, isFileSync } from '../nodejs/fs-helpers'
-import { makeCliAbstractionLoader } from '../nodejs/build-helpers'
+import { makeFsAbstractionLoader } from '../nodejs/build-helpers'
 setAsc(asc)
 
 const BIT_DEPTH = 64
@@ -382,7 +382,7 @@ const main = (): void => {
             assertValidOutFilepath(outFilepath, outFormat)
         }
 
-        const abstractionLoader = makeCliAbstractionLoader(
+        const abstractionLoader = makeFsAbstractionLoader(
             path.dirname(inFilepath)
         )
 
