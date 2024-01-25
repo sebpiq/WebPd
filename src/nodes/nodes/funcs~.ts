@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
 import { ast } from '@webpd/compiler'
@@ -38,14 +38,41 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------------------------------------------- //
+// ---------------------------- node implementation -------------------------- //
+const nodeImplementationBase: Partial<NodeImplementation<any>> = {
+    flags: {
+        isPureFunction: true,
+    },
+}
+
 const nodeImplementations: NodeImplementations = {
-    'abs~': { inlineLoop: ({ ins }) => ast`Math.abs(${ins.$0})` },
-    'cos~': { inlineLoop: ({ ins }) => ast`Math.cos(${ins.$0} * 2 * Math.PI)` },
-    'wrap~': { inlineLoop: ({ ins }) => ast`(1 + (${ins.$0} % 1)) % 1` },
-    'sqrt~': { inlineLoop: ({ ins }) => ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0` },
-    'mtof~': { inlineLoop: ({ ins }) => ast`mtof(${ins.$0})`, dependencies: [mtof] },
-    'ftom~': { inlineLoop: ({ ins }) => ast`ftom(${ins.$0})`, dependencies: [ftom] },
+    'abs~': {
+        ...nodeImplementationBase,
+        inlineLoop: ({ ins }) => ast`Math.abs(${ins.$0})`,
+    },
+    'cos~': {
+        ...nodeImplementationBase,
+        inlineLoop: ({ ins }) => ast`Math.cos(${ins.$0} * 2 * Math.PI)`,
+    },
+    'wrap~': {
+        ...nodeImplementationBase,
+        inlineLoop: ({ ins }) => ast`(1 + (${ins.$0} % 1)) % 1`,
+    },
+    'sqrt~': {
+        ...nodeImplementationBase,
+        inlineLoop: ({ ins }) =>
+            ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0`,
+    },
+    'mtof~': {
+        ...nodeImplementationBase,
+        inlineLoop: ({ ins }) => ast`mtof(${ins.$0})`,
+        dependencies: [mtof],
+    },
+    'ftom~': {
+        ...nodeImplementationBase,
+        inlineLoop: ({ ins }) => ast`ftom(${ins.$0})`,
+        dependencies: [ftom],
+    },
 }
 
 const builders = {
@@ -57,8 +84,4 @@ const builders = {
     'ftom~': builder,
 }
 
-export { 
-    builders,
-    nodeImplementations,
-    NodeArguments,
-}
+export { builders, nodeImplementations, NodeArguments }

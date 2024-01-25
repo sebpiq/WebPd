@@ -18,13 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import {
     coldFloatInletWithSetter,
 } from '../standard-message-receivers'
-import { ast, Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
+import { ast, Class, Func, Sequence, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -68,8 +68,13 @@ const nodeImplementation: _NodeImplementation = {
             coeff: 0,
         }`),
 
+    caching: ({ state, ins }) => ({
+        '1': ast`
+            ${variableNames.setFreq}(${state}, ${ins.$1})
+        `
+    }),
+        
     loop: ({ ins, state, outs }) => ast`
-        ${variableNames.setFreq}(${state}, ${ins.$1})
         ${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous
     `,
 

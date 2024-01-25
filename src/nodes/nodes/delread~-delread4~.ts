@@ -18,8 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, ConstVar, Sequence, stdlib } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { AnonFunc, Class, Sequence, stdlib } from '@webpd/compiler'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
@@ -58,48 +58,62 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = (): _NodeImplementation => {
-    const variableNames = generateVariableNamesNodeType('delread', ['setDelayName'])
+    const variableNames = generateVariableNamesNodeType('delread', [
+        'NOOP',
+        'setDelayName',
+        'setRawOffset',
+        'updateOffset',
+    ])
 
     return {
         stateInitialization: () => 
             Var(variableNames.stateClass, '', `{
                 delayName: '',
                 buffer: DELAY_BUFFERS_NULL,
+                rawOffset: 0,
+                offset: 0,
+                setDelayNameCallback: ${variableNames.NOOP}
             }`),
 
         initialization: ({ node: { args }, state }) => ast`
+            ${state}.setDelayNameCallback = ${AnonFunc([Var('string', '_')])`
+                ${state}.buffer = DELAY_BUFFERS.get(${state}.delayName)
+                ${variableNames.updateOffset}(${state})
+            `}
+
             commons_waitEngineConfigure(() => {
                 if ("${args.delayName}".length) {
-                    ${variableNames.setDelayName}(${state}, "${args.delayName}", () => {
-                        ${state}.buffer = DELAY_BUFFERS.get(${state}.delayName)
-                    })
+                    ${variableNames.setDelayName}(${state}, "${args.delayName}", ${state}.setDelayNameCallback)
                 }
             })
         `,
 
-        inlineLoop: ({ globs, ins, state }) => ast`buf_readSample(${state}.buffer, toInt(Math.round(
-            Math.min(
-                Math.max(computeUnitInSamples(${globs.sampleRate}, ${ins.$0}, "msec"), 0), 
-                toFloat(${state}.buffer.length - 1)
-            )
-        )))`,
+        caching: ({ state, ins }) => ({
+            '0': ast`${variableNames.setRawOffset}(${state}, ${ins.$0})`
+        }),
+
+        loop: ({ state, outs }) => 
+            ast`${outs.$0} = buf_readSample(${state}.buffer, ${state}.offset)`,
 
         dependencies: [
             computeUnitInSamples,
             delayBuffers,
             stdlib.commonsWaitEngineConfigure,
             stdlib.bufWriteRead,
-            () => Sequence([
+            ({ globs }) => Sequence([
                 Class(variableNames.stateClass, [
                     Var('string', 'delayName'), 
                     Var('buf_SoundBuffer', 'buffer'), 
+                    Var('Float', 'rawOffset'),
+                    Var('Int', 'offset'),
+                    Var('(_: string) => void', 'setDelayNameCallback'),
                 ]),
         
                 Func(variableNames.setDelayName, [
                     Var(variableNames.stateClass, 'state'),
                     Var('string', 'delayName'),
                     Var('SkedCallback', 'callback'),
-                ], 'void')`
+                ])`
                     if (state.delayName.length) {
                         state.buffer = DELAY_BUFFERS_NULL
                     }
@@ -107,7 +121,30 @@ const makeNodeImplementation = (): _NodeImplementation => {
                     if (state.delayName.length) {
                         DELAY_BUFFERS_get(state.delayName, callback)
                     }
-                `
+                `,
+
+                Func(variableNames.setRawOffset, [
+                    Var(variableNames.stateClass, 'state'),
+                    Var('Float', 'rawOffset'),
+                ])`
+                    state.rawOffset = rawOffset
+                    ${variableNames.updateOffset}(state)
+                `,
+
+                Func(variableNames.updateOffset, [
+                    Var(variableNames.stateClass, 'state'),
+                ])`
+                    state.offset = toInt(Math.round(
+                        Math.min(
+                            Math.max(computeUnitInSamples(${globs.sampleRate}, state.rawOffset, "msec"), 0), 
+                            toFloat(state.buffer.length - 1)
+                        )
+                    ))
+                `,
+
+                Func(variableNames.NOOP, [
+                    Var('string', '_')
+                ])``,
             ]),
         ],
     }

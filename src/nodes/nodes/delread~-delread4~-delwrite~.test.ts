@@ -45,9 +45,8 @@ import {
 import { testNodeTranslateArgs, testParametersCombine } from '../test-helpers'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import compile from '@webpd/compiler'
+import compile, { ast } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
-import { ast } from '@webpd/compiler'
 
 const SAMPLE_RATE = 44100
 // const DELREAD_NODE_TYPES = ['delread~', 'delread4~'] as const

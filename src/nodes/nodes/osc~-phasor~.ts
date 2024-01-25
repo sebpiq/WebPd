@@ -61,24 +61,25 @@ const makeNodeImplementation = ({
     generateOperation,
 }: {
     name: string,
-    coeff?: Code,
+    coeff: Code,
     generateOperation: (phase: Code) => Code,
 }): _NodeImplementation => {
 
     const variableNames = generateVariableNamesNodeType(name, [
-        'setPhase'
+        'setPhase',
+        'setStep'
     ])
 
     const nodeImplementation: _NodeImplementation = {
         stateInitialization: () => 
             Var(variableNames.stateClass, '', `{
                 phase: 0,
-                J: 0,
+                step: 0,
             }`),
 
-        initialization: ({ globs, state }) => ast`
+        initialization: ({ state }) => ast`
             commons_waitEngineConfigure(() => {
-                ${state}.J = ${coeff ? `${coeff}`: '1'} / ${globs.sampleRate}
+                ${variableNames.setStep}(${state}, 0)
             })
         `,
 
@@ -86,25 +87,36 @@ const makeNodeImplementation = ({
             '1': coldFloatInletWithSetter(variableNames.setPhase, state),
         }),
 
-        loop: ({ ins, state, outs }) => ast`
+        caching: ({ state, ins }) => ({
+            '0': ast`${variableNames.setStep}(${state}, ${ins.$0})`
+        }),
+
+        loop: ({ state, outs }) => ast`
             ${outs.$0} = ${generateOperation(`${state}.phase`)}
-            ${state}.phase += (${state}.J * ${ins.$0})
+            ${state}.phase += ${state}.step
         `,
 
         dependencies: [
             stdlib.commonsWaitEngineConfigure, 
-            () => Sequence([
+            ({ globs }) => Sequence([
                 Class(variableNames.stateClass, [
                     Var('Float', 'phase'),
-                    Var('Float', 'J'),
+                    Var('Float', 'step'),
                 ]),
         
+                Func(variableNames.setStep, [
+                    Var(variableNames.stateClass, 'state'),
+                    Var('Float', 'freq'),
+                ])`
+                    state.step = (${coeff} / ${globs.sampleRate}) * freq
+                `,
+
                 Func(variableNames.setPhase, [
                     Var(variableNames.stateClass, 'state'),
                     Var('Float', 'phase'),
-                ], 'void')`
+                ])`
                     state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}
-                `
+                `,
             ])
         ]
     }
@@ -121,6 +133,7 @@ const nodeImplementations: NodeImplementations = {
     }),
     'phasor~': makeNodeImplementation({
         name: 'phasor_t',
+        coeff: '1',
         generateOperation: (phase: Code) => `${phase} % 1`
     }),
 }

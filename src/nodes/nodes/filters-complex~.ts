@@ -21,7 +21,7 @@
 import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { Class, Code, ConstVar, Sequence } from '@webpd/compiler'
+import { Class, Code, Sequence } from '@webpd/compiler'
 import { ast, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 

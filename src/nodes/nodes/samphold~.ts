@@ -63,7 +63,7 @@ const nodeImplementation: _NodeImplementation = {
         ${state}.controlMemory = ${ins.$1}
     `,
 
-    messageReceivers: ({ state, globs }) => ({
+    messageReceivers: ({ state }) => ({
         '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])

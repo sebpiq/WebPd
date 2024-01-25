@@ -22,7 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
-import { ast, Class, ConstVar, Sequence, Var } from '@webpd/compiler'
+import { ast, Class, Sequence, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -50,6 +50,10 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('sig_t')
 
 const nodeImplementation: _NodeImplementation = {
+    flags: {
+        isPureFunction: true,
+    },
+    
     stateInitialization: ({ node: { args } }) => 
         Var(variableNames.stateClass, '', `{
             currentValue: ${args.initValue}

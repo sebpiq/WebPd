@@ -22,7 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { ast, Var, Func, AnonFunc, Class, ConstVar, Sequence } from '@webpd/compiler'
+import { ast, Var, Func, AnonFunc, Class, Sequence } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -79,7 +79,7 @@ const nodeImplementation: _NodeImplementation = {
             ym2: 0,
         }`),
     
-    initialization: ({ node: { args }, state }) => ast`
+    initialization: ({ state }) => ast`
         commons_waitEngineConfigure(() => {
             ${variableNames.updateCoefs}(${state})
         })

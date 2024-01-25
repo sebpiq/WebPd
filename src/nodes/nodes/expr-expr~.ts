@@ -20,7 +20,6 @@
 
 import { Code, stdlib, functional, Class } from '@webpd/compiler'
 import {
-    GlobalCodeGenerator,
     NodeImplementation,
     NodeImplementations,
     PrecompiledNodeCode,
@@ -33,7 +32,7 @@ import {
     messageTokenToFloat,
     messageTokenToString,
 } from '../type-arguments'
-import { AnonFunc, ast, ConstVar, Sequence, Var } from '@webpd/compiler'
+import { AnonFunc, ast, Sequence, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 

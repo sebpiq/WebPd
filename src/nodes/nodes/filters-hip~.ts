@@ -67,9 +67,14 @@ const nodeImplementation: _NodeImplementation = {
             normal: 0,
         }`),
     
-    loop: ({ ins, state, outs, globs }) => ast`
-        ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
-        ${state}.normal = 0.5 * (1 + ${state}.coeff)
+    caching: ({ state, ins, globs }) => ({
+        '1': ast`
+            ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
+            ${state}.normal = 0.5 * (1 + ${state}.coeff)
+        `
+    }),
+
+    loop: ({ ins, state, outs }) => ast`
         ${state}.current = ${ins.$0} + ${state}.coeff * ${state}.previous
         ${outs.$0} = ${state}.normal * (${state}.current - ${state}.previous)
         ${state}.previous = ${state}.current

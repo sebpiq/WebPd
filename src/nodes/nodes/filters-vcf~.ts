@@ -73,8 +73,13 @@ const nodeImplementation: _NodeImplementation = {
             ym2: 0,
         }`),
 
+    caching: ({ state, ins }) => ({
+        '1': ast`
+            ${variableNames.setFrequency}(${state}, ${ins.$1})
+        `
+    }),
+
     loop: ({ ins, outs, state }) => ast`
-        ${variableNames.setFrequency}(${state}, ${ins.$1})
         ${state}.y = ${ins.$0} + ${state}.coef1 * ${state}.ym1 + ${state}.coef2 * ${state}.ym2
         ${outs.$1} = ${outs.$0} = ${state}.gain * ${state}.y
         ${state}.ym2 = ${state}.ym1

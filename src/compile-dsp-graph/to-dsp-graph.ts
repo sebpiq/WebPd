@@ -143,7 +143,7 @@ export default async (
     _buildConnections(compilation, [rootPatch])
     Object.values(compilation.graph).forEach((node) => {
         if (Object.keys(subpatchNodeBuilders).includes(node.type)) {
-            dspGraph.mutation.deleteNode(compilation.graph, node.id)
+            dspGraph.mutators.deleteNode(compilation.graph, node.id)
         }
     })
 
@@ -210,7 +210,7 @@ const _buildNode = (
 
     const nodeArgs = nodeBuilder.translateArgs(pdNode, patch, compilation.pd)
     const partialNode = nodeBuilder.build(nodeArgs)
-    return dspGraph.mutation.addNode(compilation.graph, {
+    return dspGraph.mutators.addNode(compilation.graph, {
         id: nodeId,
         type: nodeType,
         args: nodeArgs,
@@ -296,7 +296,7 @@ const _buildConnectionToMessageSink = (
     sink: DspGraph.ConnectionEndpoint
 ) =>
     sources.forEach((source) => {
-        dspGraph.mutation.connect(graph, source, sink)
+        dspGraph.mutators.connect(graph, source, sink)
     })
 
 /**
@@ -351,14 +351,14 @@ const _buildConnectionToSignalSink = (
     // 1. SIGNAL SOURCES
     // 1.1. if single signal source, we just put a normal connection
     if (signalSources.length === 1) {
-        dspGraph.mutation.connect(graph, signalSources[0], sink)
+        dspGraph.mutators.connect(graph, signalSources[0], sink)
 
         // 1.2. if several signal sources, we put a mixer node in between.
     } else if (signalSources.length > 1) {
         const mixerNodeArgs: MixerNodeArguments = {
             channelCount: signalSources.length,
         }
-        const implicitMixerNode = dspGraph.mutation.addNode(graph, {
+        const implicitMixerNode = dspGraph.mutators.addNode(graph, {
             id: buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.MIXER),
             type: IMPLICIT_NODE_TYPES.MIXER,
             args: mixerNodeArgs,
@@ -366,7 +366,7 @@ const _buildConnectionToSignalSink = (
             sinks: {},
             ...mixerNodeBuilder.build(mixerNodeArgs),
         })
-        dspGraph.mutation.connect(
+        dspGraph.mutators.connect(
             graph,
             {
                 nodeId: implicitMixerNode.id,
@@ -375,7 +375,7 @@ const _buildConnectionToSignalSink = (
             sink
         )
         signalSources.forEach((source, i) => {
-            dspGraph.mutation.connect(graph, source, {
+            dspGraph.mutators.connect(graph, source, {
                 nodeId: implicitMixerNode.id,
                 portletId: buildGraphPortletId(i),
             })
@@ -388,7 +388,7 @@ const _buildConnectionToSignalSink = (
                 ? messageToSignalConfig.initialSignalValue
                 : 0,
         }
-        implicitSigNode = dspGraph.mutation.addNode(graph, {
+        implicitSigNode = dspGraph.mutators.addNode(graph, {
             id: buildImplicitGraphNodeId(
                 sink,
                 IMPLICIT_NODE_TYPES.CONSTANT_SIGNAL
@@ -399,7 +399,7 @@ const _buildConnectionToSignalSink = (
             sinks: {},
             ...sigNodeBuilder.build(sigNodeArgs),
         })
-        dspGraph.mutation.connect(
+        dspGraph.mutators.connect(
             graph,
             {
                 nodeId: implicitSigNode.id,
@@ -416,7 +416,7 @@ const _buildConnectionToSignalSink = (
     // with a signal sink which can't accept messages).
     if (messageSources.length) {
         const routeMsgArgs: RouteMsgNodeArguments = {}
-        const implicitRouteMsgNode = dspGraph.mutation.addNode(graph, {
+        const implicitRouteMsgNode = dspGraph.mutators.addNode(graph, {
             id: buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.ROUTE_MSG),
             type: IMPLICIT_NODE_TYPES.ROUTE_MSG,
             args: routeMsgArgs,
@@ -427,7 +427,7 @@ const _buildConnectionToSignalSink = (
         let isMsgSortNodeConnected = false
 
         if (implicitSigNode) {
-            dspGraph.mutation.connect(
+            dspGraph.mutators.connect(
                 graph,
                 { nodeId: implicitRouteMsgNode.id, portletId: '0' },
                 { nodeId: implicitSigNode.id, portletId: '0' }
@@ -439,7 +439,7 @@ const _buildConnectionToSignalSink = (
             messageToSignalConfig &&
             messageToSignalConfig.reroutedMessageInletId !== undefined
         ) {
-            dspGraph.mutation.connect(
+            dspGraph.mutators.connect(
                 graph,
                 { nodeId: implicitRouteMsgNode.id, portletId: '1' },
                 {
@@ -452,7 +452,7 @@ const _buildConnectionToSignalSink = (
 
         if (isMsgSortNodeConnected) {
             messageSources.forEach((graphMessageSource) => {
-                dspGraph.mutation.connect(graph, graphMessageSource, {
+                dspGraph.mutators.connect(graph, graphMessageSource, {
                     nodeId: implicitRouteMsgNode.id,
                     portletId: '0',
                 })

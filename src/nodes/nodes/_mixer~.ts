@@ -44,6 +44,9 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = { 
+    flags: {
+        isPureFunction: true,
+    },
     inlineLoop: ({ node, ins }) =>
         ast`${Object.keys(node.inlets)
             .map((inletId) => ins[inletId])

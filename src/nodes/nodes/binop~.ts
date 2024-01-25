@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { pow } from '../global-code/funcs'
@@ -57,26 +57,39 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 })
 
 // ------------------------------- node implementation ------------------------------ //
+const nodeImplementationBase: Partial<NodeImplementation<any>> = {
+    flags: {
+        isPureFunction: true,
+    },
+}
+
 const nodeImplementations: NodeImplementations = {
     '+~': {
+        ...nodeImplementationBase,
         inlineLoop: ({ ins }) => ast`${ins.$0} + ${ins.$1}`,
     },
     '-~': {
+        ...nodeImplementationBase,
         inlineLoop: ({ ins }) => ast`${ins.$0} - ${ins.$1}`,
     },
     '*~': {
+        ...nodeImplementationBase,
         inlineLoop: ({ ins }) => ast`${ins.$0} * ${ins.$1}`,
     },
     '/~': {
+        ...nodeImplementationBase,
         inlineLoop: ({ ins }) => ast`${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
     },
     'min~': {
+        ...nodeImplementationBase,
         inlineLoop: ({ ins }) => ast`Math.min(${ins.$0}, ${ins.$1})`,
     },
     'max~': {
+        ...nodeImplementationBase,
         inlineLoop: ({ ins }) => ast`Math.max(${ins.$0}, ${ins.$1})`,
     },
     'pow~': {
+        ...nodeImplementationBase,
         inlineLoop: ({ ins }) => ast`pow(${ins.$0}, ${ins.$1})`,
         dependencies: [pow],
     },
