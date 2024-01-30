@@ -62,11 +62,15 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('lop_t', ['setFreq'])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            previous: 0,
-            coeff: 0,
-        }`),
+    flags: {
+        alphaName: 'lop_t',
+    },
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'previous', 0),
+            Var('Float', 'coeff', 0),
+        ]),
 
     caching: ({ state, ins }) => ({
         '1': ast`
@@ -82,21 +86,15 @@ const nodeImplementation: _NodeImplementation = {
         '1': coldFloatInletWithSetter(variableNames.setFreq, state),
     }),
 
-    dependencies: [
-        ({ globs }) => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'previous'),
-                Var('Float', 'coeff'),
-            ]),
-        
+    core: ({ globs, stateClassName }) => 
+        Sequence([
             Func(variableNames.setFreq, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'freq'),
             ], 'void')`
                 state.coeff = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
             `
         ])
-    ],
 }
 
 // ------------------------------------------------------------------- //

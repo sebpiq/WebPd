@@ -21,8 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Class, Sequence, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { AnonFunc, Class, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {}
 
@@ -50,13 +49,15 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('snapshot_t')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            currentValue: 0
-        }`),
+    flags: {
+        alphaName: 'snapshot_t',
+    },
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'currentValue', 0)
+        ]),
 
     loop: ({ ins, state }) => ast`
         ${state}.currentValue = ${ins.$0}
@@ -73,11 +74,6 @@ const nodeImplementation: _NodeImplementation = {
 
     dependencies: [ 
         bangUtils,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'currentValue')
-            ]),
-        ]),
     ]
 }
 

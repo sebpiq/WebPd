@@ -59,12 +59,16 @@ const variableNames = generateVariableNamesNodeType('line_t', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            currentLine: ${variableNames.defaultLine},
-            currentValue: ${args.initValue},
-            nextDurationSamp: 0,
-        }`),
+    flags: {
+        alphaName: 'line_t',
+    },
+
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('LineSegment', 'currentLine', variableNames.defaultLine),
+            Var('Float', 'currentValue', args.initValue),
+            Var('Float', 'nextDurationSamp', 0),
+        ]),
 
     messageReceivers: ({ state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -100,17 +104,8 @@ const nodeImplementation: _NodeImplementation = {
         }
     `,
 
-    dependencies: [
-        stringMsgUtils, 
-        computeUnitInSamples, 
-        linesUtils, 
-        ({ globs }) => Sequence([
-            Class(variableNames.stateClass, [
-                Var('LineSegment', 'currentLine'),
-                Var('Float', 'currentValue'),
-                Var('Float', 'nextDurationSamp'),
-            ]),
-        
+    core: ({ globs, stateClassName }) => 
+        Sequence([
             ConstVar('LineSegment', variableNames.defaultLine, `{
                 p0: {x: -1, y: 0},
                 p1: {x: -1, y: 0},
@@ -119,7 +114,7 @@ const nodeImplementation: _NodeImplementation = {
             }`),
         
             Func(variableNames.setNewLine, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'targetValue'),
             ], 'void')`
                 ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame})`)}
@@ -147,19 +142,25 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.setNextDuration, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'durationMsec'),
             ], 'void')`
                 state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
             `,
         
             Func(variableNames.stop, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 state.currentLine.p1.x = -1
                 state.currentLine.p1.y = state.currentValue
             `
-        ])        
+        ]),
+
+
+    dependencies: [
+        stringMsgUtils, 
+        computeUnitInSamples, 
+        linesUtils, 
     ],
 }
 

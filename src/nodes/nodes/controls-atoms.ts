@@ -17,12 +17,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, stdlib, functional, Func, Sequence } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Code, stdlib, Func, Sequence, Class } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCore, controlsCoreVariableNames } from './controls-base'
+import {
+    build,
+    EMPTY_BUS_NAME,
+    ControlsBaseNodeArguments,
+    controlsCore,
+    controlsCoreVariableNamesList,
+} from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
@@ -44,25 +50,28 @@ const builder: NodeBuilder<ControlsBaseNodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = ({
     name,
-    initValue,
+    initValueCode,
     messageMatch,
 }: {
     name: string,
-    initValue: Code,
+    initValueCode: Code,
     messageMatch?: (messageName: VariableName) => Code
 }): _NodeImplementation => {
 
-    const variableNames = generateVariableNamesNodeType(name, ['receiveMessage'])
+    const variableNames = generateVariableNamesNodeType(name, [
+        ...controlsCoreVariableNamesList,
+        'receiveMessage',
+    ])
 
     return {
-        stateInitialization: ({ node: { args }}) => 
-            Var(controlsCoreVariableNames.stateClass, '', `{
-                value: ${initValue},
-                receiveBusName: "${args.receiveBusName}",
-                sendBusName: "${args.sendBusName}",
-                messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
-                messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
-            }`),
+        state: ({ node: { args }, stateClassName }) => 
+            Class(stateClassName, [
+                Var('Message', 'value', initValueCode),
+                Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
+                Var('string', 'sendBusName', `"${args.sendBusName}"`),
+                Var('(m: Message) => void', 'messageReceiver', variableNames.defaultMessageHandler),
+                Var('(m: Message) => void', 'messageSender', variableNames.defaultMessageHandler),
+            ]),
 
         initialization: ({
             state, 
@@ -74,7 +83,7 @@ const makeNodeImplementation = ({
                     ${variableNames.receiveMessage}(${state}, m)
                 `}
                 ${state}.messageSender = ${snds.$0}
-                ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+                ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
             })
         `,
 
@@ -85,15 +94,12 @@ const makeNodeImplementation = ({
             `,
         }),
 
-        dependencies: [
-            bangUtils,
-            messageBuses,
-            msgUtils,
-            stdlib.commonsWaitEngineConfigure,
-            controlsCore,
-            () => Sequence([
+        core: ({ stateClassName }) => 
+            Sequence([
+                controlsCore(variableNames, stateClassName),
+
                 Func(variableNames.receiveMessage, [
-                    Var(controlsCoreVariableNames.stateClass, 'state'),
+                    Var(stateClassName, 'state'),
                     Var('Message', 'm'),
                 ], 'void')`
                     if (msg_isBang(m)) {
@@ -115,7 +121,7 @@ const makeNodeImplementation = ({
                         ${messageMatch ? 
                             '}': null}
         
-                    } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                    } else if (${variableNames.setSendReceiveFromMessage}(state, m) === true) {
                         return
                         
                     } ${messageMatch ? 
@@ -132,6 +138,12 @@ const makeNodeImplementation = ({
                     }
                 `
             ]),
+
+        dependencies: [
+            bangUtils,
+            messageBuses,
+            msgUtils,
+            stdlib.commonsWaitEngineConfigure,
         ],
     }
 }
@@ -145,17 +157,17 @@ const builders = {
 const nodeImplementations = {
     'floatatom': makeNodeImplementation({
         name: 'floatatom',
-        initValue: `msg_floats([0])`,
+        initValueCode: `msg_floats([0])`,
         messageMatch: (m) => `msg_isMatching(${m}, [MSG_FLOAT_TOKEN])`
     }),
     'symbolatom': makeNodeImplementation({
         name: 'symbolatom',
-        initValue: `msg_strings([''])`,
+        initValueCode: `msg_strings([''])`,
         messageMatch: (m) => `msg_isMatching(${m}, [MSG_STRING_TOKEN])`
     }),
     'listbox': makeNodeImplementation({
         name: 'listbox',
-        initValue: `msg_bang()`,
+        initValueCode: `msg_bang()`,
     })
 }
 

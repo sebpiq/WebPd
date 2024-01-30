@@ -22,8 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
-import { AnonFunc, Class, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { AnonFunc, Class, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     minValue: number
@@ -50,14 +49,12 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('clip')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args }}) => 
-        Var(variableNames.stateClass, '', `{
-            minValue: ${args.minValue},
-            maxValue: ${args.maxValue},
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'minValue', args.minValue),
+            Var('Float', 'maxValue', args.maxValue),
+        ]),
     
     messageReceivers: ({ snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -78,15 +75,6 @@ const nodeImplementation: _NodeImplementation = {
         '1': coldFloatInlet(`${state}.minValue`),
         '2': coldFloatInlet(`${state}.maxValue`),
     }),
-
-    dependencies: [
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'minValue'), 
-                Var('Float', 'maxValue'), 
-            ]),
-        ])
-    ],
 }
 
 export { builder, nodeImplementation, NodeArguments }

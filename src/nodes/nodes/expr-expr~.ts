@@ -84,15 +84,14 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('expr')
+const sharedNodeImplementation = (): _NodeImplementation => ({
 
-const nodeImplementationExpr: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            floatInputs: new Map(),
-            stringInputs: new Map(),
-            outputs: new Array(${args.tokenizedExpressions.length}),
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Map<Int, Float>', 'floatInputs', 'new Map()'),
+            Var('Map<Int, string>', 'stringInputs', 'new Map()'),
+            Var('Array<Float>', 'outputs', `new Array(${args.tokenizedExpressions.length})`),
+        ]),
 
     initialization: ({
         node: { args, type },
@@ -176,18 +175,17 @@ const nodeImplementationExpr: _NodeImplementation = {
         roundFloatAsPdInt,
         bangUtils,
         stdlib.commonsArrays,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Map<Int, Float>', 'floatInputs'),
-                Var('Map<Int, string>', 'stringInputs'),
-                Var('Array<Float>', 'outputs'),
-            ]),
-        ]),
     ],
-}
+})
+
+const nodeImplementationExpr: _NodeImplementation = sharedNodeImplementation()
 
 const nodeImplementationExprTilde: _NodeImplementation = {
-    ...nodeImplementationExpr,
+    ...sharedNodeImplementation(),
+
+    flags: {
+        alphaName: 'expr_t',
+    },
 
     loop: ({
         node: { args },

@@ -22,8 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
-import { ast, Class, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { ast, Class, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     initValue: number,
@@ -47,17 +46,16 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('sig_t')
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         isPureFunction: true,
+        alphaName: 'sig_t',
     },
     
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            currentValue: ${args.initValue}
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'currentValue', args.initValue)
+        ]),
 
     inlineLoop: ({ state }) => 
         ast`${state}.currentValue`,
@@ -65,14 +63,6 @@ const nodeImplementation: _NodeImplementation = {
     messageReceivers: ({ state }) => ({
         '0': coldFloatInlet(`${state}.currentValue`),
     }),
-
-    dependencies: [
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'currentValue')
-            ]),
-        ]),
-    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

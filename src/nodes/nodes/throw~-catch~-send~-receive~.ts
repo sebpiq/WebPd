@@ -18,12 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { signalBuses } from '../global-code/buses'
-import { AnonFunc, Class, ConstVar, Func, NodeImplementations, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Func, Sequence, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     busName: string,
@@ -93,41 +94,48 @@ const builderCatch: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('throw_catch_send_receive_t', ['setBusName'])
+const sharedCore = (
+    variableNames: ReturnType<typeof generateVariableNamesNodeType>,
+    stateClassName: VariableName
+) =>
+    Sequence([
+        Func(
+            variableNames.setBusName,
+            [Var(stateClassName, 'state'), Var('string', 'busName')],
+            'void'
+        )`
+            if (busName.length) {
+                state.busName = busName
+                resetSignalBus(state.busName)
+            }
+        `,
+    ])
 
-const nodeCore: GlobalCodeGenerator = () => Sequence([
-    Class(variableNames.stateClass, [
-        Var('string', 'busName'),
-    ]),
+const sharedNodeImplementation = (
+    variableNames: ReturnType<typeof generateVariableNamesNodeType>
+): _NodeImplementation => {
+    return {
+        state: ({ stateClassName }) =>
+            Class(stateClassName, [Var('string', 'busName', '""')]),
 
-    Func(variableNames.setBusName, [
-        Var(variableNames.stateClass, 'state'),
-        Var('string', 'busName')
-    ], 'void')`
-        if (busName.length) {
-            state.busName = busName
-            resetSignalBus(state.busName)
-        }
-    `
-])
-
-const baseNodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            busName: '',
-        }`),
-    
-    initialization: ({ node: { args }, state }) => 
-        ast`
+        initialization: ({ node: { args }, state }) =>
+            ast`
             ${variableNames.setBusName}(${state}, "${args.busName}")
         `,
+    }
 }
 
-
-
 // --------------------------------- node implementation - throw~ ---------------------------------- //
+const variableNamesThrow = generateVariableNamesNodeType('throw_t', [
+    'setBusName'
+])
+
 const nodeImplementationThrow: _NodeImplementation = {
-    ...baseNodeImplementation,
+    ...sharedNodeImplementation(variableNamesThrow),
+
+    flags: {
+        alphaName: 'throw_t',
+    },
 
     loop: ({ ins, state }) => ast`
         addAssignSignalBus(${state}.busName, ${ins.$0})
@@ -139,21 +147,31 @@ const nodeImplementationThrow: _NodeImplementation = {
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'set'
             ) {
-                ${variableNames.setBusName}(${state}, msg_readStringToken(m, 1))
+                ${variableNamesThrow.setBusName}(${state}, msg_readStringToken(m, 1))
                 return
             }
         `
     }),
 
+    core: ({ stateClassName }) => 
+        sharedCore(variableNamesThrow, stateClassName),
+
     dependencies: [ 
-        signalBuses, 
-        nodeCore,
+        signalBuses,
     ]
 }
 
 // --------------------------------- node implementation - catch~ ---------------------------------- //
+const variableNamesCatch = generateVariableNamesNodeType('catch_t', [
+    'setBusName'
+])
+
 const nodeImplementationCatch: _NodeImplementation = {
-    ...baseNodeImplementation,
+    ...sharedNodeImplementation(variableNamesCatch),
+
+    flags: {
+        alphaName: 'catch_t',
+    },
 
     loop: ({
         outs,
@@ -163,29 +181,49 @@ const nodeImplementationCatch: _NodeImplementation = {
         resetSignalBus(${state}.busName)
     `,
 
+    core: ({ stateClassName }) => 
+        sharedCore(variableNamesCatch, stateClassName),
+
     dependencies: [
-        signalBuses, 
-        nodeCore
+        signalBuses,
     ],
 }
 
 // --------------------------------- node implementation - send~ ---------------------------------- //
+const variableNamesSend = generateVariableNamesNodeType('send_t', [
+    'setBusName'
+])
+
 const nodeImplementationSend: _NodeImplementation = {
-    ...baseNodeImplementation,
+    ...sharedNodeImplementation(variableNamesSend),
+
+    flags: {
+        alphaName: 'send_t',
+    },
 
     loop: ({ state, ins }) => ast`
         setSignalBus(${state}.busName, ${ins.$0})
     `,
 
+    core: ({ stateClassName }) => 
+        sharedCore(variableNamesSend, stateClassName),
+
     dependencies: [
-        signalBuses, 
-        nodeCore
+        signalBuses,
     ],
 }
 
 // --------------------------------- node implementation - receive~ ---------------------------------- //
+const variableNamesReceive = generateVariableNamesNodeType('receive_t', [
+    'setBusName'
+])
+
 const nodeImplementationReceive: _NodeImplementation = {
-    ...baseNodeImplementation,
+    ...sharedNodeImplementation(variableNamesReceive),
+
+    flags: {
+        alphaName: 'receive_t',
+    },
 
     inlineLoop: ({ state }) => 
         ast`readSignalBus(${state}.busName)`,
@@ -196,15 +234,17 @@ const nodeImplementationReceive: _NodeImplementation = {
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'set'
             ) {
-                ${variableNames.setBusName}(${state}, msg_readStringToken(m, 1))
+                ${variableNamesReceive.setBusName}(${state}, msg_readStringToken(m, 1))
                 return
             }
         `
     }),
 
+    core: ({ stateClassName }) => 
+        sharedCore(variableNamesReceive, stateClassName),
+
     dependencies: [
         signalBuses,
-        nodeCore,
     ]
 }
 

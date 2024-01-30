@@ -17,12 +17,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, Func, Sequence } from '@webpd/compiler'
+import { stdlib, Func, Sequence, Class } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCoreVariableNames, controlsCore } from './controls-base'
+import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCore, controlsCoreVariableNamesList } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
@@ -45,17 +45,20 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('bang', ['receiveMessage'])
+const variableNames = generateVariableNamesNodeType('bang', [
+    ...controlsCoreVariableNamesList,
+    'receiveMessage'
+])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args }}) => 
-        Var(controlsCoreVariableNames.stateClass, '', `{
-            value: msg_create([]),
-            receiveBusName: "${args.receiveBusName}",
-            sendBusName: "${args.sendBusName}",
-            messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
-            messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Message', 'value', 'msg_create([])'),
+            Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
+            Var('string', 'sendBusName', `"${args.sendBusName}"`),
+            Var('(m: Message) => void', 'messageReceiver', variableNames.defaultMessageHandler),
+            Var('(m: Message) => void', 'messageSender', variableNames.defaultMessageHandler),
+        ]),
 
     initialization: ({ 
         snds,
@@ -67,7 +70,7 @@ const nodeImplementation: _NodeImplementation = {
                 ${variableNames.receiveMessage}(${state}, m)
             `}
             ${state}.messageSender = ${snds.$0}
-            ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+            ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
         })
 
         ${args.outputOnLoad ? 
@@ -81,18 +84,15 @@ const nodeImplementation: _NodeImplementation = {
         `,
     }),
 
-    dependencies: [
-        bangUtils,
-        messageBuses,
-        stdlib.commonsWaitEngineConfigure,
-        stdlib.commonsWaitFrame,
-        controlsCore,
-        () => Sequence([
+    core: ({ stateClassName }) => 
+        Sequence([
+            controlsCore(variableNames, stateClassName),
+
             Func(variableNames.receiveMessage, [
-                Var(controlsCoreVariableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Message', 'm'),
             ], 'void')`
-                if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                if (${variableNames.setSendReceiveFromMessage}(state, m) === true) {
                     return
                 }
                 
@@ -104,6 +104,12 @@ const nodeImplementation: _NodeImplementation = {
                 return
             `
         ]),
+
+    dependencies: [
+        bangUtils,
+        messageBuses,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

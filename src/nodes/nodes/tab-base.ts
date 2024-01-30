@@ -18,12 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { Class, Func, Sequence, Var, ConstVar } from '@webpd/compiler'
+import { Func, Sequence, Var, ConstVar } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 import { _NodeImplementation } from './controls-float'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export interface NodeArguments {
     arrayName: string
@@ -34,59 +34,54 @@ export const translateArgsTabBase: NodeBuilder<NodeArguments>['translateArgs'] =
         arrayName: assertOptionalString(pdNode.args[0]) || '',
     })
 
-export const variableNamesTabBase = generateVariableNamesNodeType('tabbase', [
+export const variableNamesTabBaseNameList = [
     'setArrayName',
     'createState',
     'prepareIndex',
     'emptyArray',
-])
+]
 
-export const nodeCoreTabBase: GlobalCodeGenerator = () => Sequence([
-    ConstVar('FloatArray', variableNamesTabBase.emptyArray, 'createFloatArray(1)'),
+export const nodeCoreTabBase = (
+    variableNames: ReturnType<typeof generateVariableNamesNodeType>, 
+    stateClassName: VariableName,
+) => 
+    Sequence([
+        ConstVar('FloatArray', variableNames.emptyArray, 'createFloatArray(1)'),
 
-    Class(variableNamesTabBase.stateClass, [
-        Var('FloatArray', 'array'),
-        Var('string', 'arrayName'),
-        Var('SkedId', 'arrayChangesSubscription'),
-        Var('Int', 'readPosition'),
-        Var('Int', 'readUntil'),
-        Var('Int', 'writePosition')
-    ]),
+        Func(variableNames.createState, [
+            Var('string', 'arrayName'),
+        ], stateClassName)`
+            return {
+                array: ${variableNames.emptyArray},
+                arrayName,
+                arrayChangesSubscription: SKED_ID_NULL,
+                readPosition: 0,
+                readUntil: 0,
+                writePosition: 0,
+            }
+        `,
 
-    Func(variableNamesTabBase.createState, [
-        Var('string', 'arrayName'),
-    ], variableNamesTabBase.stateClass)`
-        return {
-            array: ${variableNamesTabBase.emptyArray},
-            arrayName,
-            arrayChangesSubscription: SKED_ID_NULL,
-            readPosition: 0,
-            readUntil: 0,
-            writePosition: 0,
-        }
-    `,
+        Func(variableNames.setArrayName, [
+            Var(stateClassName, 'state'),
+            Var('string', 'arrayName'),
+            Var('SkedCallback', 'callback'),
+        ], 'void')`
+            if (state.arrayChangesSubscription != SKED_ID_NULL) {
+                commons_cancelArrayChangesSubscription(state.arrayChangesSubscription)
+            }
+            state.arrayName = arrayName
+            state.array = ${variableNames.emptyArray}
+            commons_subscribeArrayChanges(arrayName, callback)
+        `,
 
-    Func(variableNamesTabBase.setArrayName, [
-        Var(variableNamesTabBase.stateClass, 'state'),
-        Var('string', 'arrayName'),
-        Var('SkedCallback', 'callback'),
-    ], 'void')`
-        if (state.arrayChangesSubscription != SKED_ID_NULL) {
-            commons_cancelArrayChangesSubscription(state.arrayChangesSubscription)
-        }
-        state.arrayName = arrayName
-        state.array = ${variableNamesTabBase.emptyArray}
-        commons_subscribeArrayChanges(arrayName, callback)
-    `,
-
-    Func(variableNamesTabBase.prepareIndex, [
-        Var('Float', 'index'),
-        Var('Int', 'arrayLength'),
-    ], 'Int')`
-        return toInt(Math.min(
-            Math.max(
-                0, Math.floor(index)
-            ), toFloat(arrayLength - 1)
-        ))
-    `
-])
+        Func(variableNames.prepareIndex, [
+            Var('Float', 'index'),
+            Var('Int', 'arrayLength'),
+        ], 'Int')`
+            return toInt(Math.min(
+                Math.max(
+                    0, Math.floor(index)
+                ), toFloat(arrayLength - 1)
+            ))
+        `
+    ])

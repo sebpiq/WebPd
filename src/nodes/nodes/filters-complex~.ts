@@ -24,6 +24,7 @@ import { assertOptionalNumber } from '../validation'
 import { Class, Code, Sequence } from '@webpd/compiler'
 import { ast, Var } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     initCoeffRe: number
@@ -73,6 +74,7 @@ const builder: NodeBuilder<NodeArguments> = {
 const makeNodeImplementation = ({
     generateOperationRe,
     generateOperationIm,
+    alphaName,
 }: {
     generateOperationRe: (
         inputRe: Code,
@@ -94,17 +96,20 @@ const makeNodeImplementation = ({
         lastInputRe: Code,
         lastInputIm: Code,
     ) => Code,
+    alphaName: VariableName,
 }): _NodeImplementation => {
-    const variableNames = generateVariableNamesNodeType('filter_c_t')
-
     return {
-        stateInitialization: () => 
-            Var(variableNames.stateClass, '', `{
-                lastOutputRe: 0,
-                lastOutputIm: 0,
-                lastInputRe: 0,
-                lastInputIm: 0,
-            }`),
+        flags: {
+            alphaName,
+        },
+
+        state: ({ stateClassName }) => 
+            Class(stateClassName, [
+                Var('Float', 'lastOutputRe', 0),
+                Var('Float', 'lastOutputIm', 0),
+                Var('Float', 'lastInputRe', 0),
+                Var('Float', 'lastInputIm', 0),
+            ]),
 
         loop: ({ ins, state, outs }) => ast`
             ${outs.$0} = ${generateOperationRe(
@@ -131,17 +136,6 @@ const makeNodeImplementation = ({
             ${state}.lastInputRe = ${ins.$0}
             ${state}.lastInputIm = ${ins.$1}
         `,
-
-        dependencies: [
-            () => Sequence([
-                Class(variableNames.stateClass, [
-                    Var('Float', 'lastOutputRe'),
-                    Var('Float', 'lastOutputIm'),
-                    Var('Float', 'lastInputRe'),
-                    Var('Float', 'lastInputIm'),
-                ]),
-            ])
-        ]
     }
 }
 
@@ -153,6 +147,7 @@ const builders = {
 
 const nodeImplementations: NodeImplementations = {
     'cpole~': makeNodeImplementation({
+        alphaName: 'cpole_t',
         // *outre++ = nextre + lastre * coefre - lastim * coefim
         generateOperationRe: (
             inputRe,
@@ -173,6 +168,7 @@ const nodeImplementations: NodeImplementations = {
         ) => `${inputIm} + ${lastOutputRe} * ${coeffIm} + ${lastOutputIm} * ${coeffRe}`,
     }),
     'czero~': makeNodeImplementation({
+        alphaName: 'czero_t',
         // *outre++ = nextre - lastre * coefre + lastim * coefim;
         generateOperationRe: (
             inputRe,

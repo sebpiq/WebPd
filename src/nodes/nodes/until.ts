@@ -21,8 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Class, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { AnonFunc, Class, Var } from '@webpd/compiler'
 
 interface NodeArguments {}
 
@@ -43,13 +42,11 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('until')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            continueIter: true,
-        }`),
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('boolean', 'continueIter', 'true')
+        ]),
     
     messageReceivers: ({ snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -81,11 +78,6 @@ const nodeImplementation: _NodeImplementation = {
 
     dependencies: [
         bangUtils,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('boolean', 'continueIter')
-            ]),
-        ]),
     ],
 }
 

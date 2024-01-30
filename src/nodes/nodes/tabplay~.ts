@@ -22,10 +22,10 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
-import { Sequence, stdlib } from '@webpd/compiler'
+import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
-import { nodeCoreTabBase, variableNamesTabBase, NodeArguments } from './tab-base'
+import { nodeCoreTabBase, NodeArguments, variableNamesTabBaseNameList } from './tab-base'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
@@ -48,19 +48,31 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('tabplay_t', [
+    ...variableNamesTabBaseNameList,
     'setArrayNameFinalize',
     'play',
     'stop',
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args }}) => 
-        Var(variableNamesTabBase.stateClass, '', `${variableNamesTabBase.createState}("${args.arrayName}")`),
+    flags: {
+        alphaName: 'tabplay_t',
+    },
+
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('FloatArray', 'array', variableNames.emptyArray),
+            Var('string', 'arrayName', `"${args.arrayName}"`),
+            Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
+            Var('Int', 'readPosition', 0),
+            Var('Int', 'readUntil', 0),
+            Var('Int', 'writePosition', 0),
+        ]),
 
     initialization: ({ state }) => ast`
         commons_waitEngineConfigure(() => {
             if (${state}.arrayName.length) {
-                ${variableNamesTabBase.setArrayName}(
+                ${variableNames.setArrayName}(
                     ${state}, 
                     ${state}.arrayName,
                     () => ${variableNames.setArrayNameFinalize}(${state})
@@ -83,7 +95,7 @@ const nodeImplementation: _NodeImplementation = {
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'set'
             ) {
-                ${variableNamesTabBase.setArrayName}(
+                ${variableNames.setArrayName}(
                     ${state},
                     msg_readStringToken(m, 1),
                     () => ${variableNames.setArrayNameFinalize}(${state}),
@@ -122,15 +134,12 @@ const nodeImplementation: _NodeImplementation = {
         }
     `,
 
-    dependencies: [
-        bangUtils,
-        stdlib.commonsWaitEngineConfigure,
-        stdlib.commonsArrays,
-        stringMsgUtils,
-        nodeCoreTabBase,
-        () => Sequence([
+    core: ({ stateClassName }) => 
+        Sequence([
+            nodeCoreTabBase(variableNames, stateClassName),
+
             Func(variableNames.setArrayNameFinalize, [
-                Var(variableNamesTabBase.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 state.array = commons_getArray(state.arrayName)
                 state.readPosition = state.array.length
@@ -138,7 +147,7 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.play, [
-                Var(variableNamesTabBase.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Int', 'playFrom'),
                 Var('Int', 'playTo'),
             ], 'void')`
@@ -150,12 +159,18 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.stop, [
-                Var(variableNamesTabBase.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 state.readPosition = 0
                 state.readUntil = 0
             `,
         ]),
+
+    dependencies: [
+        bangUtils,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsArrays,
+        stringMsgUtils,
     ],
 }
 

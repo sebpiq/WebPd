@@ -41,26 +41,26 @@ const builder: NodeBuilder<NodeArguments> = {
     },
 }
 
-// ------------------------------- loop ------------------------------ //
-const inlineLoop: _NodeImplementation['inlineLoop'] = () => ast`Math.random() * 2 - 1`
+// ---------------------------- node implementation -------------------------- //
+const nodeImplementation: _NodeImplementation = {
+    flags: {
+        alphaName: 'noise_t',
+    },
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ globs }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-            && msg_readStringToken(m, 0) === 'seed'
-        ) {
-            console.log('WARNING : seed not implemented yet for [noise~]')
-            return
-        }
-    `,
-})
+    inlineLoop: () => 
+        ast`Math.random() * 2 - 1`, 
 
-// ------------------------------------------------------------------- //
-const nodeImplementation: _NodeImplementation = { 
-    inlineLoop: inlineLoop, 
-    messageReceivers: messageReceivers,
+    messageReceivers: () => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
+                && msg_readStringToken(m, 0) === 'seed'
+            ) {
+                console.log('WARNING : seed not implemented yet for [noise~]')
+                return
+            }
+        `,
+    }),
 }
 
 export { 

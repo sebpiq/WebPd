@@ -54,14 +54,18 @@ const variableNames = generateVariableNamesNodeType('vline_t', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            points: [],
-            lineSegments: [],
-            currentValue: 0,
-            nextDurationSamp: 0,
-            nextDelaySamp: 0,
-        }`),
+    flags: {
+        alphaName: 'vline_t',
+    },
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Array<Point>', 'points', '[]'),
+            Var('Array<LineSegment>', 'lineSegments', '[]'),
+            Var('Float', 'currentValue', 0),
+            Var('Float', 'nextDurationSamp', 0),
+            Var('Float', 'nextDelaySamp', 0),
+        ]),
 
     loop: ({ outs, state, globs }) => ast`
         if (${state}.lineSegments.length) {
@@ -111,21 +115,10 @@ const nodeImplementation: _NodeImplementation = {
         '2': coldFloatInletWithSetter(variableNames.setNextDelay, state),
     }),
 
-    dependencies: [
-        linesUtils, 
-        computeUnitInSamples, 
-        stringMsgUtils,
-        ({ globs }) => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Array<Point>', 'points'),
-                Var('Array<LineSegment>', 'lineSegments'),
-                Var('Float', 'currentValue'),
-                Var('Float', 'nextDurationSamp'),
-                Var('Float', 'nextDelaySamp'),
-            ]),
-        
+    core: ({ stateClassName, globs }) => 
+        Sequence([
             Func(variableNames.setNewLine, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'targetValue'),
             ], 'void')`
                 state.points = removePointsBeforeFrame(state.points, toFloat(${globs.frame}))
@@ -148,19 +141,24 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.setNextDuration, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'durationMsec'),
             ], 'void')`
                 state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
             `,
         
             Func(variableNames.setNextDelay, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'delayMsec'),
             ], 'void')`
                 state.nextDelaySamp = computeUnitInSamples(${globs.sampleRate}, delayMsec, 'msec')
             `,
         ]),
+
+    dependencies: [
+        linesUtils, 
+        computeUnitInSamples, 
+        stringMsgUtils,
     ]
 }
 

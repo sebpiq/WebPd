@@ -67,17 +67,21 @@ const variableNames = generateVariableNamesNodeType('filter_bp_t', [
 
 // ------------------------------------------------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            frequency: ${args.frequency},
-            Q: ${args.Q},
-            coef1: 0,
-            coef2: 0,
-            gain: 0,
-            y: 0,
-            ym1: 0,
-            ym2: 0,
-        }`),
+    flags: {
+        alphaName: 'filters_bp_t',
+    },
+
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'frequency', args.frequency),
+            Var('Float', 'Q', args.Q),
+            Var('Float', 'coef1', 0),
+            Var('Float', 'coef2', 0),
+            Var('Float', 'gain', 0),
+            Var('Float', 'y', 0),
+            Var('Float', 'ym1', 0),
+            Var('Float', 'ym2', 0),
+        ]),
     
     initialization: ({ state }) => ast`
         commons_waitEngineConfigure(() => {
@@ -106,21 +110,10 @@ const nodeImplementation: _NodeImplementation = {
         '2': coldFloatInletWithSetter(variableNames.setQ, state),
     }),
 
-    dependencies: [
-        ({ globs }) => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'frequency'),
-                Var('Float', 'Q'),
-                Var('Float', 'coef1'),
-                Var('Float', 'coef2'),
-                Var('Float', 'gain'),
-                Var('Float', 'y'),
-                Var('Float', 'ym1'),
-                Var('Float', 'ym2'),
-            ]),
-        
+    core: ({ globs, stateClassName }) => 
+        Sequence([
             Func(variableNames.updateCoefs, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 ${Var('Float', 'omega', `state.frequency * (2.0 * Math.PI) / ${globs.sampleRate}`)}
                 ${Var('Float', 'oneminusr', `state.Q < 0.001 ? 1.0 : Math.min(omega / state.Q, 1)`)}
@@ -135,7 +128,7 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.setFrequency, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'frequency'),
             ], 'void')`
                 state.frequency = (frequency < 0.001) ? 10: frequency
@@ -143,7 +136,7 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.setQ, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'Q'),
             ], 'void')`
                 state.Q = Math.max(Q, 0)
@@ -151,13 +144,12 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.clear, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 state.ym1 = 0
                 state.ym2 = 0
             `
         ])
-    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

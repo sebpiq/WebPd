@@ -21,8 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { ast, Class, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { ast, Class, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     initValue: number
@@ -56,16 +55,18 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('hip_t')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            previous: 0,
-            current: 0,
-            coeff: 0,
-            normal: 0,
-        }`),
+    flags: {
+        alphaName: 'hip_t',
+    },
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'previous', 0),
+            Var('Float', 'current', 0),
+            Var('Float', 'coeff', 0),
+            Var('Float', 'normal', 0),
+        ]),
     
     caching: ({ state, ins, globs }) => ({
         '1': ast`
@@ -79,17 +80,6 @@ const nodeImplementation: _NodeImplementation = {
         ${outs.$0} = ${state}.normal * (${state}.current - ${state}.previous)
         ${state}.previous = ${state}.current
     `,
-
-    dependencies: [
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'previous'),
-                Var('Float', 'current'),
-                Var('Float', 'coeff'),
-                Var('Float', 'normal'),
-            ]),
-        ])
-    ],
 }
 
 // ------------------------------------------------------------------- //

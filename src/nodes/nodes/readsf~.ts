@@ -68,12 +68,16 @@ const variableNames = generateVariableNamesNodeType('readsf_t', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            buffers: [],
-            streamOperationId: -1,
-            readingStatus: 0,
-        }`),
+    flags: {
+        alphaName: 'readsf_t',
+    },
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Array<buf_SoundBuffer>', 'buffers', '[]'),
+            Var('fs_OperationId', 'streamOperationId', -1),
+            Var('Int', 'readingStatus', 0),
+        ]),
 
     messageReceivers: ({
         node,
@@ -152,21 +156,10 @@ const nodeImplementation: _NodeImplementation = {
         }
     `,
 
-    dependencies: [
-        parseSoundFileOpenOpts,
-        parseReadWriteFsOpts,
-        bangUtils,
-        stringMsgUtils,
-        stdlib.fsReadSoundStream,
-        ({ globs }) => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Array<buf_SoundBuffer>', 'buffers'),
-                Var('fs_OperationId', 'streamOperationId'),
-                Var('Int', 'readingStatus'),
-            ]),
-        
+    core: ({ stateClassName, globs }) => 
+        Sequence([
             Func(variableNames.openStream, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Message', 'm'),
                 Var('Int', 'channelCount'),
                 Var('fs_OperationCallback', 'onStreamClose'),
@@ -204,6 +197,13 @@ const nodeImplementation: _NodeImplementation = {
                 state.buffers = _FS_SOUND_STREAM_BUFFERS.get(state.streamOperationId)
             `
         ]),
+
+    dependencies: [
+        parseSoundFileOpenOpts,
+        parseReadWriteFsOpts,
+        bangUtils,
+        stringMsgUtils,
+        stdlib.fsReadSoundStream,
     ],
 }
 

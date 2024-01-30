@@ -18,13 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, functional, Sequence } from '@webpd/compiler'
+import { Class, functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
 import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
 import { AnonFunc, ConstVar, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     typeArguments: Array<[TypeArgument, number | string]>
@@ -73,22 +72,20 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('pack')
-
 const nodeImplementation: _NodeImplementation = { 
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            floatValues: [${
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Array<Float>', 'floatValues', `[${
                 args.typeArguments.map(([typeArg, defaultValue]) => 
                     typeArg === 'float' ? defaultValue: 0
                 ).join(',')
-            }],
-            stringValues: [${
+            }]`),
+            Var('Array<string>', 'stringValues', `[${
                 args.typeArguments.map(([typeArg, defaultValue]) => 
                     typeArg === 'symbol' ? `"${defaultValue}"`: '""'
                 ).join(',')
-            }]
-        }`),
+            }]`),
+        ]),
 
     messageReceivers: ({ snds, state, node }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -144,13 +141,7 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [ 
         messageTokenToString, 
         messageTokenToFloat, 
-        bangUtils, 
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Array<Float>', 'floatValues'),
-                Var('Array<string>', 'stringValues'),
-            ]),
-        ]),
+        bangUtils,
     ]
 }
 

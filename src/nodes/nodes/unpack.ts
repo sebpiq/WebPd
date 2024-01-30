@@ -57,32 +57,29 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, node: { args } }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        ${args.typeArguments.map((t, i) => [t, i] as [TypeArgument, number]).reverse().map(([t, reversedI]) =>
-            `
-                if (
-                    msg_getLength(m) >= ${reversedI + 1}
-                ) {
-                    if (msg_getTokenType(m, ${reversedI}) === ${t === 'float' ? 'MSG_FLOAT_TOKEN': 'MSG_STRING_TOKEN'}) {
-                        ${functional.renderSwitch(
-                            [t === 'float', `${snds[reversedI]}(msg_floats([msg_readFloatToken(m, ${reversedI})]))`],
-                            [t === 'symbol', `${snds[reversedI]}(msg_strings([msg_readStringToken(m, ${reversedI})]))`],
-                        )}
-                    } else {
-                        console.log('unpack : invalid token type index ${reversedI}')
-                    }
-                }
-            `
-        )}
-        return
-    `,
-})
-
-// ------------------------------------------------------------------- //
+// ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    messageReceivers: messageReceivers,
+    messageReceivers: ({ snds, node: { args } }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            ${args.typeArguments.map((t, i) => [t, i] as [TypeArgument, number]).reverse().map(([t, reversedI]) =>
+                `
+                    if (
+                        msg_getLength(m) >= ${reversedI + 1}
+                    ) {
+                        if (msg_getTokenType(m, ${reversedI}) === ${t === 'float' ? 'MSG_FLOAT_TOKEN': 'MSG_STRING_TOKEN'}) {
+                            ${functional.renderSwitch(
+                                [t === 'float', `${snds[reversedI]}(msg_floats([msg_readFloatToken(m, ${reversedI})]))`],
+                                [t === 'symbol', `${snds[reversedI]}(msg_strings([msg_readStringToken(m, ${reversedI})]))`],
+                            )}
+                        } else {
+                            console.log('unpack : invalid token type index ${reversedI}')
+                        }
+                    }
+                `
+            )}
+            return
+        `,
+    }),
 }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -55,10 +55,10 @@ const variableNames = generateVariableNamesNodeType('random', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            maxValue: ${args.maxValue}
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'maxValue', args.maxValue),
+        ]),
 
     messageReceivers: ({ snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -77,20 +77,18 @@ const nodeImplementation: _NodeImplementation = {
         '1': coldFloatInletWithSetter(variableNames.setMaxValue, state),
     }),
 
-    dependencies: [
-        bangUtils, 
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'maxValue')
-            ]),
-        
+    core: ({ stateClassName }) => 
+        Sequence([
             Func(variableNames.setMaxValue, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'maxValue'),
             ], 'void')`
                 state.maxValue = Math.max(maxValue, 0)
             `
         ]),
+
+    dependencies: [
+        bangUtils, 
     ],
 }
 

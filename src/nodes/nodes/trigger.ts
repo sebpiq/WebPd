@@ -59,19 +59,17 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds, node: { args: { typeArguments }} }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        ${typeArguments.reverse().map((typeArg, i) => 
-            `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, 'm', 0)})`
-        )}
-        return
-    `,
-})
-
-// ------------------------------------------------------------------- //
+// ---------------------------------- node implementation --------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    messageReceivers: messageReceivers,  
+    messageReceivers: ({ snds, node: { args: { typeArguments }} }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            ${typeArguments.reverse().map((typeArg, i) => 
+                `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, 'm', 0)})`
+            )}
+            return
+        `,
+    }),  
+
     dependencies: [ 
         messageTokenToFloat, 
         messageTokenToString,

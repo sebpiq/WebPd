@@ -37,14 +37,15 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- generateDeclarations ------------------------------ //
-const initialization: _NodeImplementation['initialization'] = ({ snds }) => 
-    ast`commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`
-    
-// ------------------------------------------------------------------- //
+// ---------------------------- node implementation -------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    initialization: initialization, 
-    dependencies: [ bangUtils, stdlib.commonsWaitFrame ],
+    initialization: ({ snds }) => 
+        ast`commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`, 
+    
+    dependencies: [ 
+        bangUtils, 
+        stdlib.commonsWaitFrame 
+    ],
 }
 
 export { 

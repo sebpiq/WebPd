@@ -52,10 +52,10 @@ const variableNames = generateVariableNamesNodeType('soundfiler', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            operations: new Map(),
-        }`),
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var(`Map<fs_OperationId, ${variableNames.Operation}>`, 'operations', 'new Map()'),
+        ]),
 
     messageReceivers: ({ state, globs, snds }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -290,16 +290,8 @@ const nodeImplementation: _NodeImplementation = {
         `,
     }),
 
-    dependencies: [
-        parseSoundFileOpenOpts,
-        stdlib.commonsArrays,
-        stdlib.fsReadSoundFile,
-        stdlib.fsWriteSoundFile,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var(`Map<fs_OperationId, ${variableNames.Operation}>`, 'operations')
-            ]),
-        
+    core: () => 
+        Sequence([
             Class(variableNames.Operation, [
                 Var('string', 'url'),
                 Var('Array<string>', 'arrayNames'),
@@ -329,6 +321,12 @@ const nodeImplementation: _NodeImplementation = {
                 return m
             `
         ]),
+
+    dependencies: [
+        parseSoundFileOpenOpts,
+        stdlib.commonsArrays,
+        stdlib.fsReadSoundFile,
+        stdlib.fsWriteSoundFile,
     ],
 }
 

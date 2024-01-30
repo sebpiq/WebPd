@@ -69,17 +69,21 @@ const variableNames = generateVariableNamesNodeType('writesf_t', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            operationId: -1,
-            isWriting: false,
-            cursor: 0,
-            block: [
+    flags: {
+        alphaName: 'write_t',
+    },
+
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('fs_OperationId', 'operationId', -1),
+            Var('boolean', 'isWriting', 'false'),
+            Var('Array<FloatArray>', 'block', `[
                 ${functional.countTo(args.channelCount).map(() => 
                     `createFloatArray(${BLOCK_SIZE})`
                 ).join(',')}
-            ],
-        }`),
+            ]`),
+            Var('Int', 'cursor', 0),
+        ]),
 
     loop: ({ state, ins, node: { args } }) => ast`
         if (${state}.isWriting === true) {
@@ -150,21 +154,10 @@ const nodeImplementation: _NodeImplementation = {
         `
     }), 
 
-    dependencies: [
-        parseSoundFileOpenOpts,
-        parseReadWriteFsOpts,
-        stringMsgUtils,
-        stdlib.fsWriteSoundStream,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('fs_OperationId', 'operationId'),
-                Var('boolean', 'isWriting'),
-                Var('Array<FloatArray>', 'block'),
-                Var('Int', 'cursor'),
-            ]),
-        
+    core: ({ stateClassName }) => 
+        Sequence([
             Func(variableNames.flushBlock, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 ${ConstVar('Array<FloatArray>', 'block', '[]')}
                 for (${Var('Int', 'i', '0')}; i < state.block.length; i++) {
@@ -174,6 +167,12 @@ const nodeImplementation: _NodeImplementation = {
                 state.cursor = 0
             `,
         ]),
+
+    dependencies: [
+        parseSoundFileOpenOpts,
+        parseReadWriteFsOpts,
+        stringMsgUtils,
+        stdlib.fsWriteSoundStream,
     ],
 }
 

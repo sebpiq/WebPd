@@ -46,6 +46,7 @@ const builder: NodeBuilder<NodeArguments> = {
 const nodeImplementation: _NodeImplementation = { 
     flags: {
         isPureFunction: true,
+        alphaName: '_mixer_t',
     },
     inlineLoop: ({ node, ins }) =>
         ast`${Object.keys(node.inlets)

@@ -25,8 +25,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { messageBuses } from '../global-code/buses'
-import { AnonFunc, Class, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { AnonFunc, Class, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     value: string
@@ -54,13 +53,11 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('symbol')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            value: "${args.value}"
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('string', 'value', `"${args.value}"`)
+        ]),
 
     messageReceivers: ({
         snds,
@@ -90,11 +87,6 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [
         bangUtils, 
         messageBuses,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('string', 'value')
-            ]),
-        ]),
     ]
 }
 

@@ -22,10 +22,10 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
-import { Sequence, stdlib } from '@webpd/compiler'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { Class, Sequence, stdlib } from '@webpd/compiler'
+import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
-import { nodeCoreTabBase, variableNamesTabBase, NodeArguments } from './tab-base'
+import { nodeCoreTabBase, NodeArguments, variableNamesTabBaseNameList } from './tab-base'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
@@ -54,17 +54,29 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ node implementation ------------------------------ //
 const variableNames = generateVariableNamesNodeType('tabread_t', [
+    ...variableNamesTabBaseNameList,
     'setArrayNameFinalize',
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args }}) => 
-        Var(variableNamesTabBase.stateClass, '', `${variableNamesTabBase.createState}("${args.arrayName}")`),
+    flags: {
+        alphaName: 'tabread_t',
+    },
+
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('FloatArray', 'array', variableNames.emptyArray),
+            Var('string', 'arrayName', `"${args.arrayName}"`),
+            Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
+            Var('Int', 'readPosition', 0),
+            Var('Int', 'readUntil', 0),
+            Var('Int', 'writePosition', 0),
+        ]),
 
     initialization: ({ state }) => ast`
         commons_waitEngineConfigure(() => {
             if (${state}.arrayName.length) {
-                ${variableNamesTabBase.setArrayName}(
+                ${variableNames.setArrayName}(
                     ${state}, 
                     ${state}.arrayName,
                     () => ${variableNames.setArrayNameFinalize}(${state})
@@ -79,7 +91,7 @@ const nodeImplementation: _NodeImplementation = {
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'set'
             ) {
-                ${variableNamesTabBase.setArrayName}(
+                ${variableNames.setArrayName}(
                     ${state},
                     msg_readStringToken(m, 1),
                     () => ${variableNames.setArrayNameFinalize}(${state}),
@@ -93,19 +105,22 @@ const nodeImplementation: _NodeImplementation = {
     inlineLoop: ({ ins, state }) => 
         ast`${state}.array[toInt(Math.max(Math.min(Math.floor(${ins.$0}), ${state}.array.length - 1), 0))]`,
     
+    core: ({ stateClassName }) => 
+        Sequence([
+            nodeCoreTabBase(variableNames, stateClassName),
+
+            Func(variableNames.setArrayNameFinalize, [
+                Var(stateClassName, 'state'),
+            ], 'void')`
+                state.array = commons_getArray(state.arrayName)
+            `,
+        ]),
+
     dependencies: [
         bangUtils,
         stdlib.commonsWaitEngineConfigure,
         stdlib.commonsArrays,
         stringMsgUtils,
-        nodeCoreTabBase,
-        () => Sequence([
-            Func(variableNames.setArrayNameFinalize, [
-                Var(variableNamesTabBase.stateClass, 'state'),
-            ], 'void')`
-                state.array = commons_getArray(state.arrayName)
-            `,
-        ]),
     ],
 }
 

@@ -22,8 +22,7 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInlet } from '../standard-message-receivers'
-import { ast, Class, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { ast, Class, Var } from '@webpd/compiler'
 
 interface NodeArguments {
     minValue: number,
@@ -50,18 +49,17 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('clip_t')
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         isPureFunction: true,
+        alphaName: 'clip_t',
     },
 
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            minValue: ${args.minValue},
-            maxValue: ${args.maxValue},
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'minValue', args.minValue),
+            Var('Float', 'maxValue', args.maxValue),
+        ]),
 
     inlineLoop: ({ ins, state }) =>
         ast`Math.max(Math.min(${state}.maxValue, ${ins.$0}), ${state}.minValue)`,
@@ -69,16 +67,7 @@ const nodeImplementation: _NodeImplementation = {
     messageReceivers: ({ state }) => ({
         '1': coldFloatInlet(`${state}.minValue`),
         '2': coldFloatInlet(`${state}.maxValue`),
-    })
-    ,
-    dependencies: [
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'minValue'), 
-                Var('Float', 'maxValue'), 
-            ]),
-        ])
-    ],
+    }),
 }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -48,7 +48,7 @@ describe('random', () => {
                 const nodeTestSettings = {
                     target,
                     bitDepth,
-                    node: buildNode(builder, 'noise~', {
+                    node: buildNode(builder, 'random', {
                         maxValue: 4,
                     }),
                     nodeImplementation,
@@ -76,7 +76,7 @@ describe('random', () => {
                 const nodeTestSettings = {
                     target,
                     bitDepth,
-                    node: buildNode(builder, 'noise~', {
+                    node: buildNode(builder, 'random', {
                         maxValue: 4,
                     }),
                     nodeImplementation,

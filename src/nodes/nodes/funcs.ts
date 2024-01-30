@@ -51,18 +51,19 @@ const makeNodeImplementation = ({
     dependencies?: Array<GlobalCodeGenerator>
 }): _NodeImplementation => {
 
-    // ------------------------------- messageReceivers ------------------------------ //
-    const messageReceivers: _NodeImplementation['messageReceivers'] = ({ snds }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
-                ${snds.$0}(msg_floats([${operationCode}]))
-                return
-            }
-        `
-    })
-
-    return { messageReceivers: messageReceivers, dependencies }
+    // ------------------------------- node implementation ------------------------------ //
+    return { 
+        messageReceivers: ({ snds }) => ({
+            '0': AnonFunc([Var('Message', 'm')])`
+                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                    ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
+                    ${snds.$0}(msg_floats([${operationCode}]))
+                    return
+                }
+            `
+        }), 
+        dependencies
+    }
 }
 
 // ------------------------------------------------------------------- //

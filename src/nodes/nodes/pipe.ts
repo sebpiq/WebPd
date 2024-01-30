@@ -90,18 +90,18 @@ const variableNames = generateVariableNamesNodeType('pipe', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            delay: 0,
-            outputMessages: [${
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Int', 'delay', 0),
+            Var('Array<Message>', 'outputMessages', `[${
                 args.typeArguments
                     .map(([_, value]) => typeof value === 'number' ? 
                         `msg_floats([${value}])`
                         : `msg_strings(["${value}"])`).join(',')
-            }],
-            scheduledMessages: [],
-            snds: [],
-        }`),
+            }]`),
+            Var(`Array<${variableNames.ScheduledMessage}>`, 'scheduledMessages', '[]'),
+            Var('Array<(m: Message) => void>', 'snds', '[]'),
+        ]),
     
     initialization: ({ node: { args }, state, snds }) => 
         ast`
@@ -177,21 +177,8 @@ const nodeImplementation: _NodeImplementation = {
         [args.typeArguments.length]: coldFloatInletWithSetter(variableNames.setDelay, state)
     }),
     
-    dependencies: [
-        messageTokenToFloat, 
-        messageTokenToString,
-        bangUtils,
-        stringMsgUtils,
-        stdlib.commonsWaitEngineConfigure,
-        stdlib.commonsWaitFrame,
-        ({ globs }) => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Int', 'delay'),
-                Var('Array<Message>', 'outputMessages'),
-                Var(`Array<${variableNames.ScheduledMessage}>`, 'scheduledMessages'),
-                Var('Array<(m: Message) => void>', 'snds'),
-            ]),
-        
+    core: ({ stateClassName, globs }) => 
+        Sequence([
             Class(variableNames.ScheduledMessage, [
                 Var('Message', 'message'), 
                 Var('Int', 'frame'), 
@@ -205,7 +192,7 @@ const nodeImplementation: _NodeImplementation = {
             }`),
         
             Func(variableNames.prepareMessageScheduling, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('SkedCallback', 'callback'),
             ], 'Int')`
                 ${Var('Int', 'insertIndex', '0')}
@@ -257,7 +244,7 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.sendMessages, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Int', 'toFrame'),
             ], 'void')`
                 ${Var('Int', 'i', 0)}
@@ -273,7 +260,7 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.clear, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 ${Var('Int', 'i', '0')}
                 ${ConstVar('Int', 'length', `state.scheduledMessages.length`)}
@@ -284,12 +271,20 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.setDelay, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'delay'),
             ], 'void')`
                 state.delay = toInt(Math.round(delay / 1000 * ${globs.sampleRate}))
             `,
         ]),
+
+    dependencies: [
+        messageTokenToFloat, 
+        messageTokenToString,
+        bangUtils,
+        stringMsgUtils,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

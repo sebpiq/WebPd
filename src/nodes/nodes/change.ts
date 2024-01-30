@@ -18,12 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, Sequence, Var, ConstVar, ast, Class } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { AnonFunc, Var, ConstVar, Class } from '@webpd/compiler'
 
 interface NodeArguments {
     initValue: number
@@ -46,13 +45,11 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('change')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            currentValue: ${args.initValue}
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'currentValue', args.initValue)
+        ]),
 
     messageReceivers: ({
         snds,
@@ -82,12 +79,7 @@ const nodeImplementation: _NodeImplementation = {
     }),
 
     dependencies: [
-        bangUtils, 
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'currentValue'), 
-            ]),
-        ])
+        bangUtils
     ],
 }
 

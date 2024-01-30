@@ -26,6 +26,7 @@ import {
     Var,
     ast,
     Func,
+    Class,
 } from '@webpd/compiler'
 import {
     NodeImplementation,
@@ -38,8 +39,8 @@ import {
     build,
     EMPTY_BUS_NAME,
     ControlsBaseNodeArguments,
-    controlsCoreVariableNames,
     controlsCore,
+    controlsCoreVariableNamesList,
 } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
@@ -96,20 +97,23 @@ const makeNodeImplementation = ({
     name: string
 }): _NodeImplementation => {
 
-    const variableNames = generateVariableNamesNodeType(name, ['receiveMessage'])
+    const variableNames = generateVariableNamesNodeType(name, [
+        ...controlsCoreVariableNamesList,
+        'receiveMessage'
+    ])
 
     return {
-        stateInitialization: ({ node: { args }}) => 
-            Var(controlsCoreVariableNames.stateClass, '', `{
-                minValue: ${args.minValue},
-                maxValue: ${args.maxValue},
-                valueFloat: ${args.initValue},
-                value: msg_create([]),
-                receiveBusName: "${args.receiveBusName}",
-                sendBusName: "${args.sendBusName}",
-                messageReceiver: ${controlsCoreVariableNames.defaultMessageHandler},
-                messageSender: ${controlsCoreVariableNames.defaultMessageHandler},
-            }`),
+        state: ({ node: { args }, stateClassName }) => 
+            Class(stateClassName, [
+                Var('Float', 'minValue', args.minValue),
+                Var('Float', 'maxValue', args.maxValue),
+                Var('Float', 'valueFloat', args.initValue),
+                Var('Message', 'value', 'msg_create([])'),
+                Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
+                Var('string', 'sendBusName', `"${args.sendBusName}"`),
+                Var('(m: Message) => void', 'messageReceiver', variableNames.defaultMessageHandler),
+                Var('(m: Message) => void', 'messageSender', variableNames.defaultMessageHandler),
+            ]),
 
         initialization: ({
             state,
@@ -125,7 +129,7 @@ const makeNodeImplementation = ({
                         ${variableNames.receiveMessage}(${state}, m)
                     `}
                     ${state}.messageSender = ${snds.$0}
-                    ${controlsCoreVariableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+                    ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
                 })
     
                 ${args.outputOnLoad ? 
@@ -141,15 +145,12 @@ const makeNodeImplementation = ({
             `
         }),
 
-        dependencies: [
-            bangUtils,
-            messageBuses,
-            stdlib.commonsWaitEngineConfigure,
-            stdlib.commonsWaitFrame,
-            controlsCore,
-            () => Sequence([
+        core: ({ stateClassName }) => 
+            Sequence([
+                controlsCore(variableNames, stateClassName),
+
                 Func(variableNames.receiveMessage, [
-                    Var(controlsCoreVariableNames.stateClass, 'state'),
+                    Var(stateClassName, 'state'),
                     Var('Message', 'm'),
                 ], 'void')`
                     if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
@@ -183,11 +184,17 @@ const makeNodeImplementation = ({
                             : `state.valueFloat = msg_readFloatToken(m, 1)`}
                         return
                     
-                    } else if (${controlsCoreVariableNames.setSendReceiveFromMessage}(state, m) === true) {
+                    } else if (${variableNames.setSendReceiveFromMessage}(state, m) === true) {
                         return
                     }
                 `
             ]),
+
+        dependencies: [
+            bangUtils,
+            messageBuses,
+            stdlib.commonsWaitEngineConfigure,
+            stdlib.commonsWaitFrame,
         ],
     }
 }
@@ -203,11 +210,11 @@ const nodeImplementations: NodeImplementations = {
         prepareStoreValue: (valueCode) => 
             `Math.min(Math.max(${valueCode},state.minValue),state.maxValue)`
     }),
-    'hsl': makeNodeImplementation({ name: 'sl' }),
-    'hradio': makeNodeImplementation({ name: 'radio' }),
+    'hsl': makeNodeImplementation({ name: 'hsl' }),
+    'vsl': makeNodeImplementation({ name: 'vsl' }),
+    'hradio': makeNodeImplementation({ name: 'hradio' }),
+    'vradio': makeNodeImplementation({ name: 'vradio' }),
 }
-nodeImplementations['vsl'] = nodeImplementations['hsl']
-nodeImplementations['vradio'] = nodeImplementations['hradio']
 
 const builders = {
     'tgl': builderWithoutMin,

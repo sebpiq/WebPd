@@ -49,12 +49,11 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('moses')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args }}) => Var(variableNames.stateClass, '', `{
-        threshold: ${args.threshold},
-    }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'threshold', args.threshold),
+        ]),
 
     messageReceivers: ({ snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -71,14 +70,6 @@ const nodeImplementation: _NodeImplementation = {
     
         '1': coldFloatInlet(`${state}.threshold`),
     }),
-
-    dependencies: [
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'threshold')
-            ]),
-        ])
-    ] 
 }
 
 export { builder, nodeImplementation, NodeArguments }

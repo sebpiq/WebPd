@@ -17,10 +17,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { GlobalCodeGenerator } from "@webpd/compiler/src/compile/types"
-import { NodeBuilder } from "../../compile-dsp-graph/types"
-import { Class, Func, Sequence, Var } from "@webpd/compiler"
-import { generateVariableNamesNodeType } from "../variable-names"
+import { NodeBuilder } from '../../compile-dsp-graph/types'
+import { Func, Sequence, Var } from '@webpd/compiler'
+import { generateVariableNamesNodeType } from '../variable-names'
+import { AstElement, VariableName } from '@webpd/compiler/src/ast/types'
 
 export const EMPTY_BUS_NAME = 'empty'
 
@@ -41,58 +41,50 @@ export const build: NodeBuilder<any>['build'] = () => ({
     isPushingMessages: true
 })
 
-// TODO : move to global code
-export const controlsCoreVariableNames = generateVariableNamesNodeType('control', [
+export const controlsCoreVariableNamesList = [
     'setReceiveBusName', 
     'setSendReceiveFromMessage',
     'defaultMessageHandler',
-])
+]
 
-export const controlsCore: GlobalCodeGenerator = () => Sequence([
-    Class(controlsCoreVariableNames.stateClass, [
-        Var('Float', 'minValue'),
-        Var('Float', 'maxValue'),
-        Var('Float', 'valueFloat'),
-        Var('Message', 'value'),
-        Var('string', 'receiveBusName'),
-        Var('string', 'sendBusName'),
-        Var('(m: Message) => void', 'messageReceiver'),
-        Var('(m: Message) => void', 'messageSender'),
-    ]),
+export const controlsCore = (
+    variableNames: ReturnType<typeof generateVariableNamesNodeType>, 
+    stateClassName: VariableName,
+): AstElement =>
+    Sequence([
+        Func(variableNames.setReceiveBusName, [
+            Var(stateClassName, 'state'),
+            Var('string', 'busName'),
+        ], 'void')`
+            if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
+                msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
+            }
+            state.receiveBusName = busName
+            if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
+                msgBusSubscribe(state.receiveBusName, state.messageReceiver)
+            }
+        `,
 
-    Func(controlsCoreVariableNames.setReceiveBusName, [
-        Var(controlsCoreVariableNames.stateClass, 'state'),
-        Var('string', 'busName'),
-    ], 'void')`
-        if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
-            msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
-        }
-        state.receiveBusName = busName
-        if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
-            msgBusSubscribe(state.receiveBusName, state.messageReceiver)
-        }
-    `,
+        Func(variableNames.setSendReceiveFromMessage, [
+            Var(stateClassName, 'state'),
+            Var('Message', 'm'),
+        ], 'boolean')`
+            if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'receive'
+            ) {
+                ${variableNames.setReceiveBusName}(state, msg_readStringToken(m, 1))
+                return true
 
-    Func(controlsCoreVariableNames.setSendReceiveFromMessage, [
-        Var(controlsCoreVariableNames.stateClass, 'state'),
-        Var('Message', 'm'),
-    ], 'boolean')`
-        if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-            && msg_readStringToken(m, 0) === 'receive'
-        ) {
-            ${controlsCoreVariableNames.setReceiveBusName}(state, msg_readStringToken(m, 1))
-            return true
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'send'
+            ) {
+                state.sendBusName = msg_readStringToken(m, 1)
+                return true
+            }
+            return false
+        `,
 
-        } else if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-            && msg_readStringToken(m, 0) === 'send'
-        ) {
-            state.sendBusName = msg_readStringToken(m, 1)
-            return true
-        }
-        return false
-    `,
-
-    Func(controlsCoreVariableNames.defaultMessageHandler, [Var('Message', 'm')], 'void')``,
-])
+        Func(variableNames.defaultMessageHandler, [Var('Message', 'm')], 'void')``,
+    ])

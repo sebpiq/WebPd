@@ -62,15 +62,15 @@ const variableNames = generateVariableNamesNodeType('metro', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', ast`{
-            rate: 0,
-            sampleRatio: 1,
-            skedId: SKED_ID_NULL,
-            realNextTick: -1,
-            snd0: ${AnonFunc([Var('Message', 'm')])``},
-            tickCallback: ${AnonFunc()``},
-        }`),
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'rate', 0),
+            Var('Float', 'sampleRatio', 1),
+            Var('Int', 'skedId', 'SKED_ID_NULL'),
+            Var('Float', 'realNextTick', -1),
+            Var('(m: Message) => void', 'snd0', AnonFunc([Var('Message', 'm')])``),
+            Var('SkedCallback', 'tickCallback', AnonFunc()``),
+        ]),
 
     initialization: ({
         node: { args }, 
@@ -116,32 +116,18 @@ const nodeImplementation: _NodeImplementation = {
         '1': coldFloatInletWithSetter(variableNames.setRate, state),
     }),
 
-    dependencies: [
-        computeUnitInSamples,
-        bangUtils,
-        stringMsgUtils,
-        stdlib.commonsWaitEngineConfigure,
-        stdlib.commonsWaitFrame,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'rate'),
-                Var('Float', 'sampleRatio'),
-                Var('Int', 'skedId'),
-                Var('Float', 'realNextTick'),
-                Var('(m: Message) => void', 'snd0'),
-                Var('SkedCallback', 'tickCallback'),
-            ]),
-        
+    core: ({ stateClassName }) => 
+        Sequence([
             // Time units are all expressed in samples here
             Func(variableNames.setRate, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'rate'),
             ], 'void')`
                 state.rate = Math.max(rate, 0)
             `,
         
             Func(variableNames.scheduleNextTick, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 state.snd0(msg_bang())
                 state.realNextTick = state.realNextTick + state.rate * state.sampleRatio
@@ -152,7 +138,7 @@ const nodeImplementation: _NodeImplementation = {
             `,
         
             Func(variableNames.stop, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 if (state.skedId !== SKED_ID_NULL) {
                     commons_cancelWaitFrame(state.skedId)
@@ -161,6 +147,13 @@ const nodeImplementation: _NodeImplementation = {
                 state.realNextTick = 0
             `,
         ]),
+
+    dependencies: [
+        computeUnitInSamples,
+        bangUtils,
+        stringMsgUtils,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

@@ -28,7 +28,7 @@ import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { pow } from '../global-code/funcs'
-import { AnonFunc, ast, Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
+import { AnonFunc, ast, Class, Func, Sequence, Var } from '@webpd/compiler'
 import { Code } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
@@ -57,8 +57,6 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 })
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNamesBinopBase = generateVariableNamesNodeType('binopbase')
-
 const makeNodeImplementation = ({
     operationName,
     generateOperation,
@@ -76,14 +74,18 @@ const makeNodeImplementation = ({
     prepareLeftOp?: Code
     prepareRightOp?: Code
 }): _NodeImplementation => {
-    
     const variableNames = generateVariableNamesNodeType(operationName, ['setLeft', 'setRight'])
 
     return {
-        stateInitialization: () => Var(variableNamesBinopBase.stateClass, '', `{
-            leftOp: 0,
-            rightOp: 0,
-        }`),
+        flags: {
+            alphaName: operationName,
+        },
+
+        state: ({ stateClassName }) => 
+            Class(stateClassName, [
+                Var('Float', 'leftOp', 0), 
+                Var('Float', 'rightOp', 0)
+            ]),
         
         initialization: ({ state, node: { args } }) => ast`
             ${variableNames.setLeft}(${state}, 0)
@@ -106,33 +108,26 @@ const makeNodeImplementation = ({
             '1': coldFloatInletWithSetter(variableNames.setRight, state),
         }),
 
-        dependencies: [
-            bangUtils, 
-            ...dependencies,
-            // Shared code for all operators
-            () => Sequence([
-                Class(variableNamesBinopBase.stateClass, [
-                    Var('Float', 'leftOp'), 
-                    Var('Float', 'rightOp')
-                ])
-            ]),
-
-            // Operator-dependent code
-            () => Sequence([
+        core: ({ stateClassName }) => 
+            Sequence([
                 Func(variableNames.setLeft, [
-                    Var(variableNamesBinopBase.stateClass, 'state'),
+                    Var(stateClassName, 'state'),
                     Var('Float', 'value'),
                 ], 'void')`
                     state.leftOp = ${prepareLeftOp ? prepareLeftOp: 'value'}
                 `,
 
                 Func(variableNames.setRight, [
-                    Var(variableNamesBinopBase.stateClass, 'state'),
+                    Var(stateClassName, 'state'),
                     Var('Float', 'value'),
                 ], 'void')`
                     state.rightOp = ${prepareRightOp ? prepareRightOp: 'value'}
                 `,
             ]),
+
+        dependencies: [
+            bangUtils, 
+            ...dependencies,
         ],
     }
 }

@@ -104,14 +104,16 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const variableNames = generateVariableNamesNodeType('list', ['setSplitPoint'])
+const variableNames = generateVariableNamesNodeType('list', [
+    'setSplitPoint'
+])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            splitPoint: 0,
-            currentList: msg_create([]),
-        }`),
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Int', 'splitPoint', 0),
+            Var('Message', 'currentList', 'msg_create([])'),
+        ]),
 
     initialization: ({ node: { args }, state }) => ast`
         ${args.operation === 'split' ? 
@@ -213,22 +215,19 @@ const nodeImplementation: _NodeImplementation = {
         }
     },
 
-    dependencies: [
-        bangUtils, 
-        msgUtils, 
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Int', 'splitPoint'),
-                Var('Message', 'currentList'),
-            ]),
-        
+    core: ({ stateClassName }) => 
+        Sequence([
             Func(variableNames.setSplitPoint, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'value'),
             ], 'void')`
                 state.splitPoint = toInt(value)
             `
-        ])    
+        ]),
+
+    dependencies: [
+        bangUtils, 
+        msgUtils, 
     ]
 }
 

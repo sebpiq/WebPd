@@ -51,10 +51,10 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('spigot', ['setIsClosed'])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            isClosed: ${args.isClosed ? 'true': 'false'}
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'isClosed', args.isClosed ? 'true': 'false')
+        ]),
 
     messageReceivers: ({ snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
@@ -67,20 +67,15 @@ const nodeImplementation: _NodeImplementation = {
         '1': coldFloatInletWithSetter(variableNames.setIsClosed, state),
     }),
 
-    dependencies: [
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'isClosed')
-            ]),
-        
+    core: ({ stateClassName }) => 
+        Sequence([
             Func(variableNames.setIsClosed, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'value'),
             ], 'void')`
                 state.isClosed = (value === 0)
             `
         ]),
-    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -39,37 +39,49 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ---------------------------- node implementation -------------------------- //
-const nodeImplementationBase: Partial<NodeImplementation<any>> = {
-    flags: {
-        isPureFunction: true,
-    },
-}
-
 const nodeImplementations: NodeImplementations = {
     'abs~': {
-        ...nodeImplementationBase,
+        flags: {
+            isPureFunction: true,
+            alphaName: 'abs_t',
+        },
         inlineLoop: ({ ins }) => ast`Math.abs(${ins.$0})`,
     },
     'cos~': {
-        ...nodeImplementationBase,
+        flags: {
+            isPureFunction: true,
+            alphaName: 'cos_t',
+        },
         inlineLoop: ({ ins }) => ast`Math.cos(${ins.$0} * 2 * Math.PI)`,
     },
     'wrap~': {
-        ...nodeImplementationBase,
+        flags: {
+            isPureFunction: true,
+            alphaName: 'wrap_t',
+        },
         inlineLoop: ({ ins }) => ast`(1 + (${ins.$0} % 1)) % 1`,
     },
     'sqrt~': {
-        ...nodeImplementationBase,
+        flags: {
+            isPureFunction: true,
+            alphaName: 'sqrt_t',
+        },
         inlineLoop: ({ ins }) =>
             ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0`,
     },
     'mtof~': {
-        ...nodeImplementationBase,
+        flags: {
+            isPureFunction: true,
+            alphaName: 'mtof_t',
+        },
         inlineLoop: ({ ins }) => ast`mtof(${ins.$0})`,
         dependencies: [mtof],
     },
     'ftom~': {
-        ...nodeImplementationBase,
+        flags: {
+            isPureFunction: true,
+            alphaName: 'ftom_t',
+        },
         inlineLoop: ({ ins }) => ast`ftom(${ins.$0})`,
         dependencies: [ftom],
     },

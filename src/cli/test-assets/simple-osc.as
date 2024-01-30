@@ -1,14 +1,5 @@
 
         const metadata: string = '{"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"ioRcv_n_0_1_0"}},"messageSenders":{}}}}}'
-        
-        let F: Int = 0
-let FRAME: Int = 0
-let BLOCK_SIZE: Int = 0
-let SAMPLE_RATE: Float = 0
-let NULL_SIGNAL: Float = 0
-function SND_TO_NULL(m: Message): void {}
-        let INPUT: FloatArray = createFloatArray(0)
-        let OUTPUT: FloatArray = createFloatArray(0)
 
         
                 type FloatArray = Float64Array
@@ -389,7 +380,17 @@ function commons_waitFrame(frame: Int, callback: SkedCallback): SkedId {
 function commons_cancelWaitFrame(id: SkedId): void {
             sked_cancel(_commons_FRAME_SKEDULER, id)
         }
-class n_State_control {
+        class State_osc_t {
+phase: Float
+step: Float
+}
+function n_osc_t_setStep(state: State_osc_t, freq: Float): void {
+                    state.step = (2 * Math.PI / SAMPLE_RATE) * freq
+                }
+function n_osc_t_setPhase(state: State_osc_t, phase: Float): void {
+                    state.phase = phase % 1.0 * 2 * Math.PI
+                }
+class State_nbx {
 minValue: Float
 maxValue: Float
 valueFloat: Float
@@ -399,34 +400,34 @@ sendBusName: string
 messageReceiver: (m: Message) => void
 messageSender: (m: Message) => void
 }
-function n_control_setReceiveBusName(state: n_State_control, busName: string): void {
-        if (state.receiveBusName !== "empty") {
-            msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
+function n_nbx_setReceiveBusName(state: State_nbx, busName: string): void {
+            if (state.receiveBusName !== "empty") {
+                msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
+            }
+            state.receiveBusName = busName
+            if (state.receiveBusName !== "empty") {
+                msgBusSubscribe(state.receiveBusName, state.messageReceiver)
+            }
         }
-        state.receiveBusName = busName
-        if (state.receiveBusName !== "empty") {
-            msgBusSubscribe(state.receiveBusName, state.messageReceiver)
-        }
-    }
-function n_control_setSendReceiveFromMessage(state: n_State_control, m: Message): boolean {
-        if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-            && msg_readStringToken(m, 0) === 'receive'
-        ) {
-            n_control_setReceiveBusName(state, msg_readStringToken(m, 1))
-            return true
+function n_nbx_setSendReceiveFromMessage(state: State_nbx, m: Message): boolean {
+            if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'receive'
+            ) {
+                n_nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
+                return true
 
-        } else if (
-            msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-            && msg_readStringToken(m, 0) === 'send'
-        ) {
-            state.sendBusName = msg_readStringToken(m, 1)
-            return true
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'send'
+            ) {
+                state.sendBusName = msg_readStringToken(m, 1)
+                return true
+            }
+            return false
         }
-        return false
-    }
-function n_control_defaultMessageHandler(m: Message): void {}
-function n_nbx_receiveMessage(state: n_State_control, m: Message): void {
+function n_nbx_defaultMessageHandler(m: Message): void {}
+function n_nbx_receiveMessage(state: State_nbx, m: Message): void {
                     if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 0),state.minValue),state.maxValue)
                         const outMessage: Message = msg_floats([state.valueFloat])
@@ -452,82 +453,100 @@ function n_nbx_receiveMessage(state: n_State_control, m: Message): void {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 1),state.minValue),state.maxValue)
                         return
                     
-                    } else if (n_control_setSendReceiveFromMessage(state, m) === true) {
+                    } else if (n_nbx_setSendReceiveFromMessage(state, m) === true) {
                         return
                     }
                 }
-class n_State_sig_t {
+
+
+class State_sig_t {
 currentValue: Float
 }
-class n_State_osc_t {
-phase: Float
-J: Float
-}
-function n_osc_t_setPhase(state: n_State_osc_t, phase: Float): void {
-                    state.phase = phase % 1.0 * 2 * Math.PI
-                }
+
+
+
+
+        let F: Int = 0
+let FRAME: Int = 0
+let BLOCK_SIZE: Int = 0
+let SAMPLE_RATE: Float = 0
+let NULL_SIGNAL: Float = 0
+function SND_TO_NULL(m: Message): void {}
+let EMPTY_MESSAGE: Message = msg_create([])
+        let INPUT: FloatArray = createFloatArray(0)
+        let OUTPUT: FloatArray = createFloatArray(0)
 
         
 
-        const n_0_1_STATE: n_State_control = {
-                minValue: -1e+37,
-                maxValue: 1e+37,
-                valueFloat: 220,
-                value: msg_create([]),
-                receiveBusName: "empty",
-                sendBusName: "empty",
-                messageReceiver: n_control_defaultMessageHandler,
-                messageSender: n_control_defaultMessageHandler,
-            }
-const m_n_0_0_0_sig_STATE: n_State_sig_t = {
-            currentValue: 0
-        }
-const n_0_0_STATE: n_State_osc_t = {
-                phase: 0,
-                J: 0,
-            }
+        const n_0_1_STATE: State_nbx = {
+                                minValue: -1e+37,
+maxValue: 1e+37,
+valueFloat: 220,
+value: msg_create([]),
+receiveBusName: "empty",
+sendBusName: "empty",
+messageReceiver: n_nbx_defaultMessageHandler,
+messageSender: n_nbx_defaultMessageHandler
+                            }
+const m_n_0_0_0_sig_STATE: State_sig_t = {
+                                currentValue: 0
+                            }
+const n_0_0_STATE: State_osc_t = {
+                                phase: 0,
+step: 0
+                            }
         
 function n_0_1_RCVS_0(m: Message): void {
-                                
+                            
                 n_nbx_receiveMessage(n_0_1_STATE, m)
                 return
             
-                                throw new Error('[nbx], id "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
-                            }
+                            throw new Error('[nbx], id "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
+                        }
 
 function m_n_0_0_0__routemsg_RCVS_0(m: Message): void {
-                                
+                            
             if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                m_n_0_0_0_sig_RCVS_0(m)
+                m_n_0_0_0__routemsg_SNDS_0(m)
                 return
             } else {
                 SND_TO_NULL(m)
                 return
             }
         
-                                throw new Error('[_routemsg], id "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
-                            }
-
+                            throw new Error('[_routemsg], id "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
+                        }
+let m_n_0_0_0_sig_OUTS_0: Float = 0
 function m_n_0_0_0_sig_RCVS_0(m: Message): void {
-                                
+                            
         if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
             m_n_0_0_0_sig_STATE.currentValue = msg_readFloatToken(m, 0)
             return
         }
     
-                                throw new Error('[sig~], id "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
-                            }
+                            throw new Error('[sig~], id "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
+                        }
 let n_0_0_OUTS_0: Float = 0
 
 
 
 
+function m_n_0_0_0__routemsg_SNDS_0(m: Message): void {
+                        m_n_0_0_0_sig_RCVS_0(m)
+coldDsp_0(m)
+                    }
 
 
 
 
-
-        function ioRcv_n_0_1_0(m: Message): void {n_0_1_RCVS_0(m)}
+        function coldDsp_0(m: Message): void {
+                m_n_0_0_0_sig_OUTS_0 = m_n_0_0_0_sig_STATE.currentValue
+                n_osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
+            }
+        function ioRcv_n_0_1_0(m: Message): void {
+                        n_0_1_RCVS_0(m)
+                        
+                    }
         
 
             
@@ -536,7 +555,7 @@ let n_0_0_OUTS_0: Float = 0
                         n_nbx_receiveMessage(n_0_1_STATE, m)
                     }
                     n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
-                    n_control_setReceiveBusName(n_0_1_STATE, "empty")
+                    n_nbx_setReceiveBusName(n_0_1_STATE, "empty")
                 })
     
                 commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
@@ -545,10 +564,11 @@ let n_0_0_OUTS_0: Float = 0
 
 
             commons_waitEngineConfigure(() => {
-                n_0_0_STATE.J = 2 * Math.PI / SAMPLE_RATE
+                n_osc_t_setStep(n_0_0_STATE, 0)
             })
         
 
+        coldDsp_0(EMPTY_MESSAGE)
 
         export function configure(sampleRate: Float, blockSize: Int): void {
             INPUT = createFloatArray(blockSize * 2)
@@ -568,7 +588,7 @@ let n_0_0_OUTS_0: Float = 0
             _commons_emitFrame(FRAME)
             
             n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
-            n_0_0_STATE.phase += (n_0_0_STATE.J * m_n_0_0_0_sig_STATE.currentValue)
+            n_0_0_STATE.phase += n_0_0_STATE.step
         
 OUTPUT[F + BLOCK_SIZE * 0] = n_0_0_OUTS_0
 OUTPUT[F + BLOCK_SIZE * 1] = n_0_0_OUTS_0

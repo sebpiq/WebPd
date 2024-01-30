@@ -67,7 +67,11 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const nodeImplementation: _NodeImplementation = { 
+const nodeImplementation: _NodeImplementation = {
+    flags: {
+        alphaName: 'dac_t',
+    },
+
     loop: ({
         ins,
         globs,

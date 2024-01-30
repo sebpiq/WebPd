@@ -62,11 +62,12 @@ const variableNames = generateVariableNamesNodeType('delay', [
 ])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => Var(variableNames.stateClass, '', `{
-        delay: 0,
-        sampleRatio: 1,
-        scheduledBang: SKED_ID_NULL,
-    }`),
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'delay', 0),
+            Var('Float', 'sampleRatio', 1),
+            Var('SkedId', 'scheduledBang', 'SKED_ID_NULL'),
+        ]),
 
     initialization: ({ node: { args }, state, globs }) => ast`
         commons_waitEngineConfigure(() => {
@@ -118,27 +119,17 @@ const nodeImplementation: _NodeImplementation = {
         '1': coldFloatInletWithSetter(variableNames.setDelay, state)
     }),
 
-    dependencies: [
-        computeUnitInSamples,
-        bangUtils,
-        stdlib.commonsWaitEngineConfigure,
-        stdlib.commonsWaitFrame,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'delay', '0'),
-                Var('Float', 'sampleRatio', '1'),
-                Var('SkedId', 'scheduledBang', 'SKED_ID_NULL'),
-            ]),
-    
+    core: ({ stateClassName }) => 
+        Sequence([
             Func(variableNames.setDelay, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('Float', 'delay'),
             ], 'void')`
                 state.delay = Math.max(0, delay)
             `,
-    
+
             Func(variableNames.scheduleDelay, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('SkedCallback', 'callback'),
                 Var('Int', 'currentFrame'),
             ], 'void')`
@@ -151,14 +142,20 @@ const nodeImplementation: _NodeImplementation = {
                     callback
                 )
             `,
-    
+
             Func(variableNames.stop, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
             ], 'void')`
                 commons_cancelWaitFrame(state.scheduledBang)
                 state.scheduledBang = SKED_ID_NULL
             `
-        ])
+        ]),
+
+    dependencies: [
+        computeUnitInSamples,
+        bangUtils,
+        stdlib.commonsWaitEngineConfigure,
+        stdlib.commonsWaitFrame,
     ],
 }
 

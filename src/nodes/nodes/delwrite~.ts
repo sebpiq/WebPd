@@ -24,7 +24,7 @@ import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { AnonFunc, Class, ConstVar, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Func, Sequence, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
@@ -61,11 +61,15 @@ const builder: NodeBuilder<NodeArguments> = {
 const variableNames = generateVariableNamesNodeType('delwrite', ['setDelayName'])
 
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            delayName: '',
-            buffer: DELAY_BUFFERS_NULL,
-        }`),
+    flags: {
+        alphaName: 'delwrite_t',
+    },
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('string', 'delayName', '""'),
+            Var('buf_SoundBuffer', 'buffer', 'DELAY_BUFFERS_NULL'),
+        ]),
 
     initialization: ({ node: { args }, state, globs }) => ast`
         commons_waitEngineConfigure(() => {
@@ -93,19 +97,11 @@ const nodeImplementation: _NodeImplementation = {
             }
         `
     }),
-    
-    dependencies: [ 
-        computeUnitInSamples, 
-        delayBuffers, 
-        stringMsgUtils, 
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('string', 'delayName'), 
-                Var('buf_SoundBuffer', 'buffer'), 
-            ]),
-        
+
+    core: ({ stateClassName }) => 
+        Sequence([
             Func(variableNames.setDelayName, [
-                Var(variableNames.stateClass, 'state'),
+                Var(stateClassName, 'state'),
                 Var('string', 'delayName')
             ], 'void')`
                 if (state.delayName.length) {
@@ -116,7 +112,12 @@ const nodeImplementation: _NodeImplementation = {
                     DELAY_BUFFERS_set(state.delayName, state.buffer)
                 }
             `
-        ])
+        ]),
+
+    dependencies: [ 
+        computeUnitInSamples, 
+        delayBuffers, 
+        stringMsgUtils,
     ]
 }
 

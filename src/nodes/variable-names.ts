@@ -25,10 +25,10 @@ export const generateVariableNamesNodeType = <
     nodeType: DspGraph.NodeType,
     functionNames?: Keys
 ): { [key: string]: string } =>
-    createNamespace(nodeType, {
-        stateClass: `n_State_${nodeType}`,
-        ...functional.mapArray(functionNames || [], (name) => [
+    createNamespace(
+        nodeType,
+        functional.mapArray(functionNames || [], (name) => [
             name,
             `n_${nodeType}_${name}`,
-        ]),
-    })
+        ])
+    )

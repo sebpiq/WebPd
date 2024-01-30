@@ -56,15 +56,13 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('route')
-
 const nodeImplementation: _NodeImplementation = { 
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            floatFilter: ${typeof args.filters[0] === 'number' ? args.filters[0]: 0},
-            stringFilter: "${args.filters[0]}",
-            filterType: ${typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN'},
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'floatFilter', typeof args.filters[0] === 'number' ? args.filters[0]: 0),
+            Var('string', 'stringFilter', `"${args.filters[0]}"`),
+            Var('Int', 'filterType', typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN'),
+        ]),
 
     messageReceivers: ({ snds, state, node: { args } }) => {
         if (args.filters.length > 1) {
@@ -174,13 +172,6 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [ 
         bangUtils, 
         msgUtils,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'floatFilter'),
-                Var('string', 'stringFilter'),
-                Var('Int', 'filterType'),
-            ]),
-        ]),
     ]
 }
 

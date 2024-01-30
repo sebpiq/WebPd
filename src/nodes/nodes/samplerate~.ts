@@ -39,20 +39,24 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- messageReceivers ------------------------------ //
-const messageReceivers: _NodeImplementation['messageReceivers'] = ({ globs, snds }) => ({
-    '0': AnonFunc([Var('Message', 'm')])`
-        if (msg_isBang(m)) { 
-            ${snds.$0}(msg_floats([${globs.sampleRate}])) 
-            return
-        }
-    `,
-})
-
-// ------------------------------------------------------------------- //
+// --------------------------- node implementation --------------------------- //
 const nodeImplementation: _NodeImplementation = {
-    messageReceivers: messageReceivers,
-    dependencies: [bangUtils]
+    flags: {
+        alphaName: 'samplerate_t',
+    },
+
+    messageReceivers: ({ globs, snds }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isBang(m)) { 
+                ${snds.$0}(msg_floats([${globs.sampleRate}])) 
+                return
+            }
+        `,
+    }),
+
+    dependencies: [
+        bangUtils
+    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

@@ -23,9 +23,8 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { computeUnitInSamples } from '../global-code/timing'
-import { Class, Sequence, stdlib } from '@webpd/compiler'
+import { Class, stdlib } from '@webpd/compiler'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     unitAmount: number
@@ -52,14 +51,12 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('timer')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            sampleRatio: 0,
-            resetTime: 0,
-        }`),
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'sampleRatio', 0),
+            Var('Int', 'resetTime', 0),
+        ]),
 
     initialization: ({ node: { args }, state, globs }) => 
         ast`
@@ -102,13 +99,7 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [ 
         computeUnitInSamples, 
         bangUtils, 
-        stdlib.commonsWaitEngineConfigure, 
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'sampleRatio'),
-                Var('Int', 'resetTime'),
-            ]),
-        ]),
+        stdlib.commonsWaitEngineConfigure,
     ]
 }
 

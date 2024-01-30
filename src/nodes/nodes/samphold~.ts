@@ -20,8 +20,7 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { AnonFunc, Class, Sequence, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { AnonFunc, Class, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {}
 
@@ -49,14 +48,16 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('samphold_t')
-
 const nodeImplementation: _NodeImplementation = {
-    stateInitialization: () => 
-        Var(variableNames.stateClass, '', `{
-            signalMemory: 0,
-            controlMemory: 0,
-        }`),
+    flags: {
+        alphaName: 'samphold_t',
+    },
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'signalMemory', 0),
+            Var('Float', 'controlMemory', 0),
+        ]),
 
     loop: ({ ins, outs, state }) => ast`
         ${state}.signalMemory = ${outs.$0} = ${ins.$1} < ${state}.controlMemory ? ${ins.$0}: ${state}.signalMemory
@@ -88,15 +89,6 @@ const nodeImplementation: _NodeImplementation = {
             }
         `,
     }),
-
-    dependencies: [
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('Float', 'signalMemory'),
-                Var('Float', 'controlMemory'),
-            ]),
-        ]),
-    ]
 }
 
 export { builder, nodeImplementation, NodeArguments }

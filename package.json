@@ -29,9 +29,9 @@
   ],
   "scripts": {
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings --max-old-space-size=2048' npx jest --config node_modules/@webpd/dev/configs/jest.js",
-    "build:cli": "npx rollup --config configs/cli.rollup.config.js",
-    "build:dist": "npx rollup --config configs/dist.rollup.config.js",
-    "build:runtime": "npx rollup --config configs/runtime.rollup.config.js",
+    "build:cli": "npx rollup --config configs/cli.rollup.js",
+    "build:dist": "npx rollup --config configs/dist.rollup.js",
+    "build:runtime": "npx rollup --config configs/runtime.rollup.js",
     "build": "npm run clean; npm run build:runtime; npm run build:dist; npm run build:cli",
     "clean": "rm -rf dist ; rm -rf bin"
   },

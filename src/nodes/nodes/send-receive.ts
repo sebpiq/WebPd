@@ -18,14 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { messageBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
-import { Class, ConstVar, Sequence, stdlib } from '@webpd/compiler'
+import { Class, stdlib } from '@webpd/compiler'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     busName: string
@@ -61,13 +60,11 @@ const builderReceive: NodeBuilder<NodeArguments> = {
 }
 
 // -------------------------------- node implementation - send ----------------------------------- //
-const variableNames = generateVariableNamesNodeType('send')
-
 const nodeImplementationSend: _NodeImplementation = {
-    stateInitialization: ({ node: { args } }) => 
-        Var(variableNames.stateClass, '', `{
-            busName: "${args.busName}",
-        }`),
+    state: ({ node: { args }, stateClassName }) => 
+        Class(stateClassName, [
+            Var('string', 'busName', `"${args.busName}"`),
+        ]),
         
     messageReceivers: ({
         state,
@@ -83,11 +80,6 @@ const nodeImplementationSend: _NodeImplementation = {
     dependencies: [
         messageBuses, 
         stdlib.commonsWaitEngineConfigure,
-        () => Sequence([
-            Class(variableNames.stateClass, [
-                Var('string', 'busName')
-            ]),
-        ]),
     ],
 }
 

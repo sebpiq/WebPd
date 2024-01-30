@@ -56,26 +56,30 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ node implementation ------------------------------ //
 const makeNodeImplementation = ({
-    name,
+    alphaName,
     coeff,
     generateOperation,
 }: {
-    name: string,
+    alphaName: string,
     coeff: Code,
     generateOperation: (phase: Code) => Code,
 }): _NodeImplementation => {
 
-    const variableNames = generateVariableNamesNodeType(name, [
+    const variableNames = generateVariableNamesNodeType(alphaName, [
         'setPhase',
         'setStep'
     ])
 
     const nodeImplementation: _NodeImplementation = {
-        stateInitialization: () => 
-            Var(variableNames.stateClass, '', `{
-                phase: 0,
-                step: 0,
-            }`),
+        flags: {
+            alphaName,
+        },
+
+        state: ({ stateClassName }) => 
+            Class(stateClassName, [
+                Var('Float', 'phase', 0),
+                Var('Float', 'step', 0),
+            ]),
 
         initialization: ({ state }) => ast`
             commons_waitEngineConfigure(() => {
@@ -96,28 +100,25 @@ const makeNodeImplementation = ({
             ${state}.phase += ${state}.step
         `,
 
-        dependencies: [
-            stdlib.commonsWaitEngineConfigure, 
-            ({ globs }) => Sequence([
-                Class(variableNames.stateClass, [
-                    Var('Float', 'phase'),
-                    Var('Float', 'step'),
-                ]),
-        
+        core: ({ stateClassName, globs }) => 
+            Sequence([
                 Func(variableNames.setStep, [
-                    Var(variableNames.stateClass, 'state'),
+                    Var(stateClassName, 'state'),
                     Var('Float', 'freq'),
                 ])`
                     state.step = (${coeff} / ${globs.sampleRate}) * freq
                 `,
 
                 Func(variableNames.setPhase, [
-                    Var(variableNames.stateClass, 'state'),
+                    Var(stateClassName, 'state'),
                     Var('Float', 'phase'),
                 ])`
                     state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}
                 `,
-            ])
+            ]),
+
+        dependencies: [
+            stdlib.commonsWaitEngineConfigure,
         ]
     }
 
@@ -127,12 +128,12 @@ const makeNodeImplementation = ({
 // ------------------------------------------------------------------- //
 const nodeImplementations: NodeImplementations = {
     'osc~': makeNodeImplementation({
-        name: 'osc_t',
+        alphaName: 'osc_t',
         coeff: '2 * Math.PI',
         generateOperation: (phase: Code) => `Math.cos(${phase})`
     }),
     'phasor~': makeNodeImplementation({
-        name: 'phasor_t',
+        alphaName: 'phasor_t',
         coeff: '1',
         generateOperation: (phase: Code) => `${phase} % 1`
     }),

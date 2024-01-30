@@ -18,12 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, DspGraph, Sequence } from '@webpd/compiler'
-import { GlobalCodeGenerator, NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Class, DspGraph } from '@webpd/compiler'
+import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { AstElement } from '@webpd/compiler/src/ast/types'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments { templates: Array<Array<DspGraph.NodeArgument>> }
 
@@ -66,15 +65,14 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('msg')
-
 const nodeImplementation: _NodeImplementation = {
 
-    stateInitialization: () => Var(variableNames.stateClass, '', `{
-        outTemplates: [],
-        outMessages: [],
-        messageTransferFunctions: [],
-    }`),
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Array<MessageTemplate>', 'outTemplates', '[]'),
+            Var('Array<Message>', 'outMessages', '[]'),
+            Var('Array<(m: Message) => Message>', 'messageTransferFunctions', '[]'),
+        ]),
 
     initialization: (context) => {
         const { node: { args }, state } = context
@@ -153,14 +151,6 @@ const nodeImplementation: _NodeImplementation = {
             `,
         }
     },
-
-    dependencies: [() => Sequence([
-        Class(variableNames.stateClass, [
-            Var('Array<MessageTemplate>', 'outTemplates'),
-            Var('Array<Message>', 'outMessages'),
-            Var('Array<(m: Message) => Message>', 'messageTransferFunctions'),
-        ]),
-    ])],
 }
 
 export { 

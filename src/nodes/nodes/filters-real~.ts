@@ -21,9 +21,9 @@
 import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { Class, Code, Sequence } from '@webpd/compiler'
+import { Class, Code } from '@webpd/compiler'
 import { ast, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     initValue: number
@@ -58,36 +58,31 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const makeNodeImplementation = ({
     generateOperation,
+    alphaName,
 }: {
     generateOperation: (
         input: Code,
         coeff: Code,
         lastOutput: Code,
         lastInput: Code,
-    ) => Code
+    ) => Code,
+    alphaName: VariableName,
 }): _NodeImplementation => {
-    const variableNames = generateVariableNamesNodeType('filter_r_t')
-
     return {
-        stateInitialization: () => 
-            Var(variableNames.stateClass, '', `{
-                lastOutput: 0,
-                lastInput: 0,
-            }`),
+        flags: {
+            alphaName,
+        },
+
+        state: ({ stateClassName }) => 
+            Class(stateClassName, [
+                Var('Float', 'lastOutput', 0),
+                Var('Float', 'lastInput', 0),
+            ]),
 
         loop: ({ ins, state, outs }) => ast`
             ${state}.lastOutput = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, `${state}.lastOutput`, `${state}.lastInput`)}
             ${state}.lastInput = ${ins.$0}
         `,
-
-        dependencies: [
-            () => Sequence([
-                Class(variableNames.stateClass, [
-                    Var('Float', 'lastOutput'),
-                    Var('Float', 'lastInput'),
-                ]),
-            ])
-        ],
     }
 }
 
@@ -100,12 +95,15 @@ const builders = {
 
 const nodeImplementations: NodeImplementations = {
     'rpole~': makeNodeImplementation({
+        alphaName: 'rpole_t',
         generateOperation: (input, coeff, lastOutput) => `${input} + ${coeff} * ${lastOutput}`,
     }),
     'rzero~': makeNodeImplementation({
+        alphaName: 'rzero_t',
         generateOperation: (input, coeff, _, lastInput) => `${input} - ${coeff} * ${lastInput}`,
     }),
     'rzero_rev~': makeNodeImplementation({
+        alphaName: 'rzero_rev_t',
         generateOperation: (input, coeff, _, lastInput) => `${lastInput} - ${coeff} * ${input}`
     }),
 }

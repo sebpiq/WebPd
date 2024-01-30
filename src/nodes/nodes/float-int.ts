@@ -29,7 +29,6 @@ import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
-import { VariableName } from '@webpd/compiler/src/ast/types'
 import { roundFloatAsPdInt } from '../global-code/numbers'
 
 interface NodeArguments {
@@ -57,68 +56,87 @@ const builder: NodeBuilder<NodeArguments> = {
     }),
 }
 
-// ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('float_int', [
-    'setValueInt', 
-    'setValueFloat'
+// ------------------------------- node implementation - shared ------------------------------ //
+const sharedNodeImplementation = (
+    variableNames: ReturnType<typeof generateVariableNamesNodeType>
+): _NodeImplementation => ({
+
+    state: ({ stateClassName }) => 
+        Class(stateClassName, [
+            Var('Float', 'value', 0),
+        ]),
+
+    initialization: ({ node: { args }, state }) => 
+        ast`
+            ${variableNames.setValue}(${state}, ${args.value})
+        `,
+    
+    messageReceivers: ({
+        snds,
+        state,
+    }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                ${variableNames.setValue}(${state}, msg_readFloatToken(m, 0))
+                ${snds.$0}(msg_floats([${state}.value]))
+                return 
+
+            } else if (msg_isBang(m)) {
+                ${snds.$0}(msg_floats([${state}.value]))
+                return
+                
+            }
+        `,
+
+        '1': coldFloatInletWithSetter(variableNames.setValue, state),
+    }),
+})
+
+// ------------------------------- node implementation - float ------------------------------ //
+const variableNamesFloat = generateVariableNamesNodeType('float', [
+    'setValue',
 ])
 
-const makeNodeImplementation = (setValueVariableName: VariableName): _NodeImplementation => {
-    return {
-        stateInitialization: () => 
-            Var(variableNames.stateClass, '', `{
-                value: 0,
-            }`),
+const nodeImplementationFloat: _NodeImplementation = {
+    ...sharedNodeImplementation(variableNamesFloat),
 
-        initialization: ({ node: { args }, state }) => 
-            ast`
-                ${setValueVariableName}(${state}, ${args.value})
-            `,
-        
-        messageReceivers: ({
-            snds,
-            state,
-        }) => ({
-            '0': AnonFunc([Var('Message', 'm')])`
-                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                    ${setValueVariableName}(${state}, msg_readFloatToken(m, 0))
-                    ${snds.$0}(msg_floats([${state}.value]))
-                    return 
-    
-                } else if (msg_isBang(m)) {
-                    ${snds.$0}(msg_floats([${state}.value]))
-                    return
-                    
-                }
-            `,
-    
-            '1': coldFloatInletWithSetter(setValueVariableName, state),
-        }),
+    core: ({ stateClassName }) => 
+        Sequence([
+            Func(variableNamesFloat.setValue, [
+                Var(stateClassName, 'state'),
+                Var('Float', 'value'),
+            ], 'void')`
+                state.value = value
+            `
+        ]),
 
-        dependencies: [
-            roundFloatAsPdInt,
-            bangUtils,
-            () => Sequence([
-                Class(variableNames.stateClass, [
-                    Var('Float', 'value')
-                ]),
-            
-                Func(variableNames.setValueInt, [
-                    Var(variableNames.stateClass, 'state'),
-                    Var('Float', 'value'),
-                ], 'void')`
-                    state.value = roundFloatAsPdInt(value)
-                `,
-            
-                Func(variableNames.setValueFloat, [
-                    Var(variableNames.stateClass, 'state'),
-                    Var('Float', 'value'),
-                ], 'void')`
-                    state.value = value
-                `
-            ])
-        ],
-    }
+    dependencies: [
+        bangUtils,
+    ],
+}
+
+// ------------------------------- node implementation - int ------------------------------ //
+const variableNamesInt = generateVariableNamesNodeType('int', [
+    'setValue',
+])
+
+const nodeImplementationInt: _NodeImplementation = {
+    ...sharedNodeImplementation(variableNamesInt),
+
+    core: ({ stateClassName }) => 
+        Sequence([
+            Func(variableNamesInt.setValue, [
+                Var(stateClassName, 'state'),
+                Var('Float', 'value'),
+            ], 'void')`
+                state.value = roundFloatAsPdInt(value)
+            `,
+        ]),
+
+    dependencies: [
+        roundFloatAsPdInt,
+        bangUtils,
+    ],
 }
 
 // ------------------------------------------------------------------- //
@@ -130,8 +148,8 @@ const builders = {
 }
 
 const nodeImplementations: NodeImplementations = {
-    float: makeNodeImplementation(variableNames.setValueFloat),
-    int: makeNodeImplementation(variableNames.setValueInt),
+    float: nodeImplementationFloat,
+    int: nodeImplementationInt,
 }
 
 export { builders, nodeImplementations, NodeArguments }
