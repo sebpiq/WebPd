@@ -70,7 +70,7 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'adc_t',
     },
 
-    loop: ({
+    dsp: ({
         outs,
         globs,
         node,

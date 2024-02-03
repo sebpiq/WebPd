@@ -94,7 +94,7 @@ const sharedNodeImplementation = (
         '0': ast`${variableNames.setRawOffset}(${state}, ${ins.$0})`
     }),
 
-    loop: ({ state, outs }) => 
+    dsp: ({ state, outs }) => 
         ast`${outs.$0} = buf_readSample(${state}.buffer, ${state}.offset)`,
 
     core: ({ stateClassName, globs }) => 

@@ -91,7 +91,7 @@ const renderAudioData = (
     engine.configure(sampleRate, blockSize)
     let frame = 0
     while (frame < durationSamples) {
-        engine.loop(blockInput, blockOutput)
+        engine.dspLoop(blockInput, blockOutput)
         for (let channel = 0; channel < channelCount.out; channel++) {
             output[channel].set(
                 blockOutput[channel].slice(

@@ -59,7 +59,7 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'controlMemory', 0),
         ]),
 
-    loop: ({ ins, outs, state }) => ast`
+    dsp: ({ ins, outs, state }) => ast`
         ${state}.signalMemory = ${outs.$0} = ${ins.$1} < ${state}.controlMemory ? ${ins.$0}: ${state}.signalMemory
         ${state}.controlMemory = ${ins.$1}
     `,

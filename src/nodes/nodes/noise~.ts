@@ -45,10 +45,10 @@ const builder: NodeBuilder<NodeArguments> = {
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'noise_t',
-        isLoopInline: true,
+        isDspInline: true,
     },
 
-    loop: () => 
+    dsp: () => 
         ast`Math.random() * 2 - 1`, 
 
     messageReceivers: () => ({

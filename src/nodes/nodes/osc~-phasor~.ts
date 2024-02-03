@@ -95,7 +95,7 @@ const makeNodeImplementation = ({
             '0': ast`${variableNames.setStep}(${state}, ${ins.$0})`
         }),
 
-        loop: ({ state, outs }) => ast`
+        dsp: ({ state, outs }) => ast`
             ${outs.$0} = ${generateOperation(`${state}.phase`)}
             ${state}.phase += ${state}.step
         `,

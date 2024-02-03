@@ -126,7 +126,7 @@ const nodeImplementation: _NodeImplementation = {
         `,
     }),
 
-    loop: ({
+    dsp: ({
         state,
         snds,
         outs,

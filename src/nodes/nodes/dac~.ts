@@ -71,7 +71,7 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'dac_t',
     },
 
-    loop: ({
+    dsp: ({
         ins,
         globs,
         node,

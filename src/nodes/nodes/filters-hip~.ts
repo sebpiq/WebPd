@@ -75,7 +75,7 @@ const nodeImplementation: _NodeImplementation = {
         `
     }),
 
-    loop: ({ ins, state, outs }) => ast`
+    dsp: ({ ins, state, outs }) => ast`
         ${state}.current = ${ins.$0} + ${state}.coeff * ${state}.previous
         ${outs.$0} = ${state}.normal * (${state}.current - ${state}.previous)
         ${state}.previous = ${state}.current

@@ -89,7 +89,7 @@ const nodeImplementation: _NodeImplementation = {
         })
     `,
 
-    loop: ({ ins, outs, state }) => ast`
+    dsp: ({ ins, outs, state }) => ast`
         ${state}.y = ${ins.$0} + ${state}.coef1 * ${state}.ym1 + ${state}.coef2 * ${state}.ym2
         ${outs.$0} = ${state}.gain * ${state}.y
         ${state}.ym2 = ${state}.ym1

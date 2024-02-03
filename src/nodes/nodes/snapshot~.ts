@@ -59,7 +59,7 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'currentValue', 0)
         ]),
 
-    loop: ({ ins, state }) => ast`
+    dsp: ({ ins, state }) => ast`
         ${state}.currentValue = ${ins.$0}
     `,
 

@@ -86,7 +86,7 @@ const nodeImplementation: _NodeImplementation = {
         })
     `,
 
-    loop: ({ ins, state }) => 
+    dsp: ({ ins, state }) => 
         ast`buf_writeSample(${state}.buffer, ${ins.$0})`,
 
     messageReceivers: ({ state }) => ({

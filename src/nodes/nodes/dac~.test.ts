@@ -98,7 +98,7 @@ describe('dac~', () => {
             const nodeImplementations: NodeImplementations = {
                 'dac~': nodeImplementation,
                 counter: {
-                    loop: ({ globs, outs }) =>
+                    dsp: ({ globs, outs }) =>
                         Sequence([
                             functional
                                 .countTo(args.channelMapping.length)

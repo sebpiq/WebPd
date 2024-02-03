@@ -46,10 +46,10 @@ const builder: NodeBuilder<NodeArguments> = {
 const nodeImplementation: _NodeImplementation = { 
     flags: {
         isPureFunction: true,
-        isLoopInline: true,
+        isDspInline: true,
         alphaName: '_mixer_t',
     },
-    loop: ({ node, ins }) =>
+    dsp: ({ node, ins }) =>
         ast`${Object.keys(node.inlets)
             .map((inletId) => ins[inletId])
             .join(' + ')}` 

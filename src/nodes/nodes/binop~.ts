@@ -61,58 +61,58 @@ const nodeImplementations: NodeImplementations = {
     '+~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'add_t',
         },
-        loop: ({ ins }) => ast`${ins.$0} + ${ins.$1}`,
+        dsp: ({ ins }) => ast`${ins.$0} + ${ins.$1}`,
     },
     '-~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'sub_t',
         },
-        loop: ({ ins }) => ast`${ins.$0} - ${ins.$1}`,
+        dsp: ({ ins }) => ast`${ins.$0} - ${ins.$1}`,
     },
     '*~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'mul_t',
         },
-        loop: ({ ins }) => ast`${ins.$0} * ${ins.$1}`,
+        dsp: ({ ins }) => ast`${ins.$0} * ${ins.$1}`,
     },
     '/~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'div_t',
         },
-        loop: ({ ins }) => ast`${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
+        dsp: ({ ins }) => ast`${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
     },
     'min~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'min_t',
         },
-        loop: ({ ins }) => ast`Math.min(${ins.$0}, ${ins.$1})`,
+        dsp: ({ ins }) => ast`Math.min(${ins.$0}, ${ins.$1})`,
     },
     'max~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'max_t',
         },
-        loop: ({ ins }) => ast`Math.max(${ins.$0}, ${ins.$1})`,
+        dsp: ({ ins }) => ast`Math.max(${ins.$0}, ${ins.$1})`,
     },
     'pow~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'pow_t',
         },
-        loop: ({ ins }) => ast`pow(${ins.$0}, ${ins.$1})`,
+        dsp: ({ ins }) => ast`pow(${ins.$0}, ${ins.$1})`,
         dependencies: [pow],
     },
 }

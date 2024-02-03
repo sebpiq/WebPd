@@ -137,7 +137,7 @@ const nodeImplementationThrow: _NodeImplementation = {
         alphaName: 'throw_t',
     },
 
-    loop: ({ ins, state }) => ast`
+    dsp: ({ ins, state }) => ast`
         addAssignSignalBus(${state}.busName, ${ins.$0})
     `,
 
@@ -173,7 +173,7 @@ const nodeImplementationCatch: _NodeImplementation = {
         alphaName: 'catch_t',
     },
 
-    loop: ({
+    dsp: ({
         outs,
         state,
     }) => ast`
@@ -201,7 +201,7 @@ const nodeImplementationSend: _NodeImplementation = {
         alphaName: 'send_t',
     },
 
-    loop: ({ state, ins }) => ast`
+    dsp: ({ state, ins }) => ast`
         setSignalBus(${state}.busName, ${ins.$0})
     `,
 
@@ -223,10 +223,10 @@ const nodeImplementationReceive: _NodeImplementation = {
 
     flags: {
         alphaName: 'receive_t',
-        isLoopInline: true,
+        isDspInline: true,
     },
 
-    loop: ({ state }) => 
+    dsp: ({ state }) => 
         ast`readSignalBus(${state}.busName)`,
     
     messageReceivers: ({ state }) => ({

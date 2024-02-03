@@ -60,7 +60,7 @@ const variableNames = generateVariableNamesNodeType('tabread_t', [
 
 const nodeImplementation: _NodeImplementation = {
     flags: {
-        isLoopInline: true,
+        isDspInline: true,
         alphaName: 'tabread_t',
     },
 
@@ -103,7 +103,7 @@ const nodeImplementation: _NodeImplementation = {
         `,
     }),
 
-    loop: ({ ins, state }) => 
+    dsp: ({ ins, state }) => 
         ast`${state}.array[toInt(Math.max(Math.min(Math.floor(${ins.$0}), ${state}.array.length - 1), 0))]`,
     
     core: ({ stateClassName }) => 

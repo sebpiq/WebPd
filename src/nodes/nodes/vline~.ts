@@ -67,7 +67,7 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'nextDelaySamp', 0),
         ]),
 
-    loop: ({ outs, state, globs }) => ast`
+    dsp: ({ outs, state, globs }) => ast`
         if (${state}.lineSegments.length) {
             if (toFloat(${globs.frame}) < ${state}.lineSegments[0].p0.x) {
 

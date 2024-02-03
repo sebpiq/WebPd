@@ -78,7 +78,7 @@ const nodeImplementation: _NodeImplementation = {
         `
     }),
         
-    loop: ({ ins, state, outs }) => ast`
+    dsp: ({ ins, state, outs }) => ast`
         ${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous
     `,
 

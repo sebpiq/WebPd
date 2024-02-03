@@ -85,7 +85,7 @@ const nodeImplementation: _NodeImplementation = {
             Var('Int', 'cursor', 0),
         ]),
 
-    loop: ({ state, ins, node: { args } }) => ast`
+    dsp: ({ state, ins, node: { args } }) => ast`
         if (${state}.isWriting === true) {
             ${functional.countTo(args.channelCount).map((i) => 
                 `${state}.block[${i}][${state}.cursor] = ${ins[i]}`)}

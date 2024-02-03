@@ -2752,7 +2752,7 @@ var WebPdRuntime = (function (exports) {
       fs: { type: 'proxy', value: createFsModule(rawModule) },
       metadata: { type: 'raw' },
       configure: { type: 'raw' },
-      loop: { type: 'raw' },
+      dspLoop: { type: 'raw' },
       io: { type: 'raw' },
       commons: {
           type: 'proxy',

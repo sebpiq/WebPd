@@ -122,7 +122,7 @@ const nodeImplementation: _NodeImplementation = {
         `,
     }),
 
-    loop: ({ state, snds, outs }) => ast`
+    dsp: ({ state, snds, outs }) => ast`
         if (${state}.readPosition < ${state}.readUntil) {
             ${outs.$0} = ${state}.array[${state}.readPosition]
             ${state}.readPosition++

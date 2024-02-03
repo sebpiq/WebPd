@@ -193,7 +193,7 @@ const nodeImplementationExprTilde: _NodeImplementation = {
         alphaName: 'expr_t',
     },
 
-    loop: ({
+    dsp: ({
         node: { args },
         state,
         outs, 
@@ -314,7 +314,7 @@ export const tokenizeExpression = (expression: string) => {
 
 export const renderTokenizedExpression = (
     state: VariableName,
-    ins: Parameters<NodeImplementation['loop']>[0]['ins'] | null,
+    ins: Parameters<NodeImplementation['dsp']>[0]['ins'] | null,
     tokens: Array<ExpressionToken>, 
 ): Code =>
     // Add '+(' to convert for example boolean output to float

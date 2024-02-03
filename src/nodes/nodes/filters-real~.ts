@@ -79,7 +79,7 @@ const makeNodeImplementation = ({
                 Var('Float', 'lastInput', 0),
             ]),
 
-        loop: ({ ins, state, outs }) => ast`
+        dsp: ({ ins, state, outs }) => ast`
             ${state}.lastOutput = ${outs.$0} = ${generateOperation(ins.$0, ins.$1, `${state}.lastOutput`, `${state}.lastInput`)}
             ${state}.lastInput = ${ins.$0}
         `,

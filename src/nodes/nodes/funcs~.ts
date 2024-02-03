@@ -43,52 +43,52 @@ const nodeImplementations: NodeImplementations = {
     'abs~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'abs_t',
         },
-        loop: ({ ins }) => ast`Math.abs(${ins.$0})`,
+        dsp: ({ ins }) => ast`Math.abs(${ins.$0})`,
     },
     'cos~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'cos_t',
         },
-        loop: ({ ins }) => ast`Math.cos(${ins.$0} * 2 * Math.PI)`,
+        dsp: ({ ins }) => ast`Math.cos(${ins.$0} * 2 * Math.PI)`,
     },
     'wrap~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'wrap_t',
         },
-        loop: ({ ins }) => ast`(1 + (${ins.$0} % 1)) % 1`,
+        dsp: ({ ins }) => ast`(1 + (${ins.$0} % 1)) % 1`,
     },
     'sqrt~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'sqrt_t',
         },
-        loop: ({ ins }) =>
+        dsp: ({ ins }) =>
             ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0`,
     },
     'mtof~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'mtof_t',
         },
-        loop: ({ ins }) => ast`mtof(${ins.$0})`,
+        dsp: ({ ins }) => ast`mtof(${ins.$0})`,
         dependencies: [mtof],
     },
     'ftom~': {
         flags: {
             isPureFunction: true,
-            isLoopInline: true,
+            isDspInline: true,
             alphaName: 'ftom_t',
         },
-        loop: ({ ins }) => ast`ftom(${ins.$0})`,
+        dsp: ({ ins }) => ast`ftom(${ins.$0})`,
         dependencies: [ftom],
     },
 }

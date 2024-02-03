@@ -120,15 +120,13 @@ const makeNodeImplementation = ({
             snds,
             node: { args },
         }) =>
-            // There is a circular dependency problem between the state and snds.$0 so we can actually
-            // only use snds.$0 inside the callback of `commons_waitEngineConfigure`.
-            // TODO : assemblyscript-upgrade - this is probably no true anymore.
-            ast`    
+            ast`
+                ${state}.messageSender = ${snds.$0}
+
                 commons_waitEngineConfigure(() => {
                     ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
                         ${variableNames.receiveMessage}(${state}, m)
                     `}
-                    ${state}.messageSender = ${snds.$0}
                     ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
                 })
     

@@ -95,7 +95,7 @@ describe('throw~ / catch~', () => {
                 ...nodeImplementationsThrowCatchSendReceive,
                 'dac~': nodeImplementationDac,
                 counter: {
-                    loop: ({ globs, outs }) =>
+                    dsp: ({ globs, outs }) =>
                         ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }
@@ -217,7 +217,7 @@ describe('throw~ / catch~', () => {
                     nodeImplementationsThrowCatchSendReceive['receive~'],
                 'dac~': nodeImplementationDac,
                 counter: {
-                    loop: ({ globs, outs }) =>
+                    dsp: ({ globs, outs }) =>
                         ast`${outs.$0} = toFloat(${globs.frame})`,
                 },
             }

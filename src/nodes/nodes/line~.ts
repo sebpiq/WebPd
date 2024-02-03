@@ -94,7 +94,7 @@ const nodeImplementation: _NodeImplementation = {
         '1': coldFloatInletWithSetter(variableNames.setNextDuration, state),
     }),
 
-    loop: ({ outs, state, globs }) => ast`
+    dsp: ({ outs, state, globs }) => ast`
         ${outs.$0} = ${state}.currentValue
         if (toFloat(${globs.frame}) < ${state}.currentLine.p1.x) {
             ${state}.currentValue += ${state}.currentLine.dy
