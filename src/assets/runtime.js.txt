@@ -1888,7 +1888,8 @@ var WebPdRuntime = (function (exports) {
    * along with this program. If not, see <http://www.gnu.org/licenses/>.
    */
   const msg = {
-      codeGenerator: ({ target }) => {
+      codeGenerator: ({ settings: { target } }) => {
+          // prettier-ignore
           const declareFuncs = {
               msg_create: Func('msg_create', [Var('MessageTemplate', 'template')], 'Message'),
               msg_writeStringToken: Func('msg_writeStringToken', [
@@ -1939,6 +1940,7 @@ var WebPdRuntime = (function (exports) {
               ], 'string')
           };
           if (target === 'assemblyscript') {
+              // prettier-ignore
               return Sequence([
                   `
                 type MessageFloatToken = Float
@@ -2163,6 +2165,7 @@ var WebPdRuntime = (function (exports) {
               ]);
           }
           else if (target === 'javascript') {
+              // prettier-ignore
               return Sequence([
                   ConstVar('string', 'MSG_FLOAT_TOKEN', '"number"'),
                   ConstVar('string', 'MSG_STRING_TOKEN', '"string"'),
@@ -2260,7 +2263,7 @@ var WebPdRuntime = (function (exports) {
   const FS_OPERATION_SUCCESS = 0;
   const FS_OPERATION_FAILURE = 1;
   const fsCore = {
-      codeGenerator: ({ target }) => {
+      codeGenerator: ({ settings: { target } }) => {
           const content = [];
           if (target === 'assemblyscript') {
               content.push(`
@@ -2271,6 +2274,7 @@ var WebPdRuntime = (function (exports) {
                 type fs_Url = string
             `);
           }
+          // prettier-ignore
           return Sequence([
               ...content,
               ConstVar('Int', 'FS_OPERATION_SUCCESS', FS_OPERATION_SUCCESS.toString()),
@@ -2329,6 +2333,7 @@ var WebPdRuntime = (function (exports) {
       dependencies: [msg],
   };
   ({
+      // prettier-ignore
       codeGenerator: () => Sequence([
           Func('fs_readSoundFile', [
               Var('fs_Url', 'url'),
@@ -2368,6 +2373,7 @@ var WebPdRuntime = (function (exports) {
       dependencies: [fsCore],
   });
   ({
+      // prettier-ignore
       codeGenerator: () => Sequence([
           Func('fs_writeSoundFile', [
               Var('FloatArray[]', 'sound'),
@@ -2408,6 +2414,7 @@ var WebPdRuntime = (function (exports) {
       dependencies: [fsCore],
   });
   const fsSoundStreamCore = {
+      // prettier-ignore
       codeGenerator: () => Sequence([
           ConstVar('Map<fs_OperationId, Array<buf_SoundBuffer>>', '_FS_SOUND_STREAM_BUFFERS', 'new Map()'),
           ConstVar('Int', '_FS_SOUND_BUFFER_LENGTH', '20 * 44100'),
@@ -2442,14 +2449,12 @@ var WebPdRuntime = (function (exports) {
           },
       ],
       imports: [
-          Func('i_fs_closeSoundStream', [
-              Var('fs_OperationId', 'id'),
-              Var('fs_OperationStatus', 'status'),
-          ], 'void') ``,
+          Func('i_fs_closeSoundStream', [Var('fs_OperationId', 'id'), Var('fs_OperationStatus', 'status')], 'void') ``,
       ],
       dependencies: [bufCore, fsCore],
   };
   ({
+      // prettier-ignore
       codeGenerator: () => Sequence([
           Func('fs_openSoundReadStream', [
               Var('fs_Url', 'url'),
@@ -2493,6 +2498,7 @@ var WebPdRuntime = (function (exports) {
       dependencies: [fsSoundStreamCore, bufPushPull],
   });
   ({
+      // prettier-ignore
       codeGenerator: () => Sequence([
           Func('fs_openSoundWriteStream', [
               Var('fs_Url', 'url'),
@@ -2519,10 +2525,7 @@ var WebPdRuntime = (function (exports) {
               Var('fs_Url', 'url'),
               Var('Message', 'info'),
           ], 'void') ``,
-          Func('i_fs_sendSoundStreamData', [
-              Var('fs_OperationId', 'id'),
-              Var('FloatArray[]', 'block'),
-          ], 'void') ``,
+          Func('i_fs_sendSoundStreamData', [Var('fs_OperationId', 'id'), Var('FloatArray[]', 'block')], 'void') ``,
       ],
       dependencies: [fsSoundStreamCore],
   });

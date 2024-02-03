@@ -49,6 +49,7 @@ const builder: NodeBuilder<NodeArguments> = {
 const nodeImplementation: _NodeImplementation = {
     flags: {
         isPureFunction: true,
+        isLoopInline: true,
         alphaName: 'sig_t',
     },
     
@@ -57,7 +58,7 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'currentValue', args.initValue)
         ]),
 
-    inlineLoop: ({ state }) => 
+    loop: ({ state }) => 
         ast`${state}.currentValue`,
 
     messageReceivers: ({ state }) => ({

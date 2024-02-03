@@ -46,9 +46,10 @@ const builder: NodeBuilder<NodeArguments> = {
 const nodeImplementation: _NodeImplementation = { 
     flags: {
         isPureFunction: true,
+        isLoopInline: true,
         alphaName: '_mixer_t',
     },
-    inlineLoop: ({ node, ins }) =>
+    loop: ({ node, ins }) =>
         ast`${Object.keys(node.inlets)
             .map((inletId) => ins[inletId])
             .join(' + ')}` 

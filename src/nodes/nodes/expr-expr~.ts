@@ -18,11 +18,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Code, stdlib, functional, Class } from '@webpd/compiler'
+import {
+    Code,
+    stdlib,
+    functional,
+    Class,
+    AnonFunc,
+    ast,
+    Sequence,
+    Var,
+} from '@webpd/compiler'
 import {
     NodeImplementation,
     NodeImplementations,
-    PrecompiledNodeCode,
 } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
@@ -32,8 +40,6 @@ import {
     messageTokenToFloat,
     messageTokenToString,
 } from '../type-arguments'
-import { AnonFunc, ast, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
@@ -308,7 +314,7 @@ export const tokenizeExpression = (expression: string) => {
 
 export const renderTokenizedExpression = (
     state: VariableName,
-    ins: PrecompiledNodeCode['generationContext']['signalIns'] | null,
+    ins: Parameters<NodeImplementation['loop']>[0]['ins'] | null,
     tokens: Array<ExpressionToken>, 
 ): Code =>
     // Add '+(' to convert for example boolean output to float

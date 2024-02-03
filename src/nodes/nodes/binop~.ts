@@ -61,51 +61,58 @@ const nodeImplementations: NodeImplementations = {
     '+~': {
         flags: {
             isPureFunction: true,
+            isLoopInline: true,
             alphaName: 'add_t',
         },
-        inlineLoop: ({ ins }) => ast`${ins.$0} + ${ins.$1}`,
+        loop: ({ ins }) => ast`${ins.$0} + ${ins.$1}`,
     },
     '-~': {
         flags: {
             isPureFunction: true,
+            isLoopInline: true,
             alphaName: 'sub_t',
         },
-        inlineLoop: ({ ins }) => ast`${ins.$0} - ${ins.$1}`,
+        loop: ({ ins }) => ast`${ins.$0} - ${ins.$1}`,
     },
     '*~': {
         flags: {
             isPureFunction: true,
+            isLoopInline: true,
             alphaName: 'mul_t',
         },
-        inlineLoop: ({ ins }) => ast`${ins.$0} * ${ins.$1}`,
+        loop: ({ ins }) => ast`${ins.$0} * ${ins.$1}`,
     },
     '/~': {
         flags: {
             isPureFunction: true,
+            isLoopInline: true,
             alphaName: 'div_t',
         },
-        inlineLoop: ({ ins }) => ast`${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
+        loop: ({ ins }) => ast`${ins.$1} !== 0 ? ${ins.$0} / ${ins.$1} : 0`,
     },
     'min~': {
         flags: {
             isPureFunction: true,
+            isLoopInline: true,
             alphaName: 'min_t',
         },
-        inlineLoop: ({ ins }) => ast`Math.min(${ins.$0}, ${ins.$1})`,
+        loop: ({ ins }) => ast`Math.min(${ins.$0}, ${ins.$1})`,
     },
     'max~': {
         flags: {
             isPureFunction: true,
+            isLoopInline: true,
             alphaName: 'max_t',
         },
-        inlineLoop: ({ ins }) => ast`Math.max(${ins.$0}, ${ins.$1})`,
+        loop: ({ ins }) => ast`Math.max(${ins.$0}, ${ins.$1})`,
     },
     'pow~': {
         flags: {
             isPureFunction: true,
+            isLoopInline: true,
             alphaName: 'pow_t',
         },
-        inlineLoop: ({ ins }) => ast`pow(${ins.$0}, ${ins.$1})`,
+        loop: ({ ins }) => ast`pow(${ins.$0}, ${ins.$1})`,
         dependencies: [pow],
     },
 }

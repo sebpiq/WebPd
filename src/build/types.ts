@@ -22,7 +22,6 @@ import {
     CompilationSettings,
     DspGraph,
     NodeImplementations,
-    Compilation,
 } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
@@ -37,7 +36,7 @@ export interface Artefacts {
         graph: DspGraph.Graph
         arrays: DspGraph.Arrays
         pd: PdJson.Pd
-        io: Compilation['settings']['io']
+        io: CompilationSettings['io']
     }
     javascript?: string
     assemblyscript?: string

@@ -52,6 +52,7 @@ const builder: NodeBuilder<NodeArguments> = {
 const nodeImplementation: _NodeImplementation = {
     flags: {
         isPureFunction: true,
+        isLoopInline: true,
         alphaName: 'clip_t',
     },
 
@@ -61,7 +62,7 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'maxValue', args.maxValue),
         ]),
 
-    inlineLoop: ({ ins, state }) =>
+    loop: ({ ins, state }) =>
         ast`Math.max(Math.min(${state}.maxValue, ${ins.$0}), ${state}.minValue)`,
     
     messageReceivers: ({ state }) => ({

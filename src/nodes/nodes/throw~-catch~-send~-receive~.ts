@@ -223,9 +223,10 @@ const nodeImplementationReceive: _NodeImplementation = {
 
     flags: {
         alphaName: 'receive_t',
+        isLoopInline: true,
     },
 
-    inlineLoop: ({ state }) => 
+    loop: ({ state }) => 
         ast`readSignalBus(${state}.busName)`,
     
     messageReceivers: ({ state }) => ({
