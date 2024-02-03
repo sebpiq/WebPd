@@ -91,14 +91,15 @@ const makeNodeImplementation = ({
             '1': coldFloatInletWithSetter(variableNames.setPhase, state),
         }),
 
-        caching: ({ state, ins }) => ({
-            '0': ast`${variableNames.setStep}(${state}, ${ins.$0})`
+        dsp: ({ state, outs, ins }) => ({
+            inlets: {
+                '0': ast`${variableNames.setStep}(${state}, ${ins.$0})`
+            },
+            loop: ast`
+                ${outs.$0} = ${generateOperation(`${state}.phase`)}
+                ${state}.phase += ${state}.step
+            `
         }),
-
-        dsp: ({ state, outs }) => ast`
-            ${outs.$0} = ${generateOperation(`${state}.phase`)}
-            ${state}.phase += ${state}.step
-        `,
 
         core: ({ stateClassName, globs }) => 
             Sequence([

@@ -77,18 +77,19 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'ym2', 0),
         ]),
 
-    caching: ({ state, ins }) => ({
-        '1': ast`
-            ${variableNames.setFrequency}(${state}, ${ins.$1})
+    dsp: ({ ins, outs, state }) => ({
+        inlets: {
+            '1': ast`
+                ${variableNames.setFrequency}(${state}, ${ins.$1})
+            `
+        },
+        loop: ast`
+            ${state}.y = ${ins.$0} + ${state}.coef1 * ${state}.ym1 + ${state}.coef2 * ${state}.ym2
+            ${outs.$1} = ${outs.$0} = ${state}.gain * ${state}.y
+            ${state}.ym2 = ${state}.ym1
+            ${state}.ym1 = ${state}.y
         `
     }),
-
-    dsp: ({ ins, outs, state }) => ast`
-        ${state}.y = ${ins.$0} + ${state}.coef1 * ${state}.ym1 + ${state}.coef2 * ${state}.ym2
-        ${outs.$1} = ${outs.$0} = ${state}.gain * ${state}.y
-        ${state}.ym2 = ${state}.ym1
-        ${state}.ym1 = ${state}.y
-    `,
 
     messageReceivers: ({ state }) => ({
         '2': coldFloatInletWithSetter(variableNames.setQ, state),

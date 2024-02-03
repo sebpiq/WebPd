@@ -90,12 +90,12 @@ const sharedNodeImplementation = (
         })
     `,
 
-    caching: ({ state, ins }) => ({
-        '0': ast`${variableNames.setRawOffset}(${state}, ${ins.$0})`
+    dsp: ({ state, outs, ins }) => ({
+        inlets: {
+            '0': ast`${variableNames.setRawOffset}(${state}, ${ins.$0})`
+        },    
+        loop: ast`${outs.$0} = buf_readSample(${state}.buffer, ${state}.offset)`,
     }),
-
-    dsp: ({ state, outs }) => 
-        ast`${outs.$0} = buf_readSample(${state}.buffer, ${state}.offset)`,
 
     core: ({ stateClassName, globs }) => 
         Sequence([

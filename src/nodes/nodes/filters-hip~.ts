@@ -67,19 +67,20 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'coeff', 0),
             Var('Float', 'normal', 0),
         ]),
-    
-    caching: ({ state, ins, globs }) => ({
-        '1': ast`
-            ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
-            ${state}.normal = 0.5 * (1 + ${state}.coeff)
+
+    dsp: ({ ins, state, outs, globs }) => ({
+        inlets: {
+            '1': ast`
+                ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
+                ${state}.normal = 0.5 * (1 + ${state}.coeff)
+            `
+        },
+        loop: ast`
+            ${state}.current = ${ins.$0} + ${state}.coeff * ${state}.previous
+            ${outs.$0} = ${state}.normal * (${state}.current - ${state}.previous)
+            ${state}.previous = ${state}.current
         `
     }),
-
-    dsp: ({ ins, state, outs }) => ast`
-        ${state}.current = ${ins.$0} + ${state}.coeff * ${state}.previous
-        ${outs.$0} = ${state}.normal * (${state}.current - ${state}.previous)
-        ${state}.previous = ${state}.current
-    `,
 }
 
 // ------------------------------------------------------------------- //

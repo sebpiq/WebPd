@@ -71,16 +71,13 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'previous', 0),
             Var('Float', 'coeff', 0),
         ]),
-
-    caching: ({ state, ins }) => ({
-        '1': ast`
-            ${variableNames.setFreq}(${state}, ${ins.$1})
-        `
-    }),
         
-    dsp: ({ ins, state, outs }) => ast`
-        ${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous
-    `,
+    dsp: ({ ins, state, outs }) => ({
+        inlets: {
+            '1': ast`${variableNames.setFreq}(${state}, ${ins.$1})`
+        },
+        loop: ast`${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous`
+    }),
 
     messageReceivers: ({ state }) => ({
         '1': coldFloatInletWithSetter(variableNames.setFreq, state),
