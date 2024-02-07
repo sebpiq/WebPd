@@ -111,8 +111,8 @@ const makeNodeImplementation = ({
                 Var('Message', 'value', 'msg_create([])'),
                 Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
                 Var('string', 'sendBusName', `"${args.sendBusName}"`),
-                Var('(m: Message) => void', 'messageReceiver', variableNames.defaultMessageHandler),
-                Var('(m: Message) => void', 'messageSender', variableNames.defaultMessageHandler),
+                Var('MessageHandler', 'messageReceiver', variableNames.defaultMessageHandler),
+                Var('MessageHandler', 'messageSender', variableNames.defaultMessageHandler),
             ]),
 
         initialization: ({

@@ -67,7 +67,7 @@ export const signalBuses: GlobalCodeGenerator = () =>
 export const messageBuses: GlobalCodeGeneratorWithSettings = {
     codeGenerator: () => Sequence([
         ConstVar(
-            'Map<string, Array<(m: Message) => void>>',
+            'Map<string, Array<MessageHandler>>',
             'MSG_BUSES',
             'new Map()'
         ),
@@ -78,7 +78,7 @@ export const messageBuses: GlobalCodeGeneratorWithSettings = {
         )`
             ${Var('Int', 'i', '0')}
             ${ConstVar(
-                'Array<(m: Message) => void>',
+                'Array<MessageHandler>',
                 'callbacks',
                 'MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []'
             )}
@@ -88,7 +88,7 @@ export const messageBuses: GlobalCodeGeneratorWithSettings = {
         `,
 
         Func('msgBusSubscribe', 
-            [Var('string', 'busName'), Var('(m: Message) => void', 'callback')],
+            [Var('string', 'busName'), Var('MessageHandler', 'callback')],
             'void'
         )`
             if (!MSG_BUSES.has(busName)) {
@@ -98,13 +98,13 @@ export const messageBuses: GlobalCodeGeneratorWithSettings = {
         `,
 
         Func('msgBusUnsubscribe', 
-            [Var('string', 'busName'), Var('(m: Message) => void', 'callback')],
+            [Var('string', 'busName'), Var('MessageHandler', 'callback')],
             'void'
         )`
             if (!MSG_BUSES.has(busName)) {
                 return
             }
-            ${ConstVar('Array<(m: Message) => void>', 'callbacks', 'MSG_BUSES.get(busName)')}
+            ${ConstVar('Array<MessageHandler>', 'callbacks', 'MSG_BUSES.get(busName)')}
             ${ConstVar('Int', 'found', 'callbacks.indexOf(callback) !== -1')}
             if (found !== -1) {
                 callbacks.splice(found, 1)

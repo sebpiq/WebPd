@@ -100,7 +100,7 @@ const nodeImplementation: _NodeImplementation = {
                         : `msg_strings(["${value}"])`).join(',')
             }]`),
             Var(`Array<${variableNames.ScheduledMessage}>`, 'scheduledMessages', '[]'),
-            Var('Array<(m: Message) => void>', 'snds', '[]'),
+            Var('Array<MessageHandler>', 'snds', '[]'),
         ]),
     
     initialization: ({ node: { args }, state, snds }) => 

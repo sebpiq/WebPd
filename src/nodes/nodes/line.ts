@@ -84,7 +84,7 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'grainSamp', 0),
             Var('Float', 'nextDurationSamp', 0),
             Var('SkedId', 'skedId', 'SKED_ID_NULL'),
-            Var('(m: Message) => void', 'snd0', ast`${AnonFunc([Var('Message', 'm')])``}`),
+            Var('MessageHandler', 'snd0', ast`${AnonFunc([Var('Message', 'm')])``}`),
             Var('SkedCallback', 'tickCallback', ast`${AnonFunc()``}`),
         ]),
     
