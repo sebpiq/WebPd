@@ -105,13 +105,11 @@ const nodeImplementation: _NodeImplementation = {
     
     initialization: ({ node: { args }, state, snds }) => 
         ast`
-            commons_waitEngineConfigure(() => {
-                ${variableNames.setDelay}(${state}, ${args.delay})
-                ${state}.snds = [${functional.countTo(args.typeArguments.length)
-                    .reverse()
-                    .map((i) => snds[i]).join(', ')
-                }]
-            })
+            ${variableNames.setDelay}(${state}, ${args.delay})
+            ${state}.snds = [${functional.countTo(args.typeArguments.length)
+                .reverse()
+                .map((i) => snds[i]).join(', ')
+            }]
         `,
 
     messageReceivers: ({ 
@@ -283,7 +281,6 @@ const nodeImplementation: _NodeImplementation = {
         messageTokenToString,
         bangUtils,
         stringMsgUtils,
-        stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
     ],
 }

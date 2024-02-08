@@ -246,7 +246,7 @@ describe('controls-float', () => {
                     bitDepth,
                     compileResult.code
                 )
-                engine.configure(44100, 1)
+                engine.initialize(44100, 1)
                 return engine
             }
 

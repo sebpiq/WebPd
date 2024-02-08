@@ -88,7 +88,7 @@ const renderAudioData = (
     const blockOutput = _makeBlock('out', audioSettings)
     const output = _makeBlock('out', audioSettings, durationSamples)
 
-    engine.configure(sampleRate, blockSize)
+    engine.initialize(sampleRate, blockSize)
     let frame = 0
     while (frame < durationSamples) {
         engine.dspLoop(blockInput, blockOutput)

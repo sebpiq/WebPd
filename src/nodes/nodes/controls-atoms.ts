@@ -78,13 +78,11 @@ const makeNodeImplementation = ({
             node: { args },
             snds,
         }) => ast`
-            commons_waitEngineConfigure(() => {
-                ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-                    ${variableNames.receiveMessage}(${state}, m)
-                `}
-                ${state}.messageSender = ${snds.$0}
-                ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
-            })
+            ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
+                ${variableNames.receiveMessage}(${state}, m)
+            `}
+            ${state}.messageSender = ${snds.$0}
+            ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
         `,
 
         messageReceivers: ({ state }) => ({
@@ -143,7 +141,6 @@ const makeNodeImplementation = ({
             bangUtils,
             messageBuses,
             msgUtils,
-            stdlib.commonsWaitEngineConfigure,
         ],
     }
 }

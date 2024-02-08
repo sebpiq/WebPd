@@ -18,8 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph } from '@webpd/compiler'
-import { nodeDefaults } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import { DspGraph, dspGraph } from '@webpd/compiler'
 import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import {
@@ -59,7 +58,7 @@ export const buildNode = <NodeArgsType>(
     args: NodeArgsType
 ): DspGraph.Node => {
     return {
-        ...nodeDefaults('DUMMY', type),
+        ...dspGraph.helpers.nodeDefaults('DUMMY', type),
         type,
         args: args as unknown as DspGraph.NodeArguments,
         ...nodeBuilder.build(args),

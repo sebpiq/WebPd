@@ -82,9 +82,7 @@ const makeNodeImplementation = ({
             ]),
 
         initialization: ({ state }) => ast`
-            commons_waitEngineConfigure(() => {
-                ${variableNames.setStep}(${state}, 0)
-            })
+            ${variableNames.setStep}(${state}, 0)
         `,
 
         messageReceivers: ({ state }) => ({
@@ -117,10 +115,6 @@ const makeNodeImplementation = ({
                     state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}
                 `,
             ]),
-
-        dependencies: [
-            stdlib.commonsWaitEngineConfigure,
-        ]
     }
 
     return nodeImplementation

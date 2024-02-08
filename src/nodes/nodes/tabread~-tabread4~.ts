@@ -75,15 +75,13 @@ const nodeImplementation: _NodeImplementation = {
         ]),
 
     initialization: ({ state }) => ast`
-        commons_waitEngineConfigure(() => {
-            if (${state}.arrayName.length) {
-                ${variableNames.setArrayName}(
-                    ${state}, 
-                    ${state}.arrayName,
-                    () => ${variableNames.setArrayNameFinalize}(${state})
-                )
-            }
-        })
+        if (${state}.arrayName.length) {
+            ${variableNames.setArrayName}(
+                ${state}, 
+                ${state}.arrayName,
+                () => ${variableNames.setArrayNameFinalize}(${state})
+            )
+        }
     `,
 
     messageReceivers: ({ state }) => ({
@@ -119,7 +117,6 @@ const nodeImplementation: _NodeImplementation = {
 
     dependencies: [
         bangUtils,
-        stdlib.commonsWaitEngineConfigure,
         stdlib.commonsArrays,
         stringMsgUtils,
     ],

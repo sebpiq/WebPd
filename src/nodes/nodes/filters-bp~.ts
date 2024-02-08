@@ -84,9 +84,7 @@ const nodeImplementation: _NodeImplementation = {
         ]),
     
     initialization: ({ state }) => ast`
-        commons_waitEngineConfigure(() => {
-            ${variableNames.updateCoefs}(${state})
-        })
+        ${variableNames.updateCoefs}(${state})
     `,
 
     dsp: ({ ins, outs, state }) => ast`

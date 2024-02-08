@@ -83,11 +83,9 @@ const sharedNodeImplementation = (
             ${variableNames.updateOffset}(${state})
         `}
 
-        commons_waitEngineConfigure(() => {
-            if ("${args.delayName}".length) {
-                ${variableNames.setDelayName}(${state}, "${args.delayName}", ${state}.setDelayNameCallback)
-            }
-        })
+        if ("${args.delayName}".length) {
+            ${variableNames.setDelayName}(${state}, "${args.delayName}", ${state}.setDelayNameCallback)
+        }
     `,
 
     dsp: ({ state, outs, ins }) => ({
@@ -140,7 +138,6 @@ const sharedNodeImplementation = (
     dependencies: [
         computeUnitInSamples,
         delayBuffers,
-        stdlib.commonsWaitEngineConfigure,
         stdlib.bufWriteRead,
     ],
 })

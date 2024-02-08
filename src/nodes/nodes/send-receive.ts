@@ -79,7 +79,6 @@ const nodeImplementationSend: _NodeImplementation = {
 
     dependencies: [
         messageBuses, 
-        stdlib.commonsWaitEngineConfigure,
     ],
 }
 
@@ -87,14 +86,11 @@ const nodeImplementationSend: _NodeImplementation = {
 const nodeImplementationReceive: _NodeImplementation = {
     initialization: ({ node: { args }, snds }) => 
         ast`
-            commons_waitEngineConfigure(() => {
-                msgBusSubscribe("${args.busName}", ${snds.$0})
-            })
+            msgBusSubscribe("${args.busName}", ${snds.$0})
         `,
     
     dependencies: [
         messageBuses, 
-        stdlib.commonsWaitEngineConfigure,
     ],
 }
 

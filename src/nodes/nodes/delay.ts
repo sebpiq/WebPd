@@ -70,10 +70,8 @@ const nodeImplementation: _NodeImplementation = {
         ]),
 
     initialization: ({ node: { args }, state, globs }) => ast`
-        commons_waitEngineConfigure(() => {
-            ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-            ${variableNames.setDelay}(${state}, ${args.delay})
-        })
+        ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
+        ${variableNames.setDelay}(${state}, ${args.delay})
     `,
 
     messageReceivers: ({ state, globs, snds }) => ({
@@ -154,7 +152,6 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [
         computeUnitInSamples,
         bangUtils,
-        stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
     ],
 }

@@ -90,13 +90,11 @@ const nodeImplementation: _NodeImplementation = {
     
     initialization: ({ node: { args }, state, snds }) => 
         ast`
-            commons_waitEngineConfigure(() => {
-                ${variableNames.setGrain}(${state}, ${args.timeGrainMsec})
-                ${state}.snd0 = ${snds.$0}
-                ${state}.tickCallback = ${AnonFunc()`
-                    ${variableNames.tick}(${state})
-                `}
-            })
+            ${variableNames.setGrain}(${state}, ${args.timeGrainMsec})
+            ${state}.snd0 = ${snds.$0}
+            ${state}.tickCallback = ${AnonFunc()`
+                ${variableNames.tick}(${state})
+            `}
         `,
     
     messageReceivers: ({ 
@@ -247,7 +245,6 @@ const nodeImplementation: _NodeImplementation = {
         stringMsgUtils,
         computeUnitInSamples,
         linesUtils,
-        stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
     ],
 }

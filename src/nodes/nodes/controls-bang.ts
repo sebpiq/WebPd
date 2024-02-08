@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, Func, Sequence, Class } from '@webpd/compiler'
+import { stdlib, Func, Sequence, Class, AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
@@ -25,7 +25,6 @@ import { assertOptionalString } from '../validation'
 import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCore, controlsCoreVariableNamesList } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
-import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
@@ -65,13 +64,11 @@ const nodeImplementation: _NodeImplementation = {
         state,
         node: { args },
     }) => ast`
-        commons_waitEngineConfigure(() => {
-            ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-                ${variableNames.receiveMessage}(${state}, m)
-            `}
-            ${state}.messageSender = ${snds.$0}
-            ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
-        })
+        ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
+            ${variableNames.receiveMessage}(${state}, m)
+        `}
+        ${state}.messageSender = ${snds.$0}
+        ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
 
         ${args.outputOnLoad ? 
             `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`: null}
@@ -108,7 +105,6 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [
         bangUtils,
         messageBuses,
-        stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
     ],
 }

@@ -79,14 +79,12 @@ const nodeImplementation: _NodeImplementation = {
         snds,
     }) => 
         ast`
-            commons_waitEngineConfigure(() => {
-                ${state}.snd0 = ${snds.$0}
-                ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-                ${variableNames.setRate}(${state}, ${args.rate})
-                ${state}.tickCallback = ${AnonFunc()`
-                    ${variableNames.scheduleNextTick}(${state})
-                `}
-            })
+            ${state}.snd0 = ${snds.$0}
+            ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
+            ${variableNames.setRate}(${state}, ${args.rate})
+            ${state}.tickCallback = ${AnonFunc()`
+                ${variableNames.scheduleNextTick}(${state})
+            `}
         `,
     
     messageReceivers: ({ 
@@ -152,7 +150,6 @@ const nodeImplementation: _NodeImplementation = {
         computeUnitInSamples,
         bangUtils,
         stringMsgUtils,
-        stdlib.commonsWaitEngineConfigure,
         stdlib.commonsWaitFrame,
     ],
 }

@@ -173,7 +173,7 @@ describe('delread~ / delwrite~', () => {
                 bitDepth,
                 compileResult.code
             )
-            engine.configure(SAMPLE_RATE, 1)
+            engine.initialize(SAMPLE_RATE, 1)
             return engine
         }
 

@@ -72,18 +72,16 @@ const nodeImplementation: _NodeImplementation = {
         ]),
 
     initialization: ({ node: { args }, state, globs }) => ast`
-        commons_waitEngineConfigure(() => {
-            ${state}.buffer = buf_create(
-                toInt(Math.ceil(computeUnitInSamples(
-                    ${globs.sampleRate}, 
-                    ${args.maxDurationMsec},
-                    "msec"
-                )))
-            )
-            if ("${args.delayName}".length) {
-                ${variableNames.setDelayName}(${state}, "${args.delayName}")
-            }
-        })
+        ${state}.buffer = buf_create(
+            toInt(Math.ceil(computeUnitInSamples(
+                ${globs.sampleRate}, 
+                ${args.maxDurationMsec},
+                "msec"
+            )))
+        )
+        if ("${args.delayName}".length) {
+            ${variableNames.setDelayName}(${state}, "${args.delayName}")
+        }
     `,
 
     dsp: ({ ins, state }) => 
