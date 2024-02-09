@@ -39,9 +39,8 @@ import {
 } from '../test-helpers'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import compile from '@webpd/compiler'
+import compile, { ast } from '@webpd/compiler'
 import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
-import { ast } from '@webpd/compiler'
 
 describe('throw~ / catch~', () => {
     describe('builder [throw~]', () => {
@@ -156,7 +155,9 @@ describe('throw~ / catch~', () => {
                 throw new Error('Compilation failed')
             }
 
-            return await createTestEngine(target, bitDepth, compileResult.code)
+            const engine = await createTestEngine(target, bitDepth, compileResult.code)
+            engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
+            return engine
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
@@ -276,7 +277,9 @@ describe('throw~ / catch~', () => {
                 throw new Error('Compilation failed')
             }
 
-            return await createTestEngine(target, bitDepth, compileResult.code)
+            const engine = await createTestEngine(target, bitDepth, compileResult.code)
+            engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
+            return engine
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(

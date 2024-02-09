@@ -96,13 +96,15 @@ function _sked_createRequest(skeduler, event, callback, mode) {
 function _sked_nextId(skeduler) {
             return skeduler.idCounter++
         }
-const _commons_ENGINE_LOGGED_SKEDULER = sked_create(true)
 const _commons_FRAME_SKEDULER = sked_create(false)
-function _commons_emitEngineConfigure() {
-            sked_emit(_commons_ENGINE_LOGGED_SKEDULER, 'configure')
-        }
 function _commons_emitFrame(frame) {
             sked_emit(_commons_FRAME_SKEDULER, frame.toString())
+        }
+function commons_waitFrame(frame, callback) {
+            return sked_wait_future(_commons_FRAME_SKEDULER, frame.toString(), callback)
+        }
+function commons_cancelWaitFrame(id) {
+            sked_cancel(_commons_FRAME_SKEDULER, id)
         }
 const MSG_FLOAT_TOKEN = "number"
 const MSG_STRING_TOKEN = "string"
@@ -200,15 +202,6 @@ function msgBusUnsubscribe(busName, callback) {
             if (found !== -1) {
                 callbacks.splice(found, 1)
             }
-        }
-function commons_waitEngineConfigure(callback) {
-            sked_wait(_commons_ENGINE_LOGGED_SKEDULER, 'configure', callback)
-        }
-function commons_waitFrame(frame, callback) {
-            return sked_wait_future(_commons_FRAME_SKEDULER, frame.toString(), callback)
-        }
-function commons_cancelWaitFrame(id) {
-            sked_cancel(_commons_FRAME_SKEDULER, id)
         }
         
 function n_osc_t_setStep(state, freq) {
@@ -362,15 +355,20 @@ coldDsp_0(m)
                 }
         
 
-        
-                n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
+        const exports = {
+            metadata: {"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":{"nodeId":"n_ioRcv_n_0_1_0","funcName":"ioRcv_n_0_1_0"}}},"messageSenders":{}}}}},
+            initialize: (sampleRate, blockSize) => {
+                exports.metadata.audioSettings.sampleRate = sampleRate
+                exports.metadata.audioSettings.blockSize = blockSize
+                SAMPLE_RATE = sampleRate
+                BLOCK_SIZE = blockSize
 
-                commons_waitEngineConfigure(() => {
-                    n_0_1_STATE.messageReceiver = function (m) {
-                        n_nbx_receiveMessage(n_0_1_STATE, m)
-                    }
-                    n_nbx_setReceiveBusName(n_0_1_STATE, "empty")
-                })
+                
+                n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
+                n_0_1_STATE.messageReceiver = function (m) {
+                    n_nbx_receiveMessage(n_0_1_STATE, m)
+                }
+                n_nbx_setReceiveBusName(n_0_1_STATE, "empty")
     
                 commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
             
@@ -378,21 +376,10 @@ coldDsp_0(m)
 
 
 
-            commons_waitEngineConfigure(() => {
-                n_osc_t_setStep(n_0_0_STATE, 0)
-            })
+            n_osc_t_setStep(n_0_0_STATE, 0)
         
 
-        coldDsp_0(EMPTY_MESSAGE)
-
-        const exports = {
-            metadata: {"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":{"nodeId":"n_ioRcv_n_0_1_0","funcName":"ioRcv_n_0_1_0"}}},"messageSenders":{}}}}},
-            configure: (sampleRate, blockSize) => {
-                exports.metadata.audioSettings.sampleRate = sampleRate
-                exports.metadata.audioSettings.blockSize = blockSize
-                SAMPLE_RATE = sampleRate
-                BLOCK_SIZE = blockSize
-                _commons_emitEngineConfigure()
+                coldDsp_0(EMPTY_MESSAGE)
             },
             dspLoop: (INPUT, OUTPUT) => {
                 

@@ -127,13 +127,15 @@ function _sked_createRequest(skeduler: Skeduler, event: SkedEvent, callback: Ske
 function _sked_nextId(skeduler: Skeduler): SkedId {
             return skeduler.idCounter++
         }
-const _commons_ENGINE_LOGGED_SKEDULER: Skeduler = sked_create(true)
 const _commons_FRAME_SKEDULER: Skeduler = sked_create(false)
-function _commons_emitEngineConfigure(): void {
-            sked_emit(_commons_ENGINE_LOGGED_SKEDULER, 'configure')
-        }
 function _commons_emitFrame(frame: Int): void {
             sked_emit(_commons_FRAME_SKEDULER, frame.toString())
+        }
+function commons_waitFrame(frame: Int, callback: SkedCallback): SkedId {
+            return sked_wait_future(_commons_FRAME_SKEDULER, frame.toString(), callback)
+        }
+function commons_cancelWaitFrame(id: SkedId): void {
+            sked_cancel(_commons_FRAME_SKEDULER, id)
         }
 
                 type MessageFloatToken = Float
@@ -373,15 +375,6 @@ function msgBusUnsubscribe(busName: string, callback: MessageHandler): void {
                 callbacks.splice(found, 1)
             }
         }
-function commons_waitEngineConfigure(callback: SkedCallback): void {
-            sked_wait(_commons_ENGINE_LOGGED_SKEDULER, 'configure', callback)
-        }
-function commons_waitFrame(frame: Int, callback: SkedCallback): SkedId {
-            return sked_wait_future(_commons_FRAME_SKEDULER, frame.toString(), callback)
-        }
-function commons_cancelWaitFrame(id: SkedId): void {
-            sked_cancel(_commons_FRAME_SKEDULER, id)
-        }
         class State_osc_t {
 phase: Float
 step: Float
@@ -550,15 +543,18 @@ coldDsp_0(m)
                 }
         
 
-        
-                n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
+        export function initialize(sampleRate: Float, blockSize: Int): void {
+            INPUT = createFloatArray(blockSize * 2)
+            OUTPUT = createFloatArray(blockSize * 2)
+            SAMPLE_RATE = sampleRate
+            BLOCK_SIZE = blockSize
 
-                commons_waitEngineConfigure(() => {
-                    n_0_1_STATE.messageReceiver = function (m: Message): void {
-                        n_nbx_receiveMessage(n_0_1_STATE, m)
-                    }
-                    n_nbx_setReceiveBusName(n_0_1_STATE, "empty")
-                })
+            
+                n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
+                n_0_1_STATE.messageReceiver = function (m: Message): void {
+                    n_nbx_receiveMessage(n_0_1_STATE, m)
+                }
+                n_nbx_setReceiveBusName(n_0_1_STATE, "empty")
     
                 commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
             
@@ -566,19 +562,10 @@ coldDsp_0(m)
 
 
 
-            commons_waitEngineConfigure(() => {
-                n_osc_t_setStep(n_0_0_STATE, 0)
-            })
+            n_osc_t_setStep(n_0_0_STATE, 0)
         
 
-        coldDsp_0(EMPTY_MESSAGE)
-
-        export function configure(sampleRate: Float, blockSize: Int): void {
-            INPUT = createFloatArray(blockSize * 2)
-            OUTPUT = createFloatArray(blockSize * 2)
-            SAMPLE_RATE = sampleRate
-            BLOCK_SIZE = blockSize
-            _commons_emitEngineConfigure()
+            coldDsp_0(EMPTY_MESSAGE)
         }
 
         export function getInput(): FloatArray { return INPUT }

@@ -211,11 +211,8 @@ const _buildNode = (
     const nodeArgs = nodeBuilder.translateArgs(pdNode, patch, compilation.pd)
     const partialNode = nodeBuilder.build(nodeArgs)
     return dspGraph.mutators.addNode(compilation.graph, {
-        id: nodeId,
-        type: nodeType,
+        ...dspGraph.helpers.nodeDefaults(nodeId, nodeType),
         args: nodeArgs,
-        sources: {},
-        sinks: {},
         ...partialNode,
     })
 }
@@ -359,11 +356,11 @@ const _buildConnectionToSignalSink = (
             channelCount: signalSources.length,
         }
         const implicitMixerNode = dspGraph.mutators.addNode(graph, {
-            id: buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.MIXER),
-            type: IMPLICIT_NODE_TYPES.MIXER,
+            ...dspGraph.helpers.nodeDefaults(
+                buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.MIXER),
+                IMPLICIT_NODE_TYPES.MIXER
+            ),
             args: mixerNodeArgs,
-            sources: {},
-            sinks: {},
             ...mixerNodeBuilder.build(mixerNodeArgs),
         })
         dspGraph.mutators.connect(
@@ -389,14 +386,14 @@ const _buildConnectionToSignalSink = (
                 : 0,
         }
         implicitSigNode = dspGraph.mutators.addNode(graph, {
-            id: buildImplicitGraphNodeId(
-                sink,
+            ...dspGraph.helpers.nodeDefaults(
+                buildImplicitGraphNodeId(
+                    sink,
+                    IMPLICIT_NODE_TYPES.CONSTANT_SIGNAL
+                ),
                 IMPLICIT_NODE_TYPES.CONSTANT_SIGNAL
             ),
-            type: IMPLICIT_NODE_TYPES.CONSTANT_SIGNAL,
             args: sigNodeArgs,
-            sources: {},
-            sinks: {},
             ...sigNodeBuilder.build(sigNodeArgs),
         })
         dspGraph.mutators.connect(
@@ -417,11 +414,11 @@ const _buildConnectionToSignalSink = (
     if (messageSources.length) {
         const routeMsgArgs: RouteMsgNodeArguments = {}
         const implicitRouteMsgNode = dspGraph.mutators.addNode(graph, {
-            id: buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.ROUTE_MSG),
-            type: IMPLICIT_NODE_TYPES.ROUTE_MSG,
+            ...dspGraph.helpers.nodeDefaults(
+                buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.ROUTE_MSG),
+                IMPLICIT_NODE_TYPES.ROUTE_MSG
+            ),
             args: routeMsgArgs,
-            sources: {},
-            sinks: {},
             ...routeMsgNodeBuilder.build(routeMsgArgs),
         })
         let isMsgSortNodeConnected = false
@@ -490,7 +487,8 @@ const _groupAndResolveGraphConnections = (
             _currentPatch(patchPath).id,
             pdSink.nodeId
         )
-        groupedGraphConnections[graphNodeId] = groupedGraphConnections[graphNodeId] || {}
+        groupedGraphConnections[graphNodeId] =
+            groupedGraphConnections[graphNodeId] || {}
 
         const graphPortletId = buildGraphPortletId(pdSink.portletId)
         if (groupedGraphConnections[graphNodeId][graphPortletId]) {

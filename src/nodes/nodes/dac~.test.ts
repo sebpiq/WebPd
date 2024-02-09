@@ -142,7 +142,9 @@ describe('dac~', () => {
                 throw new Error('Compilation failed')
             }
 
-            return await createTestEngine(target, bitDepth, compileResult.code)
+            const engine = await createTestEngine(target, bitDepth, compileResult.code)
+            engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
+            return engine
         }
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(

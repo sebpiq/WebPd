@@ -27,7 +27,7 @@ import {
 } from '../test-helpers'
 import { nodeImplementation, builder } from './trigger'
 
-describe('loadbang', () => {
+describe('trigger', () => {
     describe('builder', () => {
         describe('translateArgs', () => {
             it('should handle args as expected', () => {
@@ -81,7 +81,7 @@ describe('loadbang', () => {
 
     describe('implementation', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should the expected values %s',
+            'should send the expected values %s',
             async ({ target, bitDepth }) => {
                 await nodeImplementationsTestHelpers.assertNodeOutput(
                     {
