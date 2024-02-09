@@ -18,7 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { functional } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertString } from '../validation'
@@ -31,7 +30,7 @@ import {
     resolveTypeArgumentAlias,
     TypeArgument,
 } from '../type-arguments'
-import { AnonFunc, Var } from '@webpd/compiler'
+import { AnonFunc, Var, functional } from '@webpd/compiler'
 
 interface NodeArguments {
     typeArguments: Array<TypeArgument>
