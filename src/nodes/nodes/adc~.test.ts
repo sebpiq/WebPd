@@ -109,9 +109,12 @@ describe('adc~', () => {
                     type: 'adc~',
                     args,
                     ...adcPartial,
-                    sinks: functional.mapObject(
-                        adcPartial.outlets,
-                        (_, outletId) => [['dac', outletId]]
+                    sinks: Object.keys(adcPartial.outlets).reduce(
+                        (sinks, outletId) => ({
+                            ...sinks,
+                            [outletId]: [['dac', outletId]],
+                        }),
+                        {}
                     ),
                 },
                 dac: {
@@ -137,7 +140,11 @@ describe('adc~', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(target, bitDepth, compileResult.code)
+            const engine = await createTestEngine(
+                target,
+                bitDepth,
+                compileResult.code
+            )
             engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
             return engine
         }

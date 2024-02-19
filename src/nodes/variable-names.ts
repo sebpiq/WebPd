@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { DspGraph, functional, createNamespace } from '@webpd/compiler'
+import { DspGraph, functional, ProtectedIndex } from '@webpd/compiler'
 
 export const generateVariableNamesNodeType = <
     Keys extends ReadonlyArray<string>
@@ -25,10 +25,10 @@ export const generateVariableNamesNodeType = <
     nodeType: DspGraph.NodeType,
     functionNames?: Keys
 ): { [key: string]: string } =>
-    createNamespace(
-        nodeType,
+    ProtectedIndex(
         functional.mapArray(functionNames || [], (name) => [
             name,
             `n_${nodeType}_${name}`,
-        ])
+        ]),
+        { keys: [nodeType], parents: [] }
     )

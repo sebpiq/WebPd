@@ -118,9 +118,12 @@ describe('dac~', () => {
                 counter: {
                     type: 'counter',
                     outlets: dacPartial.inlets,
-                    sinks: functional.mapObject(
-                        dacPartial.inlets,
-                        (_, inletId) => [['dac', inletId]]
+                    sinks: Object.keys(dacPartial.inlets).reduce(
+                        (sinks, inletId) => ({
+                            ...sinks,
+                            [inletId]: [['dac', inletId]],
+                        }),
+                        {}
                     ),
                 },
                 dac: {
@@ -142,7 +145,11 @@ describe('dac~', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(target, bitDepth, compileResult.code)
+            const engine = await createTestEngine(
+                target,
+                bitDepth,
+                compileResult.code
+            )
             engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
             return engine
         }
