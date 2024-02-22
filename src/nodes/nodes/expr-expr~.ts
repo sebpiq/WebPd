@@ -92,8 +92,8 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const sharedNodeImplementation = (): _NodeImplementation => ({
 
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Map<Int, Float>', 'floatInputs', 'new Map()'),
             Var('Map<Int, string>', 'stringInputs', 'new Map()'),
             Var('Array<Float>', 'outputs', `new Array(${args.tokenizedExpressions.length})`),

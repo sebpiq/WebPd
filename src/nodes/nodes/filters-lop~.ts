@@ -25,7 +25,6 @@ import {
     coldFloatInletWithSetter,
 } from '../standard-message-receivers'
 import { ast, Class, Func, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     frequency: number
@@ -59,34 +58,33 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('lop_t', ['setFreq'])
 
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'lop_t',
     },
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Float', 'previous', 0),
             Var('Float', 'coeff', 0),
         ]),
         
-    dsp: ({ ins, state, outs }) => ({
+    dsp: ({ ns, ins, state, outs }) => ({
         inlets: {
-            '1': ast`${variableNames.setFreq}(${state}, ${ins.$1})`
+            '1': ast`${ns.setFreq!}(${state}, ${ins.$1})`
         },
         loop: ast`${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous`
     }),
 
-    messageReceivers: ({ state }) => ({
-        '1': coldFloatInletWithSetter(variableNames.setFreq, state),
+    messageReceivers: ({ ns, state }) => ({
+        '1': coldFloatInletWithSetter(ns.setFreq!, state),
     }),
 
-    core: ({ globs, stateClassName }) => 
+    core: ({ globs, ns }) => 
         Sequence([
-            Func(variableNames.setFreq, [
-                Var(stateClassName, 'state'),
+            Func(ns.setFreq!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'freq'),
             ], 'void')`
                 state.coeff = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)

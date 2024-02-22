@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, stdlib, Func, Sequence, Class } from '@webpd/compiler'
+import { Code, Func, Sequence, Class } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
@@ -27,13 +27,11 @@ import {
     EMPTY_BUS_NAME,
     ControlsBaseNodeArguments,
     controlsCore,
-    controlsCoreVariableNamesList,
 } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { VariableName } from '@webpd/compiler/src/ast/types'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 export type _NodeImplementation = NodeImplementation<ControlsBaseNodeArguments>
 
@@ -58,46 +56,42 @@ const makeNodeImplementation = ({
     messageMatch?: (messageName: VariableName) => Code
 }): _NodeImplementation => {
 
-    const variableNames = generateVariableNamesNodeType(name, [
-        ...controlsCoreVariableNamesList,
-        'receiveMessage',
-    ])
-
     return {
-        state: ({ node: { args }, stateClassName }) => 
-            Class(stateClassName, [
+        state: ({ ns, node: { args } }) => 
+            Class(ns.State!, [
                 Var('Message', 'value', initValueCode),
                 Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
                 Var('string', 'sendBusName', `"${args.sendBusName}"`),
-                Var('MessageHandler', 'messageReceiver', variableNames.defaultMessageHandler),
-                Var('MessageHandler', 'messageSender', variableNames.defaultMessageHandler),
+                Var('MessageHandler', 'messageReceiver', ns.defaultMessageHandler),
+                Var('MessageHandler', 'messageSender', ns.defaultMessageHandler),
             ]),
 
         initialization: ({
+            ns,
             state, 
             node: { args },
             snds,
         }) => ast`
             ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-                ${variableNames.receiveMessage}(${state}, m)
+                ${ns.receiveMessage}(${state}, m)
             `}
             ${state}.messageSender = ${snds.$0}
-            ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+            ${ns.setReceiveBusName}(${state}, "${args.receiveBusName}")
         `,
 
-        messageReceivers: ({ state }) => ({
+        messageReceivers: ({ ns, state }) => ({
             '0': AnonFunc([Var('Message', 'm')])`
-                ${variableNames.receiveMessage}(${state}, m)
+                ${ns.receiveMessage}(${state}, m)
                 return
             `,
         }),
 
-        core: ({ stateClassName }) => 
+        core: ({ ns }) => 
             Sequence([
-                controlsCore(variableNames, stateClassName),
+                controlsCore(ns),
 
-                Func(variableNames.receiveMessage, [
-                    Var(stateClassName, 'state'),
+                Func(ns.receiveMessage, [
+                    Var(ns.State!, 'state'),
                     Var('Message', 'm'),
                 ], 'void')`
                     if (msg_isBang(m)) {
@@ -119,7 +113,7 @@ const makeNodeImplementation = ({
                         ${messageMatch ? 
                             '}': null}
         
-                    } else if (${variableNames.setSendReceiveFromMessage}(state, m) === true) {
+                    } else if (${ns.setSendReceiveFromMessage}(state, m) === true) {
                         return
                         
                     } ${messageMatch ? 

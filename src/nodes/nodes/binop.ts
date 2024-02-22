@@ -30,7 +30,6 @@ import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { pow } from '../global-code/funcs'
 import { AnonFunc, ast, Class, Func, Sequence, Var } from '@webpd/compiler'
 import { Code } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     value: number
@@ -74,28 +73,27 @@ const makeNodeImplementation = ({
     prepareLeftOp?: Code
     prepareRightOp?: Code
 }): _NodeImplementation => {
-    const variableNames = generateVariableNamesNodeType(operationName, ['setLeft', 'setRight'])
 
     return {
         flags: {
             alphaName: operationName,
         },
 
-        state: ({ stateClassName }) => 
-            Class(stateClassName, [
+        state: ({ ns }) => 
+            Class(ns.State!, [
                 Var('Float', 'leftOp', 0), 
                 Var('Float', 'rightOp', 0)
             ]),
         
-        initialization: ({ state, node: { args } }) => ast`
-            ${variableNames.setLeft}(${state}, 0)
-            ${variableNames.setRight}(${state}, ${args.value})
+        initialization: ({ ns, state, node: { args } }) => ast`
+            ${ns.setLeft!}(${state}, 0)
+            ${ns.setRight!}(${state}, ${args.value})
         `,
 
-        messageReceivers: ({ state, snds }) => ({
+        messageReceivers: ({ ns, state, snds }) => ({
             '0': AnonFunc([Var('Message', 'm')])`
                 if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                    ${variableNames.setLeft}(${state}, msg_readFloatToken(m, 0))
+                    ${ns.setLeft!}(${state}, msg_readFloatToken(m, 0))
                     ${snds.$0}(msg_floats([${generateOperation(state)}]))
                     return
                 
@@ -105,20 +103,20 @@ const makeNodeImplementation = ({
                 }
             `,
 
-            '1': coldFloatInletWithSetter(variableNames.setRight, state),
+            '1': coldFloatInletWithSetter(ns.setRight!, state),
         }),
 
-        core: ({ stateClassName }) => 
+        core: ({ ns }) => 
             Sequence([
-                Func(variableNames.setLeft, [
-                    Var(stateClassName, 'state'),
+                Func(ns.setLeft!, [
+                    Var(ns.State!, 'state'),
                     Var('Float', 'value'),
                 ], 'void')`
                     state.leftOp = ${prepareLeftOp ? prepareLeftOp: 'value'}
                 `,
 
-                Func(variableNames.setRight, [
-                    Var(stateClassName, 'state'),
+                Func(ns.setRight!, [
+                    Var(ns.State!, 'state'),
                     Var('Float', 'value'),
                 ], 'void')`
                     state.rightOp = ${prepareRightOp ? prepareRightOp: 'value'}

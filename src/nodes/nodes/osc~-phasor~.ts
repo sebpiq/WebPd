@@ -24,7 +24,6 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     frequency: number
@@ -64,34 +63,28 @@ const makeNodeImplementation = ({
     coeff: Code,
     generateOperation: (phase: Code) => Code,
 }): _NodeImplementation => {
-
-    const variableNames = generateVariableNamesNodeType(alphaName, [
-        'setPhase',
-        'setStep'
-    ])
-
     const nodeImplementation: _NodeImplementation = {
         flags: {
             alphaName,
         },
 
-        state: ({ stateClassName }) => 
-            Class(stateClassName, [
+        state: ({ ns }) => 
+            Class(ns.State!, [
                 Var('Float', 'phase', 0),
                 Var('Float', 'step', 0),
             ]),
 
-        initialization: ({ state }) => ast`
-            ${variableNames.setStep}(${state}, 0)
+        initialization: ({ ns, state }) => ast`
+            ${ns.setStep!}(${state}, 0)
         `,
 
-        messageReceivers: ({ state }) => ({
-            '1': coldFloatInletWithSetter(variableNames.setPhase, state),
+        messageReceivers: ({ ns, state }) => ({
+            '1': coldFloatInletWithSetter(ns.setPhase!, state),
         }),
 
-        dsp: ({ state, outs, ins }) => ({
+        dsp: ({ ns, state, outs, ins }) => ({
             inlets: {
-                '0': ast`${variableNames.setStep}(${state}, ${ins.$0})`
+                '0': ast`${ns.setStep!}(${state}, ${ins.$0})`
             },
             loop: ast`
                 ${outs.$0} = ${generateOperation(`${state}.phase`)}
@@ -99,17 +92,17 @@ const makeNodeImplementation = ({
             `
         }),
 
-        core: ({ stateClassName, globs }) => 
+        core: ({ ns, globs }) => 
             Sequence([
-                Func(variableNames.setStep, [
-                    Var(stateClassName, 'state'),
+                Func(ns.setStep!, [
+                    Var(ns.State!, 'state'),
                     Var('Float', 'freq'),
                 ])`
                     state.step = (${coeff} / ${globs.sampleRate}) * freq
                 `,
 
-                Func(variableNames.setPhase, [
-                    Var(stateClassName, 'state'),
+                Func(ns.setPhase!, [
+                    Var(ns.State!, 'state'),
                     Var('Float', 'phase'),
                 ])`
                     state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}

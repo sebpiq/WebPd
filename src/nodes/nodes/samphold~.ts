@@ -53,8 +53,8 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'samphold_t',
     },
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Float', 'signalMemory', 0),
             Var('Float', 'controlMemory', 0),
         ]),

@@ -25,7 +25,6 @@ import { assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 const BLOCK_SIZE = 44100 * 5
 
@@ -64,17 +63,13 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('writesf_t', [
-    'flushBlock'
-])
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'write_t',
     },
 
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('fs_OperationId', 'operationId', -1),
             Var('boolean', 'isWriting', 'false'),
             Var('Array<FloatArray>', 'block', `[
@@ -85,18 +80,18 @@ const nodeImplementation: _NodeImplementation = {
             Var('Int', 'cursor', 0),
         ]),
 
-    dsp: ({ state, ins, node: { args } }) => ast`
+    dsp: ({ ns, state, ins, node: { args } }) => ast`
         if (${state}.isWriting === true) {
             ${functional.countTo(args.channelCount).map((i) => 
                 `${state}.block[${i}][${state}.cursor] = ${ins[i]}`)}
             ${state}.cursor++
             if (${state}.cursor === ${BLOCK_SIZE}) {
-                ${variableNames.flushBlock}(${state})
+                ${ns.flushBlock!}(${state})
             }
         }
     `, 
 
-    messageReceivers: ({ node, state, globs }) => ({
+    messageReceivers: ({ ns, node, state, globs }) => ({
         '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
             if (msg_getLength(m) >= 2) {
                 if (
@@ -131,7 +126,7 @@ const nodeImplementation: _NodeImplementation = {
                         url,
                         soundInfo,
                         () => {
-                            ${variableNames.flushBlock}(${state})
+                            ${ns.flushBlock!}(${state})
                             ${state}.operationId = -1
                         }
                     )
@@ -143,7 +138,7 @@ const nodeImplementation: _NodeImplementation = {
                     return
     
             } else if (msg_isAction(m, 'stop')) {
-                ${variableNames.flushBlock}(${state})
+                ${ns.flushBlock!}(${state})
                 ${state}.isWriting = false
                 return
     
@@ -154,10 +149,10 @@ const nodeImplementation: _NodeImplementation = {
         `
     }), 
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
-            Func(variableNames.flushBlock, [
-                Var(stateClassName, 'state'),
+            Func(ns.flushBlock!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 ${ConstVar('Array<FloatArray>', 'block', '[]')}
                 for (${Var('Int', 'i', '0')}; i < state.block.length; i++) {

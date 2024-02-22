@@ -56,8 +56,8 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'clip_t',
     },
 
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Float', 'minValue', args.minValue),
             Var('Float', 'maxValue', args.maxValue),
         ]),

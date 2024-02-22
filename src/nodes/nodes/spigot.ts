@@ -23,7 +23,6 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { AnonFunc, Class, Func, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     isClosed: boolean
@@ -48,15 +47,14 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('spigot', ['setIsClosed'])
 
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Float', 'isClosed', args.isClosed ? 'true': 'false')
         ]),
 
-    messageReceivers: ({ snds, state }) => ({
+    messageReceivers: ({ ns, snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (!${state}.isClosed) {
                 ${snds.$0}(m)
@@ -64,13 +62,13 @@ const nodeImplementation: _NodeImplementation = {
             return
         `,
 
-        '1': coldFloatInletWithSetter(variableNames.setIsClosed, state),
+        '1': coldFloatInletWithSetter(ns.setIsClosed!, state),
     }),
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
-            Func(variableNames.setIsClosed, [
-                Var(stateClassName, 'state'),
+            Func(ns.setIsClosed!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'value'),
             ], 'void')`
                 state.isClosed = (value === 0)

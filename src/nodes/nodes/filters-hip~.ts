@@ -60,8 +60,8 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'hip_t',
     },
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Float', 'previous', 0),
             Var('Float', 'current', 0),
             Var('Float', 'coeff', 0),

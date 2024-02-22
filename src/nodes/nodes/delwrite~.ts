@@ -25,7 +25,6 @@ import { stringMsgUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { AnonFunc, Class, Func, Sequence, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     delayName: string,
@@ -58,20 +57,19 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('delwrite', ['setDelayName'])
 
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'delwrite_t',
     },
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('string', 'delayName', '""'),
             Var('buf_SoundBuffer', 'buffer', 'DELAY_BUFFERS_NULL'),
         ]),
 
-    initialization: ({ node: { args }, state, globs }) => ast`
+    initialization: ({ ns, node: { args }, state, globs }) => ast`
         ${state}.buffer = buf_create(
             toInt(Math.ceil(computeUnitInSamples(
                 ${globs.sampleRate}, 
@@ -80,7 +78,7 @@ const nodeImplementation: _NodeImplementation = {
             )))
         )
         if ("${args.delayName}".length) {
-            ${variableNames.setDelayName}(${state}, "${args.delayName}")
+            ${ns.setDelayName!}(${state}, "${args.delayName}")
         }
     `,
 
@@ -96,10 +94,10 @@ const nodeImplementation: _NodeImplementation = {
         `
     }),
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
-            Func(variableNames.setDelayName, [
-                Var(stateClassName, 'state'),
+            Func(ns.setDelayName!, [
+                Var(ns.State!, 'state'),
                 Var('string', 'delayName')
             ], 'void')`
                 if (state.delayName.length) {

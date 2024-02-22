@@ -26,7 +26,6 @@ import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     rate: number
@@ -55,15 +54,9 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('metro', [
-    'setRate',
-    'scheduleNextTick',
-    'stop',
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Float', 'rate', 0),
             Var('Float', 'sampleRatio', 1),
             Var('Int', 'skedId', 'SKED_ID_NULL'),
@@ -73,6 +66,7 @@ const nodeImplementation: _NodeImplementation = {
         ]),
 
     initialization: ({
+        ns,
         node: { args }, 
         state, 
         globs, 
@@ -81,13 +75,14 @@ const nodeImplementation: _NodeImplementation = {
         ast`
             ${state}.snd0 = ${snds.$0}
             ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-            ${variableNames.setRate}(${state}, ${args.rate})
+            ${ns.setRate!}(${state}, ${args.rate})
             ${state}.tickCallback = ${AnonFunc()`
-                ${variableNames.scheduleNextTick}(${state})
+                ${ns.scheduleNextTick!}(${state})
             `}
         `,
     
     messageReceivers: ({ 
+        ns,
         state, 
         globs, 
     }) => ({
@@ -97,7 +92,7 @@ const nodeImplementation: _NodeImplementation = {
                     (msg_isFloatToken(m, 0) && msg_readFloatToken(m, 0) === 0)
                     || msg_isAction(m, 'stop')
                 ) {
-                    ${variableNames.stop}(${state})
+                    ${ns.stop!}(${state})
                     return
     
                 } else if (
@@ -105,27 +100,27 @@ const nodeImplementation: _NodeImplementation = {
                     || msg_isBang(m)
                 ) {
                     ${state}.realNextTick = toFloat(${globs.frame})
-                    ${variableNames.scheduleNextTick}(${state})
+                    ${ns.scheduleNextTick!}(${state})
                     return
                 }
             }
         `,
     
-        '1': coldFloatInletWithSetter(variableNames.setRate, state),
+        '1': coldFloatInletWithSetter(ns.setRate!, state),
     }),
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
             // Time units are all expressed in samples here
-            Func(variableNames.setRate, [
-                Var(stateClassName, 'state'),
+            Func(ns.setRate!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'rate'),
             ], 'void')`
                 state.rate = Math.max(rate, 0)
             `,
         
-            Func(variableNames.scheduleNextTick, [
-                Var(stateClassName, 'state'),
+            Func(ns.scheduleNextTick!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.snd0(msg_bang())
                 state.realNextTick = state.realNextTick + state.rate * state.sampleRatio
@@ -135,8 +130,8 @@ const nodeImplementation: _NodeImplementation = {
                 )
             `,
         
-            Func(variableNames.stop, [
-                Var(stateClassName, 'state'),
+            Func(ns.stop!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 if (state.skedId !== SKED_ID_NULL) {
                     commons_cancelWaitFrame(state.skedId)

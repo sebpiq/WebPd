@@ -1815,13 +1815,13 @@ var WebPdRuntime = (function (exports) {
   };
 
   const _addPath = (parent, key, _path) => {
-      const path = _defaultPath(_path);
+      const path = _ensurePath(_path);
       return {
           keys: [...path.keys, key],
           parents: [...path.parents, parent],
       };
   };
-  const _defaultPath = (path) => path || {
+  const _ensurePath = (path) => path || {
       keys: [],
       parents: [],
   };
@@ -1848,9 +1848,9 @@ var WebPdRuntime = (function (exports) {
       }
       return false;
   };
-  const Assigner = (spec, context, _obj, _path) => {
+  const Assigner = (spec, _obj, context, _path) => {
       const path = _path || { keys: [], parents: [] };
-      const obj = Assigner.ensureValue(_obj, spec, undefined, path);
+      const obj = Assigner.ensureValue(_obj, spec, context, path);
       // If `_path` is provided, assign the new value to the parent object.
       if (_path) {
           const parent = _path.parents[_path.parents.length - 1];
@@ -1871,40 +1871,43 @@ var WebPdRuntime = (function (exports) {
               const key = String(k);
               let nextSpec;
               if ('Index' in spec) {
-                  nextSpec = spec.Index(key, context);
+                  nextSpec = spec.Index(key, context, path);
               }
               else if ('Interface' in spec) {
+                  if (!(key in spec.Interface)) {
+                      throw new Error(`Interface has no entry "${String(key)}"`);
+                  }
                   nextSpec = spec.Interface[key];
               }
               else {
                   throw new Error('no builder');
               }
-              return Assigner(nextSpec, context, 
+              return Assigner(nextSpec, 
               // We use this form here instead of `obj[key]` specifically
               // to allow Assign to play well with `ProtectedIndex`, which
               // would raise an error if trying to access an undefined key.
-              key in obj ? obj[key] : undefined, _addPath(obj, String(key), path));
+              key in obj ? obj[key] : undefined, context, _addPath(obj, key, path));
           },
           set: _proxySetHandlerReadOnly,
       });
   };
-  Assigner.ensureValue = (_obj, spec, _recursionPath, _path) => {
+  Assigner.ensureValue = (_obj, spec, context, _path, _recursionPath) => {
       if ('Index' in spec) {
-          return (_obj || spec.indexConstructor(_defaultPath(_path)));
+          return (_obj || spec.indexConstructor(context, _ensurePath(_path)));
       }
       else if ('Interface' in spec) {
           const obj = (_obj || {});
           Object.entries(spec.Interface).forEach(([key, nextSpec]) => {
-              obj[key] = Assigner.ensureValue(obj[key], nextSpec, _addPath(obj, key, _recursionPath), _addPath(obj, key, _path));
+              obj[key] = Assigner.ensureValue(obj[key], nextSpec, context, _addPath(obj, key, _path), _addPath(obj, key, _recursionPath));
           });
           return obj;
       }
       else if ('Literal' in spec) {
-          return (_obj || spec.Literal(_defaultPath(_path)));
+          return (_obj || spec.Literal(context, _ensurePath(_path)));
       }
       else if ('LiteralDefaultNull' in spec) {
           if (!_recursionPath) {
-              return (_obj || spec.LiteralDefaultNull());
+              return (_obj || spec.LiteralDefaultNull(context, _ensurePath(_path)));
           }
           else {
               return (_obj || null);
@@ -1961,6 +1964,17 @@ var WebPdRuntime = (function (exports) {
       }
   };
 
+  const createGlobsVariableNames = () => ({
+      iterFrame: 'F',
+      frame: 'FRAME',
+      blockSize: 'BLOCK_SIZE',
+      sampleRate: 'SAMPLE_RATE',
+      output: 'OUTPUT',
+      input: 'INPUT',
+      nullMessageReceiver: 'SND_TO_NULL',
+      nullSignal: 'NULL_SIGNAL',
+      emptyMessage: 'EMPTY_MESSAGE',
+  });
   Assigner.Interface({
       nodes: Assigner.Index((nodeId) => Assigner.Interface({
           signalOuts: Assigner.Index((portletId) => Assigner.Literal(() => `${_v(nodeId)}_OUTS_${_v(portletId)}`)),
@@ -1968,26 +1982,9 @@ var WebPdRuntime = (function (exports) {
           messageReceivers: Assigner.Index((portletId) => Assigner.Literal(() => `${_v(nodeId)}_RCVS_${_v(portletId)}`)),
           state: Assigner.LiteralDefaultNull(() => `${_v(nodeId)}_STATE`),
       })),
-      nodeImplementations: Assigner.Index((nodeType, { nodeImplementations }) => {
-          const nodeImplementation = getNodeImplementation(nodeImplementations, nodeType);
-          return Assigner.Interface({
-              stateClass: Assigner.LiteralDefaultNull(() => `State_${_v((nodeImplementation.flags
-                ? nodeImplementation.flags.alphaName
-                : null) || nodeType)}`),
-          });
-      }),
+      nodeImplementations: Assigner.Index(() => Assigner.Literal(() => ({}))),
       /** Namespace for global variables */
-      globs: Assigner.Literal(() => ({
-          iterFrame: 'F',
-          frame: 'FRAME',
-          blockSize: 'BLOCK_SIZE',
-          sampleRate: 'SAMPLE_RATE',
-          output: 'OUTPUT',
-          input: 'INPUT',
-          nullMessageReceiver: 'SND_TO_NULL',
-          nullSignal: 'NULL_SIGNAL',
-          emptyMessage: 'EMPTY_MESSAGE',
-      })),
+      globs: Assigner.Literal(createGlobsVariableNames),
       io: Assigner.Interface({
           messageReceivers: Assigner.Index((nodeId) => Assigner.Index((inletId) => Assigner.Literal(() => `ioRcv_${nodeId}_${inletId}`))),
           messageSenders: Assigner.Index((nodeId) => Assigner.Index((outletId) => Assigner.Literal(() => `ioSnd_${nodeId}_${outletId}`))),
@@ -1995,7 +1992,7 @@ var WebPdRuntime = (function (exports) {
       coldDspGroups: Assigner.Index((groupId) => Assigner.Literal(() => `coldDsp_${groupId}`)),
   });
   Assigner.Interface({
-      graph: Assigner.Literal((path) => ({
+      graph: Assigner.Literal((_, path) => ({
           fullTraversal: [],
           hotDspGroup: {
               traversal: [],
@@ -2007,7 +2004,7 @@ var WebPdRuntime = (function (exports) {
           nodeImplementation: getNodeImplementation(nodeImplementations, nodeType),
           stateClass: null,
           core: null,
-      })), (path) => ProtectedIndex({}, path)),
+      })), (_, path) => ProtectedIndex({}, path)),
       nodes: Assigner.Index((nodeId, { graph }) => Assigner.Literal(() => ({
           nodeType: getNode(graph, nodeId).type,
           messageReceivers: {},
@@ -2020,15 +2017,15 @@ var WebPdRuntime = (function (exports) {
               inlets: {},
           },
           state: null,
-      })), (path) => ProtectedIndex({}, path)),
+      })), (_, path) => ProtectedIndex({}, path)),
       dependencies: Assigner.Literal(() => ({
           imports: [],
           exports: [],
           ast: Sequence([]),
       })),
       io: Assigner.Interface({
-          messageReceivers: Assigner.Index((_) => Assigner.Literal(() => ({})), (path) => ProtectedIndex({}, path)),
-          messageSenders: Assigner.Index((_) => Assigner.Literal(() => ({})), (path) => ProtectedIndex({}, path)),
+          messageReceivers: Assigner.Index((_) => Assigner.Literal((_, path) => ProtectedIndex({}, path)), (_, path) => ProtectedIndex({}, path)),
+          messageSenders: Assigner.Index((_) => Assigner.Literal((_, path) => ProtectedIndex({}, path)), (_, path) => ProtectedIndex({}, path)),
       }),
   });
   const assertValidNamePart = (namePart) => {
@@ -2806,6 +2803,9 @@ var WebPdRuntime = (function (exports) {
       ],
       dependencies: [fsSoundStreamCore],
   });
+
+  Assigner.Index((name, namespace) => Assigner.Literal(() => _variableName(namespace, name)));
+  const _variableName = (namespace, name) => `${namespace}_${assertValidNamePart(name)}`;
 
   /*
    * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.

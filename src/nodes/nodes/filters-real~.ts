@@ -73,8 +73,8 @@ const makeNodeImplementation = ({
             alphaName,
         },
 
-        state: ({ stateClassName }) => 
-            Class(stateClassName, [
+        state: ({ ns }) => 
+            Class(ns.State!, [
                 Var('Float', 'lastOutput', 0),
                 Var('Float', 'lastInput', 0),
             ]),

@@ -25,7 +25,7 @@ import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
+import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     delayName: string,
@@ -64,41 +64,39 @@ const variableNamesSharedList = [
     'updateOffset',
 ]
 
-const sharedNodeImplementation = (
-    variableNames: ReturnType<typeof generateVariableNamesNodeType>
-): _NodeImplementation => ({
+const sharedNodeImplementation: _NodeImplementation = {
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('string', 'delayName', '""'),
             Var('buf_SoundBuffer', 'buffer', 'DELAY_BUFFERS_NULL'),
             Var('Float', 'rawOffset', 0),
             Var('Int', 'offset', 0),
-            Var('(_: string) => void', 'setDelayNameCallback', variableNames.NOOP)
+            Var('(_: string) => void', 'setDelayNameCallback', ns.NOOP!)
         ]),
 
-    initialization: ({ node: { args }, state }) => ast`
+    initialization: ({ ns, node: { args }, state }) => ast`
         ${state}.setDelayNameCallback = ${AnonFunc([Var('string', '_')])`
             ${state}.buffer = DELAY_BUFFERS.get(${state}.delayName)
-            ${variableNames.updateOffset}(${state})
+            ${ns.updateOffset!}(${state})
         `}
 
         if ("${args.delayName}".length) {
-            ${variableNames.setDelayName}(${state}, "${args.delayName}", ${state}.setDelayNameCallback)
+            ${ns.setDelayName!}(${state}, "${args.delayName}", ${state}.setDelayNameCallback)
         }
     `,
 
-    dsp: ({ state, outs, ins }) => ({
+    dsp: ({ ns, state, outs, ins }) => ({
         inlets: {
-            '0': ast`${variableNames.setRawOffset}(${state}, ${ins.$0})`
+            '0': ast`${ns.setRawOffset!}(${state}, ${ins.$0})`
         },    
         loop: ast`${outs.$0} = buf_readSample(${state}.buffer, ${state}.offset)`,
     }),
 
-    core: ({ stateClassName, globs }) => 
+    core: ({ ns, globs }) => 
         Sequence([
-            Func(variableNames.setDelayName, [
-                Var(stateClassName, 'state'),
+            Func(ns.setDelayName!, [
+                Var(ns.State!, 'state'),
                 Var('string', 'delayName'),
                 Var('SkedCallback', 'callback'),
             ])`
@@ -111,16 +109,16 @@ const sharedNodeImplementation = (
                 }
             `,
 
-            Func(variableNames.setRawOffset, [
-                Var(stateClassName, 'state'),
+            Func(ns.setRawOffset!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'rawOffset'),
             ])`
                 state.rawOffset = rawOffset
-                ${variableNames.updateOffset}(state)
+                ${ns.updateOffset!}(state)
             `,
 
-            Func(variableNames.updateOffset, [
-                Var(stateClassName, 'state'),
+            Func(ns.updateOffset!, [
+                Var(ns.State!, 'state'),
             ])`
                 state.offset = toInt(Math.round(
                     Math.min(
@@ -130,7 +128,7 @@ const sharedNodeImplementation = (
                 ))
             `,
 
-            Func(variableNames.NOOP, [
+            Func(ns.NOOP!, [
                 Var('string', '_')
             ])``,
         ]),
@@ -140,7 +138,7 @@ const sharedNodeImplementation = (
         delayBuffers,
         stdlib.bufWriteRead,
     ],
-})
+}
 
 const builders = {
     'delread~': builder,
@@ -149,17 +147,13 @@ const builders = {
 
 const nodeImplementations: NodeImplementations = {
     'delread~': {
-        ...sharedNodeImplementation(
-            generateVariableNamesNodeType('delread_t', variableNamesSharedList)
-        ),
+        ...sharedNodeImplementation,
         flags: {
             alphaName: 'delread_t',
         },
     },
     'delread4~': {
-        ...sharedNodeImplementation(
-            generateVariableNamesNodeType('delread4_t', variableNamesSharedList)
-        ),
+        ...sharedNodeImplementation,
         flags: {
             alphaName: 'delread4_t',
         },

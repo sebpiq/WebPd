@@ -26,7 +26,6 @@ import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { Func, Var, ast, ConstVar, AnonFunc, Class, Sequence } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initValue: number
@@ -51,26 +50,19 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('line_t', [
-    'defaultLine',
-    'setNewLine',
-    'setNextDuration',
-    'stop',
-])
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'line_t',
     },
 
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
-            Var('LineSegment', 'currentLine', variableNames.defaultLine),
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
+            Var('LineSegment', 'currentLine', ns.defaultLine!),
             Var('Float', 'currentValue', args.initValue),
             Var('Float', 'nextDurationSamp', 0),
         ]),
 
-    messageReceivers: ({ state }) => ({
+    messageReceivers: ({ ns, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (
                 msg_isMatching(m, [MSG_FLOAT_TOKEN])
@@ -78,20 +70,20 @@ const nodeImplementation: _NodeImplementation = {
             ) {
                 switch (msg_getLength(m)) {
                     case 2:
-                        ${variableNames.setNextDuration}(${state}, msg_readFloatToken(m, 1))
+                        ${ns.setNextDuration!}(${state}, msg_readFloatToken(m, 1))
                     case 1:
-                        ${variableNames.setNewLine}(${state}, msg_readFloatToken(m, 0))
+                        ${ns.setNewLine!}(${state}, msg_readFloatToken(m, 0))
                 }
                 return
     
             } else if (msg_isAction(m, 'stop')) {
-                ${variableNames.stop}(${state})
+                ${ns.stop!}(${state})
                 return
     
             }
         `,
     
-        '1': coldFloatInletWithSetter(variableNames.setNextDuration, state),
+        '1': coldFloatInletWithSetter(ns.setNextDuration!, state),
     }),
 
     dsp: ({ outs, state, globs }) => ast`
@@ -104,23 +96,23 @@ const nodeImplementation: _NodeImplementation = {
         }
     `,
 
-    core: ({ globs, stateClassName }) => 
+    core: ({ globs, ns }) => 
         Sequence([
-            ConstVar('LineSegment', variableNames.defaultLine, `{
+            ConstVar('LineSegment', ns.defaultLine!, `{
                 p0: {x: -1, y: 0},
                 p1: {x: -1, y: 0},
                 dx: 1,
                 dy: 0,
             }`),
         
-            Func(variableNames.setNewLine, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNewLine!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'targetValue'),
             ], 'void')`
                 ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame})`)}
                 ${ConstVar('Float', 'endFrame', `toFloat(${globs.frame}) + state.nextDurationSamp`)}
                 if (endFrame === toFloat(${globs.frame})) {
-                    state.currentLine = ${variableNames.defaultLine}
+                    state.currentLine = ${ns.defaultLine!}
                     state.currentValue = targetValue
                     state.nextDurationSamp = 0
                 } else {
@@ -141,15 +133,15 @@ const nodeImplementation: _NodeImplementation = {
                 }
             `,
         
-            Func(variableNames.setNextDuration, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNextDuration!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'durationMsec'),
             ], 'void')`
                 state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
             `,
         
-            Func(variableNames.stop, [
-                Var(stateClassName, 'state'),
+            Func(ns.stop!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.currentLine.p1.x = -1
                 state.currentLine.p1.y = state.currentValue

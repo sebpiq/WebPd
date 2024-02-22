@@ -25,7 +25,6 @@ import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { AnonFunc, Class, ConstVar, Func, Sequence, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
 
@@ -47,19 +46,13 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('vline_t', [
-    'setNewLine',
-    'setNextDuration',
-    'setNextDelay',
-])
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'vline_t',
     },
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Array<Point>', 'points', '[]'),
             Var('Array<LineSegment>', 'lineSegments', '[]'),
             Var('Float', 'currentValue', 0),
@@ -87,7 +80,7 @@ const nodeImplementation: _NodeImplementation = {
         ${outs.$0} = ${state}.currentValue
     `,
 
-    messageReceivers: ({ state }) => ({
+    messageReceivers: ({ ns, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
         if (
             msg_isMatching(m, [MSG_FLOAT_TOKEN])
@@ -96,11 +89,11 @@ const nodeImplementation: _NodeImplementation = {
         ) {
             switch (msg_getLength(m)) {
                 case 3:
-                    ${variableNames.setNextDelay}(${state}, msg_readFloatToken(m, 2))
+                    ${ns.setNextDelay!}(${state}, msg_readFloatToken(m, 2))
                 case 2:
-                    ${variableNames.setNextDuration}(${state}, msg_readFloatToken(m, 1))
+                    ${ns.setNextDuration!}(${state}, msg_readFloatToken(m, 1))
                 case 1:
-                    ${variableNames.setNewLine}(${state}, msg_readFloatToken(m, 0))
+                    ${ns.setNewLine!}(${state}, msg_readFloatToken(m, 0))
             }
             return
     
@@ -111,14 +104,14 @@ const nodeImplementation: _NodeImplementation = {
         }
         `,
     
-        '1': coldFloatInletWithSetter(variableNames.setNextDuration, state),
-        '2': coldFloatInletWithSetter(variableNames.setNextDelay, state),
+        '1': coldFloatInletWithSetter(ns.setNextDuration!, state),
+        '2': coldFloatInletWithSetter(ns.setNextDelay!, state),
     }),
 
-    core: ({ stateClassName, globs }) => 
+    core: ({ ns, globs }) => 
         Sequence([
-            Func(variableNames.setNewLine, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNewLine!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'targetValue'),
             ], 'void')`
                 state.points = removePointsBeforeFrame(state.points, toFloat(${globs.frame}))
@@ -140,15 +133,15 @@ const nodeImplementation: _NodeImplementation = {
                 state.nextDelaySamp = 0
             `,
         
-            Func(variableNames.setNextDuration, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNextDuration!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'durationMsec'),
             ], 'void')`
                 state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
             `,
         
-            Func(variableNames.setNextDelay, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNextDelay!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'delayMsec'),
             ], 'void')`
                 state.nextDelaySamp = computeUnitInSamples(${globs.sampleRate}, delayMsec, 'msec')

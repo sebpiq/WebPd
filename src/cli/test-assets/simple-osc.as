@@ -375,17 +375,17 @@ function msgBusUnsubscribe(busName: string, callback: MessageHandler): void {
                 callbacks.splice(found, 1)
             }
         }
-        class State_osc_t {
+        class osc_t_State {
 phase: Float
 step: Float
 }
-function n_osc_t_setStep(state: State_osc_t, freq: Float): void {
+function osc_t_setStep(state: osc_t_State, freq: Float): void {
                     state.step = (2 * Math.PI / SAMPLE_RATE) * freq
                 }
-function n_osc_t_setPhase(state: State_osc_t, phase: Float): void {
+function osc_t_setPhase(state: osc_t_State, phase: Float): void {
                     state.phase = phase % 1.0 * 2 * Math.PI
                 }
-class State_nbx {
+class nbx_State {
 minValue: Float
 maxValue: Float
 valueFloat: Float
@@ -395,7 +395,7 @@ sendBusName: string
 messageReceiver: MessageHandler
 messageSender: MessageHandler
 }
-function n_nbx_setReceiveBusName(state: State_nbx, busName: string): void {
+function nbx_setReceiveBusName(state: nbx_State, busName: string): void {
             if (state.receiveBusName !== "empty") {
                 msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
             }
@@ -404,12 +404,12 @@ function n_nbx_setReceiveBusName(state: State_nbx, busName: string): void {
                 msgBusSubscribe(state.receiveBusName, state.messageReceiver)
             }
         }
-function n_nbx_setSendReceiveFromMessage(state: State_nbx, m: Message): boolean {
+function nbx_setSendReceiveFromMessage(state: nbx_State, m: Message): boolean {
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'receive'
             ) {
-                n_nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
+                nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
                 return true
 
             } else if (
@@ -421,8 +421,8 @@ function n_nbx_setSendReceiveFromMessage(state: State_nbx, m: Message): boolean 
             }
             return false
         }
-function n_nbx_defaultMessageHandler(m: Message): void {}
-function n_nbx_receiveMessage(state: State_nbx, m: Message): void {
+function nbx_defaultMessageHandler(m: Message): void {}
+function nbx_receiveMessage(state: nbx_State, m: Message): void {
                     if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 0),state.minValue),state.maxValue)
                         const outMessage: Message = msg_floats([state.valueFloat])
@@ -448,13 +448,13 @@ function n_nbx_receiveMessage(state: State_nbx, m: Message): void {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 1),state.minValue),state.maxValue)
                         return
                     
-                    } else if (n_nbx_setSendReceiveFromMessage(state, m) === true) {
+                    } else if (nbx_setSendReceiveFromMessage(state, m) === true) {
                         return
                     }
                 }
 
 
-class State_sig_t {
+class sig_t_State {
 currentValue: Float
 }
 
@@ -475,27 +475,27 @@ let EMPTY_MESSAGE: Message = msg_create([])
 
         
 
-        const n_0_1_STATE: State_nbx = {
+        const n_0_1_STATE: nbx_State = {
                                 minValue: -1e+37,
 maxValue: 1e+37,
 valueFloat: 220,
 value: msg_create([]),
 receiveBusName: "empty",
 sendBusName: "empty",
-messageReceiver: n_nbx_defaultMessageHandler,
-messageSender: n_nbx_defaultMessageHandler,
+messageReceiver: nbx_defaultMessageHandler,
+messageSender: nbx_defaultMessageHandler,
                             }
-const m_n_0_0_0_sig_STATE: State_sig_t = {
+const m_n_0_0_0_sig_STATE: sig_t_State = {
                                 currentValue: 0,
                             }
-const n_0_0_STATE: State_osc_t = {
+const n_0_0_STATE: osc_t_State = {
                                 phase: 0,
 step: 0,
                             }
         
 function n_0_1_RCVS_0(m: Message): void {
                             
-                n_nbx_receiveMessage(n_0_1_STATE, m)
+                nbx_receiveMessage(n_0_1_STATE, m)
                 return
             
                             throw new Error('Node "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
@@ -536,7 +536,7 @@ coldDsp_0(m)
 
         function coldDsp_0(m: Message): void {
                     m_n_0_0_0_sig_OUTS_0 = m_n_0_0_0_sig_STATE.currentValue
-                    n_osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
+                    osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
                 }
         function ioRcv_n_0_1_0(m: Message): void {
                     n_0_1_RCVS_0(m)
@@ -552,9 +552,9 @@ coldDsp_0(m)
             
                 n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
                 n_0_1_STATE.messageReceiver = function (m: Message): void {
-                    n_nbx_receiveMessage(n_0_1_STATE, m)
+                    nbx_receiveMessage(n_0_1_STATE, m)
                 }
-                n_nbx_setReceiveBusName(n_0_1_STATE, "empty")
+                nbx_setReceiveBusName(n_0_1_STATE, "empty")
     
                 commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
             
@@ -562,7 +562,7 @@ coldDsp_0(m)
 
 
 
-            n_osc_t_setStep(n_0_0_STATE, 0)
+            osc_t_setStep(n_0_0_STATE, 0)
         
 
             coldDsp_0(EMPTY_MESSAGE)

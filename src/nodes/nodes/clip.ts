@@ -50,8 +50,8 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Float', 'minValue', args.minValue),
             Var('Float', 'maxValue', args.maxValue),
         ]),

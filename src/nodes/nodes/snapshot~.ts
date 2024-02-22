@@ -54,8 +54,8 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'snapshot_t',
     },
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Float', 'currentValue', 0)
         ]),
 

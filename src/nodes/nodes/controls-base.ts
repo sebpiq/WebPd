@@ -19,7 +19,6 @@
  */
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { Func, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 import { AstElement, VariableName } from '@webpd/compiler/src/ast/types'
 
 export const EMPTY_BUS_NAME = 'empty'
@@ -41,19 +40,12 @@ export const build: NodeBuilder<any>['build'] = () => ({
     isPushingMessages: true
 })
 
-export const controlsCoreVariableNamesList = [
-    'setReceiveBusName', 
-    'setSendReceiveFromMessage',
-    'defaultMessageHandler',
-]
-
 export const controlsCore = (
-    variableNames: ReturnType<typeof generateVariableNamesNodeType>, 
-    stateClassName: VariableName,
+    ns: { [name: string]: VariableName },
 ): AstElement =>
     Sequence([
-        Func(variableNames.setReceiveBusName, [
-            Var(stateClassName, 'state'),
+        Func(ns.setReceiveBusName!, [
+            Var(ns.State!, 'state'),
             Var('string', 'busName'),
         ], 'void')`
             if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
@@ -65,15 +57,15 @@ export const controlsCore = (
             }
         `,
 
-        Func(variableNames.setSendReceiveFromMessage, [
-            Var(stateClassName, 'state'),
+        Func(ns.setSendReceiveFromMessage!, [
+            Var(ns.State!, 'state'),
             Var('Message', 'm'),
         ], 'boolean')`
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'receive'
             ) {
-                ${variableNames.setReceiveBusName}(state, msg_readStringToken(m, 1))
+                ${ns.setReceiveBusName!}(state, msg_readStringToken(m, 1))
                 return true
 
             } else if (
@@ -86,5 +78,5 @@ export const controlsCore = (
             return false
         `,
 
-        Func(variableNames.defaultMessageHandler, [Var('Message', 'm')], 'void')``,
+        Func(ns.defaultMessageHandler!, [Var('Message', 'm')], 'void')``,
     ])

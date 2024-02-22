@@ -43,8 +43,8 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('boolean', 'continueIter', 'true')
         ]),
     

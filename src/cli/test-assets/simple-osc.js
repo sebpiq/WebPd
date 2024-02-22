@@ -204,14 +204,14 @@ function msgBusUnsubscribe(busName, callback) {
             }
         }
         
-function n_osc_t_setStep(state, freq) {
+function osc_t_setStep(state, freq) {
                     state.step = (2 * Math.PI / SAMPLE_RATE) * freq
                 }
-function n_osc_t_setPhase(state, phase) {
+function osc_t_setPhase(state, phase) {
                     state.phase = phase % 1.0 * 2 * Math.PI
                 }
 
-function n_nbx_setReceiveBusName(state, busName) {
+function nbx_setReceiveBusName(state, busName) {
             if (state.receiveBusName !== "empty") {
                 msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
             }
@@ -220,12 +220,12 @@ function n_nbx_setReceiveBusName(state, busName) {
                 msgBusSubscribe(state.receiveBusName, state.messageReceiver)
             }
         }
-function n_nbx_setSendReceiveFromMessage(state, m) {
+function nbx_setSendReceiveFromMessage(state, m) {
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'receive'
             ) {
-                n_nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
+                nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
                 return true
 
             } else if (
@@ -237,8 +237,8 @@ function n_nbx_setSendReceiveFromMessage(state, m) {
             }
             return false
         }
-function n_nbx_defaultMessageHandler(m) {}
-function n_nbx_receiveMessage(state, m) {
+function nbx_defaultMessageHandler(m) {}
+function nbx_receiveMessage(state, m) {
                     if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 0),state.minValue),state.maxValue)
                         const outMessage = msg_floats([state.valueFloat])
@@ -264,7 +264,7 @@ function n_nbx_receiveMessage(state, m) {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 1),state.minValue),state.maxValue)
                         return
                     
-                    } else if (n_nbx_setSendReceiveFromMessage(state, m) === true) {
+                    } else if (nbx_setSendReceiveFromMessage(state, m) === true) {
                         return
                     }
                 }
@@ -294,8 +294,8 @@ valueFloat: 220,
 value: msg_create([]),
 receiveBusName: "empty",
 sendBusName: "empty",
-messageReceiver: n_nbx_defaultMessageHandler,
-messageSender: n_nbx_defaultMessageHandler,
+messageReceiver: nbx_defaultMessageHandler,
+messageSender: nbx_defaultMessageHandler,
                             }
 const m_n_0_0_0_sig_STATE = {
                                 currentValue: 0,
@@ -307,7 +307,7 @@ step: 0,
         
 function n_0_1_RCVS_0(m) {
                             
-                n_nbx_receiveMessage(n_0_1_STATE, m)
+                nbx_receiveMessage(n_0_1_STATE, m)
                 return
             
                             throw new Error('Node "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
@@ -348,7 +348,7 @@ coldDsp_0(m)
 
         function coldDsp_0(m) {
                     m_n_0_0_0_sig_OUTS_0 = m_n_0_0_0_sig_STATE.currentValue
-                    n_osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
+                    osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
                 }
         function ioRcv_n_0_1_0(m) {
                     n_0_1_RCVS_0(m)
@@ -366,9 +366,9 @@ coldDsp_0(m)
                 
                 n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
                 n_0_1_STATE.messageReceiver = function (m) {
-                    n_nbx_receiveMessage(n_0_1_STATE, m)
+                    nbx_receiveMessage(n_0_1_STATE, m)
                 }
-                n_nbx_setReceiveBusName(n_0_1_STATE, "empty")
+                nbx_setReceiveBusName(n_0_1_STATE, "empty")
     
                 commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
             
@@ -376,7 +376,7 @@ coldDsp_0(m)
 
 
 
-            n_osc_t_setStep(n_0_0_STATE, 0)
+            osc_t_setStep(n_0_0_STATE, 0)
         
 
                 coldDsp_0(EMPTY_MESSAGE)

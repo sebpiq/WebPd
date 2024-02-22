@@ -23,7 +23,6 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { Class, Code, Sequence } from '@webpd/compiler'
 import { ast, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
@@ -103,8 +102,8 @@ const makeNodeImplementation = ({
             alphaName,
         },
 
-        state: ({ stateClassName }) => 
-            Class(stateClassName, [
+        state: ({ ns }) => 
+            Class(ns.State!, [
                 Var('Float', 'lastOutputRe', 0),
                 Var('Float', 'lastOutputIm', 0),
                 Var('Float', 'lastInputRe', 0),

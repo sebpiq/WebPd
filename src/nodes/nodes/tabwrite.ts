@@ -21,10 +21,9 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { nodeCoreTabBase, translateArgsTabBase, NodeArguments, variableNamesTabBaseNameList } from './tab-base'
+import { nodeCoreTabBase, translateArgsTabBase, NodeArguments } from './tab-base'
 import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
@@ -41,16 +40,10 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const variableNames = generateVariableNamesNodeType('tabwrite', [
-    ...variableNamesTabBaseNameList,
-    'setArrayNameFinalize',
-    'setWritePosition',
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
-            Var('FloatArray', 'array', variableNames.emptyArray),
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
+            Var('FloatArray', 'array', ns.emptyArray!),
             Var('string', 'arrayName', `"${args.arrayName}"`),
             Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
             Var('Int', 'readPosition', 0),
@@ -58,62 +51,59 @@ const nodeImplementation: _NodeImplementation = {
             Var('Int', 'writePosition', 0),
         ]),
 
-    initialization: ({ state }) => ast`
+    initialization: ({ ns, state }) => ast`
         if (${state}.arrayName.length) {
-            ${variableNames.setArrayName}(
+            ${ns.setArrayName!}(
                 ${state}, 
                 ${state}.arrayName,
-                () => ${variableNames.setArrayNameFinalize}(${state})
+                () => ${ns.setArrayNameFinalize!}(${state})
             )
         }
     `,
 
-    messageReceivers: (context) => {
-        const { state } = context
-        return {
-            '0': AnonFunc([Var('Message', 'm')])`
-                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
-                    if (${state}.array.length === 0) {
-                        return
-    
-                    } else {
-                        ${state}.array[${state}.writePosition] = msg_readFloatToken(m, 0)
-                        return
-                    }
-    
-                } else if (
-                    msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                    && msg_readStringToken(m, 0) === 'set'
-                ) {
-                    ${variableNames.setArrayName}(
-                        ${state}, 
-                        msg_readStringToken(m, 1),
-                        () => ${variableNames.setArrayNameFinalize}(${state}),
-                    )
+    messageReceivers: ({ ns, state}) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
+                if (${state}.array.length === 0) {
                     return
-            
+
+                } else {
+                    ${state}.array[${state}.writePosition] = msg_readFloatToken(m, 0)
+                    return
                 }
-            `,
-    
-            '1': coldFloatInletWithSetter(variableNames.setWritePosition, state)
-        }
-    },
 
-    core: ({ stateClassName }) => 
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${ns.setArrayName!}(
+                    ${state}, 
+                    msg_readStringToken(m, 1),
+                    () => ${ns.setArrayNameFinalize!}(${state}),
+                )
+                return
+        
+            }
+        `,
+
+        '1': coldFloatInletWithSetter(ns.setWritePosition!, state)
+    }),
+
+    core: ({ ns }) => 
         Sequence([
-            nodeCoreTabBase(variableNames, stateClassName),
+            nodeCoreTabBase(ns),
 
-            Func(variableNames.setArrayNameFinalize, [
-                Var(stateClassName, 'state'),
+            Func(ns.setArrayNameFinalize!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.array = commons_getArray(state.arrayName)
             `,
         
-            Func(variableNames.setWritePosition, [
-                Var(stateClassName, 'state'),
+            Func(ns.setWritePosition!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'writePosition')
             ], 'void')`
-                state.writePosition = ${variableNames.prepareIndex}(writePosition, state.array.length)
+                state.writePosition = ${ns.prepareIndex!}(writePosition, state.array.length)
             `
         ]),
 

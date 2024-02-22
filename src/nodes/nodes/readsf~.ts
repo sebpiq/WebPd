@@ -25,7 +25,6 @@ import { assertOptionalNumber } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     channelCount: number
@@ -63,23 +62,20 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ node implementations ------------------------------ //
-const variableNames = generateVariableNamesNodeType('readsf_t', [
-    'openStream',
-])
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'readsf_t',
     },
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Array<buf_SoundBuffer>', 'buffers', '[]'),
             Var('fs_OperationId', 'streamOperationId', -1),
             Var('Int', 'readingStatus', 0),
         ]),
 
     messageReceivers: ({
+        ns,
         node,
         state,
     }) => ({
@@ -88,7 +84,7 @@ const nodeImplementation: _NodeImplementation = {
                 if (msg_isStringToken(m, 0) 
                     && msg_readStringToken(m, 0) === 'open'
                 ) {
-                    ${variableNames.openStream}(
+                    ${ns.openStream!}(
                         ${state},
                         m,
                         ${node.args.channelCount},
@@ -156,10 +152,10 @@ const nodeImplementation: _NodeImplementation = {
         }
     `,
 
-    core: ({ stateClassName, globs }) => 
+    core: ({ ns, globs }) => 
         Sequence([
-            Func(variableNames.openStream, [
-                Var(stateClassName, 'state'),
+            Func(ns.openStream!, [
+                Var(ns.State!, 'state'),
                 Var('Message', 'm'),
                 Var('Int', 'channelCount'),
                 Var('fs_OperationCallback', 'onStreamClose'),

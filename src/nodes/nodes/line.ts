@@ -27,7 +27,6 @@ import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     initValue: number
@@ -58,20 +57,9 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('line', [
-    'setNewLine',
-    'setNextDuration',
-    'setGrain',
-    'stopCurrentLine',
-    'setNextSamp',
-    'incrementTime',
-    'tick',
-    'scheduleNextTick',
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('LineSegment', 'currentLine', `{
                 p0: {x: -1, y: 0},
                 p1: {x: -1, y: 0},
@@ -88,16 +76,17 @@ const nodeImplementation: _NodeImplementation = {
             Var('SkedCallback', 'tickCallback', ast`${AnonFunc()``}`),
         ]),
     
-    initialization: ({ node: { args }, state, snds }) => 
+    initialization: ({ ns, node: { args }, state, snds }) => 
         ast`
-            ${variableNames.setGrain}(${state}, ${args.timeGrainMsec})
+            ${ns.setGrain!}(${state}, ${args.timeGrainMsec})
             ${state}.snd0 = ${snds.$0}
             ${state}.tickCallback = ${AnonFunc()`
-                ${variableNames.tick}(${state})
+                ${ns.tick!}(${state})
             `}
         `,
     
     messageReceivers: ({ 
+        ns,
         snds, 
         state,
     }) => ({
@@ -107,12 +96,12 @@ const nodeImplementation: _NodeImplementation = {
                 || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
                 || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
             ) {
-                ${variableNames.stopCurrentLine}(${state})
+                ${ns.stopCurrentLine!}(${state})
                 switch (msg_getLength(m)) {
                     case 3:
-                        ${variableNames.setGrain}(${state}, msg_readFloatToken(m, 2))
+                        ${ns.setGrain!}(${state}, msg_readFloatToken(m, 2))
                     case 2:
-                        ${variableNames.setNextDuration}(${state}, msg_readFloatToken(m, 1))
+                        ${ns.setNextDuration!}(${state}, msg_readFloatToken(m, 1))
                     case 1:
                         ${ConstVar('Float', 'targetValue', 'msg_readFloatToken(m, 0)')}
                         if (${state}.nextDurationSamp === 0) {
@@ -120,36 +109,36 @@ const nodeImplementation: _NodeImplementation = {
                             ${snds.$0}(msg_floats([targetValue]))
                         } else {
                             ${snds.$0}(msg_floats([${state}.currentValue]))
-                            ${variableNames.setNewLine}(${state}, targetValue)
-                            ${variableNames.incrementTime}(${state}, ${state}.currentLine.dx)
-                            ${variableNames.scheduleNextTick}(${state})
+                            ${ns.setNewLine!}(${state}, targetValue)
+                            ${ns.incrementTime!}(${state}, ${state}.currentLine.dx)
+                            ${ns.scheduleNextTick!}(${state})
                         }
                         
                 }
                 return
     
             } else if (msg_isAction(m, 'stop')) {
-                ${variableNames.stopCurrentLine}(${state})
+                ${ns.stopCurrentLine!}(${state})
                 return
     
             } else if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
                 && msg_readStringToken(m, 0) === 'set'
             ) {
-                ${variableNames.stopCurrentLine}(${state})
+                ${ns.stopCurrentLine!}(${state})
                 ${state}.currentValue = msg_readFloatToken(m, 1)
                 return
             }
         `,
     
-        '1': coldFloatInletWithSetter(variableNames.setNextDuration, state),
-        '2': coldFloatInletWithSetter(variableNames.setGrain, state),
+        '1': coldFloatInletWithSetter(ns.setNextDuration!, state),
+        '2': coldFloatInletWithSetter(ns.setGrain!, state),
     }),
 
-    core: ({ globs, stateClassName }) => 
+    core: ({ globs, ns }) => 
         Sequence([
-            Func(variableNames.setNewLine, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNewLine!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'targetValue'),
             ], 'void')`
                 state.currentLine = {
@@ -167,43 +156,43 @@ const nodeImplementation: _NodeImplementation = {
                 state.currentLine.dy = computeSlope(state.currentLine.p0, state.currentLine.p1) * state.grainSamp
             `,
         
-            Func(variableNames.setNextDuration, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNextDuration!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'durationMsec'),
             ], 'void')`
                 state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
             `,
         
-            Func(variableNames.setGrain, [
-                Var(stateClassName, 'state'),
+            Func(ns.setGrain!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'grainMsec'),
             ], 'void')`
                 state.grainSamp = computeUnitInSamples(${globs.sampleRate}, Math.max(grainMsec, ${MIN_GRAIN_MSEC}), 'msec')
             `,
         
-            Func(variableNames.stopCurrentLine, [
-                Var(stateClassName, 'state'),
+            Func(ns.stopCurrentLine!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 if (state.skedId !== SKED_ID_NULL) {
                     commons_cancelWaitFrame(state.skedId)
                     state.skedId = SKED_ID_NULL
                 }
                 if (${globs.frame} < state.nextSampInt) {
-                    ${variableNames.incrementTime}(state, -1 * (state.nextSamp - toFloat(${globs.frame})))
+                    ${ns.incrementTime!}(state, -1 * (state.nextSamp - toFloat(${globs.frame})))
                 }
-                ${variableNames.setNextSamp}(state, -1)
+                ${ns.setNextSamp!}(state, -1)
             `,
         
-            Func(variableNames.setNextSamp, [
-                Var(stateClassName, 'state'),
+            Func(ns.setNextSamp!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'currentSamp'),
             ], 'void')`
                 state.nextSamp = currentSamp
                 state.nextSampInt = toInt(Math.round(currentSamp))
             `,
         
-            Func(variableNames.incrementTime, [
-                Var(stateClassName, 'state'),
+            Func(ns.incrementTime!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'incrementSamp'),
             ], 'void')`
                 if (incrementSamp === state.currentLine.dx) {
@@ -215,27 +204,27 @@ const nodeImplementation: _NodeImplementation = {
                         {x: state.currentLine.dx, y: state.currentLine.dy},
                     )
                 }
-                ${variableNames.setNextSamp}(
+                ${ns.setNextSamp!}(
                     state, 
                     (state.nextSamp !== -1 ? state.nextSamp: toFloat(${globs.frame})) + incrementSamp
                 )
             `,
         
-            Func(variableNames.tick, [
-                Var(stateClassName, 'state'),
+            Func(ns.tick!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.snd0(msg_floats([state.currentValue]))
                 if (toFloat(${globs.frame}) >= state.currentLine.p1.x) {
                     state.currentValue = state.currentLine.p1.y
-                    ${variableNames.stopCurrentLine}(state)
+                    ${ns.stopCurrentLine!}(state)
                 } else {
-                    ${variableNames.incrementTime}(state, state.currentLine.dx)
-                    ${variableNames.scheduleNextTick}(state)
+                    ${ns.incrementTime!}(state, state.currentLine.dx)
+                    ${ns.scheduleNextTick!}(state)
                 }
             `,
         
-            Func(variableNames.scheduleNextTick, [
-                Var(stateClassName, 'state'),
+            Func(ns.scheduleNextTick!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.skedId = commons_waitFrame(state.nextSampInt, state.tickCallback)
             `

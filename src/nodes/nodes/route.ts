@@ -23,7 +23,6 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { AnonFunc, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     filters: Array<number | string>
@@ -57,8 +56,8 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = { 
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Float', 'floatFilter', typeof args.filters[0] === 'number' ? args.filters[0]: 0),
             Var('string', 'stringFilter', `"${args.filters[0]}"`),
             Var('Int', 'filterType', typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN'),

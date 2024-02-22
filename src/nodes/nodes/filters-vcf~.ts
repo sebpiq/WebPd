@@ -23,7 +23,6 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { Class, Func, Sequence, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     frequency: number,
@@ -54,19 +53,13 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('vcf_t', [
-    'updateCoefs',
-    'setFrequency',
-    'setQ',
-])
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'vcf_t',
     },
 
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Float', 'frequency', args.frequency),
             Var('Float', 'Q', args.Q),
             Var('Float', 'coef1', 0),
@@ -77,10 +70,10 @@ const nodeImplementation: _NodeImplementation = {
             Var('Float', 'ym2', 0),
         ]),
 
-    dsp: ({ ins, outs, state }) => ({
+    dsp: ({ ns, ins, outs, state }) => ({
         inlets: {
             '1': ast`
-                ${variableNames.setFrequency}(${state}, ${ins.$1})
+                ${ns.setFrequency!}(${state}, ${ins.$1})
             `
         },
         loop: ast`
@@ -91,14 +84,14 @@ const nodeImplementation: _NodeImplementation = {
         `
     }),
 
-    messageReceivers: ({ state }) => ({
-        '2': coldFloatInletWithSetter(variableNames.setQ, state),
+    messageReceivers: ({ ns, state }) => ({
+        '2': coldFloatInletWithSetter(ns.setQ!, state),
     }),
 
-    core: ({ globs, stateClassName }) => 
+    core: ({ globs, ns }) => 
         Sequence([
-            Func(variableNames.updateCoefs, [
-                Var(stateClassName, 'state'),
+            Func(ns.updateCoefs!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 ${Var('Float', 'omega', `state.frequency * (2.0 * Math.PI) / ${globs.sampleRate}`)}
                 ${Var('Float', 'oneminusr', `state.Q < 0.001 ? 1.0 : Math.min(omega / state.Q, 1)`)}
@@ -112,20 +105,20 @@ const nodeImplementation: _NodeImplementation = {
                 state.gain = 2 * oneminusr * (oneminusr + r * omega)
             `,
         
-            Func(variableNames.setFrequency, [
-                Var(stateClassName, 'state'),
+            Func(ns.setFrequency!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'frequency'),
             ], 'void')`
                 state.frequency = (frequency < 0.001) ? 10: frequency
-                ${variableNames.updateCoefs}(state)
+                ${ns.updateCoefs!}(state)
             `,
         
-            Func(variableNames.setQ, [
-                Var(stateClassName, 'state'),
+            Func(ns.setQ!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'Q'),
             ], 'void')`
                 state.Q = Math.max(Q, 0)
-                ${variableNames.updateCoefs}(state)
+                ${ns.updateCoefs!}(state)
             `,
         ])
 }

@@ -21,7 +21,6 @@
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { Func, Sequence, Var, ConstVar } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 import { _NodeImplementation } from './controls-float'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
@@ -34,25 +33,15 @@ export const translateArgsTabBase: NodeBuilder<NodeArguments>['translateArgs'] =
         arrayName: assertOptionalString(pdNode.args[0]) || '',
     })
 
-export const variableNamesTabBaseNameList = [
-    'setArrayName',
-    'createState',
-    'prepareIndex',
-    'emptyArray',
-]
-
-export const nodeCoreTabBase = (
-    variableNames: ReturnType<typeof generateVariableNamesNodeType>, 
-    stateClassName: VariableName,
-) => 
+export const nodeCoreTabBase = (ns: { [name: string]: VariableName }) => 
     Sequence([
-        ConstVar('FloatArray', variableNames.emptyArray, 'createFloatArray(1)'),
+        ConstVar('FloatArray', ns.emptyArray!, 'createFloatArray(1)'),
 
-        Func(variableNames.createState, [
+        Func(ns.createState!, [
             Var('string', 'arrayName'),
-        ], stateClassName)`
+        ], ns.State!)`
             return {
-                array: ${variableNames.emptyArray},
+                array: ${ns.emptyArray!},
                 arrayName,
                 arrayChangesSubscription: SKED_ID_NULL,
                 readPosition: 0,
@@ -61,8 +50,8 @@ export const nodeCoreTabBase = (
             }
         `,
 
-        Func(variableNames.setArrayName, [
-            Var(stateClassName, 'state'),
+        Func(ns.setArrayName!, [
+            Var(ns.State!, 'state'),
             Var('string', 'arrayName'),
             Var('SkedCallback', 'callback'),
         ], 'void')`
@@ -70,11 +59,11 @@ export const nodeCoreTabBase = (
                 commons_cancelArrayChangesSubscription(state.arrayChangesSubscription)
             }
             state.arrayName = arrayName
-            state.array = ${variableNames.emptyArray}
+            state.array = ${ns.emptyArray!}
             commons_subscribeArrayChanges(arrayName, callback)
         `,
 
-        Func(variableNames.prepareIndex, [
+        Func(ns.prepareIndex!, [
             Var('Float', 'index'),
             Var('Int', 'arrayLength'),
         ], 'Int')`

@@ -53,8 +53,8 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'sig_t',
     },
     
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Float', 'currentValue', args.initValue)
         ]),
 

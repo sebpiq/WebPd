@@ -22,10 +22,9 @@ import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCore, controlsCoreVariableNamesList } from './controls-base'
+import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCore } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     outputOnLoad: boolean
@@ -44,52 +43,48 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('bang', [
-    ...controlsCoreVariableNamesList,
-    'receiveMessage'
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns, node: { args } }) => 
+        Class(ns.State!, [
             Var('Message', 'value', 'msg_create([])'),
             Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
             Var('string', 'sendBusName', `"${args.sendBusName}"`),
-            Var('MessageHandler', 'messageReceiver', variableNames.defaultMessageHandler),
-            Var('MessageHandler', 'messageSender', variableNames.defaultMessageHandler),
+            Var('MessageHandler', 'messageReceiver', ns.defaultMessageHandler!),
+            Var('MessageHandler', 'messageSender', ns.defaultMessageHandler!),
         ]),
 
     initialization: ({ 
+        ns,
         snds,
         state,
         node: { args },
     }) => ast`
         ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-            ${variableNames.receiveMessage}(${state}, m)
+            ${ns.receiveMessage!}(${state}, m)
         `}
         ${state}.messageSender = ${snds.$0}
-        ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+        ${ns.setReceiveBusName!}(${state}, "${args.receiveBusName}")
 
         ${args.outputOnLoad ? 
             `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`: null}
     `,
     
-    messageReceivers: ({ state }) => ({
+    messageReceivers: ({ ns, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
-            ${variableNames.receiveMessage}(${state}, m)
+            ${ns.receiveMessage!}(${state}, m)
             return
         `,
     }),
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
-            controlsCore(variableNames, stateClassName),
+            controlsCore(ns),
 
-            Func(variableNames.receiveMessage, [
-                Var(stateClassName, 'state'),
+            Func(ns.receiveMessage!, [
+                Var(ns.State!, 'state'),
                 Var('Message', 'm'),
             ], 'void')`
-                if (${variableNames.setSendReceiveFromMessage}(state, m) === true) {
+                if (${ns.setSendReceiveFromMessage!}(state, m) === true) {
                     return
                 }
                 

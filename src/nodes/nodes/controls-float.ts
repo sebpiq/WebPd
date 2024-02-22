@@ -40,11 +40,9 @@ import {
     EMPTY_BUS_NAME,
     ControlsBaseNodeArguments,
     controlsCore,
-    controlsCoreVariableNamesList,
 } from './controls-base'
 import { messageBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
     minValue: number
@@ -97,25 +95,21 @@ const makeNodeImplementation = ({
     name: string
 }): _NodeImplementation => {
 
-    const variableNames = generateVariableNamesNodeType(name, [
-        ...controlsCoreVariableNamesList,
-        'receiveMessage'
-    ])
-
     return {
-        state: ({ node: { args }, stateClassName }) => 
-            Class(stateClassName, [
+        state: ({ ns, node: { args } }) => 
+            Class(ns.State!, [
                 Var('Float', 'minValue', args.minValue),
                 Var('Float', 'maxValue', args.maxValue),
                 Var('Float', 'valueFloat', args.initValue),
                 Var('Message', 'value', 'msg_create([])'),
                 Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
                 Var('string', 'sendBusName', `"${args.sendBusName}"`),
-                Var('MessageHandler', 'messageReceiver', variableNames.defaultMessageHandler),
-                Var('MessageHandler', 'messageSender', variableNames.defaultMessageHandler),
+                Var('MessageHandler', 'messageReceiver', ns.defaultMessageHandler!),
+                Var('MessageHandler', 'messageSender', ns.defaultMessageHandler!),
             ]),
 
         initialization: ({
+            ns,
             state,
             snds,
             node: { args },
@@ -123,29 +117,30 @@ const makeNodeImplementation = ({
             ast`
                 ${state}.messageSender = ${snds.$0}
                 ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-                    ${variableNames.receiveMessage}(${state}, m)
+                    ${ns.receiveMessage!}(${state}, m)
                 `}
-                ${variableNames.setReceiveBusName}(${state}, "${args.receiveBusName}")
+                ${ns.setReceiveBusName!}(${state}, "${args.receiveBusName}")
     
                 ${args.outputOnLoad ? 
                     `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state}.valueFloat])))`: null}
             `,
         
         messageReceivers: ({ 
+            ns,
             state, 
         }) => ({
             '0': AnonFunc([Var('Message', 'm')])`
-                ${variableNames.receiveMessage}(${state}, m)
+                ${ns.receiveMessage!}(${state}, m)
                 return
             `
         }),
 
-        core: ({ stateClassName }) => 
+        core: ({ ns }) => 
             Sequence([
-                controlsCore(variableNames, stateClassName),
+                controlsCore(ns),
 
-                Func(variableNames.receiveMessage, [
-                    Var(stateClassName, 'state'),
+                Func(ns.receiveMessage!, [
+                    Var(ns.State!, 'state'),
                     Var('Message', 'm'),
                 ], 'void')`
                     if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
@@ -179,7 +174,7 @@ const makeNodeImplementation = ({
                             : `state.valueFloat = msg_readFloatToken(m, 1)`}
                         return
                     
-                    } else if (${variableNames.setSendReceiveFromMessage}(state, m) === true) {
+                    } else if (${ns.setSendReceiveFromMessage!}(state, m) === true) {
                         return
                     }
                 `

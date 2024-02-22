@@ -20,10 +20,9 @@
 
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { nodeCoreTabBase, translateArgsTabBase, NodeArguments, variableNamesTabBaseNameList } from './tab-base'
+import { nodeCoreTabBase, translateArgsTabBase, NodeArguments } from './tab-base'
 import { Class, Func, Sequence, ast, stdlib } from '@webpd/compiler'
 import { AnonFunc, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
@@ -41,15 +40,10 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('tabread', [
-    ...variableNamesTabBaseNameList,
-    'setArrayNameFinalize',
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
-            Var('FloatArray', 'array', variableNames.emptyArray),
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
+            Var('FloatArray', 'array', ns.emptyArray!),
             Var('string', 'arrayName', `"${args.arrayName}"`),
             Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
             Var('Int', 'readPosition', 0),
@@ -57,56 +51,53 @@ const nodeImplementation: _NodeImplementation = {
             Var('Int', 'writePosition', 0),
         ]),
     
-    initialization: ({ state }) => ast`
+    initialization: ({ ns, state }) => ast`
         if (${state}.arrayName.length) {
-            ${variableNames.setArrayName}(
+            ${ns.setArrayName!}(
                 ${state}, 
                 ${state}.arrayName,
-                () => ${variableNames.setArrayNameFinalize}(${state})
+                () => ${ns.setArrayNameFinalize!}(${state})
             )
         }
     `,
 
-    messageReceivers: (context) => {
-        const { snds, state } = context
-        return {
-            '0': AnonFunc([Var('Message', 'm')])`
-                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
-                    if (${state}.array.length === 0) {
-                        ${snds.$0}(msg_floats([0]))
+    messageReceivers: ({ ns, snds, state }) => ({
+        '0': AnonFunc([Var('Message', 'm')])`
+            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
+                if (${state}.array.length === 0) {
+                    ${snds.$0}(msg_floats([0]))
 
-                    } else {
-                        ${snds.$0}(msg_floats([${state}.array[
-                            ${variableNames.prepareIndex}(
-                                msg_readFloatToken(m, 0), 
-                                ${state}.array.length
-                            )
-                        ]]))
-                    }
-                    return 
-
-                } else if (
-                    msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                    && msg_readStringToken(m, 0) === 'set'
-                ) {
-                    ${variableNames.setArrayName}(
-                        ${state}, 
-                        msg_readStringToken(m, 1),
-                        () => ${variableNames.setArrayNameFinalize}(${state})
-                    )
-                    return
-            
+                } else {
+                    ${snds.$0}(msg_floats([${state}.array[
+                        ${ns.prepareIndex!}(
+                            msg_readFloatToken(m, 0), 
+                            ${state}.array.length
+                        )
+                    ]]))
                 }
-            `,
-        }
-    },
+                return 
 
-    core: ({ stateClassName }) => 
+            } else if (
+                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
+                && msg_readStringToken(m, 0) === 'set'
+            ) {
+                ${ns.setArrayName!}(
+                    ${state}, 
+                    msg_readStringToken(m, 1),
+                    () => ${ns.setArrayNameFinalize!}(${state})
+                )
+                return
+        
+            }
+        `,
+    }),
+
+    core: ({ ns }) => 
         Sequence([
-            nodeCoreTabBase(variableNames, stateClassName),
+            nodeCoreTabBase(ns),
 
-            Func(variableNames.setArrayNameFinalize, [
-                Var(stateClassName, 'state'),
+            Func(ns.setArrayNameFinalize!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.array = commons_getArray(state.arrayName)
             `,

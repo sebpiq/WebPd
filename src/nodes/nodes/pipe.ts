@@ -33,7 +33,6 @@ import {
     TypeArgument,
 } from '../type-arguments'
 import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     typeArguments: Array<[TypeArgument, number | string]>
@@ -80,18 +79,9 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('pipe', [
-    'prepareMessageScheduling',
-    'sendMessages',
-    'clear',
-    'setDelay',
-    'ScheduledMessage',
-    'dummyScheduledMessage',
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Int', 'delay', 0),
             Var('Array<Message>', 'outputMessages', `[${
                 args.typeArguments
@@ -99,13 +89,13 @@ const nodeImplementation: _NodeImplementation = {
                         `msg_floats([${value}])`
                         : `msg_strings(["${value}"])`).join(',')
             }]`),
-            Var(`Array<${variableNames.ScheduledMessage}>`, 'scheduledMessages', '[]'),
+            Var(`Array<${ns.ScheduledMessage!}>`, 'scheduledMessages', '[]'),
             Var('Array<MessageHandler>', 'snds', '[]'),
         ]),
     
-    initialization: ({ node: { args }, state, snds }) => 
+    initialization: ({ ns, node: { args }, state, snds }) => 
         ast`
-            ${variableNames.setDelay}(${state}, ${args.delay})
+            ${ns.setDelay!}(${state}, ${args.delay})
             ${state}.snds = [${functional.countTo(args.typeArguments.length)
                 .reverse()
                 .map((i) => snds[i]).join(', ')
@@ -113,18 +103,19 @@ const nodeImplementation: _NodeImplementation = {
         `,
 
     messageReceivers: ({ 
+        ns,
         node: { args }, 
         state, 
         globs,
     }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (msg_isAction(m, 'clear')) {
-                ${variableNames.clear}(${state})
+                ${ns.clear!}(${state})
                 return 
     
             } else if (msg_isAction(m, 'flush')) {
                 if (${state}.scheduledMessages.length) {
-                    ${variableNames.sendMessages}(
+                    ${ns.sendMessages!}(
                         ${state}, 
                         ${state}.scheduledMessages[${state}.scheduledMessages.length - 1].frame
                     )
@@ -133,10 +124,10 @@ const nodeImplementation: _NodeImplementation = {
     
             } else {
                 ${ConstVar('Message', 'inMessage', 'msg_isBang(m) ? msg_create([]): m')}
-                ${ConstVar('Int', 'insertIndex', `${variableNames.prepareMessageScheduling}(
+                ${ConstVar('Int', 'insertIndex', `${ns.prepareMessageScheduling!}(
                     ${state}, 
                     () => {
-                        ${variableNames.sendMessages}(${state}, ${globs.frame})
+                        ${ns.sendMessages!}(${state}, ${globs.frame})
                     },
                 )`)}
     
@@ -172,25 +163,25 @@ const nodeImplementation: _NodeImplementation = {
             ]
         ),
     
-        [args.typeArguments.length]: coldFloatInletWithSetter(variableNames.setDelay, state)
+        [args.typeArguments.length]: coldFloatInletWithSetter(ns.setDelay!, state)
     }),
     
-    core: ({ stateClassName, globs }) => 
+    core: ({ ns, globs }) => 
         Sequence([
-            Class(variableNames.ScheduledMessage, [
+            Class(ns.ScheduledMessage!, [
                 Var('Message', 'message'), 
                 Var('Int', 'frame'), 
                 Var('SkedId', 'skedId'), 
             ]),
         
-            ConstVar(variableNames.ScheduledMessage, variableNames.dummyScheduledMessage, `{
+            ConstVar(ns.ScheduledMessage!, ns.dummyScheduledMessage!, `{
                 message: msg_create([]),
                 frame: 0,
                 skedId: SKED_ID_NULL,
             }`),
         
-            Func(variableNames.prepareMessageScheduling, [
-                Var(stateClassName, 'state'),
+            Func(ns.prepareMessageScheduling!, [
+                Var(ns.State!, 'state'),
                 Var('SkedCallback', 'callback'),
             ], 'Int')`
                 ${Var('Int', 'insertIndex', '0')}
@@ -224,7 +215,7 @@ const nodeImplementation: _NodeImplementation = {
                 // 3. Instantiate new messages in the newly created holes.
                 }
                 for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
-                    state.scheduledMessages.push(${variableNames.dummyScheduledMessage})
+                    state.scheduledMessages.push(${ns.dummyScheduledMessage!})
                 }
                 state.scheduledMessages.copyWithin(
                     (insertIndex + 1) * state.snds.length, 
@@ -232,7 +223,7 @@ const nodeImplementation: _NodeImplementation = {
                 )
                 for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
                     state.scheduledMessages[insertIndex + i] = {
-                        message: ${variableNames.dummyScheduledMessage}.message,
+                        message: ${ns.dummyScheduledMessage!}.message,
                         frame,
                         skedId,
                     }
@@ -241,8 +232,8 @@ const nodeImplementation: _NodeImplementation = {
                 return insertIndex
             `,
         
-            Func(variableNames.sendMessages, [
-                Var(stateClassName, 'state'),
+            Func(ns.sendMessages!, [
+                Var(ns.State!, 'state'),
                 Var('Int', 'toFrame'),
             ], 'void')`
                 ${Var('Int', 'i', 0)}
@@ -257,8 +248,8 @@ const nodeImplementation: _NodeImplementation = {
                 }
             `,
         
-            Func(variableNames.clear, [
-                Var(stateClassName, 'state'),
+            Func(ns.clear!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 ${Var('Int', 'i', '0')}
                 ${ConstVar('Int', 'length', `state.scheduledMessages.length`)}
@@ -268,8 +259,8 @@ const nodeImplementation: _NodeImplementation = {
                 state.scheduledMessages = []
             `,
         
-            Func(variableNames.setDelay, [
-                Var(stateClassName, 'state'),
+            Func(ns.setDelay!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'delay'),
             ], 'void')`
                 state.delay = toInt(Math.round(delay / 1000 * ${globs.sampleRate}))

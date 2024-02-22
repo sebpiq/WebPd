@@ -24,8 +24,7 @@ import { assertOptionalString } from '../validation'
 import { bangUtils, stringMsgUtils } from '../global-code/core'
 import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
-import { nodeCoreTabBase, NodeArguments, variableNamesTabBaseNameList } from './tab-base'
+import { nodeCoreTabBase, NodeArguments } from './tab-base'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
@@ -47,21 +46,14 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('tabplay_t', [
-    ...variableNamesTabBaseNameList,
-    'setArrayNameFinalize',
-    'play',
-    'stop',
-])
-
 const nodeImplementation: _NodeImplementation = {
     flags: {
         alphaName: 'tabplay_t',
     },
 
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
-            Var('FloatArray', 'array', variableNames.emptyArray),
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
+            Var('FloatArray', 'array', ns.emptyArray!),
             Var('string', 'arrayName', `"${args.arrayName}"`),
             Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
             Var('Int', 'readPosition', 0),
@@ -69,39 +61,39 @@ const nodeImplementation: _NodeImplementation = {
             Var('Int', 'writePosition', 0),
         ]),
 
-    initialization: ({ state }) => ast`
+    initialization: ({ ns, state }) => ast`
         if (${state}.arrayName.length) {
-            ${variableNames.setArrayName}(
+            ${ns.setArrayName!}(
                 ${state}, 
                 ${state}.arrayName,
-                () => ${variableNames.setArrayNameFinalize}(${state})
+                () => ${ns.setArrayNameFinalize!}(${state})
             )
         }
     `,
 
-    messageReceivers: ({ state }) => ({
+    messageReceivers: ({ ns, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (msg_isBang(m)) {
-                ${variableNames.play}(${state}, 0, ${state}.array.length)
+                ${ns.play!}(${state}, 0, ${state}.array.length)
                 return 
                 
             } else if (msg_isAction(m, 'stop')) {
-                ${variableNames.stop}(${state})
+                ${ns.stop!}(${state})
                 return 
     
             } else if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'set'
             ) {
-                ${variableNames.setArrayName}(
+                ${ns.setArrayName!}(
                     ${state},
                     msg_readStringToken(m, 1),
-                    () => ${variableNames.setArrayNameFinalize}(${state}),
+                    () => ${ns.setArrayNameFinalize!}(${state}),
                 )
                 return
     
             } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${variableNames.play}(
+                ${ns.play!}(
                     ${state},
                     toInt(msg_readFloatToken(m, 0)), 
                     ${state}.array.length
@@ -110,7 +102,7 @@ const nodeImplementation: _NodeImplementation = {
     
             } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
                 ${ConstVar('Int', 'fromSample', `toInt(msg_readFloatToken(m, 0))`)}
-                ${variableNames.play}(
+                ${ns.play!}(
                     ${state},
                     fromSample,
                     fromSample + toInt(msg_readFloatToken(m, 1)),
@@ -132,20 +124,20 @@ const nodeImplementation: _NodeImplementation = {
         }
     `,
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
-            nodeCoreTabBase(variableNames, stateClassName),
+            nodeCoreTabBase(ns),
 
-            Func(variableNames.setArrayNameFinalize, [
-                Var(stateClassName, 'state'),
+            Func(ns.setArrayNameFinalize!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.array = commons_getArray(state.arrayName)
                 state.readPosition = state.array.length
                 state.readUntil = state.array.length
             `,
         
-            Func(variableNames.play, [
-                Var(stateClassName, 'state'),
+            Func(ns.play!, [
+                Var(ns.State!, 'state'),
                 Var('Int', 'playFrom'),
                 Var('Int', 'playTo'),
             ], 'void')`
@@ -156,8 +148,8 @@ const nodeImplementation: _NodeImplementation = {
                 ))
             `,
         
-            Func(variableNames.stop, [
-                Var(stateClassName, 'state'),
+            Func(ns.stop!, [
+                Var(ns.State!, 'state'),
             ], 'void')`
                 state.readPosition = 0
                 state.readUntil = 0

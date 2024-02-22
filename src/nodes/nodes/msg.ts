@@ -67,8 +67,8 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------ node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
 
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Array<MessageTemplate>', 'outTemplates', '[]'),
             Var('Array<Message>', 'outMessages', '[]'),
             Var('Array<(m: Message) => Message>', 'messageTransferFunctions', '[]'),

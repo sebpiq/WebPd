@@ -25,7 +25,6 @@ import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     operation: string
@@ -104,13 +103,9 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- generateDeclarations ------------------------------ //
-const variableNames = generateVariableNamesNodeType('list', [
-    'setSplitPoint'
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ ns }) => 
+        Class(ns.State!, [
             Var('Int', 'splitPoint', 0),
             Var('Message', 'currentList', 'msg_create([])'),
         ]),
@@ -138,6 +133,7 @@ const nodeImplementation: _NodeImplementation = {
     `,
 
     messageReceivers: ({ 
+        ns,
         snds, 
         state,
         node: { args } 
@@ -163,7 +159,7 @@ const nodeImplementation: _NodeImplementation = {
                         return
                     `,
             
-                    '1': coldFloatInletWithSetter(variableNames.setSplitPoint, state),
+                    '1': coldFloatInletWithSetter(ns.setSplitPoint!, state),
                 }
     
             case 'trim':
@@ -215,10 +211,10 @@ const nodeImplementation: _NodeImplementation = {
         }
     },
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
-            Func(variableNames.setSplitPoint, [
-                Var(stateClassName, 'state'),
+            Func(ns.setSplitPoint!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'value'),
             ], 'void')`
                 state.splitPoint = toInt(value)

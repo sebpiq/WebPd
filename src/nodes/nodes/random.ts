@@ -24,7 +24,6 @@ import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { AnonFunc, Class, Func, Sequence, Var } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {
     maxValue: number
@@ -50,17 +49,13 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const variableNames = generateVariableNamesNodeType('random', [
-    'setMaxValue',
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('Float', 'maxValue', args.maxValue),
         ]),
 
-    messageReceivers: ({ snds, state }) => ({
+    messageReceivers: ({ ns, snds, state }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (msg_isBang(m)) {
                 ${snds['0']}(msg_floats([Math.floor(Math.random() * ${state}.maxValue)]))
@@ -74,13 +69,13 @@ const nodeImplementation: _NodeImplementation = {
             }
         `,
     
-        '1': coldFloatInletWithSetter(variableNames.setMaxValue, state),
+        '1': coldFloatInletWithSetter(ns.setMaxValue!, state),
     }),
 
-    core: ({ stateClassName }) => 
+    core: ({ ns }) => 
         Sequence([
-            Func(variableNames.setMaxValue, [
-                Var(stateClassName, 'state'),
+            Func(ns.setMaxValue!, [
+                Var(ns.State!, 'state'),
                 Var('Float', 'maxValue'),
             ], 'void')`
                 state.maxValue = Math.max(maxValue, 0)

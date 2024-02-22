@@ -61,8 +61,8 @@ const builderReceive: NodeBuilder<NodeArguments> = {
 
 // -------------------------------- node implementation - send ----------------------------------- //
 const nodeImplementationSend: _NodeImplementation = {
-    state: ({ node: { args }, stateClassName }) => 
-        Class(stateClassName, [
+    state: ({ node: { args }, ns }) => 
+        Class(ns.State!, [
             Var('string', 'busName', `"${args.busName}"`),
         ]),
         

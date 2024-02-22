@@ -23,7 +23,6 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { parseSoundFileOpenOpts } from '../global-code/fs'
 import { Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler'
-import { generateVariableNamesNodeType } from '../variable-names'
 
 interface NodeArguments {}
 
@@ -46,18 +45,13 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------ generateDeclarations ------------------------------ //
-const variableNames = generateVariableNamesNodeType('soundfiler', [
-    'Operation',
-    'buildMessage1',
-])
-
 const nodeImplementation: _NodeImplementation = {
-    state: ({ stateClassName }) => 
-        Class(stateClassName, [
-            Var(`Map<fs_OperationId, ${variableNames.Operation}>`, 'operations', 'new Map()'),
+    state: ({ ns }) => 
+        Class(ns.State!, [
+            Var(`Map<fs_OperationId, ${ns.Operation!}>`, 'operations', 'new Map()'),
         ]),
 
-    messageReceivers: ({ state, globs, snds }) => ({
+    messageReceivers: ({ ns, state, globs, snds }) => ({
         '0': AnonFunc([Var('Message', 'm')])`
             if (
                 msg_getLength(m) >= 3 
@@ -76,7 +70,7 @@ const nodeImplementation: _NodeImplementation = {
                     endianness: '',
                     extraOptions: '',
                 }`)}
-                ${ConstVar(variableNames.Operation, 'operation', `{
+                ${ConstVar(ns.Operation!, 'operation', `{
                     arrayNames: [],
                     resize: false,
                     maxSize: -1,
@@ -176,7 +170,7 @@ const nodeImplementation: _NodeImplementation = {
                             Var('fs_OperationStatus', 'status'),
                             Var('FloatArray[]', 'sound'),
                         ], 'void')`
-                            ${ConstVar(variableNames.Operation, 'operation', `${state}.operations.get(id)`)}
+                            ${ConstVar(ns.Operation!, 'operation', `${state}.operations.get(id)`)}
                             ${state}.operations.delete(id)
                             ${Var('Int', 'i', '0')}
                             ${Var('Float', 'maxFramesRead', '0')}
@@ -216,7 +210,7 @@ const nodeImplementation: _NodeImplementation = {
                                 )
                             }
         
-                            ${snds.$1}(${variableNames.buildMessage1}(operation.soundInfo))
+                            ${snds.$1}(${ns.buildMessage1!}(operation.soundInfo))
                             ${snds.$0}(msg_floats([maxFramesRead]))
                         `}
                     )`)}
@@ -269,9 +263,9 @@ const nodeImplementation: _NodeImplementation = {
                         Var('fs_OperationId', 'id'),
                         Var('fs_OperationStatus', 'status'),
                     ], 'void')`
-                        ${ConstVar(variableNames.Operation, 'operation', `${state}.operations.get(id)`)}
+                        ${ConstVar(ns.Operation!, 'operation', `${state}.operations.get(id)`)}
                         ${state}.operations.delete(id)
-                        ${snds.$1}(${variableNames.buildMessage1}(operation.soundInfo))
+                        ${snds.$1}(${ns.buildMessage1!}(operation.soundInfo))
                         ${snds.$0}(msg_floats([operation.framesToWrite]))
                     `}
 
@@ -290,9 +284,9 @@ const nodeImplementation: _NodeImplementation = {
         `,
     }),
 
-    core: () => 
+    core: ({ ns }) => 
         Sequence([
-            Class(variableNames.Operation, [
+            Class(ns.Operation!, [
                 Var('string', 'url'),
                 Var('Array<string>', 'arrayNames'),
                 Var('boolean', 'resize'),
@@ -302,7 +296,7 @@ const nodeImplementation: _NodeImplementation = {
                 Var('fs_SoundInfo', 'soundInfo'),
             ]),
         
-            Func(variableNames.buildMessage1, [
+            Func(ns.buildMessage1!, [
                 Var('fs_SoundInfo', 'soundInfo')
             ], 'Message')`
                 ${ConstVar('Message', 'm', `msg_create([
