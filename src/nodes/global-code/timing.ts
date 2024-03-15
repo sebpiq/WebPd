@@ -20,16 +20,20 @@
 import { Func, Var } from "@webpd/compiler"
 import { GlobalCodeGenerator } from "@webpd/compiler/src/compile/types"
 
-// TODO : unit testing
-// TODO : amount = 0 ?
-// TODO : missing persec and all per...
 export const computeUnitInSamples: GlobalCodeGenerator = () => 
     Func('computeUnitInSamples', [
         Var('Float', 'sampleRate'),
         Var('Float', 'amount'),
         Var('string', 'unit'),
     ], 'Float')`
-        if (unit === 'msec' || unit === 'millisecond') {
+        if (unit.slice(0, 3) === 'per') {
+            if (amount !== 0) {
+                amount = 1 / amount
+            }
+            unit = unit.slice(3)
+        }
+
+        if (unit === 'msec' || unit === 'milliseconds' || unit === 'millisecond') {
             return amount / 1000 * sampleRate
         } else if (unit === 'sec' || unit === 'seconds' || unit === 'second') {
             return amount * sampleRate
