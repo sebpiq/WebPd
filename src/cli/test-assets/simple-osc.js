@@ -96,6 +96,31 @@ function _sked_createRequest(skeduler, event, callback, mode) {
 function _sked_nextId(skeduler) {
             return skeduler.idCounter++
         }
+const _commons_ARRAYS = new Map()
+const _commons_ARRAYS_SKEDULER = sked_create(false)
+function commons_getArray(arrayName) {
+            if (!_commons_ARRAYS.has(arrayName)) {
+                throw new Error('Unknown array ' + arrayName)
+            }
+            return _commons_ARRAYS.get(arrayName)
+        }
+function commons_hasArray(arrayName) {
+            return _commons_ARRAYS.has(arrayName)
+        }
+function commons_setArray(arrayName, array) {
+            _commons_ARRAYS.set(arrayName, array)
+            sked_emit(_commons_ARRAYS_SKEDULER, arrayName)
+        }
+function commons_subscribeArrayChanges(arrayName, callback) {
+            const id = sked_subscribe(_commons_ARRAYS_SKEDULER, arrayName, callback)
+            if (_commons_ARRAYS.has(arrayName)) {
+                callback(arrayName)
+            }
+            return id
+        }
+function commons_cancelArrayChangesSubscription(id) {
+            sked_cancel(_commons_ARRAYS_SKEDULER, id)
+        }
 const _commons_FRAME_SKEDULER = sked_create(false)
 function _commons_emitFrame(frame) {
             sked_emit(_commons_FRAME_SKEDULER, frame.toString())
@@ -204,14 +229,14 @@ function msgBusUnsubscribe(busName, callback) {
             }
         }
         
-function osc_t_setStep(state, freq) {
+function NT_osc_t_setStep(state, freq) {
                     state.step = (2 * Math.PI / SAMPLE_RATE) * freq
                 }
-function osc_t_setPhase(state, phase) {
+function NT_osc_t_setPhase(state, phase) {
                     state.phase = phase % 1.0 * 2 * Math.PI
                 }
 
-function nbx_setReceiveBusName(state, busName) {
+function NT_nbx_setReceiveBusName(state, busName) {
             if (state.receiveBusName !== "empty") {
                 msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
             }
@@ -220,12 +245,12 @@ function nbx_setReceiveBusName(state, busName) {
                 msgBusSubscribe(state.receiveBusName, state.messageReceiver)
             }
         }
-function nbx_setSendReceiveFromMessage(state, m) {
+function NT_nbx_setSendReceiveFromMessage(state, m) {
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'receive'
             ) {
-                nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
+                NT_nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
                 return true
 
             } else if (
@@ -237,8 +262,8 @@ function nbx_setSendReceiveFromMessage(state, m) {
             }
             return false
         }
-function nbx_defaultMessageHandler(m) {}
-function nbx_receiveMessage(state, m) {
+function NT_nbx_defaultMessageHandler(m) {}
+function NT_nbx_receiveMessage(state, m) {
                     if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 0),state.minValue),state.maxValue)
                         const outMessage = msg_floats([state.valueFloat])
@@ -264,7 +289,7 @@ function nbx_receiveMessage(state, m) {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 1),state.minValue),state.maxValue)
                         return
                     
-                    } else if (nbx_setSendReceiveFromMessage(state, m) === true) {
+                    } else if (NT_nbx_setSendReceiveFromMessage(state, m) === true) {
                         return
                     }
                 }
@@ -287,76 +312,76 @@ let EMPTY_MESSAGE = msg_create([])
 
         
 
-        const n_0_1_STATE = {
+        const N_n_0_1_state = {
                                 minValue: -1e+37,
 maxValue: 1e+37,
 valueFloat: 220,
 value: msg_create([]),
 receiveBusName: "empty",
 sendBusName: "empty",
-messageReceiver: nbx_defaultMessageHandler,
-messageSender: nbx_defaultMessageHandler,
+messageReceiver: NT_nbx_defaultMessageHandler,
+messageSender: NT_nbx_defaultMessageHandler,
                             }
-const m_n_0_0_0_sig_STATE = {
+const N_m_n_0_0_0_sig_state = {
                                 currentValue: 0,
                             }
-const n_0_0_STATE = {
+const N_n_0_0_state = {
                                 phase: 0,
 step: 0,
                             }
         
-function n_0_1_RCVS_0(m) {
+function N_n_0_1_rcvs_0(m) {
                             
-                nbx_receiveMessage(n_0_1_STATE, m)
+                NT_nbx_receiveMessage(N_n_0_1_state, m)
                 return
             
-                            throw new Error('Node "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node type "nbx", id "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
                         }
 
-function m_n_0_0_0__routemsg_RCVS_0(m) {
+function N_m_n_0_0_0__routemsg_rcvs_0(m) {
                             
             if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                m_n_0_0_0__routemsg_SNDS_0(m)
+                N_m_n_0_0_0__routemsg_snds_0(m)
                 return
             } else {
                 SND_TO_NULL(m)
                 return
             }
         
-                            throw new Error('Node "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node type "_routemsg", id "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
                         }
-let m_n_0_0_0_sig_OUTS_0 = 0
-function m_n_0_0_0_sig_RCVS_0(m) {
+let N_m_n_0_0_0_sig_outs_0 = 0
+function N_m_n_0_0_0_sig_rcvs_0(m) {
                             
         if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            m_n_0_0_0_sig_STATE.currentValue = msg_readFloatToken(m, 0)
+            N_m_n_0_0_0_sig_state.currentValue = msg_readFloatToken(m, 0)
             return
         }
     
-                            throw new Error('Node "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node type "sig~", id "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
                         }
 
 
-let n_0_0_OUTS_0 = 0
+let N_n_0_0_outs_0 = 0
 
 
 
-function m_n_0_0_0__routemsg_SNDS_0(m) {
-                        m_n_0_0_0_sig_RCVS_0(m)
-coldDsp_0(m)
+function N_m_n_0_0_0__routemsg_snds_0(m) {
+                        N_m_n_0_0_0_sig_rcvs_0(m)
+COLD_0(m)
                     }
 
-        function coldDsp_0(m) {
-                    m_n_0_0_0_sig_OUTS_0 = m_n_0_0_0_sig_STATE.currentValue
-                    osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
+        function COLD_0(m) {
+                    N_m_n_0_0_0_sig_outs_0 = N_m_n_0_0_0_sig_state.currentValue
+                    NT_osc_t_setStep(N_n_0_0_state, N_m_n_0_0_0_sig_outs_0)
                 }
-        function ioRcv_n_0_1_0(m) {
-                    n_0_1_RCVS_0(m)
+        function IORCV_n_0_1_0(m) {
+                    N_n_0_1_rcvs_0(m)
                 }
         
 
         const exports = {
-            metadata: {"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"ioRcv_n_0_1_0"}},"messageSenders":{}}}}},
+            metadata: {"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"IORCV_n_0_1_0"}},"messageSenders":{}}}}},
             initialize: (sampleRate, blockSize) => {
                 exports.metadata.audioSettings.sampleRate = sampleRate
                 exports.metadata.audioSettings.blockSize = blockSize
@@ -364,33 +389,33 @@ coldDsp_0(m)
                 BLOCK_SIZE = blockSize
 
                 
-                n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
-                n_0_1_STATE.messageReceiver = function (m) {
-                    nbx_receiveMessage(n_0_1_STATE, m)
+                N_n_0_1_state.messageSender = N_m_n_0_0_0__routemsg_rcvs_0
+                N_n_0_1_state.messageReceiver = function (m) {
+                    NT_nbx_receiveMessage(N_n_0_1_state, m)
                 }
-                nbx_setReceiveBusName(n_0_1_STATE, "empty")
+                NT_nbx_setReceiveBusName(N_n_0_1_state, "empty")
     
-                commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
+                commons_waitFrame(0, () => N_m_n_0_0_0__routemsg_rcvs_0(msg_floats([N_n_0_1_state.valueFloat])))
             
 
 
 
 
-            osc_t_setStep(n_0_0_STATE, 0)
+            NT_osc_t_setStep(N_n_0_0_state, 0)
         
 
-                coldDsp_0(EMPTY_MESSAGE)
+                COLD_0(EMPTY_MESSAGE)
             },
             dspLoop: (INPUT, OUTPUT) => {
                 
         for (F = 0; F < BLOCK_SIZE; F++) {
             _commons_emitFrame(FRAME)
             
-                n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
-                n_0_0_STATE.phase += n_0_0_STATE.step
+                N_n_0_0_outs_0 = Math.cos(N_n_0_0_state.phase)
+                N_n_0_0_state.phase += N_n_0_0_state.step
             
-OUTPUT[0][F] = n_0_0_OUTS_0
-OUTPUT[1][F] = n_0_0_OUTS_0
+OUTPUT[0][F] = N_n_0_0_outs_0
+OUTPUT[1][F] = N_n_0_0_outs_0
             FRAME++
         }
     
@@ -398,7 +423,7 @@ OUTPUT[1][F] = n_0_0_OUTS_0
             io: {
                 messageReceivers: {
                     n_0_1: {
-                            "0": ioRcv_n_0_1_0,
+                            "0": IORCV_n_0_1_0,
                         },
                 },
                 messageSenders: {
@@ -408,5 +433,6 @@ OUTPUT[1][F] = n_0_0_OUTS_0
         }
 
         
-
+exports.commons_getArray = commons_getArray
+exports.commons_setArray = commons_setArray
     

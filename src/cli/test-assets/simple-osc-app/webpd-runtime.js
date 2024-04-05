@@ -3,7 +3,7 @@ var WebPdRuntime = (function (exports) {
 
   var WEB_PD_WORKLET_PROCESSOR_CODE = "/*\n * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.\n *\n * This file is part of WebPd\n * (see https://github.com/sebpiq/WebPd).\n *\n * This program is free software: you can redistribute it and/or modify\n * it under the terms of the GNU Lesser General Public License as published by\n * the Free Software Foundation, either version 3 of the License, or\n * (at your option) any later version.\n *\n * This program is distributed in the hope that it will be useful,\n * but WITHOUT ANY WARRANTY; without even the implied warranty of\n * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n * GNU Lesser General Public License for more details.\n *\n * You should have received a copy of the GNU Lesser General Public License\n * along with this program. If not, see <http://www.gnu.org/licenses/>.\n */\nconst FS_CALLBACK_NAMES = [\n    'onReadSoundFile',\n    'onOpenSoundReadStream',\n    'onWriteSoundFile',\n    'onOpenSoundWriteStream',\n    'onSoundStreamData',\n    'onCloseSoundStream',\n];\nclass WasmWorkletProcessor extends AudioWorkletProcessor {\n    constructor() {\n        super();\n        this.port.onmessage = this.onMessage.bind(this);\n        this.settings = {\n            blockSize: null,\n            sampleRate,\n        };\n        this.dspConfigured = false;\n        this.engine = null;\n    }\n    process(inputs, outputs) {\n        const output = outputs[0];\n        const input = inputs[0];\n        if (!this.dspConfigured) {\n            if (!this.engine) {\n                return true;\n            }\n            this.settings.blockSize = output[0].length;\n            this.engine.initialize(this.settings.sampleRate, this.settings.blockSize);\n            this.dspConfigured = true;\n        }\n        this.engine.dspLoop(input, output);\n        return true;\n    }\n    onMessage(messageEvent) {\n        const message = messageEvent.data;\n        switch (message.type) {\n            case 'code:WASM':\n                this.setWasm(message.payload.wasmBuffer);\n                break;\n            case 'code:JS':\n                this.setJsCode(message.payload.jsCode);\n                break;\n            case 'io:messageReceiver':\n                this.engine.io.messageReceivers[message.payload.nodeId][message.payload.portletId](message.payload.message);\n                break;\n            case 'fs':\n                const returned = this.engine.fs[message.payload.functionName].apply(null, message.payload.arguments);\n                this.port.postMessage({\n                    type: 'fs',\n                    payload: {\n                        functionName: message.payload.functionName + '_return',\n                        operationId: message.payload.arguments[0],\n                        returned,\n                    },\n                });\n                break;\n            case 'destroy':\n                this.destroy();\n                break;\n            default:\n                new Error(`unknown message type ${message.type}`);\n        }\n    }\n    // TODO : control for channelCount of wasmModule\n    setWasm(wasmBuffer) {\n        return AssemblyScriptWasmBindings.createEngine(wasmBuffer).then((engine) => this.setEngine(engine));\n    }\n    setJsCode(code) {\n        const engine = JavaScriptBindings.createEngine(code);\n        this.setEngine(engine);\n    }\n    setEngine(engine) {\n        FS_CALLBACK_NAMES.forEach((functionName) => {\n            ;\n            engine.fs[functionName] = (...args) => {\n                // We don't use transferables, because that would imply reallocating each time new array in the engine.\n                this.port.postMessage({\n                    type: 'fs',\n                    payload: {\n                        functionName,\n                        arguments: args,\n                    },\n                });\n            };\n        });\n        this.engine = engine;\n        this.dspConfigured = false;\n    }\n    destroy() {\n        this.process = () => false;\n    }\n}\nregisterProcessor('webpd-node', WasmWorkletProcessor);\n";
 
-  var ASSEMBLY_SCRIPT_WASM_BINDINGS_CODE = "var AssemblyScriptWasmBindings = (function (exports) {\n    'use strict';\n\n    const getFloatArrayType = (bitDepth) => bitDepth === 64 ? Float64Array : Float32Array;\n    const createModule = (rawModule, bindings) => new Proxy({}, {\n        get: (_, k) => {\n            if (bindings.hasOwnProperty(k)) {\n                const key = String(k);\n                const bindingSpec = bindings[key];\n                switch (bindingSpec.type) {\n                    case 'raw':\n                        if (k in rawModule) {\n                            return rawModule[key];\n                        }\n                        else {\n                            throw new Error(`Key ${String(key)} doesn't exist in raw module`);\n                        }\n                    case 'proxy':\n                    case 'callback':\n                        return bindingSpec.value;\n                }\n            }\n            else {\n                return undefined;\n            }\n        },\n        set: (_, k, newValue) => {\n            if (bindings.hasOwnProperty(String(k))) {\n                const key = String(k);\n                const bindingSpec = bindings[key];\n                if (bindingSpec.type === 'callback') {\n                    bindingSpec.value = newValue;\n                }\n                else {\n                    throw new Error(`Binding key ${String(key)} is read-only`);\n                }\n            }\n            else {\n                throw new Error(`Key ${String(k)} is not defined in bindings`);\n            }\n            return true;\n        },\n    });\n\n    const liftString = (wasmExports, pointer) => {\n        if (!pointer) {\n            throw new Error('Cannot lift a null pointer');\n        }\n        pointer = pointer >>> 0;\n        const end = (pointer +\n            new Uint32Array(wasmExports.memory.buffer)[(pointer - 4) >>> 2]) >>>\n            1;\n        const memoryU16 = new Uint16Array(wasmExports.memory.buffer);\n        let start = pointer >>> 1;\n        let string = '';\n        while (end - start > 1024) {\n            string += String.fromCharCode(...memoryU16.subarray(start, (start += 1024)));\n        }\n        return string + String.fromCharCode(...memoryU16.subarray(start, end));\n    };\n    const lowerString = (wasmExports, value) => {\n        if (value == null) {\n            throw new Error('Cannot lower a null string');\n        }\n        const length = value.length, pointer = wasmExports.__new(length << 1, 1) >>> 0, memoryU16 = new Uint16Array(wasmExports.memory.buffer);\n        for (let i = 0; i < length; ++i)\n            memoryU16[(pointer >>> 1) + i] = value.charCodeAt(i);\n        return pointer;\n    };\n    const readTypedArray = (wasmExports, constructor, pointer) => {\n        if (!pointer) {\n            throw new Error('Cannot lift a null pointer');\n        }\n        const memoryU32 = new Uint32Array(wasmExports.memory.buffer);\n        return new constructor(wasmExports.memory.buffer, memoryU32[(pointer + 4) >>> 2], memoryU32[(pointer + 8) >>> 2] / constructor.BYTES_PER_ELEMENT);\n    };\n    const lowerFloatArray = (wasmExports, bitDepth, data) => {\n        const arrayType = getFloatArrayType(bitDepth);\n        const arrayPointer = wasmExports.createFloatArray(data.length);\n        const array = readTypedArray(wasmExports, arrayType, arrayPointer);\n        array.set(data);\n        return { array, arrayPointer };\n    };\n    const lowerListOfFloatArrays = (wasmExports, bitDepth, data) => {\n        const arraysPointer = wasmExports.x_core_createListOfArrays();\n        data.forEach((array) => {\n            const { arrayPointer } = lowerFloatArray(wasmExports, bitDepth, array);\n            wasmExports.x_core_pushToListOfArrays(arraysPointer, arrayPointer);\n        });\n        return arraysPointer;\n    };\n    const readListOfFloatArrays = (wasmExports, bitDepth, listOfArraysPointer) => {\n        const listLength = wasmExports.x_core_getListOfArraysLength(listOfArraysPointer);\n        const arrays = [];\n        const arrayType = getFloatArrayType(bitDepth);\n        for (let i = 0; i < listLength; i++) {\n            const arrayPointer = wasmExports.x_core_getListOfArraysElem(listOfArraysPointer, i);\n            arrays.push(readTypedArray(wasmExports, arrayType, arrayPointer));\n        }\n        return arrays;\n    };\n\n    const liftMessage = (wasmExports, messagePointer) => {\n        const messageTokenTypesPointer = wasmExports.x_msg_getTokenTypes(messagePointer);\n        const messageTokenTypes = readTypedArray(wasmExports, Int32Array, messageTokenTypesPointer);\n        const message = [];\n        messageTokenTypes.forEach((tokenType, tokenIndex) => {\n            if (tokenType === wasmExports.MSG_FLOAT_TOKEN.valueOf()) {\n                message.push(wasmExports.msg_readFloatToken(messagePointer, tokenIndex));\n            }\n            else if (tokenType === wasmExports.MSG_STRING_TOKEN.valueOf()) {\n                const stringPointer = wasmExports.msg_readStringToken(messagePointer, tokenIndex);\n                message.push(liftString(wasmExports, stringPointer));\n            }\n        });\n        return message;\n    };\n    const lowerMessage = (wasmExports, message) => {\n        const template = message.reduce((template, value) => {\n            if (typeof value === 'number') {\n                template.push(wasmExports.MSG_FLOAT_TOKEN.valueOf());\n            }\n            else if (typeof value === 'string') {\n                template.push(wasmExports.MSG_STRING_TOKEN.valueOf());\n                template.push(value.length);\n            }\n            else {\n                throw new Error(`invalid message value ${value}`);\n            }\n            return template;\n        }, []);\n        const templateArrayPointer = wasmExports.x_msg_createTemplate(template.length);\n        const loweredTemplateArray = readTypedArray(wasmExports, Int32Array, templateArrayPointer);\n        loweredTemplateArray.set(template);\n        const messagePointer = wasmExports.x_msg_create(templateArrayPointer);\n        message.forEach((value, index) => {\n            if (typeof value === 'number') {\n                wasmExports.msg_writeFloatToken(messagePointer, index, value);\n            }\n            else if (typeof value === 'string') {\n                const stringPointer = lowerString(wasmExports, value);\n                wasmExports.msg_writeStringToken(messagePointer, index, stringPointer);\n            }\n        });\n        return messagePointer;\n    };\n\n    const mapObject = (src, func) => {\n        const dest = {};\n        Object.entries(src).forEach(([key, srcValue], i) => {\n            dest[key] = func(srcValue, key, i);\n        });\n        return dest;\n    };\n    const mapArray = (src, func) => {\n        const dest = {};\n        src.forEach((srcValue, i) => {\n            const [key, destValue] = func(srcValue, i);\n            dest[key] = destValue;\n        });\n        return dest;\n    };\n\n    const instantiateWasmModule = async (wasmBuffer, wasmImports = {}) => {\n        const instanceAndModule = await WebAssembly.instantiate(wasmBuffer, {\n            env: {\n                abort: (messagePointer, _, lineNumber, columnNumber) => {\n                    const message = liftString(wasmExports, messagePointer);\n                    lineNumber = lineNumber;\n                    columnNumber = columnNumber;\n                    (() => {\n                        throw Error(`${message} at ${lineNumber}:${columnNumber}`);\n                    })();\n                },\n                seed: () => {\n                    return (() => {\n                        return Date.now() * Math.random();\n                    })();\n                },\n                'console.log': (textPointer) => {\n                    console.log(liftString(wasmExports, textPointer));\n                },\n            },\n            ...wasmImports,\n        });\n        const wasmExports = instanceAndModule.instance\n            .exports;\n        return instanceAndModule.instance;\n    };\n\n    const updateWasmInOuts = (rawModule, engineData) => {\n        engineData.wasmOutput = readTypedArray(rawModule, engineData.arrayType, rawModule.getOutput());\n        engineData.wasmInput = readTypedArray(rawModule, engineData.arrayType, rawModule.getInput());\n    };\n    const createEngineLifecycleBindings = (rawModule, engineData) => {\n        return {\n            initialize: {\n                type: 'proxy',\n                value: (sampleRate, blockSize) => {\n                    engineData.metadata.audioSettings.blockSize = blockSize;\n                    engineData.metadata.audioSettings.sampleRate = sampleRate;\n                    engineData.blockSize = blockSize;\n                    rawModule.initialize(sampleRate, blockSize);\n                    updateWasmInOuts(rawModule, engineData);\n                },\n            },\n            dspLoop: {\n                type: 'proxy',\n                value: (input, output) => {\n                    for (let channel = 0; channel < input.length; channel++) {\n                        engineData.wasmInput.set(input[channel], channel * engineData.blockSize);\n                    }\n                    updateWasmInOuts(rawModule, engineData);\n                    rawModule.dspLoop();\n                    updateWasmInOuts(rawModule, engineData);\n                    for (let channel = 0; channel < output.length; channel++) {\n                        output[channel].set(engineData.wasmOutput.subarray(engineData.blockSize * channel, engineData.blockSize * (channel + 1)));\n                    }\n                },\n            },\n        };\n    };\n    const createIoMessageReceiversBindings = (rawModule, engineData) => mapObject(engineData.metadata.compilation.io.messageReceivers, (spec, nodeId) => ({\n        type: 'proxy',\n        value: mapArray(spec.portletIds, (inletId) => [\n            inletId,\n            (message) => {\n                const messagePointer = lowerMessage(rawModule, message);\n                rawModule[engineData.metadata.compilation.variableNamesIndex.io\n                    .messageReceivers[nodeId][inletId].funcName](messagePointer);\n            },\n        ]),\n    }));\n    const createIoMessageSendersBindings = (_, engineData) => mapObject(engineData.metadata.compilation.io.messageSenders, (spec) => ({\n        type: 'proxy',\n        value: mapArray(spec.portletIds, (outletId) => [\n            outletId,\n            {\n                onMessage: () => undefined,\n            },\n        ]),\n    }));\n    const ioMsgSendersImports = (forwardReferences, metadata) => {\n        const wasmImports = {};\n        const { variableNamesIndex } = metadata.compilation;\n        Object.entries(metadata.compilation.io.messageSenders).forEach(([nodeId, spec]) => {\n            spec.portletIds.forEach((outletId) => {\n                const listenerName = variableNamesIndex.io.messageSenders[nodeId][outletId].funcName;\n                wasmImports[listenerName] = (messagePointer) => {\n                    const message = liftMessage(forwardReferences.rawModule, messagePointer);\n                    forwardReferences.modules.io.messageSenders[nodeId][outletId].onMessage(message);\n                };\n            });\n        });\n        return wasmImports;\n    };\n    const readMetadata = async (wasmBuffer) => {\n        const inputImports = {};\n        const wasmModule = WebAssembly.Module.imports(new WebAssembly.Module(wasmBuffer));\n        wasmModule\n            .filter((imprt) => imprt.module === 'input' && imprt.kind === 'function')\n            .forEach((imprt) => (inputImports[imprt.name] = () => undefined));\n        const wasmInstance = await instantiateWasmModule(wasmBuffer, {\n            input: inputImports,\n        });\n        const wasmExports = wasmInstance.exports;\n        const stringPointer = wasmExports.metadata.valueOf();\n        const metadataJSON = liftString(wasmExports, stringPointer);\n        return JSON.parse(metadataJSON);\n    };\n\n    const createFsBindings = (rawModule, engineData) => ({\n        sendReadSoundFileResponse: {\n            type: 'proxy',\n            value: (operationId, status, sound) => {\n                let soundPointer = 0;\n                if (sound) {\n                    soundPointer = lowerListOfFloatArrays(rawModule, engineData.bitDepth, sound);\n                }\n                rawModule.x_fs_onReadSoundFileResponse(operationId, status, soundPointer);\n                updateWasmInOuts(rawModule, engineData);\n            },\n        },\n        sendWriteSoundFileResponse: {\n            type: 'proxy',\n            value: rawModule.x_fs_onWriteSoundFileResponse,\n        },\n        sendSoundStreamData: {\n            type: 'proxy',\n            value: (operationId, sound) => {\n                const soundPointer = lowerListOfFloatArrays(rawModule, engineData.bitDepth, sound);\n                const writtenFrameCount = rawModule.x_fs_onSoundStreamData(operationId, soundPointer);\n                updateWasmInOuts(rawModule, engineData);\n                return writtenFrameCount;\n            },\n        },\n        closeSoundStream: {\n            type: 'proxy',\n            value: rawModule.x_fs_onCloseSoundStream,\n        },\n        onReadSoundFile: { type: 'callback', value: () => undefined },\n        onWriteSoundFile: { type: 'callback', value: () => undefined },\n        onOpenSoundReadStream: { type: 'callback', value: () => undefined },\n        onOpenSoundWriteStream: { type: 'callback', value: () => undefined },\n        onSoundStreamData: { type: 'callback', value: () => undefined },\n        onCloseSoundStream: { type: 'callback', value: () => undefined },\n    });\n    const createFsImports = (forwardReferences) => {\n        let wasmImports = {\n            i_fs_readSoundFile: (operationId, urlPointer, infoPointer) => {\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                forwardReferences.modules.fs.onReadSoundFile(operationId, url, info);\n            },\n            i_fs_writeSoundFile: (operationId, soundPointer, urlPointer, infoPointer) => {\n                const sound = readListOfFloatArrays(forwardReferences.rawModule, forwardReferences.engineData.bitDepth, soundPointer);\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                forwardReferences.modules.fs.onWriteSoundFile(operationId, sound, url, info);\n            },\n            i_fs_openSoundReadStream: (operationId, urlPointer, infoPointer) => {\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                updateWasmInOuts(forwardReferences.rawModule, forwardReferences.engineData);\n                forwardReferences.modules.fs.onOpenSoundReadStream(operationId, url, info);\n            },\n            i_fs_openSoundWriteStream: (operationId, urlPointer, infoPointer) => {\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                forwardReferences.modules.fs.onOpenSoundWriteStream(operationId, url, info);\n            },\n            i_fs_sendSoundStreamData: (operationId, blockPointer) => {\n                const block = readListOfFloatArrays(forwardReferences.rawModule, forwardReferences.engineData.bitDepth, blockPointer);\n                forwardReferences.modules.fs.onSoundStreamData(operationId, block);\n            },\n            i_fs_closeSoundStream: (...args) => forwardReferences.modules.fs.onCloseSoundStream(...args),\n        };\n        return wasmImports;\n    };\n\n    const createCommonsBindings = (rawModule, engineData) => ({\n        getArray: {\n            type: 'proxy',\n            value: (arrayName) => {\n                const arrayNamePointer = lowerString(rawModule, arrayName);\n                const arrayPointer = rawModule.commons_getArray(arrayNamePointer);\n                return readTypedArray(rawModule, engineData.arrayType, arrayPointer);\n            },\n        },\n        setArray: {\n            type: 'proxy',\n            value: (arrayName, array) => {\n                const stringPointer = lowerString(rawModule, arrayName);\n                const { arrayPointer } = lowerFloatArray(rawModule, engineData.bitDepth, array);\n                rawModule.commons_setArray(stringPointer, arrayPointer);\n                updateWasmInOuts(rawModule, engineData);\n            },\n        },\n    });\n\n    const createEngine = async (wasmBuffer) => {\n        const { rawModule, engineData, forwardReferences } = await createRawModule(wasmBuffer);\n        const engineBindings = await createBindings(rawModule, engineData, forwardReferences);\n        return createModule(rawModule, engineBindings);\n    };\n    const createRawModule = async (wasmBuffer) => {\n        const metadata = await readMetadata(wasmBuffer);\n        const forwardReferences = { modules: {} };\n        const wasmImports = {\n            ...createFsImports(forwardReferences),\n            ...ioMsgSendersImports(forwardReferences, metadata),\n        };\n        const bitDepth = metadata.audioSettings.bitDepth;\n        const arrayType = getFloatArrayType(bitDepth);\n        const engineData = {\n            metadata,\n            wasmOutput: new arrayType(0),\n            wasmInput: new arrayType(0),\n            arrayType,\n            bitDepth,\n            blockSize: 0,\n        };\n        const wasmInstance = await instantiateWasmModule(wasmBuffer, {\n            input: wasmImports,\n        });\n        const rawModule = wasmInstance.exports;\n        return { rawModule, engineData, forwardReferences };\n    };\n    const createBindings = async (rawModule, engineData, forwardReferences) => {\n        const commons = createModule(rawModule, createCommonsBindings(rawModule, engineData));\n        const fs = createModule(rawModule, createFsBindings(rawModule, engineData));\n        const io = {\n            messageReceivers: createModule(rawModule, createIoMessageReceiversBindings(rawModule, engineData)),\n            messageSenders: createModule(rawModule, createIoMessageSendersBindings(rawModule, engineData)),\n        };\n        forwardReferences.modules.fs = fs;\n        forwardReferences.modules.io = io;\n        forwardReferences.engineData = engineData;\n        forwardReferences.rawModule = rawModule;\n        return {\n            ...createEngineLifecycleBindings(rawModule, engineData),\n            metadata: { type: 'proxy', value: engineData.metadata },\n            commons: { type: 'proxy', value: commons },\n            fs: { type: 'proxy', value: fs },\n            io: { type: 'proxy', value: io },\n        };\n    };\n\n    exports.createBindings = createBindings;\n    exports.createEngine = createEngine;\n    exports.createRawModule = createRawModule;\n\n    return exports;\n\n})({});\n";
+  var ASSEMBLY_SCRIPT_WASM_BINDINGS_CODE = "var AssemblyScriptWasmBindings = (function (exports) {\n    'use strict';\n\n    const getFloatArrayType = (bitDepth) => bitDepth === 64 ? Float64Array : Float32Array;\n    const createModule = (rawModule, bindings) => new Proxy({}, {\n        get: (_, k) => {\n            if (bindings.hasOwnProperty(k)) {\n                const key = String(k);\n                const bindingSpec = bindings[key];\n                switch (bindingSpec.type) {\n                    case 'raw':\n                        if (k in rawModule) {\n                            return rawModule[key];\n                        }\n                        else {\n                            throw new Error(`Key ${String(key)} doesn't exist in raw module`);\n                        }\n                    case 'proxy':\n                    case 'callback':\n                        return bindingSpec.value;\n                }\n            }\n            else {\n                return undefined;\n            }\n        },\n        set: (_, k, newValue) => {\n            if (bindings.hasOwnProperty(String(k))) {\n                const key = String(k);\n                const bindingSpec = bindings[key];\n                if (bindingSpec.type === 'callback') {\n                    bindingSpec.value = newValue;\n                }\n                else {\n                    throw new Error(`Binding key ${String(key)} is read-only`);\n                }\n            }\n            else {\n                throw new Error(`Key ${String(k)} is not defined in bindings`);\n            }\n            return true;\n        },\n    });\n\n    const liftString = (wasmExports, pointer) => {\n        if (!pointer) {\n            throw new Error('Cannot lift a null pointer');\n        }\n        pointer = pointer >>> 0;\n        const end = (pointer +\n            new Uint32Array(wasmExports.memory.buffer)[(pointer - 4) >>> 2]) >>>\n            1;\n        const memoryU16 = new Uint16Array(wasmExports.memory.buffer);\n        let start = pointer >>> 1;\n        let string = '';\n        while (end - start > 1024) {\n            string += String.fromCharCode(...memoryU16.subarray(start, (start += 1024)));\n        }\n        return string + String.fromCharCode(...memoryU16.subarray(start, end));\n    };\n    const lowerString = (wasmExports, value) => {\n        if (value == null) {\n            throw new Error('Cannot lower a null string');\n        }\n        const length = value.length, pointer = wasmExports.__new(length << 1, 1) >>> 0, memoryU16 = new Uint16Array(wasmExports.memory.buffer);\n        for (let i = 0; i < length; ++i)\n            memoryU16[(pointer >>> 1) + i] = value.charCodeAt(i);\n        return pointer;\n    };\n    const readTypedArray = (wasmExports, constructor, pointer) => {\n        if (!pointer) {\n            throw new Error('Cannot lift a null pointer');\n        }\n        const memoryU32 = new Uint32Array(wasmExports.memory.buffer);\n        return new constructor(wasmExports.memory.buffer, memoryU32[(pointer + 4) >>> 2], memoryU32[(pointer + 8) >>> 2] / constructor.BYTES_PER_ELEMENT);\n    };\n    const lowerFloatArray = (wasmExports, bitDepth, data) => {\n        const arrayType = getFloatArrayType(bitDepth);\n        const arrayPointer = wasmExports.createFloatArray(data.length);\n        const array = readTypedArray(wasmExports, arrayType, arrayPointer);\n        array.set(data);\n        return { array, arrayPointer };\n    };\n    const lowerListOfFloatArrays = (wasmExports, bitDepth, data) => {\n        const arraysPointer = wasmExports.x_core_createListOfArrays();\n        data.forEach((array) => {\n            const { arrayPointer } = lowerFloatArray(wasmExports, bitDepth, array);\n            wasmExports.x_core_pushToListOfArrays(arraysPointer, arrayPointer);\n        });\n        return arraysPointer;\n    };\n    const readListOfFloatArrays = (wasmExports, bitDepth, listOfArraysPointer) => {\n        const listLength = wasmExports.x_core_getListOfArraysLength(listOfArraysPointer);\n        const arrays = [];\n        const arrayType = getFloatArrayType(bitDepth);\n        for (let i = 0; i < listLength; i++) {\n            const arrayPointer = wasmExports.x_core_getListOfArraysElem(listOfArraysPointer, i);\n            arrays.push(readTypedArray(wasmExports, arrayType, arrayPointer));\n        }\n        return arrays;\n    };\n\n    const liftMessage = (wasmExports, messagePointer) => {\n        const messageTokenTypesPointer = wasmExports.x_msg_getTokenTypes(messagePointer);\n        const messageTokenTypes = readTypedArray(wasmExports, Int32Array, messageTokenTypesPointer);\n        const message = [];\n        messageTokenTypes.forEach((tokenType, tokenIndex) => {\n            if (tokenType === wasmExports.MSG_FLOAT_TOKEN.valueOf()) {\n                message.push(wasmExports.msg_readFloatToken(messagePointer, tokenIndex));\n            }\n            else if (tokenType === wasmExports.MSG_STRING_TOKEN.valueOf()) {\n                const stringPointer = wasmExports.msg_readStringToken(messagePointer, tokenIndex);\n                message.push(liftString(wasmExports, stringPointer));\n            }\n        });\n        return message;\n    };\n    const lowerMessage = (wasmExports, message) => {\n        const template = message.reduce((template, value) => {\n            if (typeof value === 'number') {\n                template.push(wasmExports.MSG_FLOAT_TOKEN.valueOf());\n            }\n            else if (typeof value === 'string') {\n                template.push(wasmExports.MSG_STRING_TOKEN.valueOf());\n                template.push(value.length);\n            }\n            else {\n                throw new Error(`invalid message value ${value}`);\n            }\n            return template;\n        }, []);\n        const templateArrayPointer = wasmExports.x_msg_createTemplate(template.length);\n        const loweredTemplateArray = readTypedArray(wasmExports, Int32Array, templateArrayPointer);\n        loweredTemplateArray.set(template);\n        const messagePointer = wasmExports.x_msg_create(templateArrayPointer);\n        message.forEach((value, index) => {\n            if (typeof value === 'number') {\n                wasmExports.msg_writeFloatToken(messagePointer, index, value);\n            }\n            else if (typeof value === 'string') {\n                const stringPointer = lowerString(wasmExports, value);\n                wasmExports.msg_writeStringToken(messagePointer, index, stringPointer);\n            }\n        });\n        return messagePointer;\n    };\n\n    const mapArray = (src, func) => {\n        const dest = {};\n        src.forEach((srcValue, i) => {\n            const [key, destValue] = func(srcValue, i);\n            dest[key] = destValue;\n        });\n        return dest;\n    };\n\n    const instantiateWasmModule = async (wasmBuffer, wasmImports = {}) => {\n        const instanceAndModule = await WebAssembly.instantiate(wasmBuffer, {\n            env: {\n                abort: (messagePointer, _, lineNumber, columnNumber) => {\n                    const message = liftString(wasmExports, messagePointer);\n                    lineNumber = lineNumber;\n                    columnNumber = columnNumber;\n                    (() => {\n                        throw Error(`${message} at ${lineNumber}:${columnNumber}`);\n                    })();\n                },\n                seed: () => {\n                    return (() => {\n                        return Date.now() * Math.random();\n                    })();\n                },\n                'console.log': (textPointer) => {\n                    console.log(liftString(wasmExports, textPointer));\n                },\n            },\n            ...wasmImports,\n        });\n        const wasmExports = instanceAndModule.instance\n            .exports;\n        return instanceAndModule.instance;\n    };\n\n    const updateWasmInOuts = (rawModule, engineData) => {\n        engineData.wasmOutput = readTypedArray(rawModule, engineData.arrayType, rawModule.getOutput());\n        engineData.wasmInput = readTypedArray(rawModule, engineData.arrayType, rawModule.getInput());\n    };\n    const createEngineLifecycleBindings = (rawModule, engineData) => {\n        return {\n            initialize: {\n                type: 'proxy',\n                value: (sampleRate, blockSize) => {\n                    engineData.metadata.audioSettings.blockSize = blockSize;\n                    engineData.metadata.audioSettings.sampleRate = sampleRate;\n                    engineData.blockSize = blockSize;\n                    rawModule.initialize(sampleRate, blockSize);\n                    updateWasmInOuts(rawModule, engineData);\n                },\n            },\n            dspLoop: {\n                type: 'proxy',\n                value: (input, output) => {\n                    for (let channel = 0; channel < input.length; channel++) {\n                        engineData.wasmInput.set(input[channel], channel * engineData.blockSize);\n                    }\n                    updateWasmInOuts(rawModule, engineData);\n                    rawModule.dspLoop();\n                    updateWasmInOuts(rawModule, engineData);\n                    for (let channel = 0; channel < output.length; channel++) {\n                        output[channel].set(engineData.wasmOutput.subarray(engineData.blockSize * channel, engineData.blockSize * (channel + 1)));\n                    }\n                },\n            },\n        };\n    };\n    const createIoMessageReceiversBindings = (rawModule, engineData) => Object.entries(engineData.metadata.compilation.io.messageReceivers).reduce((bindings, [nodeId, spec]) => ({\n        ...bindings,\n        [nodeId]: {\n            type: 'proxy',\n            value: mapArray(spec.portletIds, (inletId) => [\n                inletId,\n                (message) => {\n                    const messagePointer = lowerMessage(rawModule, message);\n                    rawModule[engineData.metadata.compilation.variableNamesIndex\n                        .io.messageReceivers[nodeId][inletId]](messagePointer);\n                },\n            ]),\n        },\n    }), {});\n    const createIoMessageSendersBindings = (_, engineData) => Object.entries(engineData.metadata.compilation.io.messageSenders).reduce((bindings, [nodeId, spec]) => ({\n        ...bindings,\n        [nodeId]: {\n            type: 'proxy',\n            value: mapArray(spec.portletIds, (outletId) => [\n                outletId,\n                {\n                    onMessage: () => undefined,\n                },\n            ]),\n        },\n    }), {});\n    const ioMsgSendersImports = (forwardReferences, metadata) => {\n        const wasmImports = {};\n        const { variableNamesIndex } = metadata.compilation;\n        Object.entries(metadata.compilation.io.messageSenders).forEach(([nodeId, spec]) => {\n            spec.portletIds.forEach((outletId) => {\n                const listenerName = variableNamesIndex.io.messageSenders[nodeId][outletId];\n                wasmImports[listenerName] = (messagePointer) => {\n                    const message = liftMessage(forwardReferences.rawModule, messagePointer);\n                    forwardReferences.modules.io.messageSenders[nodeId][outletId].onMessage(message);\n                };\n            });\n        });\n        return wasmImports;\n    };\n    const readMetadata = async (wasmBuffer) => {\n        const inputImports = {};\n        const wasmModule = WebAssembly.Module.imports(new WebAssembly.Module(wasmBuffer));\n        wasmModule\n            .filter((imprt) => imprt.module === 'input' && imprt.kind === 'function')\n            .forEach((imprt) => (inputImports[imprt.name] = () => undefined));\n        const wasmInstance = await instantiateWasmModule(wasmBuffer, {\n            input: inputImports,\n        });\n        const wasmExports = wasmInstance.exports;\n        const stringPointer = wasmExports.metadata.valueOf();\n        const metadataJSON = liftString(wasmExports, stringPointer);\n        return JSON.parse(metadataJSON);\n    };\n\n    const createFsBindings = (rawModule, engineData) => ({\n        sendReadSoundFileResponse: {\n            type: 'proxy',\n            value: (operationId, status, sound) => {\n                let soundPointer = 0;\n                if (sound) {\n                    soundPointer = lowerListOfFloatArrays(rawModule, engineData.bitDepth, sound);\n                }\n                rawModule.x_fs_onReadSoundFileResponse(operationId, status, soundPointer);\n                updateWasmInOuts(rawModule, engineData);\n            },\n        },\n        sendWriteSoundFileResponse: {\n            type: 'proxy',\n            value: rawModule.x_fs_onWriteSoundFileResponse,\n        },\n        sendSoundStreamData: {\n            type: 'proxy',\n            value: (operationId, sound) => {\n                const soundPointer = lowerListOfFloatArrays(rawModule, engineData.bitDepth, sound);\n                const writtenFrameCount = rawModule.x_fs_onSoundStreamData(operationId, soundPointer);\n                updateWasmInOuts(rawModule, engineData);\n                return writtenFrameCount;\n            },\n        },\n        closeSoundStream: {\n            type: 'proxy',\n            value: rawModule.x_fs_onCloseSoundStream,\n        },\n        onReadSoundFile: { type: 'callback', value: () => undefined },\n        onWriteSoundFile: { type: 'callback', value: () => undefined },\n        onOpenSoundReadStream: { type: 'callback', value: () => undefined },\n        onOpenSoundWriteStream: { type: 'callback', value: () => undefined },\n        onSoundStreamData: { type: 'callback', value: () => undefined },\n        onCloseSoundStream: { type: 'callback', value: () => undefined },\n    });\n    const createFsImports = (forwardReferences) => {\n        let wasmImports = {\n            i_fs_readSoundFile: (operationId, urlPointer, infoPointer) => {\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                forwardReferences.modules.fs.onReadSoundFile(operationId, url, info);\n            },\n            i_fs_writeSoundFile: (operationId, soundPointer, urlPointer, infoPointer) => {\n                const sound = readListOfFloatArrays(forwardReferences.rawModule, forwardReferences.engineData.bitDepth, soundPointer);\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                forwardReferences.modules.fs.onWriteSoundFile(operationId, sound, url, info);\n            },\n            i_fs_openSoundReadStream: (operationId, urlPointer, infoPointer) => {\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                updateWasmInOuts(forwardReferences.rawModule, forwardReferences.engineData);\n                forwardReferences.modules.fs.onOpenSoundReadStream(operationId, url, info);\n            },\n            i_fs_openSoundWriteStream: (operationId, urlPointer, infoPointer) => {\n                const url = liftString(forwardReferences.rawModule, urlPointer);\n                const info = liftMessage(forwardReferences.rawModule, infoPointer);\n                forwardReferences.modules.fs.onOpenSoundWriteStream(operationId, url, info);\n            },\n            i_fs_sendSoundStreamData: (operationId, blockPointer) => {\n                const block = readListOfFloatArrays(forwardReferences.rawModule, forwardReferences.engineData.bitDepth, blockPointer);\n                forwardReferences.modules.fs.onSoundStreamData(operationId, block);\n            },\n            i_fs_closeSoundStream: (...args) => forwardReferences.modules.fs.onCloseSoundStream(...args),\n        };\n        return wasmImports;\n    };\n\n    const createCommonsBindings = (rawModule, engineData) => ({\n        getArray: {\n            type: 'proxy',\n            value: (arrayName) => {\n                const arrayNamePointer = lowerString(rawModule, arrayName);\n                const arrayPointer = rawModule.commons_getArray(arrayNamePointer);\n                return readTypedArray(rawModule, engineData.arrayType, arrayPointer);\n            },\n        },\n        setArray: {\n            type: 'proxy',\n            value: (arrayName, array) => {\n                const stringPointer = lowerString(rawModule, arrayName);\n                const { arrayPointer } = lowerFloatArray(rawModule, engineData.bitDepth, array);\n                rawModule.commons_setArray(stringPointer, arrayPointer);\n                updateWasmInOuts(rawModule, engineData);\n            },\n        },\n    });\n\n    const createEngine = async (wasmBuffer) => {\n        const { rawModule, engineData, forwardReferences } = await createRawModule(wasmBuffer);\n        const engineBindings = await createBindings(rawModule, engineData, forwardReferences);\n        return createModule(rawModule, engineBindings);\n    };\n    const createRawModule = async (wasmBuffer) => {\n        const metadata = await readMetadata(wasmBuffer);\n        const forwardReferences = { modules: {} };\n        const wasmImports = {\n            ...createFsImports(forwardReferences),\n            ...ioMsgSendersImports(forwardReferences, metadata),\n        };\n        const bitDepth = metadata.audioSettings.bitDepth;\n        const arrayType = getFloatArrayType(bitDepth);\n        const engineData = {\n            metadata,\n            wasmOutput: new arrayType(0),\n            wasmInput: new arrayType(0),\n            arrayType,\n            bitDepth,\n            blockSize: 0,\n        };\n        const wasmInstance = await instantiateWasmModule(wasmBuffer, {\n            input: wasmImports,\n        });\n        const rawModule = wasmInstance.exports;\n        return { rawModule, engineData, forwardReferences };\n    };\n    const createBindings = async (rawModule, engineData, forwardReferences) => {\n        const commons = createModule(rawModule, createCommonsBindings(rawModule, engineData));\n        const fs = createModule(rawModule, createFsBindings(rawModule, engineData));\n        const io = {\n            messageReceivers: createModule(rawModule, createIoMessageReceiversBindings(rawModule, engineData)),\n            messageSenders: createModule(rawModule, createIoMessageSendersBindings(rawModule, engineData)),\n        };\n        forwardReferences.modules.fs = fs;\n        forwardReferences.modules.io = io;\n        forwardReferences.engineData = engineData;\n        forwardReferences.rawModule = rawModule;\n        return {\n            ...createEngineLifecycleBindings(rawModule, engineData),\n            metadata: { type: 'proxy', value: engineData.metadata },\n            commons: { type: 'proxy', value: commons },\n            fs: { type: 'proxy', value: fs },\n            io: { type: 'proxy', value: io },\n        };\n    };\n\n    exports.createBindings = createBindings;\n    exports.createEngine = createEngine;\n    exports.createRawModule = createRawModule;\n\n    return exports;\n\n})({});\n";
 
   var JAVA_SCRIPT_BINDINGS_CODE = "var JavaScriptBindings = (function (exports) {\n    'use strict';\n\n    const getFloatArrayType = (bitDepth) => bitDepth === 64 ? Float64Array : Float32Array;\n    const createModule = (rawModule, bindings) => new Proxy({}, {\n        get: (_, k) => {\n            if (bindings.hasOwnProperty(k)) {\n                const key = String(k);\n                const bindingSpec = bindings[key];\n                switch (bindingSpec.type) {\n                    case 'raw':\n                        if (k in rawModule) {\n                            return rawModule[key];\n                        }\n                        else {\n                            throw new Error(`Key ${String(key)} doesn't exist in raw module`);\n                        }\n                    case 'proxy':\n                    case 'callback':\n                        return bindingSpec.value;\n                }\n            }\n            else {\n                return undefined;\n            }\n        },\n        set: (_, k, newValue) => {\n            if (bindings.hasOwnProperty(String(k))) {\n                const key = String(k);\n                const bindingSpec = bindings[key];\n                if (bindingSpec.type === 'callback') {\n                    bindingSpec.value = newValue;\n                }\n                else {\n                    throw new Error(`Binding key ${String(key)} is read-only`);\n                }\n            }\n            else {\n                throw new Error(`Key ${String(k)} is not defined in bindings`);\n            }\n            return true;\n        },\n    });\n\n    const createRawModule = (code) => new Function(`\n        ${code}\n        return exports\n    `)();\n    const createBindings = (rawModule) => ({\n        fs: { type: 'proxy', value: createFsModule(rawModule) },\n        metadata: { type: 'raw' },\n        initialize: { type: 'raw' },\n        dspLoop: { type: 'raw' },\n        io: { type: 'raw' },\n        commons: {\n            type: 'proxy',\n            value: createCommonsModule(rawModule, rawModule.metadata.audioSettings.bitDepth),\n        },\n    });\n    const createEngine = (code) => {\n        const rawModule = createRawModule(code);\n        return createModule(rawModule, createBindings(rawModule));\n    };\n    const createFsModule = (rawModule) => {\n        const fs = createModule(rawModule, {\n            onReadSoundFile: { type: 'callback', value: () => undefined },\n            onWriteSoundFile: { type: 'callback', value: () => undefined },\n            onOpenSoundReadStream: { type: 'callback', value: () => undefined },\n            onOpenSoundWriteStream: { type: 'callback', value: () => undefined },\n            onSoundStreamData: { type: 'callback', value: () => undefined },\n            onCloseSoundStream: { type: 'callback', value: () => undefined },\n            sendReadSoundFileResponse: {\n                type: 'proxy',\n                value: rawModule.x_fs_onReadSoundFileResponse,\n            },\n            sendWriteSoundFileResponse: {\n                type: 'proxy',\n                value: rawModule.x_fs_onWriteSoundFileResponse,\n            },\n            sendSoundStreamData: {\n                type: 'proxy',\n                value: rawModule.x_fs_onSoundStreamData,\n            },\n            closeSoundStream: {\n                type: 'proxy',\n                value: rawModule.x_fs_onCloseSoundStream,\n            },\n        });\n        rawModule.i_fs_openSoundWriteStream = (...args) => fs.onOpenSoundWriteStream(...args);\n        rawModule.i_fs_sendSoundStreamData = (...args) => fs.onSoundStreamData(...args);\n        rawModule.i_fs_openSoundReadStream = (...args) => fs.onOpenSoundReadStream(...args);\n        rawModule.i_fs_closeSoundStream = (...args) => fs.onCloseSoundStream(...args);\n        rawModule.i_fs_writeSoundFile = (...args) => fs.onWriteSoundFile(...args);\n        rawModule.i_fs_readSoundFile = (...args) => fs.onReadSoundFile(...args);\n        return fs;\n    };\n    const createCommonsModule = (rawModule, bitDepth) => {\n        const floatArrayType = getFloatArrayType(bitDepth);\n        return createModule(rawModule, {\n            getArray: { type: 'proxy', value: rawModule.commons_getArray },\n            setArray: {\n                type: 'proxy',\n                value: (arrayName, array) => rawModule.commons_setArray(arrayName, new floatArrayType(array)),\n            },\n        });\n    };\n\n    exports.createBindings = createBindings;\n    exports.createEngine = createEngine;\n    exports.createRawModule = createRawModule;\n\n    return exports;\n\n})({});\n";
 
@@ -398,6 +398,195 @@ var WebPdRuntime = (function (exports) {
    * You should have received a copy of the GNU Lesser General Public License
    * along with this program. If not, see <http://www.gnu.org/licenses/>.
    */
+  const getNode$1 = (graph, nodeId) => {
+      const node = graph[nodeId];
+      if (node) {
+          return node;
+      }
+      throw new Error(`Node "${nodeId}" not found in graph`);
+  };
+
+  /** Helper to get node implementation or throw an error if not implemented. */
+  const getNodeImplementation$1 = (nodeImplementations, nodeType) => {
+      const nodeImplementation = nodeImplementations[nodeType];
+      if (!nodeImplementation) {
+          throw new Error(`node [${nodeType}] is not implemented`);
+      }
+      return {
+          dependencies: [],
+          ...nodeImplementation,
+      };
+  };
+
+  const _addPath$1 = (parent, key, _path) => {
+      const path = _ensurePath$1(_path);
+      return {
+          keys: [...path.keys, key],
+          parents: [...path.parents, parent],
+      };
+  };
+  const _ensurePath$1 = (path) => path || {
+      keys: [],
+      parents: [],
+  };
+  const _proxySetHandlerReadOnly$1 = () => {
+      throw new Error('This Proxy is read-only.');
+  };
+  const _proxyGetHandlerThrowIfKeyUnknown$1 = (target, key, path) => {
+      if (!target.hasOwnProperty(key)) {
+          // Whitelist some fields that are undefined but accessed at
+          // some point or another by our code.
+          // TODO : find a better way to do this.
+          if ([
+              'toJSON',
+              'Symbol(Symbol.toStringTag)',
+              'constructor',
+              '$typeof',
+              '$$typeof',
+              '@@__IMMUTABLE_ITERABLE__@@',
+              '@@__IMMUTABLE_RECORD__@@',
+          ].includes(key)) {
+              return true;
+          }
+          throw new Error(`namespace${path ? ` <${path.keys.join('.')}>` : ''} doesn't know key "${String(key)}"`);
+      }
+      return false;
+  };
+  const Assigner$1 = (spec, _obj, context, _path) => {
+      const path = _path || { keys: [], parents: [] };
+      const obj = Assigner$1.ensureValue(_obj, spec, context, path);
+      // If `_path` is provided, assign the new value to the parent object.
+      if (_path) {
+          const parent = _path.parents[_path.parents.length - 1];
+          const key = _path.keys[_path.keys.length - 1];
+          // The only case where we want to overwrite the existing value
+          // is when it was a `null` assigned by `LiteralDefaultNull`, and
+          // we want to set the real value instead.
+          if (!(key in parent) || 'LiteralDefaultNull' in spec) {
+              parent[key] = obj;
+          }
+      }
+      // If the object is a Literal, end of the recursion.
+      if ('Literal' in spec || 'LiteralDefaultNull' in spec) {
+          return obj;
+      }
+      return new Proxy(obj, {
+          get: (_, k) => {
+              const key = String(k);
+              let nextSpec;
+              if ('Index' in spec) {
+                  nextSpec = spec.Index(key, context, path);
+              }
+              else if ('Interface' in spec) {
+                  if (!(key in spec.Interface)) {
+                      throw new Error(`Interface has no entry "${String(key)}"`);
+                  }
+                  nextSpec = spec.Interface[key];
+              }
+              else {
+                  throw new Error('no builder');
+              }
+              return Assigner$1(nextSpec, 
+              // We use this form here instead of `obj[key]` specifically
+              // to allow Assign to play well with `ProtectedIndex`, which
+              // would raise an error if trying to access an undefined key.
+              key in obj ? obj[key] : undefined, context, _addPath$1(obj, key, path));
+          },
+          set: _proxySetHandlerReadOnly$1,
+      });
+  };
+  Assigner$1.ensureValue = (_obj, spec, context, _path, _recursionPath) => {
+      if ('Index' in spec) {
+          return (_obj || spec.indexConstructor(context, _ensurePath$1(_path)));
+      }
+      else if ('Interface' in spec) {
+          const obj = (_obj || {});
+          Object.entries(spec.Interface).forEach(([key, nextSpec]) => {
+              obj[key] = Assigner$1.ensureValue(obj[key], nextSpec, context, _addPath$1(obj, key, _path), _addPath$1(obj, key, _recursionPath));
+          });
+          return obj;
+      }
+      else if ('Literal' in spec) {
+          return (_obj || spec.Literal(context, _ensurePath$1(_path)));
+      }
+      else if ('LiteralDefaultNull' in spec) {
+          if (!_recursionPath) {
+              return (_obj || spec.LiteralDefaultNull(context, _ensurePath$1(_path)));
+          }
+          else {
+              return (_obj || null);
+          }
+      }
+      else {
+          throw new Error('Invalid Assigner');
+      }
+  };
+  Assigner$1.Interface = (a) => ({ Interface: a });
+  Assigner$1.Index = (f, indexConstructor) => ({
+      Index: f,
+      indexConstructor: indexConstructor || (() => ({})),
+  });
+  Assigner$1.Literal = (f) => ({
+      Literal: f,
+  });
+  Assigner$1.LiteralDefaultNull = (f) => ({ LiteralDefaultNull: f });
+  // ---------------------------- ProtectedIndex ---------------------------- //
+  /**
+   * Helper to declare namespace objects enforcing stricter access rules.
+   * Specifically, it forbids :
+   * - reading an unknown property.
+   * - trying to overwrite an existing property.
+   */
+  const ProtectedIndex$1 = (namespace, path) => {
+      return new Proxy(namespace, {
+          get: (target, k) => {
+              const key = String(k);
+              if (_proxyGetHandlerThrowIfKeyUnknown$1(target, key, path)) {
+                  return undefined;
+              }
+              return target[key];
+          },
+          set: (target, k, newValue) => {
+              const key = _trimDollarKey$1(String(k));
+              if (target.hasOwnProperty(key)) {
+                  throw new Error(`Key "${String(key)}" is protected and cannot be overwritten.`);
+              }
+              else {
+                  target[key] = newValue;
+              }
+              return newValue;
+          },
+      });
+  };
+  const _trimDollarKey$1 = (key) => {
+      const match = /\$(.*)/.exec(key);
+      if (!match) {
+          return key;
+      }
+      else {
+          return match[1];
+      }
+  };
+
+  /*
+   * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
+   *
+   * This file is part of WebPd
+   * (see https://github.com/sebpiq/WebPd).
+   *
+   * This program is free software: you can redistribute it and/or modify
+   * it under the terms of the GNU Lesser General Public License as published by
+   * the Free Software Foundation, either version 3 of the License, or
+   * (at your option) any later version.
+   *
+   * This program is distributed in the hope that it will be useful,
+   * but WITHOUT ANY WARRANTY; without even the implied warranty of
+   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   * GNU Lesser General Public License for more details.
+   *
+   * You should have received a copy of the GNU Lesser General Public License
+   * along with this program. If not, see <http://www.gnu.org/licenses/>.
+   */
   /** Generate an integer series from 0 to `count` (non-inclusive). */
   const countTo$1 = (count) => {
       const results = [];
@@ -545,6 +734,87 @@ var WebPdRuntime = (function (exports) {
           return value;
       }
   };
+
+  const createGlobsVariableNames$1 = () => ({
+      iterFrame: 'F',
+      frame: 'FRAME',
+      blockSize: 'BLOCK_SIZE',
+      sampleRate: 'SAMPLE_RATE',
+      output: 'OUTPUT',
+      input: 'INPUT',
+      nullMessageReceiver: 'SND_TO_NULL',
+      nullSignal: 'NULL_SIGNAL',
+      emptyMessage: 'EMPTY_MESSAGE',
+  });
+  Assigner$1.Interface({
+      nodes: Assigner$1.Index((nodeId) => Assigner$1.Interface({
+          signalOuts: Assigner$1.Index((portletId) => Assigner$1.Literal(() => _name$1('N', nodeId, 'outs', portletId))),
+          messageSenders: Assigner$1.Index((portletId) => Assigner$1.Literal(() => _name$1('N', nodeId, 'snds', portletId))),
+          messageReceivers: Assigner$1.Index((portletId) => Assigner$1.Literal(() => _name$1('N', nodeId, 'rcvs', portletId))),
+          state: Assigner$1.LiteralDefaultNull(() => _name$1('N', nodeId, 'state')),
+      })),
+      nodeImplementations: Assigner$1.Index((nodeType, { nodeImplementations }) => {
+          const nodeImplementation = getNodeImplementation$1(nodeImplementations, nodeType);
+          const nodeTypePrefix = (nodeImplementation.flags
+              ? nodeImplementation.flags.alphaName
+              : null) || nodeType;
+          return Assigner$1.Index((name) => Assigner$1.Literal(() => _name$1('NT', nodeTypePrefix, name)));
+      }),
+      globs: Assigner$1.Literal(createGlobsVariableNames$1),
+      globalCode: Assigner$1.Index((ns) => Assigner$1.Index((name) => Assigner$1.Literal(() => _name$1('G', ns, name)))),
+      io: Assigner$1.Interface({
+          messageReceivers: Assigner$1.Index((nodeId) => Assigner$1.Index((inletId) => Assigner$1.Literal(() => _name$1('IORCV', nodeId, inletId)))),
+          messageSenders: Assigner$1.Index((nodeId) => Assigner$1.Index((outletId) => Assigner$1.Literal(() => _name$1('IOSND', nodeId, outletId)))),
+      }),
+      coldDspGroups: Assigner$1.Index((groupId) => Assigner$1.Literal(() => _name$1('COLD', groupId))),
+  });
+  Assigner$1.Interface({
+      graph: Assigner$1.Literal((_, path) => ({
+          fullTraversal: [],
+          hotDspGroup: {
+              traversal: [],
+              outNodesIds: [],
+          },
+          coldDspGroups: ProtectedIndex$1({}, path),
+      })),
+      nodeImplementations: Assigner$1.Index((nodeType, { nodeImplementations }) => Assigner$1.Literal(() => ({
+          nodeImplementation: getNodeImplementation$1(nodeImplementations, nodeType),
+          stateClass: null,
+          core: null,
+      })), (_, path) => ProtectedIndex$1({}, path)),
+      nodes: Assigner$1.Index((nodeId, { graph }) => Assigner$1.Literal(() => ({
+          nodeType: getNode$1(graph, nodeId).type,
+          messageReceivers: {},
+          messageSenders: {},
+          signalOuts: {},
+          signalIns: {},
+          initialization: ast$1 ``,
+          dsp: {
+              loop: ast$1 ``,
+              inlets: {},
+          },
+          state: null,
+      })), (_, path) => ProtectedIndex$1({}, path)),
+      dependencies: Assigner$1.Literal(() => ({
+          imports: [],
+          exports: [],
+          ast: Sequence$1([]),
+      })),
+      io: Assigner$1.Interface({
+          messageReceivers: Assigner$1.Index((_) => Assigner$1.Literal((_, path) => ProtectedIndex$1({}, path)), (_, path) => ProtectedIndex$1({}, path)),
+          messageSenders: Assigner$1.Index((_) => Assigner$1.Literal((_, path) => ProtectedIndex$1({}, path)), (_, path) => ProtectedIndex$1({}, path)),
+      }),
+  });
+  // ---------------------------- MISC ---------------------------- //
+  const _name$1 = (...parts) => parts.map(assertValidNamePart$1).join('_');
+  const assertValidNamePart$1 = (namePart) => {
+      const isInvalid = !VALID_NAME_PART_REGEXP$1.exec(namePart);
+      if (isInvalid) {
+          throw new Error(`Invalid variable name for code generation "${namePart}"`);
+      }
+      return namePart;
+  };
+  const VALID_NAME_PART_REGEXP$1 = /^[a-zA-Z0-9_]+$/;
 
   /*
    * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
@@ -1815,13 +2085,13 @@ var WebPdRuntime = (function (exports) {
   };
 
   const _addPath = (parent, key, _path) => {
-      const path = _defaultPath(_path);
+      const path = _ensurePath(_path);
       return {
           keys: [...path.keys, key],
           parents: [...path.parents, parent],
       };
   };
-  const _defaultPath = (path) => path || {
+  const _ensurePath = (path) => path || {
       keys: [],
       parents: [],
   };
@@ -1848,9 +2118,9 @@ var WebPdRuntime = (function (exports) {
       }
       return false;
   };
-  const Assigner = (spec, context, _obj, _path) => {
+  const Assigner = (spec, _obj, context, _path) => {
       const path = _path || { keys: [], parents: [] };
-      const obj = Assigner.ensureValue(_obj, spec, undefined, path);
+      const obj = Assigner.ensureValue(_obj, spec, context, path);
       // If `_path` is provided, assign the new value to the parent object.
       if (_path) {
           const parent = _path.parents[_path.parents.length - 1];
@@ -1871,40 +2141,43 @@ var WebPdRuntime = (function (exports) {
               const key = String(k);
               let nextSpec;
               if ('Index' in spec) {
-                  nextSpec = spec.Index(key, context);
+                  nextSpec = spec.Index(key, context, path);
               }
               else if ('Interface' in spec) {
+                  if (!(key in spec.Interface)) {
+                      throw new Error(`Interface has no entry "${String(key)}"`);
+                  }
                   nextSpec = spec.Interface[key];
               }
               else {
                   throw new Error('no builder');
               }
-              return Assigner(nextSpec, context, 
+              return Assigner(nextSpec, 
               // We use this form here instead of `obj[key]` specifically
               // to allow Assign to play well with `ProtectedIndex`, which
               // would raise an error if trying to access an undefined key.
-              key in obj ? obj[key] : undefined, _addPath(obj, String(key), path));
+              key in obj ? obj[key] : undefined, context, _addPath(obj, key, path));
           },
           set: _proxySetHandlerReadOnly,
       });
   };
-  Assigner.ensureValue = (_obj, spec, _recursionPath, _path) => {
+  Assigner.ensureValue = (_obj, spec, context, _path, _recursionPath) => {
       if ('Index' in spec) {
-          return (_obj || spec.indexConstructor(_defaultPath(_path)));
+          return (_obj || spec.indexConstructor(context, _ensurePath(_path)));
       }
       else if ('Interface' in spec) {
           const obj = (_obj || {});
           Object.entries(spec.Interface).forEach(([key, nextSpec]) => {
-              obj[key] = Assigner.ensureValue(obj[key], nextSpec, _addPath(obj, key, _recursionPath), _addPath(obj, key, _path));
+              obj[key] = Assigner.ensureValue(obj[key], nextSpec, context, _addPath(obj, key, _path), _addPath(obj, key, _recursionPath));
           });
           return obj;
       }
       else if ('Literal' in spec) {
-          return (_obj || spec.Literal(_defaultPath(_path)));
+          return (_obj || spec.Literal(context, _ensurePath(_path)));
       }
       else if ('LiteralDefaultNull' in spec) {
           if (!_recursionPath) {
-              return (_obj || spec.LiteralDefaultNull());
+              return (_obj || spec.LiteralDefaultNull(context, _ensurePath(_path)));
           }
           else {
               return (_obj || null);
@@ -1961,41 +2234,41 @@ var WebPdRuntime = (function (exports) {
       }
   };
 
+  const createGlobsVariableNames = () => ({
+      iterFrame: 'F',
+      frame: 'FRAME',
+      blockSize: 'BLOCK_SIZE',
+      sampleRate: 'SAMPLE_RATE',
+      output: 'OUTPUT',
+      input: 'INPUT',
+      nullMessageReceiver: 'SND_TO_NULL',
+      nullSignal: 'NULL_SIGNAL',
+      emptyMessage: 'EMPTY_MESSAGE',
+  });
   Assigner.Interface({
       nodes: Assigner.Index((nodeId) => Assigner.Interface({
-          signalOuts: Assigner.Index((portletId) => Assigner.Literal(() => `${_v(nodeId)}_OUTS_${_v(portletId)}`)),
-          messageSenders: Assigner.Index((portletId) => Assigner.Literal(() => `${_v(nodeId)}_SNDS_${_v(portletId)}`)),
-          messageReceivers: Assigner.Index((portletId) => Assigner.Literal(() => `${_v(nodeId)}_RCVS_${_v(portletId)}`)),
-          state: Assigner.LiteralDefaultNull(() => `${_v(nodeId)}_STATE`),
+          signalOuts: Assigner.Index((portletId) => Assigner.Literal(() => _name('N', nodeId, 'outs', portletId))),
+          messageSenders: Assigner.Index((portletId) => Assigner.Literal(() => _name('N', nodeId, 'snds', portletId))),
+          messageReceivers: Assigner.Index((portletId) => Assigner.Literal(() => _name('N', nodeId, 'rcvs', portletId))),
+          state: Assigner.LiteralDefaultNull(() => _name('N', nodeId, 'state')),
       })),
       nodeImplementations: Assigner.Index((nodeType, { nodeImplementations }) => {
           const nodeImplementation = getNodeImplementation(nodeImplementations, nodeType);
-          return Assigner.Interface({
-              stateClass: Assigner.LiteralDefaultNull(() => `State_${_v((nodeImplementation.flags
-                ? nodeImplementation.flags.alphaName
-                : null) || nodeType)}`),
-          });
+          const nodeTypePrefix = (nodeImplementation.flags
+              ? nodeImplementation.flags.alphaName
+              : null) || nodeType;
+          return Assigner.Index((name) => Assigner.Literal(() => _name('NT', nodeTypePrefix, name)));
       }),
-      /** Namespace for global variables */
-      globs: Assigner.Literal(() => ({
-          iterFrame: 'F',
-          frame: 'FRAME',
-          blockSize: 'BLOCK_SIZE',
-          sampleRate: 'SAMPLE_RATE',
-          output: 'OUTPUT',
-          input: 'INPUT',
-          nullMessageReceiver: 'SND_TO_NULL',
-          nullSignal: 'NULL_SIGNAL',
-          emptyMessage: 'EMPTY_MESSAGE',
-      })),
+      globs: Assigner.Literal(createGlobsVariableNames),
+      globalCode: Assigner.Index((ns) => Assigner.Index((name) => Assigner.Literal(() => _name('G', ns, name)))),
       io: Assigner.Interface({
-          messageReceivers: Assigner.Index((nodeId) => Assigner.Index((inletId) => Assigner.Literal(() => `ioRcv_${nodeId}_${inletId}`))),
-          messageSenders: Assigner.Index((nodeId) => Assigner.Index((outletId) => Assigner.Literal(() => `ioSnd_${nodeId}_${outletId}`))),
+          messageReceivers: Assigner.Index((nodeId) => Assigner.Index((inletId) => Assigner.Literal(() => _name('IORCV', nodeId, inletId)))),
+          messageSenders: Assigner.Index((nodeId) => Assigner.Index((outletId) => Assigner.Literal(() => _name('IOSND', nodeId, outletId)))),
       }),
-      coldDspGroups: Assigner.Index((groupId) => Assigner.Literal(() => `coldDsp_${groupId}`)),
+      coldDspGroups: Assigner.Index((groupId) => Assigner.Literal(() => _name('COLD', groupId))),
   });
   Assigner.Interface({
-      graph: Assigner.Literal((path) => ({
+      graph: Assigner.Literal((_, path) => ({
           fullTraversal: [],
           hotDspGroup: {
               traversal: [],
@@ -2007,7 +2280,7 @@ var WebPdRuntime = (function (exports) {
           nodeImplementation: getNodeImplementation(nodeImplementations, nodeType),
           stateClass: null,
           core: null,
-      })), (path) => ProtectedIndex({}, path)),
+      })), (_, path) => ProtectedIndex({}, path)),
       nodes: Assigner.Index((nodeId, { graph }) => Assigner.Literal(() => ({
           nodeType: getNode(graph, nodeId).type,
           messageReceivers: {},
@@ -2020,17 +2293,19 @@ var WebPdRuntime = (function (exports) {
               inlets: {},
           },
           state: null,
-      })), (path) => ProtectedIndex({}, path)),
+      })), (_, path) => ProtectedIndex({}, path)),
       dependencies: Assigner.Literal(() => ({
           imports: [],
           exports: [],
           ast: Sequence([]),
       })),
       io: Assigner.Interface({
-          messageReceivers: Assigner.Index((_) => Assigner.Literal(() => ({})), (path) => ProtectedIndex({}, path)),
-          messageSenders: Assigner.Index((_) => Assigner.Literal(() => ({})), (path) => ProtectedIndex({}, path)),
+          messageReceivers: Assigner.Index((_) => Assigner.Literal((_, path) => ProtectedIndex({}, path)), (_, path) => ProtectedIndex({}, path)),
+          messageSenders: Assigner.Index((_) => Assigner.Literal((_, path) => ProtectedIndex({}, path)), (_, path) => ProtectedIndex({}, path)),
       }),
   });
+  // ---------------------------- MISC ---------------------------- //
+  const _name = (...parts) => parts.map(assertValidNamePart).join('_');
   const assertValidNamePart = (namePart) => {
       const isInvalid = !VALID_NAME_PART_REGEXP.exec(namePart);
       if (isInvalid) {
@@ -2038,7 +2313,6 @@ var WebPdRuntime = (function (exports) {
       }
       return namePart;
   };
-  const _v = assertValidNamePart;
   const VALID_NAME_PART_REGEXP = /^[a-zA-Z0-9_]+$/;
 
   /*

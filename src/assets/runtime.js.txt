@@ -3296,6 +3296,15 @@ var WebPdRuntime = (function (exports) {
    * You should have received a copy of the GNU Lesser General Public License
    * along with this program. If not, see <http://www.gnu.org/licenses/>.
    */
+  /**
+   * These bindings enable easier interaction with Wasm modules generated with our AssemblyScript compilation.
+   * For example : instantiation, passing data back and forth, etc ...
+   *
+   * **Warning** : These bindings are compiled with rollup as a standalone JS module for inclusion in other libraries.
+   * In consequence, they are meant to be kept lightweight, and should avoid importing dependencies.
+   *
+   * @module
+   */
   const createRawModule = (code) => new Function(`
         ${code}
         return exports

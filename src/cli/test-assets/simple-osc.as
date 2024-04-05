@@ -1,5 +1,5 @@
 
-        const metadata: string = '{"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"ioRcv_n_0_1_0"}},"messageSenders":{}}}}}'
+        const metadata: string = '{"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"IORCV_n_0_1_0"}},"messageSenders":{}}}}}'
 
         
                 type FloatArray = Float64Array
@@ -126,6 +126,31 @@ function _sked_createRequest(skeduler: Skeduler, event: SkedEvent, callback: Ske
         }
 function _sked_nextId(skeduler: Skeduler): SkedId {
             return skeduler.idCounter++
+        }
+const _commons_ARRAYS: Map<string, FloatArray> = new Map()
+const _commons_ARRAYS_SKEDULER: Skeduler = sked_create(false)
+function commons_getArray(arrayName: string): FloatArray {
+            if (!_commons_ARRAYS.has(arrayName)) {
+                throw new Error('Unknown array ' + arrayName)
+            }
+            return _commons_ARRAYS.get(arrayName)
+        }
+function commons_hasArray(arrayName: string): boolean {
+            return _commons_ARRAYS.has(arrayName)
+        }
+function commons_setArray(arrayName: string, array: FloatArray): void {
+            _commons_ARRAYS.set(arrayName, array)
+            sked_emit(_commons_ARRAYS_SKEDULER, arrayName)
+        }
+function commons_subscribeArrayChanges(arrayName: string, callback: SkedCallback): SkedId {
+            const id = sked_subscribe(_commons_ARRAYS_SKEDULER, arrayName, callback)
+            if (_commons_ARRAYS.has(arrayName)) {
+                callback(arrayName)
+            }
+            return id
+        }
+function commons_cancelArrayChangesSubscription(id: SkedId): void {
+            sked_cancel(_commons_ARRAYS_SKEDULER, id)
         }
 const _commons_FRAME_SKEDULER: Skeduler = sked_create(false)
 function _commons_emitFrame(frame: Int): void {
@@ -375,17 +400,17 @@ function msgBusUnsubscribe(busName: string, callback: MessageHandler): void {
                 callbacks.splice(found, 1)
             }
         }
-        class osc_t_State {
+        class NT_osc_t_State {
 phase: Float
 step: Float
 }
-function osc_t_setStep(state: osc_t_State, freq: Float): void {
+function NT_osc_t_setStep(state: NT_osc_t_State, freq: Float): void {
                     state.step = (2 * Math.PI / SAMPLE_RATE) * freq
                 }
-function osc_t_setPhase(state: osc_t_State, phase: Float): void {
+function NT_osc_t_setPhase(state: NT_osc_t_State, phase: Float): void {
                     state.phase = phase % 1.0 * 2 * Math.PI
                 }
-class nbx_State {
+class NT_nbx_State {
 minValue: Float
 maxValue: Float
 valueFloat: Float
@@ -395,7 +420,7 @@ sendBusName: string
 messageReceiver: MessageHandler
 messageSender: MessageHandler
 }
-function nbx_setReceiveBusName(state: nbx_State, busName: string): void {
+function NT_nbx_setReceiveBusName(state: NT_nbx_State, busName: string): void {
             if (state.receiveBusName !== "empty") {
                 msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
             }
@@ -404,12 +429,12 @@ function nbx_setReceiveBusName(state: nbx_State, busName: string): void {
                 msgBusSubscribe(state.receiveBusName, state.messageReceiver)
             }
         }
-function nbx_setSendReceiveFromMessage(state: nbx_State, m: Message): boolean {
+function NT_nbx_setSendReceiveFromMessage(state: NT_nbx_State, m: Message): boolean {
             if (
                 msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
                 && msg_readStringToken(m, 0) === 'receive'
             ) {
-                nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
+                NT_nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
                 return true
 
             } else if (
@@ -421,8 +446,8 @@ function nbx_setSendReceiveFromMessage(state: nbx_State, m: Message): boolean {
             }
             return false
         }
-function nbx_defaultMessageHandler(m: Message): void {}
-function nbx_receiveMessage(state: nbx_State, m: Message): void {
+function NT_nbx_defaultMessageHandler(m: Message): void {}
+function NT_nbx_receiveMessage(state: NT_nbx_State, m: Message): void {
                     if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 0),state.minValue),state.maxValue)
                         const outMessage: Message = msg_floats([state.valueFloat])
@@ -448,13 +473,13 @@ function nbx_receiveMessage(state: nbx_State, m: Message): void {
                         state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 1),state.minValue),state.maxValue)
                         return
                     
-                    } else if (nbx_setSendReceiveFromMessage(state, m) === true) {
+                    } else if (NT_nbx_setSendReceiveFromMessage(state, m) === true) {
                         return
                     }
                 }
 
 
-class sig_t_State {
+class NT_sig_t_State {
 currentValue: Float
 }
 
@@ -475,71 +500,71 @@ let EMPTY_MESSAGE: Message = msg_create([])
 
         
 
-        const n_0_1_STATE: nbx_State = {
+        const N_n_0_1_state: NT_nbx_State = {
                                 minValue: -1e+37,
 maxValue: 1e+37,
 valueFloat: 220,
 value: msg_create([]),
 receiveBusName: "empty",
 sendBusName: "empty",
-messageReceiver: nbx_defaultMessageHandler,
-messageSender: nbx_defaultMessageHandler,
+messageReceiver: NT_nbx_defaultMessageHandler,
+messageSender: NT_nbx_defaultMessageHandler,
                             }
-const m_n_0_0_0_sig_STATE: sig_t_State = {
+const N_m_n_0_0_0_sig_state: NT_sig_t_State = {
                                 currentValue: 0,
                             }
-const n_0_0_STATE: osc_t_State = {
+const N_n_0_0_state: NT_osc_t_State = {
                                 phase: 0,
 step: 0,
                             }
         
-function n_0_1_RCVS_0(m: Message): void {
+function N_n_0_1_rcvs_0(m: Message): void {
                             
-                nbx_receiveMessage(n_0_1_STATE, m)
+                NT_nbx_receiveMessage(N_n_0_1_state, m)
                 return
             
-                            throw new Error('Node "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node type "nbx", id "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
                         }
 
-function m_n_0_0_0__routemsg_RCVS_0(m: Message): void {
+function N_m_n_0_0_0__routemsg_rcvs_0(m: Message): void {
                             
             if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                m_n_0_0_0__routemsg_SNDS_0(m)
+                N_m_n_0_0_0__routemsg_snds_0(m)
                 return
             } else {
                 SND_TO_NULL(m)
                 return
             }
         
-                            throw new Error('Node "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node type "_routemsg", id "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
                         }
-let m_n_0_0_0_sig_OUTS_0: Float = 0
-function m_n_0_0_0_sig_RCVS_0(m: Message): void {
+let N_m_n_0_0_0_sig_outs_0: Float = 0
+function N_m_n_0_0_0_sig_rcvs_0(m: Message): void {
                             
         if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            m_n_0_0_0_sig_STATE.currentValue = msg_readFloatToken(m, 0)
+            N_m_n_0_0_0_sig_state.currentValue = msg_readFloatToken(m, 0)
             return
         }
     
-                            throw new Error('Node "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node type "sig~", id "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
                         }
 
 
-let n_0_0_OUTS_0: Float = 0
+let N_n_0_0_outs_0: Float = 0
 
 
 
-function m_n_0_0_0__routemsg_SNDS_0(m: Message): void {
-                        m_n_0_0_0_sig_RCVS_0(m)
-coldDsp_0(m)
+function N_m_n_0_0_0__routemsg_snds_0(m: Message): void {
+                        N_m_n_0_0_0_sig_rcvs_0(m)
+COLD_0(m)
                     }
 
-        function coldDsp_0(m: Message): void {
-                    m_n_0_0_0_sig_OUTS_0 = m_n_0_0_0_sig_STATE.currentValue
-                    osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
+        function COLD_0(m: Message): void {
+                    N_m_n_0_0_0_sig_outs_0 = N_m_n_0_0_0_sig_state.currentValue
+                    NT_osc_t_setStep(N_n_0_0_state, N_m_n_0_0_0_sig_outs_0)
                 }
-        function ioRcv_n_0_1_0(m: Message): void {
-                    n_0_1_RCVS_0(m)
+        function IORCV_n_0_1_0(m: Message): void {
+                    N_n_0_1_rcvs_0(m)
                 }
         
 
@@ -550,22 +575,22 @@ coldDsp_0(m)
             BLOCK_SIZE = blockSize
 
             
-                n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
-                n_0_1_STATE.messageReceiver = function (m: Message): void {
-                    nbx_receiveMessage(n_0_1_STATE, m)
+                N_n_0_1_state.messageSender = N_m_n_0_0_0__routemsg_rcvs_0
+                N_n_0_1_state.messageReceiver = function (m: Message): void {
+                    NT_nbx_receiveMessage(N_n_0_1_state, m)
                 }
-                nbx_setReceiveBusName(n_0_1_STATE, "empty")
+                NT_nbx_setReceiveBusName(N_n_0_1_state, "empty")
     
-                commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
+                commons_waitFrame(0, () => N_m_n_0_0_0__routemsg_rcvs_0(msg_floats([N_n_0_1_state.valueFloat])))
             
 
 
 
 
-            osc_t_setStep(n_0_0_STATE, 0)
+            NT_osc_t_setStep(N_n_0_0_state, 0)
         
 
-            coldDsp_0(EMPTY_MESSAGE)
+            COLD_0(EMPTY_MESSAGE)
         }
 
         export function getInput(): FloatArray { return INPUT }
@@ -577,11 +602,11 @@ coldDsp_0(m)
         for (F = 0; F < BLOCK_SIZE; F++) {
             _commons_emitFrame(FRAME)
             
-                n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
-                n_0_0_STATE.phase += n_0_0_STATE.step
+                N_n_0_0_outs_0 = Math.cos(N_n_0_0_state.phase)
+                N_n_0_0_state.phase += N_n_0_0_state.step
             
-OUTPUT[F + BLOCK_SIZE * 0] = n_0_0_OUTS_0
-OUTPUT[F + BLOCK_SIZE * 1] = n_0_0_OUTS_0
+OUTPUT[F + BLOCK_SIZE * 0] = N_n_0_0_outs_0
+OUTPUT[F + BLOCK_SIZE * 1] = N_n_0_0_outs_0
             FRAME++
         }
     
@@ -589,7 +614,7 @@ OUTPUT[F + BLOCK_SIZE * 1] = n_0_0_OUTS_0
 
         export {
             metadata,
-            ioRcv_n_0_1_0,
+            IORCV_n_0_1_0,
         }
 
         
@@ -598,6 +623,8 @@ export { x_core_pushToListOfArrays }
 export { x_core_getListOfArraysLength }
 export { x_core_getListOfArraysElem }
 export { createFloatArray }
+export { commons_getArray }
+export { commons_setArray }
 export { x_msg_create }
 export { x_msg_getTokenTypes }
 export { x_msg_createTemplate }

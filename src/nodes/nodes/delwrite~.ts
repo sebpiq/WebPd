@@ -24,7 +24,7 @@ import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { stringMsgUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { AnonFunc, Class, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Func, Sequence, Var, ast, stdlib } from '@webpd/compiler'
 
 interface NodeArguments {
     delayName: string,
@@ -114,6 +114,7 @@ const nodeImplementation: _NodeImplementation = {
         computeUnitInSamples, 
         delayBuffers, 
         stringMsgUtils,
+        stdlib.bufWriteRead,
     ]
 }
 

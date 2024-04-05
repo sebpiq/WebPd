@@ -1,3 +1,14 @@
+1.0.0-alpha.9
+---------------
+
+- Minor bug fixes
+
+1.0.0-alpha.8
+---------------
+
+- Added support for `per` prefix in units in timing objects
+- Minor bug fixes
+
 1.0.0-alpha.7
 ---------------
 
