@@ -62,6 +62,11 @@ webpd --help
 
 This should output help for the CLI and will hopefully get you started.
 
+### Advices for writing WebPd compatible patches 
+
+- Make sure that you only use [supported features](https://github.com/sebpiq/WebPd/blob/main/ROADMAP.md).
+- Always use `[trigger]` objects to make messages send order explicit (including in initialization with `[loadbang]` and when loading soundfiles). Indeed, due to different constraints, Pd and WebPd's message sequencing order might be different.
+- Use [samplerate~] object instead of hard-coding sample rate with a fixed value.
 
 ### Getting help
 
@@ -105,7 +110,6 @@ Expected behavior -> Describe shortly how it should work instead
 <span id="contributing"><span>
 
 ### Contributing
-
 
 One-time contributions or regular work on the library are more than welcome! Contribution guidelines are coming, meanwhile if you have time and would really like to get involved please get in touch on the issue tracker on GitHub. I would be pleased to help you getting started for contributing.
 
