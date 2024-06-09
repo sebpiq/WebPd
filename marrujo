@@ -1,0 +1,854 @@
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:58:31.901 <link rel=preload> must have a valid `as` value
+14:55:45.670 ppr5008088454:3 Error: <svg> attribute width: Expected length, "TlM4J kQUsC".
+14:55:45.670 ppr5008088454:3 Error: <svg> attribute height: Expected length, "TlM4J kQUsC".
+14:55:48.207  🌠️ Render App
+14:55:48.290  Implement hydrate
+hydrateOnMount @ page_components.1e52…7cf037d3c99372.js:2
+14:55:48.541  Implement hydrate
+hydrateOnMount @ site_components.client.dll.js:2
+14:55:48.974  Implement hydrate
+hydrateOnMount @ page_components.1e52…7cf037d3c99372.js:2
+14:55:49.091  Implement hydrate
+hydrateOnMount @ page_components.1e52…7cf037d3c99372.js:2
+14:55:49.128  Implement hydrate
+hydrateOnMount @ page_components.1e52…7cf037d3c99372.js:2
+14:55:49.174  Implement hydrate
+hydrateOnMount @ page_components.1e52…7cf037d3c99372.js:2
+14:55:49.912  Implement hydrate
+hydrateOnMount @ page_components.1e52…7cf037d3c99372.js:2
+14:55:55.633  Analytics public queue enabled.
+14:55:55.635  Analytics public queue enabled. trackAnalyticsEvent not present
+14:55:55.636  Analytics public queue enabled. event pushed to queue:  Object
+14:55:55.885  Analytics public queue enabled.
+14:55:55.885  Analytics public queue enabled. trackAnalyticsEvent not present
+14:55:55.886  Analytics public queue enabled. event pushed to queue:  Object
+14:55:55.889  Analytics public queue enabled.
+14:55:55.889  Analytics public queue enabled. trackAnalyticsEvent not present
+14:55:55.889  Analytics public queue enabled. event pushed to queue:  Object
+14:55:55.991  Analytics public queue enabled.
+14:55:55.992  Analytics public queue enabled. trackAnalyticsEvent not present
+14:55:55.992  Analytics public queue enabled. event pushed to queue:  Object
+14:55:56.226  Implement hydrate
+hydrateOnMount @ site_components.client.dll.js:2
+14:55:56.255  Implement hydrate
+hydrateOnMount @ site_components.client.dll.js:2
+14:55:57.301  Analytics public queue enabled.
+14:55:57.301  Analytics public queue enabled. trackAnalyticsEvent not present
+14:55:57.301  Analytics public queue enabled. event pushed to queue:  Object
+14:56:03.798  Analytics public queue enabled.
+14:56:03.798  Analytics public queue enabled. trackAnalyticsEvent not present
+14:56:03.799  Analytics public queue enabled. event pushed to queue:  Object
+14:56:06.178  Analytics public queue enabled.
+14:56:06.178  Analytics public queue enabled. trackAnalyticsEvent not present
+14:56:06.179 Analytics.js:170 Analytics public queue enabled. event pushed to queue:  Object
+14:56:18.914 WebvitalsMiddleware.js:78 visibilitychange changed to hidden
+14:56:18.914 WebvitalsMiddleware.js:81 visibilitychange hidden triggered
+14:57:00.876 writer.min.js:6452 Running Ginger Widget v2.9.300
+14:57:50.633 Analytics.js:160 Analytics public queue enabled.
+14:57:50.634 Analytics.js:168 Analytics public queue enabled. trackAnalyticsEvent not present
+14:57:50.634 Analytics.js:170 Analytics public queue enabled. event pushed to queue:  Object
+14:57:50.638 Analytics.js:160 Analytics public queue enabled.
+14:57:50.639 Analytics.js:168 Analytics public queue enabled. trackAnalyticsEvent not present
+14:57:50.640 Analytics.js:170 Analytics public queue enabled. event pushed to queue:  Object
+14:57:52.374 ppr5008088454:1 The resource https://s.go-mpulse.net/boomerang/FSMSW-FSN27-22W2V-5N9KY-MWCH4 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+14:57:52.375 ppr5008088454:1 The resource https://www.static-jcpenney.com/prod7/yoda-site-components/2409.0.26/dll/ActiveCartReminderChunksLazy.dll.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+14:57:54.150 VM4364:29 framework initial load
+14:57:54.154 VM4364:4990 trigger full page load - r
+14:57:54.186 VM4364:4239 webvital formating start -1
+14:57:54.193 VM4364:259 te DigitalDataLayerLoadCompleteRunNow
+14:57:55.972 VM4364:259 te analyticsDigitalDataLayerLoadComplete
+14:57:55.985 VM4364:3892 cookie removed by cookie governor: ak_bmsc
+14:57:56.039 VM4364:3892 cookie removed by cookie governor: __adroll_fpc
+14:57:56.043 VM4364:3892 cookie removed by cookie governor: kndctr_CEEB350F5746CDE97F000101_AdobeOrg_identity
+14:57:56.050 VM4364:3892 cookie removed by cookie governor: kndctr_CEEB350F5746CDE97F000101_AdobeOrg_cluster
+14:57:56.058 VM4364:3892 cookie removed by cookie governor: psCurrentState
+14:57:56.060 VM4364:3892 cookie removed by cookie governor: ndp_session_id
+14:57:56.125 VM4364:3892 cookie removed by cookie governor: _scid
+14:57:56.132 VM4364:3892 cookie removed by cookie governor: _scid_r
+14:57:56.138 VM4364:3892 cookie removed by cookie governor: __ar_v4
+14:57:56.145 VM4364:3892 cookie removed by cookie governor: _uetvid
+14:57:56.148 VM4364:3892 cookie removed by cookie governor: _uetmsclkid
+14:57:56.153 VM4364:3892 cookie removed by cookie governor: _sctr
+14:57:56.193 VM4364:3892 cookie removed by cookie governor: _ga_5GEG6TF9LC
+14:57:56.203 VM4364:3892 cookie removed by cookie governor: RT
+14:57:56.208 VM4364:3892 cookie removed by cookie governor: ak_bmsc
+14:57:56.218 VM4364:3892 cookie removed by cookie governor: BVBRANDID
+14:57:56.224 VM4364:3892 cookie removed by cookie governor: BVBRANDSID
+14:57:56.239 VM4364:259 te digitalDataLayerLoadCompleteDesktop
+14:57:57.123 VM4373:2 initialLoad
+14:57:59.090 VM4364:259 te triggerEnsightenError
+14:57:59.094 VM4364:4404 product OOS is start
+14:57:59.109 VM4364:4411 product OOS is start
+14:57:59.110 VM4364:259 te inventoryProductOOS
+14:57:59.119 VM4364:4437 the product OOS exit
+14:57:59.122 VM4364:259 te triggerEnsightenError
+14:57:59.139 VM4364:259 te cartAdd
+14:57:59.149 VM4364:259 te openModal
+14:57:59.288 VM4403:2 event triggered
+14:58:01.206 VM4364:259 te selectSkuPDP
+14:58:01.357 VM4408:2 event triggered2
+14:58:03.253 VM4415:9 ad trigger listener fired
+14:58:17.125 hZBLSU:1 [Violation] 'setInterval' handler took 382ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:36.299 [Violation] 'setTimeout' handler took <N>ms
+14:58:21.292 [Violation] 'load' handler took 1293ms
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:59:35.589 Fetch finished loading: POST "<URL>".
+14:58:25.900 quantum-jcp.js:292 
+        
+        
+       GET https://us-jcpenney.vergic.com/api/v1/session/bucket/visitor?json=true&sessionId=671a1eb4-b139-4b99-9b43-9c900865e20e%2BKsR3xczscWKhuVf0Gz8Vtn5KRez0Oi7nP9qV3t9o%3D 401 (Unauthorized)
+c @ quantum-jcp.js:292
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+m @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+I @ engage.js:4
+C @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+_ @ engage.js:4
+E @ engage.js:4
+(anonymous) @ engage.js:15
+t.then @ engage.js:3
+t @ engage.js:15
+t.then @ engage.js:3
+(anonymous) @ engage.js:15
+execCb @ engage.js:1
+check @ engage.js:1
+enable @ engage.js:1
+enable @ engage.js:1
+(anonymous) @ engage.js:1
+(anonymous) @ engage.js:1
+each @ engage.js:1
+enable @ engage.js:1
+init @ engage.js:1
+(anonymous) @ engage.js:1
+setTimeout (async)
+req.nextTick @ engage.js:1
+o @ engage.js:1
+requirejs @ engage.js:1
+(anonymous) @ engage.js:15
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:59:44.448 XHR failed loading: GET "<URL>".
+14:58:26.599 [Violation] 'load' handler took 462ms
+14:58:27.479 [Violation] 'load' handler took 391ms
+14:58:35.515 1.js:2 [Violation] 'setInterval' handler took 134ms
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:58:52.760 XHR finished loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:59:29.431 Fetch failed loading: POST "<URL>".
+14:58:41.701 quantum-jcp.js:288 
+        
+        
+       POST https://www.jcpenney.com/proxydirectory/11019/pageInfo net::ERR_SOCKET_NOT_CONNECTED
+Vi.window.fetch @ quantum-jcp.js:288
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+n @ tag.js:1
+fetchRetry @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+o @ tag.js:1
+O @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+o @ tag.js:1
+P @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+a @ tag.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+s @ tag.js:1
+(anonymous) @ tag.js:1
+o @ tag.js:1
+E @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+(anonymous) @ tag.js:1
+o @ tag.js:1
+C @ tag.js:1
+t.default @ tag.js:1
+(anonymous) @ tag.js:2
+14:58:42.028 main.MTRiM2JhOTViMQ.js:2 
+        
+        
+       POST https://analytics.tiktok.com/api/v2/pixel net::ERR_SOCKET_NOT_CONNECTED
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+l @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+n @ main.MTRiM2JhOTViMQ.js:2
+c @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+l @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+n @ main.MTRiM2JhOTViMQ.js:2
+c @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+l @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+n @ main.MTRiM2JhOTViMQ.js:2
+c @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+n @ main.MTRiM2JhOTViMQ.js:2
+c @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+value @ main.MTRiM2JhOTViMQ.js:2
+value @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+value @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+value @ main.MTRiM2JhOTViMQ.js:2
+value @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+value @ main.MTRiM2JhOTViMQ.js:2
+value @ main.MTRiM2JhOTViMQ.js:2
+EC @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+(anonymous) @ main.MTRiM2JhOTViMQ.js:2
+14:58:42.108 core.js:1 
+        
+        
+       GET https://s.pinimg.com/ct/lib/main.2bdc3040.js net::ERR_SOCKET_NOT_CONNECTED
+(anonymous) @ core.js:1
+r @ core.js:1
+(anonymous) @ core.js:1
+(anonymous) @ core.js:1
+14:58:51.813 core.js:1 [Violation] 'error' handler took 9703ms
+14:58:52.344 hZBLSU:1 [Violation] 'setInterval' handler took 117ms
+14:58:52.668 quantum-jcp.js:292 XHR finished loading: GET "https://us-jcpenney.vergic.com/api/v1/session/bucket/visitor?json=true&sessionId=8a298932-053a-4dd9-aaa8-e4158c5e2486%2BTHG6orrAQTBQ1ps4ShR6td2NtS4Qj876Orweg3IYHUM%3D".
+c @ quantum-jcp.js:292
+XMLHttpRequest.send @ main.MTRiM2JhOTViMQ.js:2
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+m @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+I @ engage.js:4
+C @ engage.js:4
+(anonymous) @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+(anonymous) @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+e @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+p @ engage.js:3
+XMLHttpRequest.send (async)
+c @ quantum-jcp.js:292
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+y @ engage.js:4
+e @ engage.js:4
+c @ engage.js:4
+_ @ engage.js:4
+(anonymous) @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+p @ engage.js:3
+XMLHttpRequest.send (async)
+c @ quantum-jcp.js:292
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+m @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+I @ engage.js:4
+C @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+_ @ engage.js:4
+E @ engage.js:4
+(anonymous) @ engage.js:15
+t.then @ engage.js:3
+t @ engage.js:15
+t.then @ engage.js:3
+(anonymous) @ engage.js:15
+execCb @ engage.js:1
+check @ engage.js:1
+enable @ engage.js:1
+enable @ engage.js:1
+(anonymous) @ engage.js:1
+(anonymous) @ engage.js:1
+each @ engage.js:1
+enable @ engage.js:1
+init @ engage.js:1
+(anonymous) @ engage.js:1
+setTimeout (async)
+req.nextTick @ engage.js:1
+o @ engage.js:1
+requirejs @ engage.js:1
+(anonymous) @ engage.js:15
+14:58:55.425 metrical.abandon.cart.jcp.js:1 Config:  {abandoncartid: 'prod.com.jcpenney.acconfig', proto: '//', apiendpointhost: 'api.getmetrical.com', staticendpointhost: 'content.getmetrical.com', configlocation: 'survey_files', …}
+14:58:55.427 metrical.abandon.cart.jcp.js:1 topic response v2 found
+14:58:55.439 metrical.abandon.cart.jcp.js:1 Arguments [ƒ, callee: ƒ, Symbol(Symbol.iterator): ƒ]
+14:58:55.442 metrical.abandon.cart.jcp.js:1 [ƒ, push: ƒ]
+14:58:55.443 metrical.abandon.cart.jcp.js:1 Value To Process: () =>
+          _MetricalAbandonCart.EventBus.publish(
+            _MetricalAbandonCart.EventBus.constants.topics.ACTION_PAGE_LOAD
+          )
+14:58:55.444 prod.com.jcpenney.acconfig.js:631 Metrical: page load
+14:59:00.215 [Violation] Forced reflow while executing JavaScript took 1324ms
+14:59:01.209 [Violation] 'setInterval' handler took 64ms
+14:59:04.583 /p/linden-street-organic-cotton-sculpted-bath-mat/'%20+%20i%20+%20'?pTmplType=regular:1 
+        
+        
+       GET https://www.jcpenney.com/p/linden-street-organic-cotton-sculpted-bath-mat/'%20+%20i%20+%20'?pTmplType=regular net::ERR_SOCKET_NOT_CONNECTED
+14:59:09.197  XHR finished loading: GET "https://us-jcpenney.vergic.com/api/v1/Group/Status/d76d189c-bccf-4407-8055-632dd211c8e2?json=true&sessionId=8a298932-053a-4dd9-aaa8-e4158c5e2486%2BTHG6orrAQTBQ1ps4ShR6td2NtS4Qj876Orweg3IYHUM%3D&groupId=316BD26D-6D1C-419C-8314-B21C0B85BC2B&groupId=381EB9DA-A588-4D4F-A116-FF2DED9F455D&groupId=46934596-CAEE-455A-A207-DF80867F9E6A&groupId=7B1DA787-709C-4272-B04F-E03EC83CFBE4&groupId=0A7D76DC-2A4D-4C2B-9709-2674B41CE0D1".
+c @ quantum-jcp.js:292
+XMLHttpRequest.send @ main.MTRiM2JhOTViMQ.js:2
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+m @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+e @ engage.js:4
+n @ engage.js:5
+r @ engage.js:5
+(anonymous) @ engage.js:15
+t.then @ engage.js:3
+n @ engage.js:15
+n @ engage.js:3
+i @ engage.js:3
+(anonymous) @ engage.js:3
+setTimeout (async)
+s @ engage.js:3
+c.publish @ engage.js:3
+(anonymous) @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+p @ engage.js:3
+XMLHttpRequest.send (async)
+c @ quantum-jcp.js:292
+XMLHttpRequest.send @ main.MTRiM2JhOTViMQ.js:2
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+m @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+I @ engage.js:4
+C @ engage.js:4
+(anonymous) @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+(anonymous) @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+e @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+p @ engage.js:3
+XMLHttpRequest.send (async)
+c @ quantum-jcp.js:292
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+y @ engage.js:4
+e @ engage.js:4
+c @ engage.js:4
+_ @ engage.js:4
+(anonymous) @ engage.js:4
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+t.then @ engage.js:3
+(anonymous) @ engage.js:3
+t.done @ engage.js:3
+p @ engage.js:3
+XMLHttpRequest.send (async)
+c @ quantum-jcp.js:292
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+s @ engage.js:3
+(anonymous) @ engage.js:3
+T @ engage.js:4
+e @ engage.js:4
+m @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+I @ engage.js:4
+C @ engage.js:4
+(anonymous) @ engage.js:4
+t.then @ engage.js:3
+_ @ engage.js:4
+E @ engage.js:4
+(anonymous) @ engage.js:15
+t.then @ engage.js:3
+t @ engage.js:15
+t.then @ engage.js:3
+(anonymous) @ engage.js:15
+execCb @ engage.js:1
+check @ engage.js:1
+enable @ engage.js:1
+enable @ engage.js:1
+(anonymous) @ engage.js:1
+(anonymous) @ engage.js:1
+each @ engage.js:1
+enable @ engage.js:1
+init @ engage.js:1
+(anonymous) @ engage.js:1
+setTimeout (async)
+req.nextTick @ engage.js:1
+o @ engage.js:1
+requirejs @ engage.js:1
+(anonymous) @ engage.js:15
+14:59:22.282   POST https://api-v2.getmetrical.com/pe net::ERR_SOCKET_NOT_CONNECTED
+Vi.window.fetch @ quantum-jcp.js:288
+_MetricalBrowser.fetch @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalBrowser.fetchSimple @ metrical.abandon.cart.jcp.js:1
+_MetricalBrowser.post @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalPE.sendInteractionData @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+a @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.action/page_load @ prod.com.jcpenney.acconfig.js:658
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+await in (anonymous) (async)
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ prod.com.jcpenney.acconfig.js:665
+value @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.init/post @ prod.com.jcpenney.acconfig.js:664
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+loadConfig @ metrical.abandon.cart.jcp.js:1
+init @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ unknown
+14:59:22.283  {level: 'error', value: 50, ts: '2024-06-06T21:59:22.282Z', module: 'browser', msg: 'fetch run error', …}
+console.error @ quantum-jcp.js:512
+_MetricalTransportDefault.write @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalLogger.transport @ metrical.abandon.cart.jcp.js:1
+_MetricalLogger.log @ metrical.abandon.cart.jcp.js:1
+_MetricalLogger.error @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalBrowser.fetchSimple @ metrical.abandon.cart.jcp.js:1
+_MetricalBrowser.post @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalPE.sendInteractionData @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+a @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.action/page_load @ prod.com.jcpenney.acconfig.js:658
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+await in (anonymous) (async)
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ prod.com.jcpenney.acconfig.js:665
+value @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.init/post @ prod.com.jcpenney.acconfig.js:664
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+loadConfig @ metrical.abandon.cart.jcp.js:1
+init @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ unknown
+14:59:22.303  {level: 'error', value: 50, ts: '2024-06-06T21:59:22.290Z', module: 'pe', msg: 'error on post fetch call for pe', …}
+console.error @ quantum-jcp.js:512
+_MetricalTransportDefault.write @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalLogger.transport @ metrical.abandon.cart.jcp.js:1
+_MetricalLogger.log @ metrical.abandon.cart.jcp.js:1
+_MetricalLogger.error @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalPE.sendInteractionData @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+a @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.action/page_load @ prod.com.jcpenney.acconfig.js:658
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+await in (anonymous) (async)
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ prod.com.jcpenney.acconfig.js:665
+value @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.init/post @ prod.com.jcpenney.acconfig.js:664
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+loadConfig @ metrical.abandon.cart.jcp.js:1
+init @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ unknown
+14:59:22.312   POST https://ingest.quantummetric.com/horizon/jcp?T=B&u=https%3A%2F%2Fwww.jcpenney.com%2Fp%2Flinden-street-organic-cotton-sculpted-bath-mat%2Fppr5008088454%3FpTmplType%3Dregular%26deptId%3Ddept20020570040%26catId%3Dcat100290078%26urlState%3D%252Fg%252Fhome%252Fall-bath%253Fs1_deals_and_promotions%253DSALE%2526id%253Dcat100290078%26productGridView%3Dmedium%26cm_re%3DZB-_-GALLERY-FOR-THE-HOME-_-VN-_-HOME-SALE-_-DEPT_FTH_SALE-_-VN-2-_-Bath_4&t=1717711081490&v=1717711135027&H=113162668e34bb4c85ed04c1&s=782b8f7105a78de7fa26ab4c1c27af2d&U=e79b3cba009b03fc51e63b59b8aa9869&Q=2&S=0&N=0&z=1 net::ERR_SOCKET_NOT_CONNECTED
+bd @ quantum-jcp.js:176
+(anonymous) @ quantum-jcp.js:268
+b @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+f @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:14
+ma @ quantum-jcp.js:14
+A @ quantum-jcp.js:14
+Di @ quantum-jcp.js:268
+Ug @ quantum-jcp.js:271
+ag @ quantum-jcp.js:189
+Ci @ quantum-jcp.js:267
+(anonymous) @ quantum-jcp.js:269
+b @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+f @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:14
+ma @ quantum-jcp.js:14
+A @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:268
+X @ quantum-jcp.js:183
+(anonymous) @ quantum-jcp.js:268
+(anonymous) @ quantum-jcp.js:176
+Promise.then (async)
+bd @ quantum-jcp.js:176
+(anonymous) @ quantum-jcp.js:268
+b @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+f @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:14
+ma @ quantum-jcp.js:14
+A @ quantum-jcp.js:14
+Di @ quantum-jcp.js:268
+Ug @ quantum-jcp.js:271
+ag @ quantum-jcp.js:189
+send @ quantum-jcp.js:164
+Jh @ quantum-jcp.js:262
+Eh @ quantum-jcp.js:228
+(anonymous) @ quantum-jcp.js:369
+b @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+setTimeout (async)
+(anonymous) @ quantum-jcp.js:175
+(anonymous) @ quantum-jcp.js:175
+b @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+f @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+f @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+f @ quantum-jcp.js:14
+(anonymous) @ quantum-jcp.js:290
+14:59:23.549  [Violation] Avoid using document.write(). https://developers.google.com/web/updates/2016/08/removing-document-write
+Ob @ conversion.js:33
+(anonymous) @ conversion.js:114
+(anonymous) @ conversion.js:114
+(anonymous) @ conversion.js:114
+14:59:23.642  XHR finished loading: GET "https://d.adroll.com/segment/YNJJXL3HSZGX5HCII2ACSH/CIX4XXOAAZFJBAPNGYRAY7?adroll_fpc=bff2d39269a88def875b4320025a09e3-1717709583607&flg=1&pv=76776569925.37689&arrfrr=https%3A%2F%2Fwww.jcpenney.com%2Fp%2Flinden-street-organic-cotton-sculpted-bath-mat%2Fppr5008088454%3FpTmplType%3Dregular%26deptId%3Ddept20020570040%26catId%3Dcat100290078%26urlState%3D%252Fg%252Fhome%252Fall-bath%253Fs1_deals_and_promotions%253DSALE%2526id%253Dcat100290078%26productGridView%3Dmedium%26cm_re%3DZB-_-GALLERY-FOR-THE-HOME-_-VN-_-HOME-SALE-_-DEPT_FTH_SALE-_-VN-2-_-Bath_4&cookie=CIX4XXOAAZFJBAPNGYRAY7%3A2%7CYNJJXL3HSZGX5HCII2ACSH%3A2&adroll_s_ref=https%3A//www.jcpenney.com/g/home/all-bath%3Fs1_deals_and_promotions%3DSALE%26id%3Dcat100290078%26cm_re%3DZB-_-GALLERY-FOR-THE-HOME-_-VN-_-HOME-SALE-_-DEPT_FTH_SALE-_-VN-2-_-Bath_4&keyw=&p0=169807&adroll_external_data=&adroll_version=2.0".
+c @ quantum-jcp.js:292
+XMLHttpRequest.send @ main.MTRiM2JhOTViMQ.js:2
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+__adroll__._xhr @ roundtrip.js:60
+__adroll__.dyno @ roundtrip.js:36
+__adroll__.track @ roundtrip.js:162
+__adroll__.loadGlobalFunctions @ roundtrip.js:146
+__adroll__.render_advertisable_cell @ roundtrip.js:423
+window.adroll_tpc_callback @ roundtrip.js:182
+b @ roundtrip.js:190
+__adroll__._call_33across @ roundtrip.js:190
+__adroll__.call_next_tpc @ roundtrip.js:182
+__adroll__.set_consent @ roundtrip.js:24
+(anonymous) @ YNJJXL3HSZGX5HCII2ACSH:1
+14:59:24.261 quantum-jcp.js:288  Uncaught (in promise) 
+Vi.window.fetch @ quantum-jcp.js:288
+_MetricalBrowser.fetch @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalBrowser.fetchSimple @ metrical.abandon.cart.jcp.js:1
+_MetricalBrowser.post @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalPE.sendInteractionData @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+a @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+recordInteraction @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.action/page_load @ prod.com.jcpenney.acconfig.js:658
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+await in (anonymous) (async)
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ prod.com.jcpenney.acconfig.js:665
+value @ metrical.abandon.cart.jcp.js:1
+globalThis._MetricalLoadedConfig.topicresponsev2.init/post @ prod.com.jcpenney.acconfig.js:664
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+_MetricalEventBus.publish @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+(anonymous) @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ quantum-jcp.js:290
+Promise.then (async)
+Vi.window.Promise.then @ quantum-jcp.js:290
+loadConfig @ metrical.abandon.cart.jcp.js:1
+init @ metrical.abandon.cart.jcp.js:1
+(anonymous) @ unknown
+14:59:25.363  Analytics public queue enabled.
+14:59:25.364  Analytics public queue enabled. trackAnalyticsEvent present
+14:59:25.365  ensighten event name: triggerEnsightenError
+14:59:25.366  window.pageDataTracker.trackAnalyticsEvent available: event name: triggerEnsightenError
+14:59:25.396  *************************** ENSIGHTEN ERROR CASE ***************************
+14:59:25.398  CASE TWO ***************************
+14:59:25.399  te triggerEnsightenError
+14:59:32.748  Analytics v1.1.1:  Loaded...
+14:59:34.346  Fetch finished loading: GET "https://www.paypalobjects.com/muse/noop.js".
+(anonymous) @ index.html:2
+x @ index.html:2
+C @ index.html:2
+(anonymous) @ index.html:2
+load (async)
+(anonymous) @ index.html:2
+(anonymous) @ index.html:2
+(anonymous) @ index.html:2
+14:59:37.076  XHR finished loading: GET "https://id.hadron.ad.gt/v1/hadron.json?_it=freestar&partner_id=474&sync=0&domain=www.jcpenney.com&url=https://www.jcpenney.com/p/linden-street-organic-cotton-sculpted-bath-mat/ppr5008088454?pTmplType=regular&deptId=dept20020570040&catId=cat100290078&urlState=%2Fg%2Fhome%2Fall-bath%3Fs1_deals_and_promotions%3DSALE%26id%3Dcat100290078&productGridView=medium&cm_re=ZB-_-GALLERY-FOR-THE-HOME-_-VN-_-HOME-SALE-_-DEPT_FTH_SALE-_-VN-2-_-Bath_4".
+c @ quantum-jcp.js:292
+XMLHttpRequest.send @ main.MTRiM2JhOTViMQ.js:2
+u.send @ FSMSW-FSN27-22W2V-5N9KY-MWCH4:10
+(anonymous) @ hadron.js:1
+(anonymous) @ hadron.js:1
+(anonymous) @ hadron.js:1
+n @ hadron.js:1
+(anonymous) @ hadron.js:1
+(anonymous) @ hadron.js:1
+14:59:40.093  Running Ginger Widget v2.9.300
+14:59:42.026 pubfig.engine.js:1 [Violation] 'load' handler took 782ms
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
+14:59:44.600 XHR failed loading: POST "<URL>".
