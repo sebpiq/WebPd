@@ -58,34 +58,38 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation - shared ------------------------------ //
 const sharedNodeImplementation: _NodeImplementation = {
     state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'value', 0),
+        Class(ns.State, [
+            Var(`Float`, `value`, 0),
         ]),
 
     initialization: ({ ns, node: { args }, state }) => 
         ast`
-            ${ns.setValue!}(${state}, ${args.value})
+            ${ns.setValue}(${state}, ${args.value})
         `,
     
-    messageReceivers: ({
-        ns,
-        snds,
-        state,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${ns.setValue!}(${state}, msg_readFloatToken(m, 0))
-                ${snds.$0}(msg_floats([${state}.value]))
+    messageReceivers: (
+        {
+            ns,
+            snds,
+            state,
+        }, {
+            bangUtils, msg
+        }
+    ) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+                ${ns.setValue}(${state}, ${msg.readFloatToken}(m, 0))
+                ${snds.$0}(${msg.floats}([${state}.value]))
                 return 
 
-            } else if (msg_isBang(m)) {
-                ${snds.$0}(msg_floats([${state}.value]))
+            } else if (${bangUtils.isBang}(m)) {
+                ${snds.$0}(${msg.floats}([${state}.value]))
                 return
                 
             }
         `,
 
-        '1': coldFloatInletWithSetter(ns.setValue!, state),
+        '1': coldFloatInletWithSetter(ns.setValue, state, msg),
     }),
 }
 
@@ -95,9 +99,9 @@ const nodeImplementationFloat: _NodeImplementation = {
 
     core: ({ ns }) => 
         Sequence([
-            Func(ns.setValue!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'value'),
+            Func(ns.setValue, [
+                Var(ns.State, `state`),
+                Var(`Float`, `value`),
             ], 'void')`
                 state.value = value
             `
@@ -112,13 +116,13 @@ const nodeImplementationFloat: _NodeImplementation = {
 const nodeImplementationInt: _NodeImplementation = {
     ...sharedNodeImplementation,
 
-    core: ({ ns }) => 
+    core: ({ ns }, { numbers }) => 
         Sequence([
-            Func(ns.setValue!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'value'),
+            Func(ns.setValue, [
+                Var(ns.State, `state`),
+                Var(`Float`, `value`),
             ], 'void')`
-                state.value = roundFloatAsPdInt(value)
+                state.value = ${numbers.roundFloatAsPdInt}(value)
             `,
         ]),
 

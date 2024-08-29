@@ -47,32 +47,32 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'currentValue', args.initValue)
+        Class(ns.State, [
+            Var(`Float`, `currentValue`, args.initValue)
         ]),
 
-    messageReceivers: ({
-        snds,
-        state,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${ConstVar('Float', 'newValue', 'msg_readFloatToken(m, 0)')}
+    messageReceivers: (
+        { snds, state }, 
+        { bangUtils, msg }
+    ) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+                ${ConstVar(`Float`, `newValue`, `${msg.readFloatToken}(m, 0)`)}
                 if (newValue !== ${state}.currentValue) {
                     ${state}.currentValue = newValue
-                    ${snds[0]}(msg_floats([${state}.currentValue]))
+                    ${snds[0]}(${msg.floats}([${state}.currentValue]))
                 }
                 return
     
-            } else if (msg_isBang(m)) {
-                ${snds[0]}(msg_floats([${state}.currentValue]))
+            } else if (${bangUtils.isBang}(m)) {
+                ${snds[0]}(${msg.floats}([${state}.currentValue]))
                 return 
     
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-                && msg_readStringToken(m, 0) === 'set'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'set'
             ) {
-                ${state}.currentValue = msg_readFloatToken(m, 1)
+                ${state}.currentValue = ${msg.readFloatToken}(m, 1)
                 return
             }
         `,

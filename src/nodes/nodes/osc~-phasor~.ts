@@ -69,22 +69,22 @@ const makeNodeImplementation = ({
         },
 
         state: ({ ns }) => 
-            Class(ns.State!, [
-                Var('Float', 'phase', 0),
-                Var('Float', 'step', 0),
+            Class(ns.State, [
+                Var(`Float`, `phase`, 0),
+                Var(`Float`, `step`, 0),
             ]),
 
         initialization: ({ ns, state }) => ast`
-            ${ns.setStep!}(${state}, 0)
+            ${ns.setStep}(${state}, 0)
         `,
 
-        messageReceivers: ({ ns, state }) => ({
-            '1': coldFloatInletWithSetter(ns.setPhase!, state),
+        messageReceivers: ({ ns, state }, { msg }) => ({
+            '1': coldFloatInletWithSetter(ns.setPhase, state, msg),
         }),
 
         dsp: ({ ns, state, outs, ins }) => ({
             inlets: {
-                '0': ast`${ns.setStep!}(${state}, ${ins.$0})`
+                '0': ast`${ns.setStep}(${state}, ${ins.$0})`
             },
             loop: ast`
                 ${outs.$0} = ${generateOperation(`${state}.phase`)}
@@ -92,18 +92,18 @@ const makeNodeImplementation = ({
             `
         }),
 
-        core: ({ ns, globs }) => 
+        core: ({ ns }, { core }) => 
             Sequence([
-                Func(ns.setStep!, [
-                    Var(ns.State!, 'state'),
-                    Var('Float', 'freq'),
+                Func(ns.setStep, [
+                    Var(ns.State, `state`),
+                    Var(`Float`, `freq`),
                 ])`
-                    state.step = (${coeff} / ${globs.sampleRate}) * freq
+                    state.step = (${coeff} / ${core.SAMPLE_RATE}) * freq
                 `,
 
-                Func(ns.setPhase!, [
-                    Var(ns.State!, 'state'),
-                    Var('Float', 'phase'),
+                Func(ns.setPhase, [
+                    Var(ns.State, `state`),
+                    Var(`Float`, `phase`),
                 ])`
                     state.phase = phase % 1.0${coeff ? ` * ${coeff}`: ''}
                 `,

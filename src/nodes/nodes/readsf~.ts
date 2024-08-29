@@ -18,13 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { stdlib, functional, Class, Func, Sequence } from '@webpd/compiler'
+import { stdlib, functional, Class, Func, Sequence, AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { bangUtils, stringMsgUtils } from '../global-code/core'
-import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
-import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
+import { bangUtils, actionUtils } from '../global-code/core'
+import { readWriteFsOpts, soundFileOpenOpts } from '../global-code/fs'
 
 interface NodeArguments {
     channelCount: number
@@ -67,24 +66,28 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'readsf_t',
     },
 
-    state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Array<buf_SoundBuffer>', 'buffers', '[]'),
-            Var('fs_OperationId', 'streamOperationId', -1),
-            Var('Int', 'readingStatus', 0),
+    state: ({ ns }, { buf, fs }) => 
+        Class(ns.State, [
+            Var(`Array<${buf.SoundBuffer}>`, `buffers`, `[]`),
+            Var(fs.OperationId, `streamOperationId`, -1),
+            Var(`Int`, `readingStatus`, 0),
         ]),
 
-    messageReceivers: ({
-        ns,
-        node,
-        state,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_getLength(m) >= 2) {
-                if (msg_isStringToken(m, 0) 
-                    && msg_readStringToken(m, 0) === 'open'
+    messageReceivers: (
+        {
+            ns,
+            node,
+            state,
+        }, {
+            actionUtils, msg
+        }
+    ) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.getLength}(m) >= 2) {
+                if (${msg.isStringToken}(m, 0) 
+                    && ${msg.readStringToken}(m, 0) === 'open'
                 ) {
-                    ${ns.openStream!}(
+                    ${ns.openStream}(
                         ${state},
                         m,
                         ${node.args.channelCount},
@@ -100,8 +103,8 @@ const nodeImplementation: _NodeImplementation = {
                     return
                 }
     
-            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                if (msg_readFloatToken(m, 0) === 0) {
+            } else if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+                if (${msg.readFloatToken}(m, 0) === 0) {
                     ${state}.readingStatus = 3
                     return
     
@@ -115,32 +118,36 @@ const nodeImplementation: _NodeImplementation = {
     
                 }
                 
-            } else if (msg_isAction(m, 'print')) {
+            } else if (${actionUtils.isAction}(m, 'print')) {
                 console.log('[readsf~] reading = ' + ${state}.readingStatus.toString())
                 return
             }
         `,
     }),
 
-    dsp: ({
-        state,
-        snds,
-        outs,
-        node: {
-            args: { channelCount },
-        },
-    }) => ast`
+    dsp: (
+        {
+            state,
+            snds,
+            outs,
+            node: {
+                args: { channelCount },
+            },
+        }, {
+            buf, bangUtils
+        }
+    ) => ast`
         switch(${state}.readingStatus) {
             case 1: 
                 ${functional.countTo(channelCount).map((i) => 
-                    `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
+                    `${outs[i]} = ${buf.pullSample}(${state}.buffers[${i}])`)}
                 break
                 
             case 2: 
                 ${functional.countTo(channelCount).map((i) => 
-                    `${outs[i]} = buf_pullSample(${state}.buffers[${i}])`)}
+                    `${outs[i]} = ${buf.pullSample}(${state}.buffers[${i}])`)}
                 if (${state}.buffers[0].pullAvailableLength === 0) {
-                    ${snds[channelCount]}(msg_bang())
+                    ${snds[channelCount]}(${bangUtils.bang}())
                     ${state}.readingStatus = 3
                 }
                 break
@@ -152,32 +159,32 @@ const nodeImplementation: _NodeImplementation = {
         }
     `,
 
-    core: ({ ns, globs }) => 
+    core: ({ ns }, { msg, fs, core, soundFileOpenOpts, readWriteFsOpts }) => 
         Sequence([
-            Func(ns.openStream!, [
-                Var(ns.State!, 'state'),
-                Var('Message', 'm'),
-                Var('Int', 'channelCount'),
-                Var('fs_OperationCallback', 'onStreamClose'),
+            Func(ns.openStream, [
+                Var(ns.State, `state`),
+                Var(msg.Message, `m`),
+                Var(`Int`, `channelCount`),
+                Var(fs.OperationCallback, `onStreamClose`),
             ], 'void')`
                 if (state.streamOperationId !== -1) {
                     state.readingStatus = 3
-                    fs_closeSoundStream(state.streamOperationId, FS_OPERATION_SUCCESS)
+                    ${fs.closeSoundStream}(state.streamOperationId, ${fs.OPERATION_SUCCESS})
                 }
         
-                ${ConstVar('fs_SoundInfo', 'soundInfo', `{
+                ${ConstVar(fs.SoundInfo, `soundInfo`, `{
                     channelCount,
-                    sampleRate: toInt(${globs.sampleRate}),
+                    sampleRate: toInt(${core.SAMPLE_RATE}),
                     bitDepth: 32,
                     encodingFormat: '',
                     endianness: '',
                     extraOptions: '',
                 }`)}
-                ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+                ${ConstVar(`Set<Int>`, `unhandledOptions`, `${soundFileOpenOpts.parse}(
                     m,
                     soundInfo,
                 )`)}
-                ${ConstVar('string', 'url', `parseReadWriteFsOpts(
+                ${ConstVar(`string`, `url`, `${readWriteFsOpts.parse}(
                     m,
                     soundInfo,
                     unhandledOptions
@@ -185,20 +192,20 @@ const nodeImplementation: _NodeImplementation = {
                 if (url.length === 0) {
                     return
                 }
-                state.streamOperationId = fs_openSoundReadStream(
+                state.streamOperationId = ${fs.openSoundReadStream}(
                     url,
                     soundInfo,
                     onStreamClose,
                 )
-                state.buffers = _FS_SOUND_STREAM_BUFFERS.get(state.streamOperationId)
+                state.buffers = ${fs.SOUND_STREAM_BUFFERS}.get(state.streamOperationId)
             `
         ]),
 
     dependencies: [
-        parseSoundFileOpenOpts,
-        parseReadWriteFsOpts,
+        soundFileOpenOpts,
+        readWriteFsOpts,
         bangUtils,
-        stringMsgUtils,
+        actionUtils,
         stdlib.fsReadSoundStream,
     ],
 }

@@ -39,8 +39,8 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ---------------------------- node implementation -------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    initialization: ({ snds }) => 
-        ast`commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`, 
+    initialization: ({ snds }, { bangUtils, commons }) => 
+        ast`${commons.waitFrame}(0, () => ${snds.$0}(${bangUtils.bang}()))`, 
     
     dependencies: [ 
         bangUtils, 

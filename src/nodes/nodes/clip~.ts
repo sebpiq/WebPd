@@ -57,17 +57,17 @@ const nodeImplementation: _NodeImplementation = {
     },
 
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'minValue', args.minValue),
-            Var('Float', 'maxValue', args.maxValue),
+        Class(ns.State, [
+            Var(`Float`, `minValue`, args.minValue),
+            Var(`Float`, `maxValue`, args.maxValue),
         ]),
 
     dsp: ({ ins, state }) =>
         ast`Math.max(Math.min(${state}.maxValue, ${ins.$0}), ${state}.minValue)`,
     
-    messageReceivers: ({ state }) => ({
-        '1': coldFloatInlet(`${state}.minValue`),
-        '2': coldFloatInlet(`${state}.maxValue`),
+    messageReceivers: ({ state }, { msg }) => ({
+        '1': coldFloatInlet(`${state}.minValue`, msg),
+        '2': coldFloatInlet(`${state}.maxValue`, msg),
     }),
 }
 

@@ -44,32 +44,32 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
     state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('boolean', 'continueIter', 'true')
+        Class(ns.State, [
+            Var(`boolean`, `continueIter`, `true`)
         ]),
     
-    messageReceivers: ({ snds, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) {
+    messageReceivers: ({ snds, state }, { msg, bangUtils }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) {
                 ${state}.continueIter = true
                 while (${state}.continueIter) {
-                    ${snds[0]}(msg_bang())
+                    ${snds[0]}(${bangUtils.bang}())
                 }
                 return
     
-            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            } else if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
                 ${state}.continueIter = true
-                ${Var('Int', 'maxIterCount', 'toInt(msg_readFloatToken(m, 0))')}
-                ${Var('Int', 'iterCount', '0')}
+                ${Var(`Int`, `maxIterCount`, `toInt(${msg.readFloatToken}(m, 0))`)}
+                ${Var(`Int`, `iterCount`, `0`)}
                 while (${state}.continueIter && iterCount++ < maxIterCount) {
-                    ${snds[0]}(msg_bang())
+                    ${snds[0]}(${bangUtils.bang}())
                 }
                 return
             }
         `,
     
-        '1': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) {
+        '1': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) {
                 ${state}.continueIter = false
                 return
             }

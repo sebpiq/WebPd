@@ -108,8 +108,8 @@ describe('delread~ / delwrite~', () => {
                 'dac~': nodeImplementationDac,
                 'sig~': nodeImplementationSig,
                 counter: {
-                    dsp: ({ globs, outs }) =>
-                        ast`${outs.$0} = toFloat(${globs.frame})`,
+                    dsp: ({ outs }, { core }) =>
+                        ast`${outs.$0} = toFloat(${core.FRAME})`,
                 },
             }
 

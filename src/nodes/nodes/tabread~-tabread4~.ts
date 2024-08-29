@@ -21,7 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { bangUtils, stringMsgUtils } from '../global-code/core'
+import { bangUtils, actionUtils } from '../global-code/core'
 import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Func, Var, ast } from '@webpd/compiler'
 import { nodeCoreTabBase, NodeArguments } from './tab-base'
@@ -58,36 +58,36 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'tabread_t',
     },
 
-    state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('FloatArray', 'array', ns.emptyArray!),
-            Var('string', 'arrayName', `"${args.arrayName}"`),
-            Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
-            Var('Int', 'readPosition', 0),
-            Var('Int', 'readUntil', 0),
-            Var('Int', 'writePosition', 0),
+    state: ({ node: { args }, ns }, { sked }) => 
+        Class(ns.State, [
+            Var(`FloatArray`, `array`, ns.emptyArray),
+            Var(`string`, `arrayName`, `"${args.arrayName}"`),
+            Var(sked.Id, `arrayChangesSubscription`, sked.ID_NULL),
+            Var(`Int`, `readPosition`, 0),
+            Var(`Int`, `readUntil`, 0),
+            Var(`Int`, `writePosition`, 0),
         ]),
 
     initialization: ({ ns, state }) => ast`
         if (${state}.arrayName.length) {
-            ${ns.setArrayName!}(
+            ${ns.setArrayName}(
                 ${state}, 
                 ${state}.arrayName,
-                () => ${ns.setArrayNameFinalize!}(${state})
+                () => ${ns.setArrayNameFinalize}(${state})
             )
         }
     `,
 
-    messageReceivers: ({ ns, state }) => ({
-        '0_message': AnonFunc([Var('Message', 'm')])`
+    messageReceivers: ({ ns, state }, { msg }) => ({
+        '0_message': AnonFunc([Var(msg.Message, `m`)])`
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'set'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'set'
             ) {
-                ${ns.setArrayName!}(
+                ${ns.setArrayName}(
                     ${state},
-                    msg_readStringToken(m, 1),
-                    () => ${ns.setArrayNameFinalize!}(${state}),
+                    ${msg.readStringToken}(m, 1),
+                    () => ${ns.setArrayNameFinalize}(${state}),
                 )
                 return
     
@@ -96,23 +96,25 @@ const nodeImplementation: _NodeImplementation = {
     }),
 
     dsp: ({ ins, state }) => 
-        ast`${state}.array[toInt(Math.max(Math.min(Math.floor(${ins.$0}), ${state}.array.length - 1), 0))]`,
+        ast`${state}.array[toInt(Math.max(Math.min(Math.floor(${ins.$0}), toFloat(${state}.array.length - 1)), 0))]`,
     
-    core: ({ ns }) => 
-        Sequence([
-            nodeCoreTabBase(ns),
+    core: ({ ns }, globals) => {
+        const { commons } = globals
+        return Sequence([
+            nodeCoreTabBase(ns, globals),
 
-            Func(ns.setArrayNameFinalize!, [
-                Var(ns.State!, 'state'),
+            Func(ns.setArrayNameFinalize, [
+                Var(ns.State, `state`),
             ], 'void')`
-                state.array = commons_getArray(state.arrayName)
+                state.array = ${commons.getArray}(state.arrayName)
             `,
-        ]),
+        ])
+    },
 
     dependencies: [
         bangUtils,
         stdlib.commonsArrays,
-        stringMsgUtils,
+        actionUtils,
     ],
 }
 

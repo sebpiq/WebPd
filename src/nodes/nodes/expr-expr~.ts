@@ -27,6 +27,7 @@ import {
     ast,
     Sequence,
     Var,
+    VariableNamesIndex,
 } from '@webpd/compiler'
 import {
     NodeImplementation,
@@ -93,10 +94,10 @@ const builderExprTilde: NodeBuilder<NodeArguments> = {
 const sharedNodeImplementation = (): _NodeImplementation => ({
 
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Map<Int, Float>', 'floatInputs', 'new Map()'),
-            Var('Map<Int, string>', 'stringInputs', 'new Map()'),
-            Var('Array<Float>', 'outputs', `new Array(${args.tokenizedExpressions.length})`),
+        Class(ns.State, [
+            Var(`Map<Int, Float>`, `floatInputs`, `new Map()`),
+            Var(`Map<Int, string>`, `stringInputs`, `new Map()`),
+            Var(`Array<Float>`, `outputs`, `new Array(${args.tokenizedExpressions.length})`),
         ]),
 
     initialization: ({
@@ -116,11 +117,14 @@ const sharedNodeImplementation = (): _NodeImplementation => ({
         `
     },
 
-    messageReceivers: ({ 
-        snds, 
-        state, 
-        node: { args, type },
-    }) => {
+    messageReceivers: (
+        { 
+            snds, 
+            state, 
+            node: { args, type },
+        }, globals
+    ) => {
+        const { bangUtils, tokenConversion, msg } = globals
         const inputs = type === 'expr' ? 
             validateAndListInputsExpr(args.tokenizedExpressions)
             : validateAndListInputsExprTilde(args.tokenizedExpressions)
@@ -129,20 +133,22 @@ const sharedNodeImplementation = (): _NodeImplementation => ({
         const hasInput0 = inputs.length && inputs[0].id === 0
     
         return {
-            '0': AnonFunc([Var('Message', 'm')])`
-                if (!msg_isBang(m)) {
-                    for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
-                        ${state}.stringInputs.set(i, messageTokenToString(m, i))
-                        ${state}.floatInputs.set(i, messageTokenToFloat(m, i))
+            '0': AnonFunc([
+                Var(msg.Message, `m`)
+            ])`
+                if (!${bangUtils.isBang}(m)) {
+                    for (${Var(`Int`, `i`, `0`)}; i < ${msg.getLength}(m); i++) {
+                        ${state}.stringInputs.set(i, ${tokenConversion.toString_}(m, i))
+                        ${state}.floatInputs.set(i, ${tokenConversion.toFloat}(m, i))
                     }
                 }
     
                 ${type === 'expr' ? `
                     ${args.tokenizedExpressions.map((tokens, i) => 
-                        `${state}.outputs[${i}] = ${renderTokenizedExpression(state, null, tokens)}`)}
+                        `${state}.outputs[${i}] = ${renderTokenizedExpression(state, null, tokens, globals)}`)}
             
                     ${args.tokenizedExpressions.map((_, i) => 
-                        `${snds[`${i}`]}(msg_floats([${state}.outputs[${i}]]))`)}
+                        `${snds[`${i}`]}(${msg.floats}([${state}.outputs[${i}]]))`)}
                 `: null}
                 
                 return
@@ -154,16 +160,16 @@ const sharedNodeImplementation = (): _NodeImplementation => ({
                     if (type === 'float' || type === 'int') {
                         return [
                             `${id}`, 
-                            AnonFunc([Var('Message', 'm')])`
-                                ${state}.floatInputs.set(${id}, messageTokenToFloat(m, 0))
+                            AnonFunc([Var(msg.Message, `m`)])`
+                                ${state}.floatInputs.set(${id}, ${tokenConversion.toFloat}(m, 0))
                                 return
                             `
                         ]
                     } else if (type === 'string') {
                         return [
                             `${id}`, 
-                            AnonFunc([Var('Message', 'm')])`
-                                ${state}.stringInputs.set(${id}, messageTokenToString(m, 0))
+                            AnonFunc([Var(msg.Message, `m`)])`
+                                ${state}.stringInputs.set(${id}, ${tokenConversion.toString_}(m, 0))
                                 return
                             `
                         ]
@@ -193,14 +199,16 @@ const nodeImplementationExprTilde: _NodeImplementation = {
         alphaName: 'expr_t',
     },
 
-    dsp: ({
-        node: { args },
-        state,
-        outs, 
-        ins,
-    }) => Sequence(
+    dsp: (
+        {
+            node: { args },
+            state,
+            outs, 
+            ins,
+        }, globals
+    ) => Sequence(
         args.tokenizedExpressions.map((tokens, i) => 
-            `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens)}`)
+            `${outs[i]} = ${renderTokenizedExpression(state, ins, tokens, globals)}`)
     ),
 }
 
@@ -316,6 +324,7 @@ export const renderTokenizedExpression = (
     state: VariableName,
     ins: Parameters<NodeImplementation['dsp']>[0]['ins'] | null,
     tokens: Array<ExpressionToken>, 
+    { numbers, commons }: VariableNamesIndex['globals']
 ): Code =>
     // Add '+(' to convert for example boolean output to float
     '+(' + tokens.map(token => {
@@ -328,9 +337,9 @@ export const renderTokenizedExpression = (
                 }
                 return ins[token.id]
             case 'int':
-                return `roundFloatAsPdInt(${state}.floatInputs.get(${token.id}))`
+                return `${numbers.roundFloatAsPdInt}(${state}.floatInputs.get(${token.id}))`
             case 'string':
-                return `commons_getArray(${state}.stringInputs.get(${token.id}))`
+                return `${commons.getArray}(${state}.stringInputs.get(${token.id}))`
             case 'indexing-start':
                 return '[toInt('
             case 'indexing-end':

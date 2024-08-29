@@ -104,67 +104,73 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- generateDeclarations ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Int', 'splitPoint', 0),
-            Var('Message', 'currentList', 'msg_create([])'),
+    state: ({ ns }, { msg }) => 
+        Class(ns.State, [
+            Var(`Int`, `splitPoint`, 0),
+            Var(msg.Message, `currentList`, `${msg.create}([])`),
         ]),
 
-    initialization: ({ node: { args }, state }) => ast`
+    initialization: ({ node: { args }, state }, { msg }) => ast`
         ${args.operation === 'split' ? 
             `${state}.splitPoint = ${args.operationArgs[0]}`: null}
 
         ${args.operation === 'append' || args.operation === 'prepend' ? ast` 
             {
-                ${ConstVar('MessageTemplate', 'template', `[${
+                ${ConstVar(msg.Template, `template`, `[${
                     args.operationArgs.map((arg) => 
                         typeof arg === 'string' ? 
-                            `MSG_STRING_TOKEN,${arg.length}`
-                            : `MSG_FLOAT_TOKEN`).join(',')}]`)}
+                            `${msg.STRING_TOKEN},${arg.length}`
+                            : `${msg.FLOAT_TOKEN}`).join(',')}]`)}
 
-                ${state}.currentList = msg_create(template)
+                ${state}.currentList = ${msg.create}(template)
 
                 ${args.operationArgs.map((arg, i) => 
                     typeof arg === 'string' ? 
-                        `msg_writeStringToken(${state}.currentList, ${i}, "${arg}")`
-                        : `msg_writeFloatToken(${state}.currentList, ${i}, ${arg})`)}
+                        `${msg.writeStringToken}(${state}.currentList, ${i}, "${arg}")`
+                        : `${msg.writeFloatToken}(${state}.currentList, ${i}, ${arg})`)}
             }
         `: null}
     `,
 
-    messageReceivers: ({ 
-        ns,
-        snds, 
-        state,
-        node: { args } 
-    }) => {
-        const prepareInMessage = ConstVar('Message', 'inMessage', `msg_isBang(m) ? msg_create([]): m`)
+    messageReceivers: (
+        { 
+            ns,
+            snds, 
+            state,
+            node: { args } 
+        }, {
+            bangUtils,
+            msgUtils,
+            msg,
+        }
+    ) => {
+        const prepareInMessage = ConstVar(msg.Message, `inMessage`, `${bangUtils.isBang}(m) ? ${msg.create}([]): m`)
         switch(args.operation) {
             case 'split':
                 return {
-                    '0': AnonFunc([Var('Message', 'm')])`
+                    '0': AnonFunc([Var(msg.Message, `m`)])`
                         ${prepareInMessage}
-                        if (msg_getLength(inMessage) < ${state}.splitPoint) {
+                        if (${msg.getLength}(inMessage) < ${state}.splitPoint) {
                             ${snds.$2}(m)
                             return
-                        } else if (msg_getLength(inMessage) === ${state}.splitPoint) {
-                            ${snds.$1}(msg_bang())
+                        } else if (${msg.getLength}(inMessage) === ${state}.splitPoint) {
+                            ${snds.$1}(${bangUtils.bang}())
                             ${snds.$0}(m)
                             return
                         }
-                        ${ConstVar('Message', 'outMessage1', `msg_slice(inMessage, ${state}.splitPoint, msg_getLength(inMessage))`)}
-                        ${ConstVar('Message', 'outMessage0', `msg_slice(inMessage, 0, ${state}.splitPoint)`)}
-                        ${snds.$1}(msg_getLength(outMessage1) === 0 ? msg_bang(): outMessage1)
-                        ${snds.$0}(msg_getLength(outMessage0) === 0 ? msg_bang(): outMessage0)
+                        ${ConstVar(msg.Message, `outMessage1`, `${msgUtils.slice}(inMessage, ${state}.splitPoint, ${msg.getLength}(inMessage))`)}
+                        ${ConstVar(msg.Message, `outMessage0`, `${msgUtils.slice}(inMessage, 0, ${state}.splitPoint)`)}
+                        ${snds.$1}(${msg.getLength}(outMessage1) === 0 ? ${bangUtils.bang}(): outMessage1)
+                        ${snds.$0}(${msg.getLength}(outMessage0) === 0 ? ${bangUtils.bang}(): outMessage0)
                         return
                     `,
             
-                    '1': coldFloatInletWithSetter(ns.setSplitPoint!, state),
+                    '1': coldFloatInletWithSetter(ns.setSplitPoint, state, msg),
                 }
     
             case 'trim':
                 return {
-                    '0': AnonFunc([Var('Message', 'm')])`
+                    '0': AnonFunc([Var(msg.Message, `m`)])`
                         ${snds.$0}(m)
                         return
                     `
@@ -172,11 +178,11 @@ const nodeImplementation: _NodeImplementation = {
     
             case 'length':
                 return {
-                    '0': AnonFunc([Var('Message', 'm')])`
-                        if (msg_isBang(m)) {
-                            ${snds.$0}(msg_floats([0]))
+                    '0': AnonFunc([Var(msg.Message, `m`)])`
+                        if (${bangUtils.isBang}(m)) {
+                            ${snds.$0}(${msg.floats}([0]))
                         } else {
-                            ${snds.$0}(msg_floats([toFloat(msg_getLength(m))]))
+                            ${snds.$0}(${msg.floats}([toFloat(${msg.getLength}(m))]))
                         }
                         return
                     `
@@ -185,20 +191,20 @@ const nodeImplementation: _NodeImplementation = {
             case 'append':
             case 'prepend':
                 const appendPrependOutMessageCode = args.operation === 'prepend' ? 
-                    `msg_concat(${state}.currentList, m)`
-                    : `msg_concat(m, ${state}.currentList)`
+                    `${msgUtils.concat}(${state}.currentList, m)`
+                    : `${msgUtils.concat}(m, ${state}.currentList)`
                 
                 return {
-                    '0': AnonFunc([Var('Message', 'm')])`
-                        if (msg_isBang(m)) {
-                            ${snds.$0}(msg_getLength(${state}.currentList) === 0 ? msg_bang(): ${state}.currentList)
+                    '0': AnonFunc([Var(msg.Message, `m`)])`
+                        if (${bangUtils.isBang}(m)) {
+                            ${snds.$0}(${msg.getLength}(${state}.currentList) === 0 ? ${bangUtils.bang}(): ${state}.currentList)
                         } else {
-                            ${snds.$0}(msg_getLength(${state}.currentList) === 0 && msg_getLength(m) === 0 ? msg_bang(): ${appendPrependOutMessageCode})
+                            ${snds.$0}(${msg.getLength}(${state}.currentList) === 0 && ${msg.getLength}(m) === 0 ? ${bangUtils.bang}(): ${appendPrependOutMessageCode})
                         }
                         return
                     `,
     
-                    '1': AnonFunc([Var('Message', 'm')])`
+                    '1': AnonFunc([Var(msg.Message, `m`)])`
                         ${prepareInMessage}
                         ${state}.currentList = inMessage
                         return
@@ -213,9 +219,9 @@ const nodeImplementation: _NodeImplementation = {
 
     core: ({ ns }) => 
         Sequence([
-            Func(ns.setSplitPoint!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'value'),
+            Func(ns.setSplitPoint, [
+                Var(ns.State, `state`),
+                Var(`Float`, `value`),
             ], 'void')`
                 state.splitPoint = toInt(value)
             `

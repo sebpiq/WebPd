@@ -50,24 +50,24 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'threshold', args.threshold),
+        Class(ns.State, [
+            Var(`Float`, `threshold`, args.threshold),
         ]),
 
-    messageReceivers: ({ snds, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${ConstVar('Float', 'value', 'msg_readFloatToken(m, 0)')}
+    messageReceivers: ({ snds, state }, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+                ${ConstVar(`Float`, `value`, `${msg.readFloatToken}(m, 0)`)}
                 if (value >= ${state}.threshold) {
-                    ${snds[1]}(msg_floats([value]))
+                    ${snds[1]}(${msg.floats}([value]))
                 } else {
-                    ${snds[0]}(msg_floats([value]))
+                    ${snds[0]}(${msg.floats}([value]))
                 }
                 return
             }
         `,
     
-        '1': coldFloatInlet(`${state}.threshold`),
+        '1': coldFloatInlet(`${state}.threshold`, msg),
     }),
 }
 

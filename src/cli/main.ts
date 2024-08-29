@@ -295,6 +295,10 @@ const main = (): void => {
                 (opt) => colorOption(opt)
             ).join(', ')}`
         )
+        .option(
+            '--audio-duration <seconds>',
+            'Duration of the generated audio in seconds.',
+        )
         .option('--check-support')
         .option('--whats-implemented')
         .addHelpText(
@@ -324,7 +328,14 @@ const main = (): void => {
     const outFilepath: string | null = options.output || null
     const engine: Task['engine'] = options.engine || DEFAULT_ENGINE
     let outFormat: BuildFormat | null = options.outputFormat || null
+    const audioDuration: number = options.audioDuration ? Number(options.audioDuration): 30
+
     const artefacts: Artefacts = {}
+
+    ifConditionThenExitError(
+        isNaN(audioDuration),
+        `Invalid number format for --preview-duration`
+    )
 
     ifConditionThenExitError(
         !!outFilepath && !inFilepath,
@@ -396,7 +407,7 @@ const main = (): void => {
             renderAudioSettings: {
                 sampleRate: SAMPLE_RATE,
                 blockSize: BLOCK_SIZE,
-                previewDurationSeconds: WAV_PREVIEW_DURATION,
+                previewDurationSeconds: audioDuration,
             },
             abstractionLoader,
         }

@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import {
-    GlobalCodeGenerator,
+    GlobalDefinitions,
 } from '@webpd/compiler/src/compile/types'
 import { ValidationError } from './validation'
 import { VariableName } from '@webpd/compiler/src/ast/types'
-import { Func, Var, ConstVar } from '@webpd/compiler'
+import { Func, Var, ConstVar, VariableNamesIndex } from '@webpd/compiler'
 
 export type TypeArgument = 'float' | 'bang' | 'symbol' | 'list' | 'anything'
 
@@ -65,17 +65,18 @@ export const assertTypeArgument = (value: string): TypeArgument => {
 export const renderMessageTransfer = (
     typeArgument: TypeArgument,
     msgVariableName: VariableName,
-    index: number
+    index: number,
+    { msg, bangUtils, tokenConversion }: VariableNamesIndex['globals']
 ) => {
     switch (typeArgument) {
         case 'float':
-            return `msg_floats([messageTokenToFloat(${msgVariableName}, ${index})])`
+            return `${msg.floats}([${tokenConversion.toFloat}(${msgVariableName}, ${index})])`
 
         case 'bang':
-            return `msg_bang()`
+            return `${bangUtils.bang}()`
 
         case 'symbol':
-            return `msg_strings([messageTokenToString(${msgVariableName}, ${index})])`
+            return `${msg.strings}([${tokenConversion.toString_}(${msgVariableName}, ${index})])`
 
         case 'list':
         case 'anything':
@@ -86,25 +87,32 @@ export const renderMessageTransfer = (
     }
 }
 
-export const messageTokenToFloat: GlobalCodeGenerator = () => 
-    Func('messageTokenToFloat', [
-        Var('Message', 'm'), 
-        Var('Int', 'i')
+const NAMESPACE = 'tokenConversion'
+
+export const messageTokenToFloat: GlobalDefinitions = {
+    namespace: NAMESPACE,
+    // prettier-ignore
+    code: ({ ns: tokenConversion }, { msg }) => Func(tokenConversion.toFloat, [
+        Var(msg.Message, `m`), 
+        Var(`Int`, `i`)
     ], 'Float')`
-        if (msg_isFloatToken(m, i)) {
-            return msg_readFloatToken(m, i)
+        if (${msg.isFloatToken}(m, i)) {
+            return ${msg.readFloatToken}(m, i)
         } else {
             return 0
         }
     `
+}
 
-export const messageTokenToString: GlobalCodeGenerator = () =>
-    Func('messageTokenToString', [
-        Var('Message', 'm'), 
-        Var('Int', 'i')
+export const messageTokenToString: GlobalDefinitions = {
+    namespace: NAMESPACE,
+    // prettier-ignore
+    code: ({ ns: tokenConversion }, { msg }) => Func(tokenConversion.toString_, [
+        Var(msg.Message, `m`), 
+        Var(`Int`, `i`)
     ], 'string')`
-        if (msg_isStringToken(m, i)) {
-            ${ConstVar('string', 'str', 'msg_readStringToken(m, i)')}
+        if (${msg.isStringToken}(m, i)) {
+            ${ConstVar(`string`, `str`, `${msg.readStringToken}(m, i)`)}
             if (str === 'bang') {
                 return 'symbol'
             } else {
@@ -114,3 +122,4 @@ export const messageTokenToString: GlobalCodeGenerator = () =>
             return 'float'
         }
     `
+}

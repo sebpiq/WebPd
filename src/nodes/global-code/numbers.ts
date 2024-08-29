@@ -18,11 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { Func, Var } from "@webpd/compiler"
-import { GlobalCodeGenerator } from "@webpd/compiler/src/compile/types"
+import { GlobalDefinitions } from "@webpd/compiler/src/compile/types"
 
-export const roundFloatAsPdInt: GlobalCodeGenerator = () => 
-    Func('roundFloatAsPdInt', [
-        Var('Float', 'value'),
-    ], 'Float')`
-        return value > 0 ? Math.floor(value): Math.ceil(value)
-    `
+export const roundFloatAsPdInt: GlobalDefinitions = {
+    namespace: 'numbers',
+    // prettier-ignore
+    code: ({ ns: numbers }) => 
+        Func(numbers.roundFloatAsPdInt, [
+            Var(`Float`, `value`),
+        ], 'Float')`
+            return value > 0 ? Math.floor(value): Math.ceil(value)
+        `
+    }

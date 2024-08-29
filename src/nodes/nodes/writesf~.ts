@@ -22,8 +22,8 @@ import { stdlib, functional, Class, Sequence } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { stringMsgUtils } from '../global-code/core'
-import { parseReadWriteFsOpts, parseSoundFileOpenOpts } from '../global-code/fs'
+import { actionUtils } from '../global-code/core'
+import { readWriteFsOpts, soundFileOpenOpts } from '../global-code/fs'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 const BLOCK_SIZE = 44100 * 5
@@ -68,16 +68,16 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'write_t',
     },
 
-    state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('fs_OperationId', 'operationId', -1),
-            Var('boolean', 'isWriting', 'false'),
-            Var('Array<FloatArray>', 'block', `[
+    state: ({ node: { args }, ns }, { fs }) => 
+        Class(ns.State, [
+            Var(fs.OperationId, `operationId`, -1),
+            Var(`boolean`, `isWriting`, `false`),
+            Var(`Array<FloatArray>`, `block`, `[
                 ${functional.countTo(args.channelCount).map(() => 
                     `createFloatArray(${BLOCK_SIZE})`
                 ).join(',')}
             ]`),
-            Var('Int', 'cursor', 0),
+            Var(`Int`, `cursor`, 0),
         ]),
 
     dsp: ({ ns, state, ins, node: { args } }) => ast`
@@ -86,35 +86,40 @@ const nodeImplementation: _NodeImplementation = {
                 `${state}.block[${i}][${state}.cursor] = ${ins[i]}`)}
             ${state}.cursor++
             if (${state}.cursor === ${BLOCK_SIZE}) {
-                ${ns.flushBlock!}(${state})
+                ${ns.flushBlock}(${state})
             }
         }
     `, 
 
-    messageReceivers: ({ ns, node, state, globs }) => ({
-        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
-            if (msg_getLength(m) >= 2) {
+    messageReceivers: (
+        { ns, node, state }, 
+        { core, msg, fs, actionUtils, soundFileOpenOpts, readWriteFsOpts }
+    ) => ({
+        '0_message': AnonFunc([ 
+            Var(msg.Message, `m`) 
+        ], 'void')`
+            if (${msg.getLength}(m) >= 2) {
                 if (
-                    msg_isStringToken(m, 0) 
-                    && msg_readStringToken(m, 0) === 'open'
+                    ${msg.isStringToken}(m, 0) 
+                    && ${msg.readStringToken}(m, 0) === 'open'
                 ) {
                     if (${state}.operationId !== -1) {
-                        fs_closeSoundStream(${state}.operationId, FS_OPERATION_SUCCESS)
+                        ${fs.closeSoundStream}(${state}.operationId, ${fs.OPERATION_SUCCESS})
                     }
     
-                    ${ConstVar('fs_SoundInfo', 'soundInfo', `{
+                    ${ConstVar(fs.SoundInfo, `soundInfo`, `{
                         channelCount: ${node.args.channelCount},
-                        sampleRate: toInt(${globs.sampleRate}),
+                        sampleRate: toInt(${core.SAMPLE_RATE}),
                         bitDepth: 32,
                         encodingFormat: '',
                         endianness: '',
                         extraOptions: '',
                     }`)}
-                    ${ConstVar('Set<Int>', 'unhandledOptions', `parseSoundFileOpenOpts(
+                    ${ConstVar(`Set<Int>`, `unhandledOptions`, `${soundFileOpenOpts.parse}(
                         m,
                         soundInfo,
                     )`)}
-                    ${ConstVar('string', 'url', `parseReadWriteFsOpts(
+                    ${ConstVar(`string`, `url`, `${readWriteFsOpts.parse}(
                         m,
                         soundInfo,
                         unhandledOptions
@@ -122,51 +127,51 @@ const nodeImplementation: _NodeImplementation = {
                     if (url.length === 0) {
                         return
                     }
-                    ${state}.operationId = fs_openSoundWriteStream(
+                    ${state}.operationId = ${fs.openSoundWriteStream}(
                         url,
                         soundInfo,
                         () => {
-                            ${ns.flushBlock!}(${state})
+                            ${ns.flushBlock}(${state})
                             ${state}.operationId = -1
                         }
                     )
                     return
                 }
     
-            } else if (msg_isAction(m, 'start')) {
+            } else if (${actionUtils.isAction}(m, 'start')) {
                     ${state}.isWriting = true
                     return
     
-            } else if (msg_isAction(m, 'stop')) {
-                ${ns.flushBlock!}(${state})
+            } else if (${actionUtils.isAction}(m, 'stop')) {
+                ${ns.flushBlock}(${state})
                 ${state}.isWriting = false
                 return
     
-            } else if (msg_isAction(m, 'print')) {
+            } else if (${actionUtils.isAction}(m, 'print')) {
                 console.log('[writesf~] writing = ' + ${state}.isWriting.toString())
                 return
             }    
         `
     }), 
 
-    core: ({ ns }) => 
+    core: ({ ns }, { fs }) => 
         Sequence([
-            Func(ns.flushBlock!, [
-                Var(ns.State!, 'state'),
+            Func(ns.flushBlock, [
+                Var(ns.State, `state`),
             ], 'void')`
-                ${ConstVar('Array<FloatArray>', 'block', '[]')}
-                for (${Var('Int', 'i', '0')}; i < state.block.length; i++) {
+                ${ConstVar(`Array<FloatArray>`, `block`, `[]`)}
+                for (${Var(`Int`, `i`, `0`)}; i < state.block.length; i++) {
                     block.push(state.block[i].subarray(0, state.cursor))
                 }
-                fs_sendSoundStreamData(state.operationId, block)
+                ${fs.sendSoundStreamData}(state.operationId, block)
                 state.cursor = 0
             `,
         ]),
 
     dependencies: [
-        parseSoundFileOpenOpts,
-        parseReadWriteFsOpts,
-        stringMsgUtils,
+        soundFileOpenOpts,
+        readWriteFsOpts,
+        actionUtils,
         stdlib.fsWriteSoundStream,
     ],
 }

@@ -60,10 +60,12 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ---------------------------------- node implementation --------------------------------- //
 const nodeImplementation: _NodeImplementation = { 
-    messageReceivers: ({ snds, node: { args: { typeArguments }} }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
+    messageReceivers: ({ snds, node: { args: { typeArguments }} }, globals) => ({
+        '0': AnonFunc([
+            Var(globals.msg.Message, `m`)
+        ])`
             ${typeArguments.reverse().map((typeArg, i) => 
-                `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, 'm', 0)})`
+                `${snds[typeArguments.length - i - 1]}(${renderMessageTransfer(typeArg, 'm', 0, globals)})`
             )}
             return
         `,

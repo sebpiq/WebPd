@@ -19,23 +19,27 @@
  */
 import { Class, Func, Var } from '@webpd/compiler'
 import {
-    GlobalCodeGenerator,
-    GlobalCodeGeneratorWithSettings,
+    GlobalDefinitions,
 } from '@webpd/compiler/src/compile/types'
 
-export const point: GlobalCodeGenerator = () => 
-    Class('Point', [
-        Var('Float', 'x'),
-        Var('Float', 'y'),
+export const point: GlobalDefinitions = {
+    namespace: 'points',
+    // prettier-ignore
+    code: ({ ns: points }) => Class(points.Point, [
+        Var(`Float`, `x`),
+        Var(`Float`, `y`),
     ])
+}
 
-export const interpolateLin: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: () => 
-        Func('interpolateLin', 
-            [Var('Float', 'x'), Var('Point', 'p0'), Var('Point', 'p1')],
-            'Float'
-        )`
-            return p0.y + (x - p0.x) * (p1.y - p0.y) / (p1.x - p0.x)
-        `,
+export const interpolateLin: GlobalDefinitions = {
+    namespace: 'points',
+    // prettier-ignore
+    code: ({ ns: points }) => Func(points.interpolateLin, [
+        Var(`Float`, `x`), 
+        Var(points.Point, `p0`), 
+        Var(points.Point, `p1`)
+    ], 'Float')`
+        return p0.y + (x - p0.x) * (p1.y - p0.y) / (p1.x - p0.x)
+    `,
     dependencies: [point],
 }

@@ -55,90 +55,90 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'delay', 0),
-            Var('Float', 'sampleRatio', 1),
-            Var('SkedId', 'scheduledBang', 'SKED_ID_NULL'),
+    state: ({ ns }, { sked }) => 
+        Class(ns.State, [
+            Var(`Float`, `delay`, 0),
+            Var(`Float`, `sampleRatio`, 1),
+            Var(sked.Id, `scheduledBang`, sked.ID_NULL),
         ]),
 
-    initialization: ({ ns, node: { args }, state, globs }) => ast`
-        ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-        ${ns.setDelay!}(${state}, ${args.delay})
+    initialization: ({ ns, node: { args }, state }, { core }) => ast`
+        ${state}.sampleRatio = computeUnitInSamples(${core.SAMPLE_RATE}, ${args.unitAmount}, "${args.unit}")
+        ${ns.setDelay}(${state}, ${args.delay})
     `,
 
-    messageReceivers: ({ ns, state, globs, snds }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_getLength(m) === 1) {
-                if (msg_isStringToken(m, 0)) {
-                    ${ConstVar('string', 'action', 'msg_readStringToken(m, 0)')}
+    messageReceivers: ({ ns, state, snds }, { core, msg, bangUtils }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.getLength}(m) === 1) {
+                if (${msg.isStringToken}(m, 0)) {
+                    ${ConstVar(`string`, `action`, `${msg.readStringToken}(m, 0)`)}
                     if (action === 'bang' || action === 'start') {
-                        ${ns.scheduleDelay!}(
+                        ${ns.scheduleDelay}(
                             ${state}, 
-                            () => ${snds.$0}(msg_bang()),
-                            ${globs.frame},
+                            () => ${snds.$0}(${bangUtils.bang}()),
+                            ${core.FRAME},
                         )
                         return
                     } else if (action === 'stop') {
-                        ${ns.stop!}(${state})
+                        ${ns.stop}(${state})
                         return
                     }
                     
-                } else if (msg_isFloatToken(m, 0)) {
-                    ${ns.setDelay!}(${state}, msg_readFloatToken(m, 0))
-                    ${ns.scheduleDelay!}(
+                } else if (${msg.isFloatToken}(m, 0)) {
+                    ${ns.setDelay}(${state}, ${msg.readFloatToken}(m, 0))
+                    ${ns.scheduleDelay}(
                         ${state},
-                        () => ${snds.$0}(msg_bang()),
-                        ${globs.frame},
+                        () => ${snds.$0}(${bangUtils.bang}()),
+                        ${core.FRAME},
                     )
                     return 
                 }
             
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'tempo'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'tempo'
             ) {
                 ${state}.sampleRatio = computeUnitInSamples(
-                    ${globs.sampleRate}, 
-                    msg_readFloatToken(m, 1), 
-                    msg_readStringToken(m, 2)
+                    ${core.SAMPLE_RATE}, 
+                    ${msg.readFloatToken}(m, 1), 
+                    ${msg.readStringToken}(m, 2)
                 )
                 return
             }
         `,
         
-        '1': coldFloatInletWithSetter(ns.setDelay!, state)
+        '1': coldFloatInletWithSetter(ns.setDelay, state, msg)
     }),
 
-    core: ({ ns }) => 
+    core: ({ ns }, { sked, commons }) => 
         Sequence([
-            Func(ns.setDelay!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'delay'),
+            Func(ns.setDelay, [
+                Var(ns.State, `state`),
+                Var(`Float`, `delay`),
             ], 'void')`
                 state.delay = Math.max(0, delay)
             `,
 
-            Func(ns.scheduleDelay!, [
-                Var(ns.State!, 'state'),
-                Var('SkedCallback', 'callback'),
-                Var('Int', 'currentFrame'),
+            Func(ns.scheduleDelay, [
+                Var(ns.State, `state`),
+                Var(sked.Callback, `callback`),
+                Var(`Int`, `currentFrame`),
             ], 'void')`
-                if (state.scheduledBang !== SKED_ID_NULL) {
-                    ${ns.stop!}(state)
+                if (state.scheduledBang !== ${sked.ID_NULL}) {
+                    ${ns.stop}(state)
                 }
-                state.scheduledBang = commons_waitFrame(toInt(
+                state.scheduledBang = ${commons.waitFrame}(toInt(
                     Math.round(
                         toFloat(currentFrame) + state.delay * state.sampleRatio)),
                     callback
                 )
             `,
 
-            Func(ns.stop!, [
-                Var(ns.State!, 'state'),
+            Func(ns.stop, [
+                Var(ns.State, `state`),
             ], 'void')`
-                commons_cancelWaitFrame(state.scheduledBang)
-                state.scheduledBang = SKED_ID_NULL
+                ${commons.cancelWaitFrame}(state.scheduledBang)
+                state.scheduledBang = ${sked.ID_NULL}
             `
         ]),
 

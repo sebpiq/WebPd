@@ -17,32 +17,34 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
 import { interpolateLin } from './points'
 import { Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
 
-export const linesUtils: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: () => Sequence([
-        Class('LineSegment', [
-            Var('Point', 'p0'),
-            Var('Point', 'p1'),
-            Var('Float', 'dx'),
-            Var('Float', 'dy'),
+export const linesUtils: GlobalDefinitions = {
+    namespace: 'linesUtils',
+    // prettier-ignore
+    code: ({ ns: linesUtils }, { points }) => Sequence([
+        Class(linesUtils.LineSegment, [
+            Var(points.Point, `p0`),
+            Var(points.Point, `p1`),
+            Var(`Float`, `dx`),
+            Var(`Float`, `dy`),
         ]),
 
-        Func('computeSlope', 
-            [Var('Point', 'p0'), Var('Point', 'p1')],
-            'Float'
-        )`
+        Func(linesUtils.computeSlope, [
+            Var(points.Point, `p0`), 
+            Var(points.Point, `p1`)
+        ], 'Float')`
             return p1.x !== p0.x ? (p1.y - p0.y) / (p1.x - p0.x) : 0
         `,
 
-        Func('removePointsBeforeFrame', 
-            [Var('Array<Point>', 'points'), Var('Float', 'frame')],
-            'Array<Point>'
-        )`
-            ${ConstVar('Array<Point>', 'newPoints', '[]')}
-            ${Var('Int', 'i', '0')}
+        Func(linesUtils.removePointsBeforeFrame, [
+            Var(`Array<${points.Point}>`, `points`), 
+            Var(`Float`, `frame`)
+        ], `Array<${points.Point}>`)`
+            ${ConstVar(`Array<${points.Point}>`, `newPoints`, `[]`)}
+            ${Var(`Int`, `i`, `0`)}
             while (i < points.length) {
                 if (frame <= points[i].x) {
                     newPoints.push(points[i])
@@ -52,12 +54,13 @@ export const linesUtils: GlobalCodeGeneratorWithSettings = {
             return newPoints
         `,
 
-        Func('insertNewLinePoints', 
-            [Var('Array<Point>', 'points'), Var('Point', 'p0'), Var('Point', 'p1')],
-            'Array<Point>'
-        )`
-            ${ConstVar('Array<Point>', 'newPoints', '[]')}
-            ${Var('Int', 'i', '0')}
+        Func(linesUtils.insertNewLinePoints, [
+            Var(`Array<${points.Point}>`, `points`), 
+            Var(points.Point, `p0`), 
+            Var(points.Point, `p1`)
+        ], `Array<${points.Point}>`)`
+            ${ConstVar(`Array<${points.Point}>`, `newPoints`, `[]`)}
+            ${Var(`Int`, `i`, `0`)}
             
             // Keep the points that are before the new points added
             while (i < points.length && points[i].x <= p0.x) {
@@ -77,7 +80,7 @@ export const linesUtils: GlobalCodeGeneratorWithSettings = {
             } else if (0 < i && i < points.length) {
                 newPoints.push({
                     x: p0.x,
-                    y: interpolateLin(p0.x, points[i - 1], points[i])
+                    y: ${points.interpolateLin}(p0.x, points[i - 1], points[i])
                 })
 
             // 3. If new line is inserted after all existing points, 
@@ -103,19 +106,18 @@ export const linesUtils: GlobalCodeGeneratorWithSettings = {
             return newPoints
         `,
 
-        Func('computeFrameAjustedPoints', 
-            [Var('Array<Point>', 'points')],
-            'Array<Point>'
-        )`
+        Func(linesUtils.computeFrameAjustedPoints, [
+            Var(`Array<${points.Point}>`, `points`)
+        ], `Array<${points.Point}>`)`
             if (points.length < 2) {
                 throw new Error('invalid length for points')
             }
 
-            ${ConstVar('Array<Point>', 'newPoints', '[]')}
-            ${Var('Int', 'i', '0')}
-            ${Var('Point', 'p', 'points[0]')}
-            ${Var('Float', 'frameLower', '0')}
-            ${Var('Float', 'frameUpper', '0')}
+            ${ConstVar(`Array<${points.Point}>`, `newPoints`, `[]`)}
+            ${Var(`Int`, `i`, `0`)}
+            ${Var(points.Point, `p`, `points[0]`)}
+            ${Var(`Float`, `frameLower`, `0`)}
+            ${Var(`Float`, `frameUpper`, `0`)}
             
             while(i < points.length) {
                 p = points[i]
@@ -156,7 +158,7 @@ export const linesUtils: GlobalCodeGeneratorWithSettings = {
                 } else if (newPoints.length) {
                     newPoints.push({
                         x: frameLower,
-                        y: interpolateLin(frameLower, points[i - 1], p),
+                        y: ${points.interpolateLin}(frameLower, points[i - 1], p),
                     })
                 
                 // 2.b. It's the very first point, then we don't change its value.
@@ -188,7 +190,7 @@ export const linesUtils: GlobalCodeGeneratorWithSettings = {
                 } else if (i < points.length - 1) {
                     newPoints.push({
                         x: frameUpper,
-                        y: interpolateLin(frameUpper, p, points[i + 1]),
+                        y: ${points.interpolateLin}(frameUpper, p, points[i + 1]),
                     })
 
                 // 3. If it's the last point, we dont change the value
@@ -202,21 +204,20 @@ export const linesUtils: GlobalCodeGeneratorWithSettings = {
             return newPoints
         `,
 
-        Func('computeLineSegments', 
-            [Var('Array<Point>', 'points')],
-            'Array<LineSegment>'
-        )`
-            ${ConstVar('Array<LineSegment>', 'lineSegments', '[]')}
-            ${Var('Int', 'i', '0')}
-            ${Var('Point', 'p0')}
-            ${Var('Point', 'p1')}
+        Func(linesUtils.computeLineSegments, [
+            Var(`Array<${points.Point}>`, `points`)
+        ], `Array<${linesUtils.LineSegment}>`)`
+            ${ConstVar(`Array<${linesUtils.LineSegment}>`, `lineSegments`, `[]`)}
+            ${Var(`Int`, `i`, `0`)}
+            ${Var(points.Point, `p0`)}
+            ${Var(points.Point, `p1`)}
 
             while(i < points.length - 1) {
                 p0 = points[i]
                 p1 = points[i + 1]
                 lineSegments.push({
                     p0, p1, 
-                    dy: computeSlope(p0, p1),
+                    dy: ${linesUtils.computeSlope}(p0, p1),
                     dx: 1,
                 })
                 i++

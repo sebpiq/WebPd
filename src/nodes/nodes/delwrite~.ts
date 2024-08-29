@@ -21,10 +21,10 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
-import { stringMsgUtils } from '../global-code/core'
+import { actionUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { AnonFunc, Class, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { AnonFunc, Class, Func, Sequence, Var, ast, stdlib } from '@webpd/compiler'
 
 interface NodeArguments {
     delayName: string,
@@ -63,49 +63,49 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'delwrite_t',
     },
 
-    state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('string', 'delayName', '""'),
-            Var('buf_SoundBuffer', 'buffer', 'DELAY_BUFFERS_NULL'),
+    state: ({ ns }, { buf, delayBuffers }) => 
+        Class(ns.State, [
+            Var(`string`, `delayName`, `""`),
+            Var(buf.SoundBuffer, `buffer`, delayBuffers.NULL_BUFFER),
         ]),
 
-    initialization: ({ ns, node: { args }, state, globs }) => ast`
-        ${state}.buffer = buf_create(
+    initialization: ({ ns, node: { args }, state }, { buf, core }) => ast`
+        ${state}.buffer = ${buf.create}(
             toInt(Math.ceil(computeUnitInSamples(
-                ${globs.sampleRate}, 
+                ${core.SAMPLE_RATE}, 
                 ${args.maxDurationMsec},
                 "msec"
             )))
         )
         if ("${args.delayName}".length) {
-            ${ns.setDelayName!}(${state}, "${args.delayName}")
+            ${ns.setDelayName}(${state}, "${args.delayName}")
         }
     `,
 
-    dsp: ({ ins, state }) => 
-        ast`buf_writeSample(${state}.buffer, ${ins.$0})`,
+    dsp: ({ ins, state }, { buf }) => 
+        ast`${buf.writeSample}(${state}.buffer, ${ins.$0})`,
 
-    messageReceivers: ({ state }) => ({
-        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
-            if (msg_isAction(m, 'clear')) {
-                buf_clear(${state}.buffer)
+    messageReceivers: ({ state }, { buf, msg, actionUtils }) => ({
+        '0_message': AnonFunc([ Var(msg.Message, `m`) ], `void`)`
+            if (${actionUtils.isAction}(m, 'clear')) {
+                ${buf.clear}(${state}.buffer)
                 return
             }
         `
     }),
 
-    core: ({ ns }) => 
+    core: ({ ns }, { delayBuffers }) => 
         Sequence([
-            Func(ns.setDelayName!, [
-                Var(ns.State!, 'state'),
-                Var('string', 'delayName')
+            Func(ns.setDelayName, [
+                Var(ns.State, `state`),
+                Var(`string`, `delayName`)
             ], 'void')`
                 if (state.delayName.length) {
-                    DELAY_BUFFERS_delete(state.delayName)
+                    ${delayBuffers.delete}(state.delayName)
                 }
                 state.delayName = delayName
                 if (state.delayName.length) {
-                    DELAY_BUFFERS_set(state.delayName, state.buffer)
+                    ${delayBuffers.set}(state.delayName, state.buffer)
                 }
             `
         ]),
@@ -113,7 +113,8 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [ 
         computeUnitInSamples, 
         delayBuffers, 
-        stringMsgUtils,
+        actionUtils,
+        stdlib.bufWriteRead,
     ]
 }
 

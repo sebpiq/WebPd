@@ -24,7 +24,7 @@ import {
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
-import { messageBuses } from '../global-code/buses'
+import { msgBuses } from '../global-code/buses'
 import { AnonFunc, Class, Var } from '@webpd/compiler'
 
 interface NodeArguments {
@@ -55,30 +55,27 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('string', 'value', `"${args.value}"`)
+        Class(ns.State, [
+            Var(`string`, `value`, `"${args.value}"`)
         ]),
 
-    messageReceivers: ({
-        snds,
-        state,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) {
-                ${snds.$0}(msg_strings([${state}.value]))
+    messageReceivers: ({ snds, state }, { msg, bangUtils }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) {
+                ${snds.$0}(${msg.strings}([${state}.value]))
                 return
     
-            } else if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
-                ${state}.value = msg_readStringToken(m, 0)
-                ${snds.$0}(msg_strings([${state}.value]))
+            } else if (${msg.isMatching}(m, [${msg.STRING_TOKEN}])) {
+                ${state}.value = ${msg.readStringToken}(m, 0)
+                ${snds.$0}(${msg.strings}([${state}.value]))
                 return
     
             }
         `,
     
-        '1': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
-                ${state}.value = msg_readStringToken(m, 0)
+        '1': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.isMatching}(m, [${msg.STRING_TOKEN}])) {
+                ${state}.value = ${msg.readStringToken}(m, 0)
                 return 
             }
         `,
@@ -86,7 +83,7 @@ const nodeImplementation: _NodeImplementation = {
 
     dependencies: [
         bangUtils, 
-        messageBuses,
+        msgBuses,
     ]
 }
 

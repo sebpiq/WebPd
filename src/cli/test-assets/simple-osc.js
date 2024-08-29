@@ -19,252 +19,278 @@ function setFloatDataView(dataView, position, value) {
 function getFloatDataView(dataView, position) {
                     return dataView.getFloat64(position)
                 }
-const SKED_ID_NULL = -1
-const SKED_ID_COUNTER_INIT = 1
-const _SKED_WAIT_IN_PROGRESS = 0
-const _SKED_WAIT_OVER = 1
-const _SKED_MODE_WAIT = 0
-const _SKED_MODE_SUBSCRIBE = 1
+let IT_FRAME = 0
+let FRAME = 0
+let BLOCK_SIZE = 0
+let SAMPLE_RATE = 0
+let NULL_SIGNAL = 0
+let INPUT = createFloatArray(0)
+let OUTPUT = createFloatArray(0)
+const G_sked_ID_NULL = -1
+const G_sked__ID_COUNTER_INIT = 1
+const G_sked__MODE_WAIT = 0
+const G_sked__MODE_SUBSCRIBE = 1
 
 
-function sked_create(isLoggingEvents) {
-            return {
-                eventLog: new Set(),
-                events: new Map(),
-                requests: new Map(),
-                idCounter: SKED_ID_COUNTER_INIT,
-                isLoggingEvents,
+function G_sked_create(isLoggingEvents) {
+                return {
+                    eventLog: new Set(),
+                    events: new Map(),
+                    requests: new Map(),
+                    idCounter: G_sked__ID_COUNTER_INIT,
+                    isLoggingEvents,
+                }
             }
-        }
-function sked_wait(skeduler, event, callback) {
-            if (skeduler.isLoggingEvents === false) {
-                throw new Error("Please activate skeduler's isLoggingEvents")
-            }
+function G_sked_wait(skeduler, event, callback) {
+                if (skeduler.isLoggingEvents === false) {
+                    throw new Error("Please activate skeduler's isLoggingEvents")
+                }
 
-            if (skeduler.eventLog.has(event)) {
-                callback(event)
-                return SKED_ID_NULL
-            } else {
-                return _sked_createRequest(skeduler, event, callback, _SKED_MODE_WAIT)
+                if (skeduler.eventLog.has(event)) {
+                    callback(event)
+                    return G_sked_ID_NULL
+                } else {
+                    return G_sked__createRequest(skeduler, event, callback, G_sked__MODE_WAIT)
+                }
             }
-        }
-function sked_wait_future(skeduler, event, callback) {
-            return _sked_createRequest(skeduler, event, callback, _SKED_MODE_WAIT)
-        }
-function sked_subscribe(skeduler, event, callback) {
-            return _sked_createRequest(skeduler, event, callback, _SKED_MODE_SUBSCRIBE)
-        }
-function sked_emit(skeduler, event) {
-            if (skeduler.isLoggingEvents === true) {
-                skeduler.eventLog.add(event)
+function G_sked_waitFuture(skeduler, event, callback) {
+                return G_sked__createRequest(skeduler, event, callback, G_sked__MODE_WAIT)
             }
-            if (skeduler.events.has(event)) {
-                const skedIds = skeduler.events.get(event)
-                const skedIdsStaying = []
-                for (let i = 0; i < skedIds.length; i++) {
-                    if (skeduler.requests.has(skedIds[i])) {
-                        const request = skeduler.requests.get(skedIds[i])
-                        request.callback(event)
-                        if (request.mode === _SKED_MODE_WAIT) {
-                            skeduler.requests.delete(request.id)
-                        } else {
-                            skedIdsStaying.push(request.id)
+function G_sked_subscribe(skeduler, event, callback) {
+                return G_sked__createRequest(skeduler, event, callback, G_sked__MODE_SUBSCRIBE)
+            }
+function G_sked_emit(skeduler, event) {
+                if (skeduler.isLoggingEvents === true) {
+                    skeduler.eventLog.add(event)
+                }
+                if (skeduler.events.has(event)) {
+                    const skedIds = skeduler.events.get(event)
+                    const skedIdsStaying = []
+                    for (let i = 0; i < skedIds.length; i++) {
+                        if (skeduler.requests.has(skedIds[i])) {
+                            const request = skeduler.requests.get(skedIds[i])
+                            request.callback(event)
+                            if (request.mode === G_sked__MODE_WAIT) {
+                                skeduler.requests.delete(request.id)
+                            } else {
+                                skedIdsStaying.push(request.id)
+                            }
                         }
                     }
+                    skeduler.events.set(event, skedIdsStaying)
                 }
-                skeduler.events.set(event, skedIdsStaying)
             }
-        }
-function sked_cancel(skeduler, id) {
-            skeduler.requests.delete(id)
-        }
-function _sked_createRequest(skeduler, event, callback, mode) {
-            const id = _sked_nextId(skeduler)
-            const request = {
-                id, 
-                mode, 
-                callback,
+function G_sked_cancel(skeduler, id) {
+                skeduler.requests.delete(id)
             }
-            skeduler.requests.set(id, request)
-            if (!skeduler.events.has(event)) {
-                skeduler.events.set(event, [id])    
-            } else {
-                skeduler.events.get(event).push(id)
+function G_sked__createRequest(skeduler, event, callback, mode) {
+                const id = G_sked__nextId(skeduler)
+                const request = {
+                    id, 
+                    mode, 
+                    callback,
+                }
+                skeduler.requests.set(id, request)
+                if (!skeduler.events.has(event)) {
+                    skeduler.events.set(event, [id])    
+                } else {
+                    skeduler.events.get(event).push(id)
+                }
+                return id
+            }
+function G_sked__nextId(skeduler) {
+                return skeduler.idCounter++
+            }
+const G_commons__ARRAYS = new Map()
+const G_commons__ARRAYS_SKEDULER = G_sked_create(false)
+function G_commons_getArray(arrayName) {
+            if (!G_commons__ARRAYS.has(arrayName)) {
+                throw new Error('Unknown array ' + arrayName)
+            }
+            return G_commons__ARRAYS.get(arrayName)
+        }
+function G_commons_hasArray(arrayName) {
+            return G_commons__ARRAYS.has(arrayName)
+        }
+function G_commons_setArray(arrayName, array) {
+            G_commons__ARRAYS.set(arrayName, array)
+            G_sked_emit(G_commons__ARRAYS_SKEDULER, arrayName)
+        }
+function G_commons_subscribeArrayChanges(arrayName, callback) {
+            const id = G_sked_subscribe(G_commons__ARRAYS_SKEDULER, arrayName, callback)
+            if (G_commons__ARRAYS.has(arrayName)) {
+                callback(arrayName)
             }
             return id
         }
-function _sked_nextId(skeduler) {
-            return skeduler.idCounter++
+function G_commons_cancelArrayChangesSubscription(id) {
+            G_sked_cancel(G_commons__ARRAYS_SKEDULER, id)
         }
-const _commons_FRAME_SKEDULER = sked_create(false)
-function _commons_emitFrame(frame) {
-            sked_emit(_commons_FRAME_SKEDULER, frame.toString())
+
+const G_commons__FRAME_SKEDULER = G_sked_create(false)
+function G_commons__emitFrame(frame) {
+            G_sked_emit(G_commons__FRAME_SKEDULER, frame.toString())
         }
-function commons_waitFrame(frame, callback) {
-            return sked_wait_future(_commons_FRAME_SKEDULER, frame.toString(), callback)
+function G_commons_waitFrame(frame, callback) {
+            return G_sked_waitFuture(G_commons__FRAME_SKEDULER, frame.toString(), callback)
         }
-function commons_cancelWaitFrame(id) {
-            sked_cancel(_commons_FRAME_SKEDULER, id)
+function G_commons_cancelWaitFrame(id) {
+            G_sked_cancel(G_commons__FRAME_SKEDULER, id)
         }
-const MSG_FLOAT_TOKEN = "number"
-const MSG_STRING_TOKEN = "string"
-function msg_create(template) {
+const G_msg_FLOAT_TOKEN = "number"
+const G_msg_STRING_TOKEN = "string"
+function G_msg_create(template) {
                     const m = []
                     let i = 0
                     while (i < template.length) {
-                        if (template[i] === MSG_STRING_TOKEN) {
+                        if (template[i] === G_msg_STRING_TOKEN) {
                             m.push('')
                             i += 2
-                        } else if (template[i] === MSG_FLOAT_TOKEN) {
+                        } else if (template[i] === G_msg_FLOAT_TOKEN) {
                             m.push(0)
                             i += 1
                         }
                     }
                     return m
                 }
-function msg_getLength(message) {
+function G_msg_getLength(message) {
                     return message.length
                 }
-function msg_getTokenType(message, tokenIndex) {
+function G_msg_getTokenType(message, tokenIndex) {
                     return typeof message[tokenIndex]
                 }
-function msg_isStringToken(message, tokenIndex) {
-                    return msg_getTokenType(message, tokenIndex) === 'string'
+function G_msg_isStringToken(message, tokenIndex) {
+                    return G_msg_getTokenType(message, tokenIndex) === 'string'
                 }
-function msg_isFloatToken(message, tokenIndex) {
-                    return msg_getTokenType(message, tokenIndex) === 'number'
+function G_msg_isFloatToken(message, tokenIndex) {
+                    return G_msg_getTokenType(message, tokenIndex) === 'number'
                 }
-function msg_isMatching(message, tokenTypes) {
+function G_msg_isMatching(message, tokenTypes) {
                     return (message.length === tokenTypes.length) 
-                        && message.every((v, i) => msg_getTokenType(message, i) === tokenTypes[i])
+                        && message.every((v, i) => G_msg_getTokenType(message, i) === tokenTypes[i])
                 }
-function msg_writeFloatToken(message, tokenIndex, value) {
+function G_msg_writeFloatToken(message, tokenIndex, value) {
                     message[tokenIndex] = value
                 }
-function msg_writeStringToken(message, tokenIndex, value) {
+function G_msg_writeStringToken(message, tokenIndex, value) {
                     message[tokenIndex] = value
                 }
-function msg_readFloatToken(message, tokenIndex) {
+function G_msg_readFloatToken(message, tokenIndex) {
                     return message[tokenIndex]
                 }
-function msg_readStringToken(message, tokenIndex) {
+function G_msg_readStringToken(message, tokenIndex) {
                     return message[tokenIndex]
                 }
-function msg_floats(values) {
+function G_msg_floats(values) {
                     return values
                 }
-function msg_strings(values) {
+function G_msg_strings(values) {
                     return values
                 }
-function msg_display(message) {
+function G_msg_display(message) {
                     return '[' + message
                         .map(t => typeof t === 'string' ? '"' + t + '"' : t.toString())
                         .join(', ') + ']'
                 }
-function msg_isBang(message) {
+function G_msg_nullMessageReceiver(m) {}
+let G_msg_emptyMessage = G_msg_create([])
+function G_bangUtils_isBang(message) {
             return (
-                msg_isStringToken(message, 0) 
-                && msg_readStringToken(message, 0) === 'bang'
+                G_msg_isStringToken(message, 0) 
+                && G_msg_readStringToken(message, 0) === 'bang'
             )
         }
-function msg_bang() {
-            const message = msg_create([MSG_STRING_TOKEN, 4])
-            msg_writeStringToken(message, 0, 'bang')
+function G_bangUtils_bang() {
+            const message = G_msg_create([G_msg_STRING_TOKEN, 4])
+            G_msg_writeStringToken(message, 0, 'bang')
             return message
         }
-function msg_emptyToBang(message) {
-            if (msg_getLength(message) === 0) {
-                return msg_bang()
+function G_bangUtils_emptyToBang(message) {
+            if (G_msg_getLength(message) === 0) {
+                return G_bangUtils_bang()
             } else {
                 return message
             }
         }
-const MSG_BUSES = new Map()
-function msgBusPublish(busName, message) {
+const G_msgBuses__BUSES = new Map()
+function G_msgBuses_publish(busName, message) {
             let i = 0
-            const callbacks = MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []
+            const callbacks = G_msgBuses__BUSES.has(busName) ? G_msgBuses__BUSES.get(busName): []
             for (i = 0; i < callbacks.length; i++) {
                 callbacks[i](message)
             }
         }
-function msgBusSubscribe(busName, callback) {
-            if (!MSG_BUSES.has(busName)) {
-                MSG_BUSES.set(busName, [])
+function G_msgBuses_subscribe(busName, callback) {
+            if (!G_msgBuses__BUSES.has(busName)) {
+                G_msgBuses__BUSES.set(busName, [])
             }
-            MSG_BUSES.get(busName).push(callback)
+            G_msgBuses__BUSES.get(busName).push(callback)
         }
-function msgBusUnsubscribe(busName, callback) {
-            if (!MSG_BUSES.has(busName)) {
+function G_msgBuses_unsubscribe(busName, callback) {
+            if (!G_msgBuses__BUSES.has(busName)) {
                 return
             }
-            const callbacks = MSG_BUSES.get(busName)
-            const found = callbacks.indexOf(callback) !== -1
+            const callbacks = G_msgBuses__BUSES.get(busName)
+            const found = callbacks.indexOf(callback)
             if (found !== -1) {
                 callbacks.splice(found, 1)
             }
         }
         
-function osc_t_setStep(state, freq) {
-                    state.step = (2 * Math.PI / SAMPLE_RATE) * freq
-                }
-function osc_t_setPhase(state, phase) {
-                    state.phase = phase % 1.0 * 2 * Math.PI
-                }
-
-function nbx_setReceiveBusName(state, busName) {
+function NT_nbx_setReceiveBusName(state, busName) {
             if (state.receiveBusName !== "empty") {
-                msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
+                G_msgBuses_unsubscribe(state.receiveBusName, state.messageReceiver)
             }
             state.receiveBusName = busName
             if (state.receiveBusName !== "empty") {
-                msgBusSubscribe(state.receiveBusName, state.messageReceiver)
+                G_msgBuses_subscribe(state.receiveBusName, state.messageReceiver)
             }
         }
-function nbx_setSendReceiveFromMessage(state, m) {
+function NT_nbx_setSendReceiveFromMessage(state, m) {
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'receive'
+                G_msg_isMatching(m, [G_msg_STRING_TOKEN, G_msg_STRING_TOKEN])
+                && G_msg_readStringToken(m, 0) === 'receive'
             ) {
-                nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
+                NT_nbx_setReceiveBusName(state, G_msg_readStringToken(m, 1))
                 return true
 
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'send'
+                G_msg_isMatching(m, [G_msg_STRING_TOKEN, G_msg_STRING_TOKEN])
+                && G_msg_readStringToken(m, 0) === 'send'
             ) {
-                state.sendBusName = msg_readStringToken(m, 1)
+                state.sendBusName = G_msg_readStringToken(m, 1)
                 return true
             }
             return false
         }
-function nbx_defaultMessageHandler(m) {}
-function nbx_receiveMessage(state, m) {
-                    if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                        state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 0),state.minValue),state.maxValue)
-                        const outMessage = msg_floats([state.valueFloat])
+function NT_nbx_defaultMessageHandler(m) {}
+function NT_nbx_receiveMessage(state, m) {
+                    if (G_msg_isMatching(m, [G_msg_FLOAT_TOKEN])) {
+                        state.valueFloat = Math.min(Math.max(G_msg_readFloatToken(m, 0),state.minValue),state.maxValue)
+                        const outMessage = G_msg_floats([state.valueFloat])
                         state.messageSender(outMessage)
                         if (state.sendBusName !== "empty") {
-                            msgBusPublish(state.sendBusName, outMessage)
+                            G_msgBuses_publish(state.sendBusName, outMessage)
                         }
                         return
         
-                    } else if (msg_isBang(m)) {
+                    } else if (G_bangUtils_isBang(m)) {
                         
-                        const outMessage = msg_floats([state.valueFloat])
+                        const outMessage = G_msg_floats([state.valueFloat])
                         state.messageSender(outMessage)
                         if (state.sendBusName !== "empty") {
-                            msgBusPublish(state.sendBusName, outMessage)
+                            G_msgBuses_publish(state.sendBusName, outMessage)
                         }
                         return
         
                     } else if (
-                        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN]) 
-                        && msg_readStringToken(m, 0) === 'set'
+                        G_msg_isMatching(m, [G_msg_STRING_TOKEN, G_msg_FLOAT_TOKEN]) 
+                        && G_msg_readStringToken(m, 0) === 'set'
                     ) {
-                        state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 1),state.minValue),state.maxValue)
+                        state.valueFloat = Math.min(Math.max(G_msg_readFloatToken(m, 1),state.minValue),state.maxValue)
                         return
                     
-                    } else if (nbx_setSendReceiveFromMessage(state, m) === true) {
+                    } else if (NT_nbx_setSendReceiveFromMessage(state, m) === true) {
                         return
                     }
                 }
@@ -275,122 +301,119 @@ function nbx_receiveMessage(state, m) {
 
 
 
+function NT_osc_t_setStep(state, freq) {
+                    state.step = (2 * Math.PI / SAMPLE_RATE) * freq
+                }
+function NT_osc_t_setPhase(state, phase) {
+                    state.phase = phase % 1.0 * 2 * Math.PI
+                }
 
 
-        let F = 0
-let FRAME = 0
-let BLOCK_SIZE = 0
-let SAMPLE_RATE = 0
-let NULL_SIGNAL = 0
-function SND_TO_NULL(m) {}
-let EMPTY_MESSAGE = msg_create([])
 
-        
-
-        const n_0_1_STATE = {
+        const N_n_0_1_state = {
                                 minValue: -1e+37,
 maxValue: 1e+37,
 valueFloat: 220,
-value: msg_create([]),
+value: G_msg_create([]),
 receiveBusName: "empty",
 sendBusName: "empty",
-messageReceiver: nbx_defaultMessageHandler,
-messageSender: nbx_defaultMessageHandler,
+messageReceiver: NT_nbx_defaultMessageHandler,
+messageSender: NT_nbx_defaultMessageHandler,
                             }
-const m_n_0_0_0_sig_STATE = {
+const N_m_n_0_0_0_sig_state = {
                                 currentValue: 0,
                             }
-const n_0_0_STATE = {
+const N_n_0_0_state = {
                                 phase: 0,
 step: 0,
                             }
         
-function n_0_1_RCVS_0(m) {
+function N_n_0_1_rcvs_0(m) {
                             
-                nbx_receiveMessage(n_0_1_STATE, m)
+                NT_nbx_receiveMessage(N_n_0_1_state, m)
                 return
             
-                            throw new Error('Node "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node "n_0_1", inlet "0", unsupported message : ' + G_msg_display(m))
                         }
 
-function m_n_0_0_0__routemsg_RCVS_0(m) {
+function N_m_n_0_0_0__routemsg_rcvs_0(m) {
                             
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                m_n_0_0_0__routemsg_SNDS_0(m)
+            if (G_msg_isMatching(m, [G_msg_FLOAT_TOKEN])) {
+                N_m_n_0_0_0__routemsg_snds_0(m)
                 return
             } else {
-                SND_TO_NULL(m)
+                G_msg_nullMessageReceiver(m)
                 return
             }
         
-                            throw new Error('Node "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + G_msg_display(m))
                         }
-let m_n_0_0_0_sig_OUTS_0 = 0
-function m_n_0_0_0_sig_RCVS_0(m) {
+let N_m_n_0_0_0_sig_outs_0 = 0
+function N_m_n_0_0_0_sig_rcvs_0(m) {
                             
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            m_n_0_0_0_sig_STATE.currentValue = msg_readFloatToken(m, 0)
-            return
-        }
-    
-                            throw new Error('Node "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
+    if (G_msg_isMatching(m, [G_msg_FLOAT_TOKEN])) {
+        N_m_n_0_0_0_sig_state.currentValue = G_msg_readFloatToken(m, 0)
+        return
+    }
+
+                            throw new Error('Node "m_n_0_0_0_sig", inlet "0", unsupported message : ' + G_msg_display(m))
                         }
 
 
-let n_0_0_OUTS_0 = 0
+let N_n_0_0_outs_0 = 0
 
 
 
-function m_n_0_0_0__routemsg_SNDS_0(m) {
-                        m_n_0_0_0_sig_RCVS_0(m)
-coldDsp_0(m)
+function N_m_n_0_0_0__routemsg_snds_0(m) {
+                        N_m_n_0_0_0_sig_rcvs_0(m)
+COLD_0(m)
                     }
 
-        function coldDsp_0(m) {
-                    m_n_0_0_0_sig_OUTS_0 = m_n_0_0_0_sig_STATE.currentValue
-                    osc_t_setStep(n_0_0_STATE, m_n_0_0_0_sig_OUTS_0)
+        function COLD_0(m) {
+                    N_m_n_0_0_0_sig_outs_0 = N_m_n_0_0_0_sig_state.currentValue
+                    NT_osc_t_setStep(N_n_0_0_state, N_m_n_0_0_0_sig_outs_0)
                 }
-        function ioRcv_n_0_1_0(m) {
-                    n_0_1_RCVS_0(m)
+        function IO_rcv_n_0_1_0(m) {
+                    N_n_0_1_rcvs_0(m)
                 }
         
 
         const exports = {
-            metadata: {"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"ioRcv_n_0_1_0"}},"messageSenders":{}}}}},
+            metadata: {"libVersion":"0.1.0","settings":{"audio":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}}},"compilation":{"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"IO_rcv_n_0_1_0"}},"messageSenders":{}},"globals":{"commons":{"getArray":"G_commons_getArray","setArray":"G_commons_setArray"}}}}},
             initialize: (sampleRate, blockSize) => {
-                exports.metadata.audioSettings.sampleRate = sampleRate
-                exports.metadata.audioSettings.blockSize = blockSize
+                exports.metadata.settings.audio.sampleRate = sampleRate
+                exports.metadata.settings.audio.blockSize = blockSize
                 SAMPLE_RATE = sampleRate
                 BLOCK_SIZE = blockSize
 
                 
-                n_0_1_STATE.messageSender = m_n_0_0_0__routemsg_RCVS_0
-                n_0_1_STATE.messageReceiver = function (m) {
-                    nbx_receiveMessage(n_0_1_STATE, m)
+                N_n_0_1_state.messageSender = N_m_n_0_0_0__routemsg_rcvs_0
+                N_n_0_1_state.messageReceiver = function (m) {
+                    NT_nbx_receiveMessage(N_n_0_1_state, m)
                 }
-                nbx_setReceiveBusName(n_0_1_STATE, "empty")
+                NT_nbx_setReceiveBusName(N_n_0_1_state, "empty")
     
-                commons_waitFrame(0, () => m_n_0_0_0__routemsg_RCVS_0(msg_floats([n_0_1_STATE.valueFloat])))
+                G_commons_waitFrame(0, () => N_m_n_0_0_0__routemsg_rcvs_0(G_msg_floats([N_n_0_1_state.valueFloat])))
             
 
 
 
 
-            osc_t_setStep(n_0_0_STATE, 0)
+            NT_osc_t_setStep(N_n_0_0_state, 0)
         
 
-                coldDsp_0(EMPTY_MESSAGE)
+                COLD_0(G_msg_emptyMessage)
             },
             dspLoop: (INPUT, OUTPUT) => {
                 
-        for (F = 0; F < BLOCK_SIZE; F++) {
-            _commons_emitFrame(FRAME)
+        for (IT_FRAME = 0; IT_FRAME < BLOCK_SIZE; IT_FRAME++) {
+            G_commons__emitFrame(FRAME)
             
-                n_0_0_OUTS_0 = Math.cos(n_0_0_STATE.phase)
-                n_0_0_STATE.phase += n_0_0_STATE.step
+                N_n_0_0_outs_0 = Math.cos(N_n_0_0_state.phase)
+                N_n_0_0_state.phase += N_n_0_0_state.step
             
-OUTPUT[0][F] = n_0_0_OUTS_0
-OUTPUT[1][F] = n_0_0_OUTS_0
+OUTPUT[0][IT_FRAME] = N_n_0_0_outs_0
+OUTPUT[1][IT_FRAME] = N_n_0_0_outs_0
             FRAME++
         }
     
@@ -398,7 +421,7 @@ OUTPUT[1][F] = n_0_0_OUTS_0
             io: {
                 messageReceivers: {
                     n_0_1: {
-                            "0": ioRcv_n_0_1_0,
+                            "0": IO_rcv_n_0_1_0,
                         },
                 },
                 messageSenders: {
@@ -408,5 +431,6 @@ OUTPUT[1][F] = n_0_0_OUTS_0
         }
 
         
-
+exports.G_commons_getArray = G_commons_getArray
+exports.G_commons_setArray = G_commons_setArray
     

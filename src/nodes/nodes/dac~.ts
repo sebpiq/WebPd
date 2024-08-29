@@ -71,12 +71,7 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'dac_t',
     },
 
-    dsp: ({
-        ins,
-        globs,
-        node,
-        settings: { audio, target },
-    }) => Sequence([
+    dsp: ({ ins, node }, { core }, { audio, target }) => Sequence([
         node.args.channelMapping
             // Save the original index
             .map((destination, i) => [destination, i])
@@ -87,8 +82,8 @@ const nodeImplementation: _NodeImplementation = {
             )
             .map(([destination, i]) =>
                 target === 'javascript'
-                    ? `${globs.output}[${destination}][${globs.iterFrame}] = ${ins[`${i}`]}`
-                    : `${globs.output}[${globs.iterFrame} + ${globs.blockSize} * ${destination}] = ${ins[`${i}`]}`
+                    ? `${core.OUTPUT}[${destination}][${core.IT_FRAME}] = ${ins[`${i}`]}`
+                    : `${core.OUTPUT}[${core.IT_FRAME} + ${core.BLOCK_SIZE} * ${destination}] = ${ins[`${i}`]}`
             )
     ])
 }

@@ -35,6 +35,7 @@ import {
     listInputs,
 } from './expr-expr~'
 import assert from 'assert'
+import { VariableNamesIndex } from '@webpd/compiler'
 
 const NODE_TYPES: Array<keyof typeof builders> = ['expr', 'expr~']
 
@@ -167,11 +168,15 @@ describe('expr', () => {
                         type: 'signal',
                         id: 0,
                     },
-                ]
+                ],
+                {
+                    numbers: { roundFloatAsPdInt: 'roundFloatAsPdInt' },
+                    commons: { getArray: 'getArray' }
+                } as unknown as VariableNamesIndex['globals']
             )
             assert.strictEqual(
                 rendered,
-                '+(commons_getArray(STATE.stringInputs.get(1))' +
+                '+(getArray(STATE.stringInputs.get(1))' +
                     '[toInt(12 * roundFloatAsPdInt(STATE.floatInputs.get(2)))]' +
                     ' + 1.5 + STATE.floatInputs.get(0) + IN0)'
             )
@@ -522,13 +527,10 @@ describe('expr', () => {
                         }),
                         nodeImplementation: nodeImplementations['expr'],
                         arrays: {
-                            "": [0.1, 0.2, 0.3],
+                            '': [0.1, 0.2, 0.3],
                         },
                     },
-                    [
-                        { ins: { '0': [['bang']] } },
-                        { outs: { '0': [[0.1]] } },
-                    ],
+                    [{ ins: { '0': [['bang']] } }, { outs: { '0': [[0.1]] } }]
                 )
             }
         )
@@ -652,9 +654,7 @@ describe('expr', () => {
                         bitDepth,
                         node: buildNode(builders['expr~'], 'expr~', {
                             tokenizedExpressions: [
-                                tokenizeExpression(
-                                    '$v1>=0.5'
-                                ),
+                                tokenizeExpression('$v1>=0.5'),
                             ],
                         }),
                         nodeImplementation: nodeImplementations['expr~'],
@@ -674,7 +674,7 @@ describe('expr', () => {
                                 '0': 0,
                             },
                         },
-                    ],
+                    ]
                 )
             }
         )

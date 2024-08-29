@@ -23,7 +23,7 @@ import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { build, EMPTY_BUS_NAME, ControlsBaseNodeArguments, controlsCore } from './controls-base'
-import { messageBuses } from '../global-code/buses'
+import { msgBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
@@ -43,63 +43,69 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
+// prettier-ignore
 const nodeImplementation: _NodeImplementation = {
-    state: ({ ns, node: { args } }) => 
-        Class(ns.State!, [
-            Var('Message', 'value', 'msg_create([])'),
-            Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
-            Var('string', 'sendBusName', `"${args.sendBusName}"`),
-            Var('MessageHandler', 'messageReceiver', ns.defaultMessageHandler!),
-            Var('MessageHandler', 'messageSender', ns.defaultMessageHandler!),
+    state: ({ ns, node: { args } }, { msg }) => 
+        Class(ns.State, [
+            Var(msg.Message, `value`, `${msg.create}([])`),
+            Var(`string`, `receiveBusName`, `"${args.receiveBusName}"`),
+            Var(`string`, `sendBusName`, `"${args.sendBusName}"`),
+            Var(msg.Handler, `messageReceiver`, ns.defaultMessageHandler),
+            Var(msg.Handler, `messageSender`, ns.defaultMessageHandler),
         ]),
 
-    initialization: ({ 
-        ns,
-        snds,
-        state,
-        node: { args },
-    }) => ast`
-        ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-            ${ns.receiveMessage!}(${state}, m)
+    initialization: (
+        { 
+            ns,
+            snds,
+            state,
+            node: { args },
+        },
+        { commons, msg, bangUtils }
+    ) => ast`
+        ${state}.messageReceiver = ${AnonFunc([Var(msg.Message, `m`)])`
+            ${ns.receiveMessage}(${state}, m)
         `}
         ${state}.messageSender = ${snds.$0}
-        ${ns.setReceiveBusName!}(${state}, "${args.receiveBusName}")
+        ${ns.setReceiveBusName}(${state}, "${args.receiveBusName}")
 
         ${args.outputOnLoad ? 
-            `commons_waitFrame(0, () => ${snds.$0}(msg_bang()))`: null}
+            `${commons.waitFrame}(0, () => ${snds.$0}(${bangUtils.bang}()))`: null}
     `,
     
-    messageReceivers: ({ ns, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            ${ns.receiveMessage!}(${state}, m)
+    messageReceivers: ({ ns, state }, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            ${ns.receiveMessage}(${state}, m)
             return
         `,
     }),
 
-    core: ({ ns }) => 
-        Sequence([
-            controlsCore(ns),
+    core: ({ ns }, globals) => {
+        const { msg, msgBuses, bangUtils } = globals
+        return Sequence([
+            controlsCore(ns, globals),
 
-            Func(ns.receiveMessage!, [
-                Var(ns.State!, 'state'),
-                Var('Message', 'm'),
+            Func(ns.receiveMessage, [
+                Var(ns.State, `state`),
+                Var(msg.Message, `m`),
             ], 'void')`
-                if (${ns.setSendReceiveFromMessage!}(state, m) === true) {
+                if (${ns.setSendReceiveFromMessage}(state, m) === true) {
                     return
                 }
                 
-                ${ConstVar('Message', 'outMessage', 'msg_bang()')}
+                ${ConstVar(msg.Message, `outMessage`, `${bangUtils.bang}()`)}
                 state.messageSender(outMessage)
                 if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                    msgBusPublish(state.sendBusName, outMessage)
+                    ${msgBuses.publish}(state.sendBusName, outMessage)
                 }
                 return
             `
-        ]),
+        ])
+    },
 
     dependencies: [
         bangUtils,
-        messageBuses,
+        msgBuses,
         stdlib.commonsWaitFrame,
     ],
 }

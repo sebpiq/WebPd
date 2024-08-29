@@ -22,7 +22,7 @@ import { stdlib, functional, Sequence } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber } from '../validation'
-import { bangUtils, stringMsgUtils } from '../global-code/core'
+import { bangUtils, actionUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import {
     messageTokenToFloat,
@@ -80,113 +80,122 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Int', 'delay', 0),
-            Var('Array<Message>', 'outputMessages', `[${
+    state: ({ node: { args }, ns }, { msg }) => 
+        Class(ns.State, [
+            Var(`Int`, `delay`, 0),
+            Var(`Array<${msg.Message}>`, `outputMessages`, `[${
                 args.typeArguments
                     .map(([_, value]) => typeof value === 'number' ? 
-                        `msg_floats([${value}])`
-                        : `msg_strings(["${value}"])`).join(',')
+                        `${msg.floats}([${value}])`
+                        : `${msg.strings}(["${value}"])`).join(',')
             }]`),
-            Var(`Array<${ns.ScheduledMessage!}>`, 'scheduledMessages', '[]'),
-            Var('Array<MessageHandler>', 'snds', '[]'),
+            Var(`Array<${ns.ScheduledMessage}>`, `scheduledMessages`, `[]`),
+            Var(`Array<${msg.Handler}>`, `snds`, `[]`),
         ]),
     
     initialization: ({ ns, node: { args }, state, snds }) => 
         ast`
-            ${ns.setDelay!}(${state}, ${args.delay})
+            ${ns.setDelay}(${state}, ${args.delay})
             ${state}.snds = [${functional.countTo(args.typeArguments.length)
                 .reverse()
                 .map((i) => snds[i]).join(', ')
             }]
         `,
 
-    messageReceivers: ({ 
-        ns,
-        node: { args }, 
-        state, 
-        globs,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isAction(m, 'clear')) {
-                ${ns.clear!}(${state})
-                return 
-    
-            } else if (msg_isAction(m, 'flush')) {
-                if (${state}.scheduledMessages.length) {
-                    ${ns.sendMessages!}(
-                        ${state}, 
-                        ${state}.scheduledMessages[${state}.scheduledMessages.length - 1].frame
-                    )
-                }
-                return
-    
-            } else {
-                ${ConstVar('Message', 'inMessage', 'msg_isBang(m) ? msg_create([]): m')}
-                ${ConstVar('Int', 'insertIndex', `${ns.prepareMessageScheduling!}(
-                    ${state}, 
-                    () => {
-                        ${ns.sendMessages!}(${state}, ${globs.frame})
-                    },
-                )`)}
-    
-                ${args.typeArguments.slice(0).reverse()
-                    .map<[number, TypeArgument]>(([typeArg], i) => [args.typeArguments.length - i - 1, typeArg])
-                    .map(([iReverse, typeArg], i) => 
-                        ast`
-                            if (msg_getLength(inMessage) > ${iReverse}) {
-                                ${state}.scheduledMessages[insertIndex + ${i}].message = 
-                                    ${renderMessageTransfer(typeArg, 'inMessage', iReverse)}
-                                ${state}.outputMessages[${iReverse}] 
-                                    = ${state}.scheduledMessages[insertIndex + ${i}].message
-                            } else {
-                                ${state}.scheduledMessages[insertIndex + ${i}].message 
-                                    = ${state}.outputMessages[${iReverse}]
-                            }
-                        `
-                    )
-                }
-    
-                return
-            }
-        `,
-    
-        ...functional.mapArray(
-            args.typeArguments.slice(1), 
-            ([typeArg], i) => [
-                `${i + 1}`, 
-                AnonFunc([Var('Message', 'm')])`
-                    ${state}.outputMessages[${i + 1}] = ${renderMessageTransfer(typeArg, 'm', 0)}
+    messageReceivers: (
+        { 
+            ns,
+            node: { args }, 
+            state, 
+        }, globals
+    ) => {
+        const {
+            bangUtils,
+            actionUtils,
+            msg,
+            core,
+        } = globals
+        return {
+            '0': AnonFunc([Var(msg.Message, `m`)])`
+                if (${actionUtils.isAction}(m, 'clear')) {
+                    ${ns.clear}(${state})
+                    return 
+        
+                } else if (${actionUtils.isAction}(m, 'flush')) {
+                    if (${state}.scheduledMessages.length) {
+                        ${ns.sendMessages}(
+                            ${state}, 
+                            ${state}.scheduledMessages[${state}.scheduledMessages.length - 1].frame
+                        )
+                    }
                     return
-                `
-            ]
-        ),
+        
+                } else {
+                    ${ConstVar(msg.Message, `inMessage`, `${bangUtils.isBang}(m) ? ${msg.create}([]): m`)}
+                    ${ConstVar(`Int`, `insertIndex`, `${ns.prepareMessageScheduling}(
+                        ${state}, 
+                        () => {
+                            ${ns.sendMessages}(${state}, ${core.FRAME})
+                        },
+                    )`)}
+        
+                    ${args.typeArguments.slice(0).reverse()
+                        .map<[number, TypeArgument]>(([typeArg], i) => [args.typeArguments.length - i - 1, typeArg])
+                        .map(([iReverse, typeArg], i) => 
+                            ast`
+                                if (${msg.getLength}(inMessage) > ${iReverse}) {
+                                    ${state}.scheduledMessages[insertIndex + ${i}].message = 
+                                        ${renderMessageTransfer(typeArg, 'inMessage', iReverse, globals)}
+                                    ${state}.outputMessages[${iReverse}] 
+                                        = ${state}.scheduledMessages[insertIndex + ${i}].message
+                                } else {
+                                    ${state}.scheduledMessages[insertIndex + ${i}].message 
+                                        = ${state}.outputMessages[${iReverse}]
+                                }
+                            `
+                        )
+                    }
+        
+                    return
+                }
+            `,
+        
+            ...functional.mapArray(
+                args.typeArguments.slice(1), 
+                ([typeArg], i) => [
+                    `${i + 1}`, 
+                    AnonFunc([Var(msg.Message, `m`)])`
+                        ${state}.outputMessages[${i + 1}] = ${renderMessageTransfer(typeArg, 'm', 0, globals)}
+                        return
+                    `
+                ]
+            ),
+        
+            [args.typeArguments.length]: coldFloatInletWithSetter(ns.setDelay, state, msg)
+        }
+    },
     
-        [args.typeArguments.length]: coldFloatInletWithSetter(ns.setDelay!, state)
-    }),
-    
-    core: ({ ns, globs }) => 
+    core: ({ ns }, { msg, sked, core, commons }) => 
         Sequence([
-            Class(ns.ScheduledMessage!, [
-                Var('Message', 'message'), 
-                Var('Int', 'frame'), 
-                Var('SkedId', 'skedId'), 
+            Class(ns.ScheduledMessage, [
+                Var(msg.Message, `message`), 
+                Var(`Int`, `frame`), 
+                Var(sked.Id, `skedId`), 
             ]),
         
-            ConstVar(ns.ScheduledMessage!, ns.dummyScheduledMessage!, `{
-                message: msg_create([]),
+            ConstVar(ns.ScheduledMessage, ns.dummyScheduledMessage, `{
+                message: ${msg.create}([]),
                 frame: 0,
-                skedId: SKED_ID_NULL,
+                skedId: ${sked.ID_NULL},
             }`),
         
-            Func(ns.prepareMessageScheduling!, [
-                Var(ns.State!, 'state'),
-                Var('SkedCallback', 'callback'),
+            Func(ns.prepareMessageScheduling, [
+                Var(ns.State, `state`),
+                Var(sked.Callback, `callback`),
             ], 'Int')`
-                ${Var('Int', 'insertIndex', '0')}
-                ${Var('Int', 'frame', `${globs.frame} + state.delay`)}
-                ${Var('SkedId', 'skedId', 'SKED_ID_NULL')}
+                ${Var(`Int`, `insertIndex`, `0`)}
+                ${Var(`Int`, `frame`, `${core.FRAME} + state.delay`)}
+                ${Var(sked.Id, `skedId`, sked.ID_NULL)}
         
                 while (
                     insertIndex < state.scheduledMessages.length 
@@ -205,7 +214,7 @@ const nodeImplementation: _NodeImplementation = {
                         && state.scheduledMessages[insertIndex - 1].frame !== frame
                     )
                 ) {
-                    skedId = commons_waitFrame(frame, callback)
+                    skedId = ${commons.waitFrame}(frame, callback)
                 }
         
                 ${''
@@ -214,16 +223,16 @@ const nodeImplementation: _NodeImplementation = {
                 // 2. We use `copyWithin` to move old elements to their final position.
                 // 3. Instantiate new messages in the newly created holes.
                 }
-                for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
-                    state.scheduledMessages.push(${ns.dummyScheduledMessage!})
+                for (${Var(`Int`, `i`, 0)}; i < state.snds.length; i++) {
+                    state.scheduledMessages.push(${ns.dummyScheduledMessage})
                 }
                 state.scheduledMessages.copyWithin(
                     (insertIndex + 1) * state.snds.length, 
                     insertIndex * state.snds.length
                 )
-                for (${Var('Int', 'i', 0)}; i < state.snds.length; i++) {
+                for (${Var(`Int`, `i`, 0)}; i < state.snds.length; i++) {
                     state.scheduledMessages[insertIndex + i] = {
-                        message: ${ns.dummyScheduledMessage!}.message,
+                        message: ${ns.dummyScheduledMessage}.message,
                         frame,
                         skedId,
                     }
@@ -232,11 +241,11 @@ const nodeImplementation: _NodeImplementation = {
                 return insertIndex
             `,
         
-            Func(ns.sendMessages!, [
-                Var(ns.State!, 'state'),
-                Var('Int', 'toFrame'),
+            Func(ns.sendMessages, [
+                Var(ns.State, `state`),
+                Var(`Int`, `toFrame`),
             ], 'void')`
-                ${Var('Int', 'i', 0)}
+                ${Var(`Int`, `i`, 0)}
                 while (
                     state.scheduledMessages.length 
                     && state.scheduledMessages[0].frame <= toFrame
@@ -248,22 +257,22 @@ const nodeImplementation: _NodeImplementation = {
                 }
             `,
         
-            Func(ns.clear!, [
-                Var(ns.State!, 'state'),
+            Func(ns.clear, [
+                Var(ns.State, `state`),
             ], 'void')`
-                ${Var('Int', 'i', '0')}
-                ${ConstVar('Int', 'length', `state.scheduledMessages.length`)}
+                ${Var(`Int`, `i`, `0`)}
+                ${ConstVar(`Int`, `length`, `state.scheduledMessages.length`)}
                 for (i; i < length; i++) {
-                    commons_cancelWaitFrame(state.scheduledMessages[i].skedId)
+                    ${commons.cancelWaitFrame}(state.scheduledMessages[i].skedId)
                 }
                 state.scheduledMessages = []
             `,
         
-            Func(ns.setDelay!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'delay'),
+            Func(ns.setDelay, [
+                Var(ns.State, `state`),
+                Var(`Float`, `delay`),
             ], 'void')`
-                state.delay = toInt(Math.round(delay / 1000 * ${globs.sampleRate}))
+                state.delay = toInt(Math.round(delay / 1000 * ${core.SAMPLE_RATE}))
             `,
         ]),
 
@@ -271,7 +280,7 @@ const nodeImplementation: _NodeImplementation = {
         messageTokenToFloat, 
         messageTokenToString,
         bangUtils,
-        stringMsgUtils,
+        actionUtils,
         stdlib.commonsWaitFrame,
     ],
 }

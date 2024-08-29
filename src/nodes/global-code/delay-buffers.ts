@@ -19,38 +19,41 @@
  */
 import { stdlib } from '@webpd/compiler'
 import { ConstVar, Func, Sequence, Var } from '@webpd/compiler'
-import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
 
-// TODO : how to safely declare a global variable without clashing
-export const delayBuffers: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: () => Sequence([
-        ConstVar('Map<string, buf_SoundBuffer>', 'DELAY_BUFFERS', 'new Map()'),
-        ConstVar('Skeduler', 'DELAY_BUFFERS_SKEDULER', 'sked_create(true)'),
-        ConstVar('buf_SoundBuffer', 'DELAY_BUFFERS_NULL', 'buf_create(1)'),
-    
-        Func('DELAY_BUFFERS_set', 
-            [Var('string', 'delayName'), Var('buf_SoundBuffer', 'buffer')],
-            'void'
-        )`
-            DELAY_BUFFERS.set(delayName, buffer)
-            sked_emit(DELAY_BUFFERS_SKEDULER, delayName)
+export const delayBuffers: GlobalDefinitions = {
+    namespace: 'delayBuffers',
+    // prettier-ignore
+    code: ({ ns: delayBuffers }, { buf, sked }) => Sequence([
+        ConstVar(`Map<string, ${buf.SoundBuffer}>`, delayBuffers._BUFFERS, `new Map()`),
+        ConstVar(sked.Skeduler, delayBuffers._SKEDULER, `${sked.create}(true)`),
+        ConstVar(`${buf.SoundBuffer}`, delayBuffers.NULL_BUFFER, `${buf.create}(1)`),
+
+        Func(delayBuffers.get, [
+            Var(`string`, `delayName`),
+        ], buf.SoundBuffer)`
+            ${delayBuffers._BUFFERS}.get(delayName, buffer)
+        `,
+
+        Func(delayBuffers.set, [
+            Var(`string`, `delayName`), 
+            Var(buf.SoundBuffer, `buffer`)
+        ], 'void')`
+            ${delayBuffers._BUFFERS}.set(delayName, buffer)
+            ${sked.emit}(${delayBuffers._SKEDULER}, delayName)
         `,
     
-        Func('DELAY_BUFFERS_get', 
-            [
-                Var('string', 'delayName'),
-                Var('SkedCallback', 'callback'),
-            ],
-            'void'
-        )`
-            sked_wait(DELAY_BUFFERS_SKEDULER, delayName, callback)
+        Func(delayBuffers.wait, [
+            Var(`string`, `delayName`),
+            Var(sked.Callback, `callback`),
+        ], 'void')`
+            ${sked.wait}(${delayBuffers._SKEDULER}, delayName, callback)
         `,
     
-        Func('DELAY_BUFFERS_delete', 
-            [Var('string', 'delayName')],
-            'void'
-        )`
-            DELAY_BUFFERS.delete(delayName)
+        Func(delayBuffers.delete, [
+            Var(`string`, `delayName`)
+        ], 'void')`
+            ${delayBuffers._BUFFERS}.delete(delayName)
         `,
     ])
 ,

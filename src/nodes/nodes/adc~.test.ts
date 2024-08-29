@@ -145,7 +145,7 @@ describe('adc~', () => {
                 bitDepth,
                 compileResult.code
             )
-            engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
+            engine.initialize(engine.metadata.settings.audio.sampleRate, 1)
             return engine
         }
 

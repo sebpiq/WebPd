@@ -112,7 +112,7 @@ const nodeImplementations: NodeImplementations = {
             isDspInline: true,
             alphaName: 'pow_t',
         },
-        dsp: ({ ins }) => ast`pow(${ins.$0}, ${ins.$1})`,
+        dsp: ({ ins }, { funcs }) => ast`${funcs.pow}(${ins.$0}, ${ins.$1})`,
         dependencies: [pow],
     },
 }

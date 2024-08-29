@@ -17,95 +17,100 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import {
-    GlobalCodeGenerator,
-    GlobalCodeGeneratorWithSettings,
-} from '@webpd/compiler/src/compile/types'
-import { stdlib } from '@webpd/compiler'
-import { Sequence, ConstVar, Var, Func } from '@webpd/compiler'
+import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
+import { stdlib, Sequence, ConstVar, Var, Func } from '@webpd/compiler'
 
-// TODO : unit tests
-export const signalBuses: GlobalCodeGenerator = () => 
-    Sequence([
-        ConstVar('Map<string, Float>', 'SIGNAL_BUSES', 'new Map()'),
-        `SIGNAL_BUSES.set('', 0)`,
+export const sigBuses: GlobalDefinitions = {
+    namespace: 'sigBuses',
+    // prettier-ignore
+    code: ({ ns: sigBuses }) => Sequence([
+        ConstVar(`Map<string, Float>`, sigBuses._BUSES, `new Map()`),
+        `${sigBuses._BUSES}.set('', 0)`,
 
-        Func('addAssignSignalBus', [
-            Var('string', 'busName'), 
-            Var('Float', 'value')
+        Func(sigBuses.addAssign, [
+            Var(`string`, `busName`), 
+            Var(`Float`, `value`)
         ], 'Float')`
-            ${ConstVar('Float', 'newValue', 'SIGNAL_BUSES.get(busName) + value')}
-            SIGNAL_BUSES.set(
+            ${ConstVar(
+                'Float', 
+                'newValue', 
+                `${sigBuses._BUSES}.get(busName) + value`
+            )}
+            ${sigBuses._BUSES}.set(
                 busName,
                 newValue,
             )
             return newValue
         `,
 
-        Func('setSignalBus', [
-            Var('string', 'busName'), 
-            Var('Float', 'value'),
+        Func(sigBuses.set, [
+            Var(`string`, `busName`), 
+            Var(`Float`, `value`),
         ], 'void')`
-            SIGNAL_BUSES.set(
+            ${sigBuses._BUSES}.set(
                 busName,
                 value,
             )
         `,
 
-        Func('resetSignalBus', [
-            Var('string', 'busName')
+        Func(sigBuses.reset, [
+            Var(`string`, `busName`)
         ], 'void')`
-            SIGNAL_BUSES.set(busName, 0)
+            ${sigBuses._BUSES}.set(busName, 0)
         `,
 
-        Func('readSignalBus', [Var('string', 'busName')], 'Float')`
-            return SIGNAL_BUSES.get(busName)
+        Func(sigBuses.read, [
+            Var(`string`, `busName`)
+        ], 'Float')`
+            return ${sigBuses._BUSES}.get(busName)
         `
-    ])
+    ]),
+}
 
-// TODO : unit tests
-export const messageBuses: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: () => Sequence([
+export const msgBuses: GlobalDefinitions = {
+    namespace: 'msgBuses',
+    // prettier-ignore
+    code: ({ ns: msgBuses }, { msg }) => Sequence([
         ConstVar(
-            'Map<string, Array<MessageHandler>>',
-            'MSG_BUSES',
+            `Map<string, Array<${msg.Handler}>>`,
+            msgBuses._BUSES,
             'new Map()'
         ),
 
-        Func('msgBusPublish', 
-            [Var('string', 'busName'), Var('Message', 'message')],
-            'void'
-        )`
-            ${Var('Int', 'i', '0')}
+        Func(msgBuses.publish, [
+            Var(`string`, `busName`), 
+            Var(msg.Message, `message`)
+        ], 'void')`
+            ${Var(`Int`, `i`, `0`)}
             ${ConstVar(
-                'Array<MessageHandler>',
+                `Array<${msg.Handler}>`,
                 'callbacks',
-                'MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []'
+                `${msgBuses._BUSES}.has(busName) ? ${msgBuses._BUSES}.get(busName): []`
             )}
             for (i = 0; i < callbacks.length; i++) {
                 callbacks[i](message)
             }
         `,
 
-        Func('msgBusSubscribe', 
-            [Var('string', 'busName'), Var('MessageHandler', 'callback')],
-            'void'
-        )`
-            if (!MSG_BUSES.has(busName)) {
-                MSG_BUSES.set(busName, [])
+        Func(msgBuses.subscribe, [
+            Var(`string`, `busName`), 
+            Var(msg.Handler, `callback`)
+        ], 'void')`
+            if (!${msgBuses._BUSES}.has(busName)) {
+                ${msgBuses._BUSES}.set(busName, [])
             }
-            MSG_BUSES.get(busName).push(callback)
+            ${msgBuses._BUSES}.get(busName).push(callback)
         `,
 
-        Func('msgBusUnsubscribe', 
-            [Var('string', 'busName'), Var('MessageHandler', 'callback')],
-            'void'
-        )`
-            if (!MSG_BUSES.has(busName)) {
+        Func(msgBuses.unsubscribe, [
+            Var(`string`, `busName`), 
+            Var(msg.Handler, `callback`)
+        ], 'void')`
+            if (!${msgBuses._BUSES}.has(busName)) {
                 return
             }
-            ${ConstVar('Array<MessageHandler>', 'callbacks', 'MSG_BUSES.get(busName)')}
-            ${ConstVar('Int', 'found', 'callbacks.indexOf(callback) !== -1')}
+            ${ConstVar(`Array<${msg.Handler}>`, `callbacks`, `${msgBuses._BUSES}.get(busName)`)}
+            ${ConstVar(`Int`, `found`, `callbacks.indexOf(callback)`)}
             if (found !== -1) {
                 callbacks.splice(found, 1)
             }

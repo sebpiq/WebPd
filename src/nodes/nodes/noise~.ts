@@ -51,11 +51,11 @@ const nodeImplementation: _NodeImplementation = {
     dsp: () => 
         ast`Math.random() * 2 - 1`, 
 
-    messageReceivers: () => ({
-        '0': AnonFunc([Var('Message', 'm')])`
+    messageReceivers: (_, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-                && msg_readStringToken(m, 0) === 'seed'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'seed'
             ) {
                 console.log('WARNING : seed not implemented yet for [noise~]')
                 return

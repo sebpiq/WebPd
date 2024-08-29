@@ -51,32 +51,32 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'maxValue', args.maxValue),
+        Class(ns.State, [
+            Var(`Float`, `maxValue`, args.maxValue),
         ]),
 
-    messageReceivers: ({ ns, snds, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) {
-                ${snds['0']}(msg_floats([Math.floor(Math.random() * ${state}.maxValue)]))
+    messageReceivers: ({ ns, snds, state }, { bangUtils, msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) {
+                ${snds['0']}(${msg.floats}([Math.floor(Math.random() * ${state}.maxValue)]))
                 return
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-                && msg_readStringToken(m, 0) === 'seed'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'seed'
             ) {
                 console.log('WARNING : seed not implemented yet for [random]')
                 return
             }
         `,
     
-        '1': coldFloatInletWithSetter(ns.setMaxValue!, state),
+        '1': coldFloatInletWithSetter(ns.setMaxValue, state, msg),
     }),
 
     core: ({ ns }) => 
         Sequence([
-            Func(ns.setMaxValue!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'maxValue'),
+            Func(ns.setMaxValue, [
+                Var(ns.State, `state`),
+                Var(`Float`, `maxValue`),
             ], 'void')`
                 state.maxValue = Math.max(maxValue, 0)
             `
