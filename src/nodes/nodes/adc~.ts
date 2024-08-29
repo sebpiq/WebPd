@@ -70,12 +70,11 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'adc_t',
     },
 
-    dsp: ({
-        outs,
-        globs,
-        node,
-        settings: { audio, target },
-    }) => Sequence([
+    dsp: (
+        { outs, node }, 
+        { core }, 
+        { audio, target }
+    ) => Sequence([
         node.args.channelMapping
             // Save the original index 
             .map((source, i) => [source, i])
@@ -85,8 +84,8 @@ const nodeImplementation: _NodeImplementation = {
             )
             .map(([source, i]) =>
                 target === 'javascript'
-                    ? `${outs[`${i}`]} = ${globs.input}[${source}][${globs.iterFrame}]`
-                    : `${outs[`${i}`]} = ${globs.input}[${globs.iterFrame} + ${globs.blockSize} * ${source}]`
+                    ? `${outs[`${i}`]} = ${core.INPUT}[${source}][${core.IT_FRAME}]`
+                    : `${outs[`${i}`]} = ${core.INPUT}[${core.IT_FRAME} + ${core.BLOCK_SIZE} * ${source}]`
             )
         ])
 }

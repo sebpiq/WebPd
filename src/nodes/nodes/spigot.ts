@@ -50,26 +50,26 @@ const builder: NodeBuilder<NodeArguments> = {
 
 const nodeImplementation: _NodeImplementation = {
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'isClosed', args.isClosed ? 'true': 'false')
+        Class(ns.State, [
+            Var(`Float`, `isClosed`, args.isClosed ? `true`: `false`)
         ]),
 
-    messageReceivers: ({ ns, snds, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
+    messageReceivers: ({ ns, snds, state }, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
             if (!${state}.isClosed) {
                 ${snds.$0}(m)
             }
             return
         `,
 
-        '1': coldFloatInletWithSetter(ns.setIsClosed!, state),
+        '1': coldFloatInletWithSetter(ns.setIsClosed, state, msg),
     }),
 
     core: ({ ns }) => 
         Sequence([
-            Func(ns.setIsClosed!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'value'),
+            Func(ns.setIsClosed, [
+                Var(ns.State, `state`),
+                Var(`Float`, `value`),
             ], 'void')`
                 state.isClosed = (value === 0)
             `

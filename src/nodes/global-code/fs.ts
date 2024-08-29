@@ -19,22 +19,24 @@
  */
 import { stdlib } from '@webpd/compiler'
 import { ConstVar, Func, Var } from '@webpd/compiler'
-import { GlobalCodeGeneratorWithSettings } from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
 
 // TODO : support for -raw (see soundfiler help)
 // TODO : find a better way to factorize this code
 // TODO : unit testing
-export const parseSoundFileOpenOpts: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: () => 
-        Func('parseSoundFileOpenOpts', 
-            [Var('Message', 'm'), Var('fs_SoundInfo', 'soundInfo')],
-            'Set<Int>'
-        )`
-            ${ConstVar('Set<Int>', 'unhandled', 'new Set()')}
-            ${Var('Int', 'i', '0')}
-            while (i < msg_getLength(m)) {
-                if (msg_isStringToken(m, i)) {
-                    ${ConstVar('string', 'str', 'msg_readStringToken(m, i)')}
+export const soundFileOpenOpts: GlobalDefinitions = {
+    namespace: 'soundFileOpenOpts',
+    // prettier-ignore
+    code: ({ ns: soundFileOpenOpts }, { msg, fs }) => 
+        Func(soundFileOpenOpts.parse, [
+            Var(msg.Message, `m`), 
+            Var(fs.SoundInfo, `soundInfo`)
+        ], 'Set<Int>')`
+            ${ConstVar(`Set<Int>`, `unhandled`, `new Set()`)}
+            ${Var(`Int`, `i`, `0`)}
+            while (i < ${msg.getLength}(m)) {
+                if (${msg.isStringToken}(m, i)) {
+                    ${ConstVar(`string`, `str`, `${msg.readStringToken}(m, i)`)}
                     if (['-wave', '-aiff', '-caf', '-next', '-ascii'].includes(str)) {
                         soundInfo.encodingFormat = str.slice(1)
 
@@ -49,16 +51,16 @@ export const parseSoundFileOpenOpts: GlobalCodeGeneratorWithSettings = {
                         soundInfo.endianness = 'l'
 
                     } else if (str === '-bytes') {
-                        if (i < msg_getLength(m) && msg_isFloatToken(m, i + 1)) {
-                            soundInfo.bitDepth = toInt(msg_readFloatToken(m, i + 1) * 8)
+                        if (i < ${msg.getLength}(m) && ${msg.isFloatToken}(m, i + 1)) {
+                            soundInfo.bitDepth = toInt(${msg.readFloatToken}(m, i + 1) * 8)
                             i++
                         } else {
                             console.log('failed to parse -bytes <value>')
                         }
 
                     } else if (str === '-rate') {
-                        if (i < msg_getLength(m) && msg_isFloatToken(m, i + 1)) {
-                            soundInfo.sampleRate = toInt(msg_readFloatToken(m, i + 1))
+                        if (i < ${msg.getLength}(m) && ${msg.isFloatToken}(m, i + 1)) {
+                            soundInfo.sampleRate = toInt(${msg.readFloatToken}(m, i + 1))
                             i++
                         } else {
                             console.log('failed to parse -rate <value>')
@@ -80,28 +82,27 @@ export const parseSoundFileOpenOpts: GlobalCodeGeneratorWithSettings = {
 }
 
 // TODO : unit testing
-export const parseReadWriteFsOpts: GlobalCodeGeneratorWithSettings = {
-    codeGenerator: () => 
-        Func('parseReadWriteFsOpts', 
-            [
-                Var('Message', 'm'),
-                Var('fs_SoundInfo', 'soundInfo'),
-                Var('Set<Int>', 'unhandledOptions'),
-            ],
-            'string'
-        )`
+export const readWriteFsOpts: GlobalDefinitions = {
+    namespace: 'readWriteFsOpts',
+    // prettier-ignore
+    code: ({ ns: readWriteFsOpts }, { msg, fs }) => 
+        Func(readWriteFsOpts.parse, [
+            Var(msg.Message, `m`),
+            Var(fs.SoundInfo, `soundInfo`),
+            Var(`Set<Int>`, `unhandledOptions`),
+        ], 'string')`
             // Remove the "open" token
             unhandledOptions.delete(0)
 
-            ${Var('string', 'url', '""')}
-            ${Var('boolean', 'urlFound', 'false')}
-            ${Var('boolean', 'errored', 'false')}
-            ${Var('Int', 'i', '1')}
-            while (i < msg_getLength(m)) {
+            ${Var(`string`, `url`, `""`)}
+            ${Var(`boolean`, `urlFound`, `false`)}
+            ${Var(`boolean`, `errored`, `false`)}
+            ${Var(`Int`, `i`, `1`)}
+            while (i < ${msg.getLength}(m)) {
                 if (!unhandledOptions.has(i)) {
 
-                } else if (msg_isStringToken(m, i)) {
-                    url = msg_readStringToken(m, i)
+                } else if (${msg.isStringToken}(m, i)) {
+                    url = ${msg.readStringToken}(m, i)
                     urlFound = true
 
                 } else {

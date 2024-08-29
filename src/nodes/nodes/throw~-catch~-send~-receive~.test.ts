@@ -94,8 +94,8 @@ describe('throw~ / catch~', () => {
                 ...nodeImplementationsThrowCatchSendReceive,
                 'dac~': nodeImplementationDac,
                 counter: {
-                    dsp: ({ globs, outs }) =>
-                        ast`${outs.$0} = toFloat(${globs.frame})`,
+                    dsp: ({ outs }, { core }) =>
+                        ast`${outs.$0} = toFloat(${core.FRAME})`,
                 },
             }
 
@@ -156,7 +156,7 @@ describe('throw~ / catch~', () => {
             }
 
             const engine = await createTestEngine(target, bitDepth, compileResult.code)
-            engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
+            engine.initialize(engine.metadata.settings.audio.sampleRate, 1)
             return engine
         }
 
@@ -218,8 +218,8 @@ describe('throw~ / catch~', () => {
                     nodeImplementationsThrowCatchSendReceive['receive~'],
                 'dac~': nodeImplementationDac,
                 counter: {
-                    dsp: ({ globs, outs }) =>
-                        ast`${outs.$0} = toFloat(${globs.frame})`,
+                    dsp: ({ outs }, { core }) =>
+                        ast`${outs.$0} = toFloat(${core.FRAME})`,
                 },
             }
 
@@ -278,7 +278,7 @@ describe('throw~ / catch~', () => {
             }
 
             const engine = await createTestEngine(target, bitDepth, compileResult.code)
-            engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
+            engine.initialize(engine.metadata.settings.audio.sampleRate, 1)
             return engine
         }
 

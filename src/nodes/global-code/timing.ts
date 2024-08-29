@@ -18,13 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { Func, Var } from "@webpd/compiler"
-import { GlobalCodeGenerator } from "@webpd/compiler/src/compile/types"
+import { GlobalDefinitions } from "@webpd/compiler/src/compile/types"
 
-export const computeUnitInSamples: GlobalCodeGenerator = () => 
-    Func('computeUnitInSamples', [
-        Var('Float', 'sampleRate'),
-        Var('Float', 'amount'),
-        Var('string', 'unit'),
+export const computeUnitInSamples: GlobalDefinitions = {
+    namespace: 'timing',
+    // prettier-ignore
+    code: () => Func('computeUnitInSamples', [
+        Var(`Float`, `sampleRate`),
+        Var(`Float`, `amount`),
+        Var(`string`, `unit`),
     ], 'Float')`
         if (unit.slice(0, 3) === 'per') {
             if (amount !== 0) {
@@ -45,3 +47,4 @@ export const computeUnitInSamples: GlobalCodeGenerator = () =>
             throw new Error("invalid time unit : " + unit)
         }
     `
+}

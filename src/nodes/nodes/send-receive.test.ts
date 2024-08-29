@@ -127,9 +127,9 @@ describe('send / receive', () => {
                 const received1: Array<Message> = []
                 const received2: Array<Message> = []
 
-                engine.io.messageSenders.receive1['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive1['0'] = (msg) =>
                     received1.push(msg)
-                engine.io.messageSenders.receive2['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2['0'] = (msg) =>
                     received2.push(msg)
 
                 engine.io.messageReceivers.send1['0'](['blabla', 123])
@@ -151,9 +151,9 @@ describe('send / receive', () => {
                 const received1: Array<Message> = []
                 const received2: Array<Message> = []
 
-                engine.io.messageSenders.receive1['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive1['0'] = (msg) =>
                     received1.push(msg)
-                engine.io.messageSenders.receive2['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2['0'] = (msg) =>
                     received2.push(msg)
 
                 engine.io.messageReceivers.send1['1'](['BUS2'])
@@ -172,9 +172,9 @@ describe('send / receive', () => {
                 const received2: Array<Message> = []
                 const received2bis: Array<Message> = []
 
-                engine.io.messageSenders.receive2['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2['0'] = (msg) =>
                     received2.push(msg)
-                engine.io.messageSenders.receive2bis['0'].onMessage = (msg) =>
+                engine.io.messageSenders.receive2bis['0'] = (msg) =>
                     received2bis.push(msg)
 
                 engine.io.messageReceivers.send2['0']([999])

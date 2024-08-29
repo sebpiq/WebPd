@@ -41,9 +41,12 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    messageReceivers: ({ snds }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+    messageReceivers: ({ snds }, { msg }) => ({
+        // prettier-ignore
+        '0': AnonFunc([
+            Var(msg.Message, `m`)
+        ])`
+            if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
                 ${snds.$0}(m)
                 return
             } else {

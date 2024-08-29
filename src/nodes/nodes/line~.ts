@@ -21,7 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { stringMsgUtils } from '../global-code/core'
+import { actionUtils } from '../global-code/core'
 import { linesUtils } from '../global-code/lines'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
@@ -55,64 +55,64 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'line_t',
     },
 
-    state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('LineSegment', 'currentLine', ns.defaultLine!),
-            Var('Float', 'currentValue', args.initValue),
-            Var('Float', 'nextDurationSamp', 0),
+    state: ({ node: { args }, ns }, { linesUtils }) => 
+        Class(ns.State, [
+            Var(linesUtils.LineSegment, `currentLine`, ns.defaultLine),
+            Var(`Float`, `currentValue`, args.initValue),
+            Var(`Float`, `nextDurationSamp`, 0),
         ]),
 
-    messageReceivers: ({ ns, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
+    messageReceivers: ({ ns, state }, { actionUtils, msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
             if (
-                msg_isMatching(m, [MSG_FLOAT_TOKEN])
-                || msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])
+                ${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])
+                || ${msg.isMatching}(m, [${msg.FLOAT_TOKEN}, ${msg.FLOAT_TOKEN}])
             ) {
-                switch (msg_getLength(m)) {
+                switch (${msg.getLength}(m)) {
                     case 2:
-                        ${ns.setNextDuration!}(${state}, msg_readFloatToken(m, 1))
+                        ${ns.setNextDuration}(${state}, ${msg.readFloatToken}(m, 1))
                     case 1:
-                        ${ns.setNewLine!}(${state}, msg_readFloatToken(m, 0))
+                        ${ns.setNewLine}(${state}, ${msg.readFloatToken}(m, 0))
                 }
                 return
     
-            } else if (msg_isAction(m, 'stop')) {
-                ${ns.stop!}(${state})
+            } else if (${actionUtils.isAction}(m, 'stop')) {
+                ${ns.stop}(${state})
                 return
     
             }
         `,
     
-        '1': coldFloatInletWithSetter(ns.setNextDuration!, state),
+        '1': coldFloatInletWithSetter(ns.setNextDuration, state, msg),
     }),
 
-    dsp: ({ outs, state, globs }) => ast`
+    dsp: ({ outs, state }, { core }) => ast`
         ${outs.$0} = ${state}.currentValue
-        if (toFloat(${globs.frame}) < ${state}.currentLine.p1.x) {
+        if (toFloat(${core.FRAME}) < ${state}.currentLine.p1.x) {
             ${state}.currentValue += ${state}.currentLine.dy
-            if (toFloat(${globs.frame} + 1) >= ${state}.currentLine.p1.x) {
+            if (toFloat(${core.FRAME} + 1) >= ${state}.currentLine.p1.x) {
                 ${state}.currentValue = ${state}.currentLine.p1.y
             }
         }
     `,
 
-    core: ({ globs, ns }) => 
+    core: ({ ns }, { linesUtils, core }) => 
         Sequence([
-            ConstVar('LineSegment', ns.defaultLine!, `{
+            ConstVar(linesUtils.LineSegment, ns.defaultLine, `{
                 p0: {x: -1, y: 0},
                 p1: {x: -1, y: 0},
                 dx: 1,
                 dy: 0,
             }`),
         
-            Func(ns.setNewLine!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'targetValue'),
+            Func(ns.setNewLine, [
+                Var(ns.State, `state`),
+                Var(`Float`, `targetValue`),
             ], 'void')`
-                ${ConstVar('Float', 'startFrame', `toFloat(${globs.frame})`)}
-                ${ConstVar('Float', 'endFrame', `toFloat(${globs.frame}) + state.nextDurationSamp`)}
-                if (endFrame === toFloat(${globs.frame})) {
-                    state.currentLine = ${ns.defaultLine!}
+                ${ConstVar(`Float`, `startFrame`, `toFloat(${core.FRAME})`)}
+                ${ConstVar(`Float`, `endFrame`, `toFloat(${core.FRAME}) + state.nextDurationSamp`)}
+                if (endFrame === toFloat(${core.FRAME})) {
+                    state.currentLine = ${ns.defaultLine}
                     state.currentValue = targetValue
                     state.nextDurationSamp = 0
                 } else {
@@ -128,20 +128,20 @@ const nodeImplementation: _NodeImplementation = {
                         dx: 1,
                         dy: 0,
                     }
-                    state.currentLine.dy = computeSlope(state.currentLine.p0, state.currentLine.p1)
+                    state.currentLine.dy = ${linesUtils.computeSlope}(state.currentLine.p0, state.currentLine.p1)
                     state.nextDurationSamp = 0
                 }
             `,
         
-            Func(ns.setNextDuration!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'durationMsec'),
+            Func(ns.setNextDuration, [
+                Var(ns.State, `state`),
+                Var(`Float`, `durationMsec`),
             ], 'void')`
-                state.nextDurationSamp = computeUnitInSamples(${globs.sampleRate}, durationMsec, 'msec')
+                state.nextDurationSamp = computeUnitInSamples(${core.SAMPLE_RATE}, durationMsec, 'msec')
             `,
         
-            Func(ns.stop!, [
-                Var(ns.State!, 'state'),
+            Func(ns.stop, [
+                Var(ns.State, `state`),
             ], 'void')`
                 state.currentLine.p1.x = -1
                 state.currentLine.p1.y = state.currentValue
@@ -150,7 +150,7 @@ const nodeImplementation: _NodeImplementation = {
 
 
     dependencies: [
-        stringMsgUtils, 
+        actionUtils, 
         computeUnitInSamples, 
         linesUtils, 
     ],

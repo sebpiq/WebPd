@@ -74,42 +74,45 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = { 
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Array<Float>', 'floatValues', `[${
+        Class(ns.State, [
+            Var(`Array<Float>`, `floatValues`, `[${
                 args.typeArguments.map(([typeArg, defaultValue]) => 
                     typeArg === 'float' ? defaultValue: 0
                 ).join(',')
             }]`),
-            Var('Array<string>', 'stringValues', `[${
+            Var(`Array<string>`, `stringValues`, `[${
                 args.typeArguments.map(([typeArg, defaultValue]) => 
                     typeArg === 'symbol' ? `"${defaultValue}"`: '""'
                 ).join(',')
             }]`),
         ]),
 
-    messageReceivers: ({ snds, state, node }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (!msg_isBang(m)) {
-                for (${Var('Int', 'i', '0')}; i < msg_getLength(m); i++) {
-                    ${state}.stringValues[i] = messageTokenToString(m, i)
-                    ${state}.floatValues[i] = messageTokenToFloat(m, i)
+    messageReceivers: (
+        { snds, state, node }, 
+        { bangUtils, tokenConversion, msg }
+    ) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (!${bangUtils.isBang}(m)) {
+                for (${Var(`Int`, `i`, `0`)}; i < ${msg.getLength}(m); i++) {
+                    ${state}.stringValues[i] = ${tokenConversion.toString_}(m, i)
+                    ${state}.floatValues[i] = ${tokenConversion.toFloat}(m, i)
                 }
             }
     
-            ${ConstVar('MessageTemplate', 'template', `[${
+            ${ConstVar(msg.Template, `template`, `[${
                 node.args.typeArguments.map(([typeArg], i) => 
                     typeArg === 'symbol' ? 
-                        `MSG_STRING_TOKEN, ${state}.stringValues[${i}].length`
-                        : `MSG_FLOAT_TOKEN`
+                        `${msg.STRING_TOKEN}, ${state}.stringValues[${i}].length`
+                        : `${msg.FLOAT_TOKEN}`
                     ).join(',')
             }]`)}
     
-            ${ConstVar('Message', 'messageOut', 'msg_create(template)')}
+            ${ConstVar(msg.Message, `messageOut`, `${msg.create}(template)`)}
     
             ${node.args.typeArguments.map(([typeArg], i) => 
                 typeArg === 'symbol' ? 
-                    `msg_writeStringToken(messageOut, ${i}, ${state}.stringValues[${i}])`
-                    : `msg_writeFloatToken(messageOut, ${i}, ${state}.floatValues[${i}])`)}
+                    `${msg.writeStringToken}(messageOut, ${i}, ${state}.stringValues[${i}])`
+                    : `${msg.writeFloatToken}(messageOut, ${i}, ${state}.floatValues[${i}])`)}
     
             ${snds[0]}(messageOut)
             return
@@ -119,16 +122,16 @@ const nodeImplementation: _NodeImplementation = {
             if (typeArg === 'symbol') {
                 return [
                     `${i + 1}`, 
-                    AnonFunc([Var('Message', 'm')])`
-                        ${state}.stringValues[${i + 1}] = messageTokenToString(m, 0)
+                    AnonFunc([Var(msg.Message, `m`)])`
+                        ${state}.stringValues[${i + 1}] = ${tokenConversion.toString_}(m, 0)
                         return
                     `
                 ]
             } else if (typeArg === 'float') {
                 return [
                     `${i + 1}`, 
-                    AnonFunc([Var('Message', 'm')])`
-                        ${state}.floatValues[${i + 1}] = messageTokenToFloat(m, 0)
+                    AnonFunc([Var(msg.Message, `m`)])`
+                        ${state}.floatValues[${i + 1}] = ${tokenConversion.toFloat}(m, 0)
                         return
                     `
                 ]

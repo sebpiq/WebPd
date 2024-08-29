@@ -61,17 +61,17 @@ const nodeImplementation: _NodeImplementation = {
     },
 
     state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'previous', 0),
-            Var('Float', 'current', 0),
-            Var('Float', 'coeff', 0),
-            Var('Float', 'normal', 0),
+        Class(ns.State, [
+            Var(`Float`, `previous`, 0),
+            Var(`Float`, `current`, 0),
+            Var(`Float`, `coeff`, 0),
+            Var(`Float`, `normal`, 0),
         ]),
 
-    dsp: ({ ins, state, outs, globs }) => ({
+    dsp: ({ ins, state, outs }, { core }) => ({
         inlets: {
             '1': ast`
-                ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${globs.sampleRate}, 0), 1)
+                ${state}.coeff = Math.min(Math.max(1 - ${ins.$1} * (2 * Math.PI) / ${core.SAMPLE_RATE}, 0), 1)
                 ${state}.normal = 0.5 * (1 + ${state}.coeff)
             `
         },

@@ -55,18 +55,18 @@ const nodeImplementation: _NodeImplementation = {
     },
 
     state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'currentValue', 0)
+        Class(ns.State, [
+            Var(`Float`, `currentValue`, 0)
         ]),
 
     dsp: ({ ins, state }) => ast`
         ${state}.currentValue = ${ins.$0}
     `,
 
-    messageReceivers: ({ state, snds }) => ({
-        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
-            if (msg_isBang(m)) {
-                ${snds.$0}(msg_floats([${state}.currentValue]))
+    messageReceivers: ({ state, snds }, { msg, bangUtils }) => ({
+        '0_message': AnonFunc([ Var(msg.Message, `m`) ], `void`)`
+            if (${bangUtils.isBang}(m)) {
+                ${snds.$0}(${msg.floats}([${state}.currentValue]))
                 return 
             }
         `,

@@ -59,21 +59,21 @@ const nodeImplementation: _NodeImplementation = {
     },
 
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'frequency', args.frequency),
-            Var('Float', 'Q', args.Q),
-            Var('Float', 'coef1', 0),
-            Var('Float', 'coef2', 0),
-            Var('Float', 'gain', 0),
-            Var('Float', 'y', 0),
-            Var('Float', 'ym1', 0),
-            Var('Float', 'ym2', 0),
+        Class(ns.State, [
+            Var(`Float`, `frequency`, args.frequency),
+            Var(`Float`, `Q`, args.Q),
+            Var(`Float`, `coef1`, 0),
+            Var(`Float`, `coef2`, 0),
+            Var(`Float`, `gain`, 0),
+            Var(`Float`, `y`, 0),
+            Var(`Float`, `ym1`, 0),
+            Var(`Float`, `ym2`, 0),
         ]),
 
     dsp: ({ ns, ins, outs, state }) => ({
         inlets: {
             '1': ast`
-                ${ns.setFrequency!}(${state}, ${ins.$1})
+                ${ns.setFrequency}(${state}, ${ins.$1})
             `
         },
         loop: ast`
@@ -84,19 +84,19 @@ const nodeImplementation: _NodeImplementation = {
         `
     }),
 
-    messageReceivers: ({ ns, state }) => ({
-        '2': coldFloatInletWithSetter(ns.setQ!, state),
+    messageReceivers: ({ ns, state }, { msg }) => ({
+        '2': coldFloatInletWithSetter(ns.setQ, state, msg),
     }),
 
-    core: ({ globs, ns }) => 
+    core: ({ ns }, { core }) => 
         Sequence([
-            Func(ns.updateCoefs!, [
-                Var(ns.State!, 'state'),
+            Func(ns.updateCoefs, [
+                Var(ns.State, `state`),
             ], 'void')`
-                ${Var('Float', 'omega', `state.frequency * (2.0 * Math.PI) / ${globs.sampleRate}`)}
-                ${Var('Float', 'oneminusr', `state.Q < 0.001 ? 1.0 : Math.min(omega / state.Q, 1)`)}
-                ${Var('Float', 'r', `1.0 - oneminusr`)}
-                ${Var('Float', 'sigbp_qcos', `(omega >= -(0.5 * Math.PI) && omega <= 0.5 * Math.PI) ? 
+                ${Var(`Float`, `omega`, `state.frequency * (2.0 * Math.PI) / ${core.SAMPLE_RATE}`)}
+                ${Var(`Float`, `oneminusr`, `state.Q < 0.001 ? 1.0 : Math.min(omega / state.Q, 1)`)}
+                ${Var(`Float`, `r`, `1.0 - oneminusr`)}
+                ${Var(`Float`, `sigbp_qcos`, `(omega >= -(0.5 * Math.PI) && omega <= 0.5 * Math.PI) ? 
                     (((Math.pow(omega, 6) * (-1.0 / 720.0) + Math.pow(omega, 4) * (1.0 / 24)) - Math.pow(omega, 2) * 0.5) + 1)
                     : 0`)}
         
@@ -105,20 +105,20 @@ const nodeImplementation: _NodeImplementation = {
                 state.gain = 2 * oneminusr * (oneminusr + r * omega)
             `,
         
-            Func(ns.setFrequency!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'frequency'),
+            Func(ns.setFrequency, [
+                Var(ns.State, `state`),
+                Var(`Float`, `frequency`),
             ], 'void')`
                 state.frequency = (frequency < 0.001) ? 10: frequency
-                ${ns.updateCoefs!}(state)
+                ${ns.updateCoefs}(state)
             `,
         
-            Func(ns.setQ!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'Q'),
+            Func(ns.setQ, [
+                Var(ns.State, `state`),
+                Var(`Float`, `Q`),
             ], 'void')`
                 state.Q = Math.max(Q, 0)
-                ${ns.updateCoefs!}(state)
+                ${ns.updateCoefs}(state)
             `,
         ])
 }

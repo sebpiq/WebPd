@@ -54,15 +54,15 @@ const nodeImplementation: _NodeImplementation = {
     },
     
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'currentValue', args.initValue)
+        Class(ns.State, [
+            Var(`Float`, `currentValue`, args.initValue)
         ]),
 
     dsp: ({ state }) => 
         ast`${state}.currentValue`,
 
-    messageReceivers: ({ state }) => ({
-        '0': coldFloatInlet(`${state}.currentValue`),
+    messageReceivers: ({ state }, { msg }) => ({
+        '0': coldFloatInlet(`${state}.currentValue`, msg),
     }),
 }
 

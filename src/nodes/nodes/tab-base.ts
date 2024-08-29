@@ -20,7 +20,7 @@
 
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { Func, Sequence, Var, ConstVar } from '@webpd/compiler'
+import { Func, Sequence, Var, ConstVar, VariableNamesIndex } from '@webpd/compiler'
 import { _NodeImplementation } from './controls-float'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
@@ -33,39 +33,42 @@ export const translateArgsTabBase: NodeBuilder<NodeArguments>['translateArgs'] =
         arrayName: assertOptionalString(pdNode.args[0]) || '',
     })
 
-export const nodeCoreTabBase = (ns: { [name: string]: VariableName }) => 
+export const nodeCoreTabBase = (
+    ns: { [name: string]: VariableName }, 
+    { sked, commons }: VariableNamesIndex['globals']
+) => 
     Sequence([
-        ConstVar('FloatArray', ns.emptyArray!, 'createFloatArray(1)'),
+        ConstVar(`FloatArray`, ns.emptyArray, `createFloatArray(1)`),
 
-        Func(ns.createState!, [
-            Var('string', 'arrayName'),
-        ], ns.State!)`
+        Func(ns.createState, [
+            Var(`string`, `arrayName`),
+        ], ns.State)`
             return {
-                array: ${ns.emptyArray!},
+                array: ${ns.emptyArray},
                 arrayName,
-                arrayChangesSubscription: SKED_ID_NULL,
+                arrayChangesSubscription: ${sked.ID_NULL},
                 readPosition: 0,
                 readUntil: 0,
                 writePosition: 0,
             }
         `,
 
-        Func(ns.setArrayName!, [
-            Var(ns.State!, 'state'),
-            Var('string', 'arrayName'),
-            Var('SkedCallback', 'callback'),
+        Func(ns.setArrayName, [
+            Var(ns.State, `state`),
+            Var(`string`, `arrayName`),
+            Var(sked.Callback, `callback`),
         ], 'void')`
-            if (state.arrayChangesSubscription != SKED_ID_NULL) {
-                commons_cancelArrayChangesSubscription(state.arrayChangesSubscription)
+            if (state.arrayChangesSubscription != ${sked.ID_NULL}) {
+                ${commons.cancelArrayChangesSubscription}(state.arrayChangesSubscription)
             }
             state.arrayName = arrayName
-            state.array = ${ns.emptyArray!}
-            commons_subscribeArrayChanges(arrayName, callback)
+            state.array = ${ns.emptyArray}
+            ${commons.subscribeArrayChanges}(arrayName, callback)
         `,
 
-        Func(ns.prepareIndex!, [
-            Var('Float', 'index'),
-            Var('Int', 'arrayLength'),
+        Func(ns.prepareIndex, [
+            Var(`Float`, `index`),
+            Var(`Int`, `arrayLength`),
         ], 'Int')`
             return toInt(Math.min(
                 Math.max(

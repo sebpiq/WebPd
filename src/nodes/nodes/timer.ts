@@ -23,7 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { computeUnitInSamples } from '../global-code/timing'
-import { Class, stdlib } from '@webpd/compiler'
+import { Class } from '@webpd/compiler'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
@@ -53,42 +53,38 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
     state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'sampleRatio', 0),
-            Var('Int', 'resetTime', 0),
+        Class(ns.State, [
+            Var(`Float`, `sampleRatio`, 0),
+            Var(`Int`, `resetTime`, 0),
         ]),
 
-    initialization: ({ node: { args }, state, globs }) => 
+    initialization: ({ node: { args }, state }, { core }) => 
         ast`
-            ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
+            ${state}.sampleRatio = computeUnitInSamples(${core.SAMPLE_RATE}, ${args.unitAmount}, "${args.unit}")
         `,
     
-    messageReceivers: ({
-        snds,
-        globs,
-        state,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) {
-                ${state}.resetTime = ${globs.frame}
+    messageReceivers: ({ snds, state }, { bangUtils, core, msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) {
+                ${state}.resetTime = ${core.FRAME}
                 return
     
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'tempo'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'tempo'
             ) {
                 ${state}.sampleRatio = computeUnitInSamples(
-                    ${globs.sampleRate}, 
-                    msg_readFloatToken(m, 1), 
-                    msg_readStringToken(m, 2)
+                    ${core.SAMPLE_RATE}, 
+                    ${msg.readFloatToken}(m, 1), 
+                    ${msg.readStringToken}(m, 2)
                 )
                 return
             }
         `,
     
-        '1': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) {
-                ${snds.$0}(msg_floats([toFloat(${globs.frame} - ${state}.resetTime) / ${state}.sampleRatio]))
+        '1': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) {
+                ${snds.$0}(${msg.floats}([toFloat(${core.FRAME} - ${state}.resetTime) / ${state}.sampleRatio]))
                 return
             }
         `,

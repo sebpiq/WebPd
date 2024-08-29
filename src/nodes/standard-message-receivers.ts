@@ -20,37 +20,39 @@
 
 import { AnonFunc, Var } from '@webpd/compiler'
 import { VariableName } from '@webpd/compiler/src/ast/types'
+import { VariableNamesIndex } from '@webpd/compiler'
 
+
+// prettier-ignore
 export const coldFloatInlet = (
     storageName: VariableName,
-) => {
-    return AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${storageName} = msg_readFloatToken(m, 0)
-            return
-        }
-    `
-}
+    msg: VariableNamesIndex['globals']['msg'],
+) => AnonFunc([Var(msg.Message, `m`)])`
+    if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+        ${storageName} = ${msg.readFloatToken}(m, 0)
+        return
+    }
+`
 
+// prettier-ignore
 export const coldStringInlet = (
     storageName: VariableName,
-) => {
-    return AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_STRING_TOKEN])) {
-            ${storageName} = msg_readStringToken(m, 0)
-            return
-        }
-    `
-}
+    msg: VariableNamesIndex['globals']['msg'],
+) => AnonFunc([Var(msg.Message, `m`)])`
+    if (${msg.isMatching}(m, [${msg.STRING_TOKEN}])) {
+        ${storageName} = ${msg.readStringToken}(m, 0)
+        return
+    }
+`
 
+// prettier-ignore
 export const coldFloatInletWithSetter = (
     setterName: VariableName,
     state: VariableName,
-) => {
-    return AnonFunc([Var('Message', 'm')])`
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            ${setterName}(${state}, msg_readFloatToken(m, 0))
-            return
-        }
-    `
-}
+    msg: VariableNamesIndex['globals']['msg'],
+) => AnonFunc([Var(msg.Message, `m`)])`
+    if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+        ${setterName}(${state}, ${msg.readFloatToken}(m, 0))
+        return
+    }
+`

@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { Func, Sequence, Var } from '@webpd/compiler'
+import { Func, Sequence, Var, VariableNamesIndex } from '@webpd/compiler'
 import { AstElement, VariableName } from '@webpd/compiler/src/ast/types'
 
 export const EMPTY_BUS_NAME = 'empty'
@@ -42,41 +42,42 @@ export const build: NodeBuilder<any>['build'] = () => ({
 
 export const controlsCore = (
     ns: { [name: string]: VariableName },
+    { msg, msgBuses }: VariableNamesIndex['globals']
 ): AstElement =>
     Sequence([
-        Func(ns.setReceiveBusName!, [
-            Var(ns.State!, 'state'),
-            Var('string', 'busName'),
+        Func(ns.setReceiveBusName, [
+            Var(ns.State, `state`),
+            Var(`string`, `busName`),
         ], 'void')`
             if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
-                msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
+                ${msgBuses.unsubscribe}(state.receiveBusName, state.messageReceiver)
             }
             state.receiveBusName = busName
             if (state.receiveBusName !== "${EMPTY_BUS_NAME}") {
-                msgBusSubscribe(state.receiveBusName, state.messageReceiver)
+                ${msgBuses.subscribe}(state.receiveBusName, state.messageReceiver)
             }
         `,
 
-        Func(ns.setSendReceiveFromMessage!, [
-            Var(ns.State!, 'state'),
-            Var('Message', 'm'),
+        Func(ns.setSendReceiveFromMessage, [
+            Var(ns.State, `state`),
+            Var(msg.Message, `m`),
         ], 'boolean')`
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'receive'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'receive'
             ) {
-                ${ns.setReceiveBusName!}(state, msg_readStringToken(m, 1))
+                ${ns.setReceiveBusName}(state, ${msg.readStringToken}(m, 1))
                 return true
 
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'send'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'send'
             ) {
-                state.sendBusName = msg_readStringToken(m, 1)
+                state.sendBusName = ${msg.readStringToken}(m, 1)
                 return true
             }
             return false
         `,
 
-        Func(ns.defaultMessageHandler!, [Var('Message', 'm')], 'void')``,
+        Func(ns.defaultMessageHandler, [Var(msg.Message, `m`)], `void`)``,
     ])

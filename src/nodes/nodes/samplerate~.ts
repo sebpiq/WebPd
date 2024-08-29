@@ -45,10 +45,10 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'samplerate_t',
     },
 
-    messageReceivers: ({ globs, snds }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) { 
-                ${snds.$0}(msg_floats([${globs.sampleRate}])) 
+    messageReceivers: ({ snds }, { core, msg, bangUtils }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) { 
+                ${snds.$0}(${msg.floats}([${core.SAMPLE_RATE}])) 
                 return
             }
         `,

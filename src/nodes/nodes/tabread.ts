@@ -21,8 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { nodeCoreTabBase, translateArgsTabBase, NodeArguments } from './tab-base'
-import { Class, Func, Sequence, ast, stdlib } from '@webpd/compiler'
-import { AnonFunc, Var } from '@webpd/compiler'
+import { Class, Func, Sequence, ast, stdlib, AnonFunc, Var } from '@webpd/compiler'
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
@@ -41,36 +40,36 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('FloatArray', 'array', ns.emptyArray!),
-            Var('string', 'arrayName', `"${args.arrayName}"`),
-            Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
-            Var('Int', 'readPosition', 0),
-            Var('Int', 'readUntil', 0),
-            Var('Int', 'writePosition', 0),
+    state: ({ node: { args }, ns }, { sked }) => 
+        Class(ns.State, [
+            Var(`FloatArray`, `array`, ns.emptyArray),
+            Var(`string`, `arrayName`, `"${args.arrayName}"`),
+            Var(sked.Id, `arrayChangesSubscription`, sked.ID_NULL),
+            Var(`Int`, `readPosition`, 0),
+            Var(`Int`, `readUntil`, 0),
+            Var(`Int`, `writePosition`, 0),
         ]),
     
     initialization: ({ ns, state }) => ast`
         if (${state}.arrayName.length) {
-            ${ns.setArrayName!}(
+            ${ns.setArrayName}(
                 ${state}, 
                 ${state}.arrayName,
-                () => ${ns.setArrayNameFinalize!}(${state})
+                () => ${ns.setArrayNameFinalize}(${state})
             )
         }
     `,
 
-    messageReceivers: ({ ns, snds, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {        
+    messageReceivers: ({ ns, snds, state }, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {        
                 if (${state}.array.length === 0) {
-                    ${snds.$0}(msg_floats([0]))
+                    ${snds.$0}(${msg.floats}([0]))
 
                 } else {
-                    ${snds.$0}(msg_floats([${state}.array[
-                        ${ns.prepareIndex!}(
-                            msg_readFloatToken(m, 0), 
+                    ${snds.$0}(${msg.floats}([${state}.array[
+                        ${ns.prepareIndex}(
+                            ${msg.readFloatToken}(m, 0), 
                             ${state}.array.length
                         )
                     ]]))
@@ -78,13 +77,13 @@ const nodeImplementation: _NodeImplementation = {
                 return 
 
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'set'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'set'
             ) {
-                ${ns.setArrayName!}(
+                ${ns.setArrayName}(
                     ${state}, 
-                    msg_readStringToken(m, 1),
-                    () => ${ns.setArrayNameFinalize!}(${state})
+                    ${msg.readStringToken}(m, 1),
+                    () => ${ns.setArrayNameFinalize}(${state})
                 )
                 return
         
@@ -92,16 +91,18 @@ const nodeImplementation: _NodeImplementation = {
         `,
     }),
 
-    core: ({ ns }) => 
-        Sequence([
-            nodeCoreTabBase(ns),
+    core: ({ ns }, globals) => {
+        const { commons } = globals
+        return Sequence([
+            nodeCoreTabBase(ns, globals),
 
-            Func(ns.setArrayNameFinalize!, [
-                Var(ns.State!, 'state'),
+            Func(ns.setArrayNameFinalize, [
+                Var(ns.State, `state`),
             ], 'void')`
-                state.array = commons_getArray(state.arrayName)
+                state.array = ${commons.getArray}(state.arrayName)
             `,
-        ]),
+        ])
+    },
 
     dependencies: [
         stdlib.commonsArrays,

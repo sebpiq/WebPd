@@ -21,7 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { bangUtils, stringMsgUtils } from '../global-code/core'
+import { bangUtils, actionUtils } from '../global-code/core'
 import { Class, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 import { nodeCoreTabBase, NodeArguments } from './tab-base'
@@ -51,95 +51,96 @@ const nodeImplementation: _NodeImplementation = {
         alphaName: 'tabplay_t',
     },
 
-    state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('FloatArray', 'array', ns.emptyArray!),
-            Var('string', 'arrayName', `"${args.arrayName}"`),
-            Var('SkedId', 'arrayChangesSubscription', 'SKED_ID_NULL'),
-            Var('Int', 'readPosition', 0),
-            Var('Int', 'readUntil', 0),
-            Var('Int', 'writePosition', 0),
+    state: ({ node: { args }, ns }, { sked }) => 
+        Class(ns.State, [
+            Var(`FloatArray`, `array`, ns.emptyArray),
+            Var(`string`, `arrayName`, `"${args.arrayName}"`),
+            Var(sked.Id, `arrayChangesSubscription`, sked.ID_NULL),
+            Var(`Int`, `readPosition`, 0),
+            Var(`Int`, `readUntil`, 0),
+            Var(`Int`, `writePosition`, 0),
         ]),
 
     initialization: ({ ns, state }) => ast`
         if (${state}.arrayName.length) {
-            ${ns.setArrayName!}(
+            ${ns.setArrayName}(
                 ${state}, 
                 ${state}.arrayName,
-                () => ${ns.setArrayNameFinalize!}(${state})
+                () => ${ns.setArrayNameFinalize}(${state})
             )
         }
     `,
 
-    messageReceivers: ({ ns, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isBang(m)) {
-                ${ns.play!}(${state}, 0, ${state}.array.length)
+    messageReceivers: ({ ns, state }, { msg, bangUtils, actionUtils }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${bangUtils.isBang}(m)) {
+                ${ns.play}(${state}, 0, ${state}.array.length)
                 return 
                 
-            } else if (msg_isAction(m, 'stop')) {
-                ${ns.stop!}(${state})
+            } else if (${actionUtils.isAction}(m, 'stop')) {
+                ${ns.stop}(${state})
                 return 
     
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'set'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'set'
             ) {
-                ${ns.setArrayName!}(
+                ${ns.setArrayName}(
                     ${state},
-                    msg_readStringToken(m, 1),
-                    () => ${ns.setArrayNameFinalize!}(${state}),
+                    ${msg.readStringToken}(m, 1),
+                    () => ${ns.setArrayNameFinalize}(${state}),
                 )
                 return
     
-            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${ns.play!}(
+            } else if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+                ${ns.play}(
                     ${state},
-                    toInt(msg_readFloatToken(m, 0)), 
+                    toInt(${msg.readFloatToken}(m, 0)), 
                     ${state}.array.length
                 )
                 return 
     
-            } else if (msg_isMatching(m, [MSG_FLOAT_TOKEN, MSG_FLOAT_TOKEN])) {
-                ${ConstVar('Int', 'fromSample', `toInt(msg_readFloatToken(m, 0))`)}
-                ${ns.play!}(
+            } else if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}, ${msg.FLOAT_TOKEN}])) {
+                ${ConstVar(`Int`, `fromSample`, `toInt(${msg.readFloatToken}(m, 0))`)}
+                ${ns.play}(
                     ${state},
                     fromSample,
-                    fromSample + toInt(msg_readFloatToken(m, 1)),
+                    fromSample + toInt(${msg.readFloatToken}(m, 1)),
                 )
                 return
             }
         `,
     }),
 
-    dsp: ({ state, snds, outs }) => ast`
+    dsp: ({ state, snds, outs }, { bangUtils }) => ast`
         if (${state}.readPosition < ${state}.readUntil) {
             ${outs.$0} = ${state}.array[${state}.readPosition]
             ${state}.readPosition++
             if (${state}.readPosition >= ${state}.readUntil) {
-                ${snds.$1}(msg_bang())
+                ${snds.$1}(${bangUtils.bang}())
             }
         } else {
             ${outs.$0} = 0
         }
     `,
 
-    core: ({ ns }) => 
-        Sequence([
-            nodeCoreTabBase(ns),
+    core: ({ ns }, globals) => {
+        const { commons } = globals
+        return Sequence([
+            nodeCoreTabBase(ns, globals),
 
-            Func(ns.setArrayNameFinalize!, [
-                Var(ns.State!, 'state'),
+            Func(ns.setArrayNameFinalize, [
+                Var(ns.State, `state`),
             ], 'void')`
-                state.array = commons_getArray(state.arrayName)
+                state.array = ${commons.getArray}(state.arrayName)
                 state.readPosition = state.array.length
                 state.readUntil = state.array.length
             `,
         
-            Func(ns.play!, [
-                Var(ns.State!, 'state'),
-                Var('Int', 'playFrom'),
-                Var('Int', 'playTo'),
+            Func(ns.play, [
+                Var(ns.State, `state`),
+                Var(`Int`, `playFrom`),
+                Var(`Int`, `playTo`),
             ], 'void')`
                 state.readPosition = playFrom
                 state.readUntil = toInt(Math.min(
@@ -148,18 +149,19 @@ const nodeImplementation: _NodeImplementation = {
                 ))
             `,
         
-            Func(ns.stop!, [
-                Var(ns.State!, 'state'),
+            Func(ns.stop, [
+                Var(ns.State, `state`),
             ], 'void')`
                 state.readPosition = 0
                 state.readUntil = 0
             `,
-        ]),
+        ])
+    },
 
     dependencies: [
         bangUtils,
         stdlib.commonsArrays,
-        stringMsgUtils,
+        actionUtils,
     ],
 }
 

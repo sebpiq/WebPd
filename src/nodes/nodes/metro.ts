@@ -21,7 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
-import { bangUtils, stringMsgUtils } from '../global-code/core'
+import { bangUtils, actionUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
 import { Class, Sequence, stdlib } from '@webpd/compiler'
@@ -55,87 +55,95 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------ node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
-    state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'rate', 0),
-            Var('Float', 'sampleRatio', 1),
-            Var('Int', 'skedId', 'SKED_ID_NULL'),
-            Var('Float', 'realNextTick', -1),
-            Var('MessageHandler', 'snd0', AnonFunc([Var('Message', 'm')])``),
-            Var('SkedCallback', 'tickCallback', AnonFunc()``),
+    state: ({ ns }, { msg, sked }) => 
+        Class(ns.State, [
+            Var(`Float`, `rate`, 0),
+            Var(`Float`, `sampleRatio`, 1),
+            Var(`Int`, `skedId`, sked.ID_NULL),
+            Var(`Float`, `realNextTick`, -1),
+            Var(msg.Handler, `snd0`, AnonFunc([Var(msg.Message, `m`)])``),
+            Var(sked.Callback, `tickCallback`, AnonFunc()``),
         ]),
 
-    initialization: ({
-        ns,
-        node: { args }, 
-        state, 
-        globs, 
-        snds,
-    }) => 
+    initialization: (
+        {
+            ns,
+            node: { args }, 
+            state, 
+            snds,
+        }, 
+        { core }
+    ) => 
         ast`
             ${state}.snd0 = ${snds.$0}
-            ${state}.sampleRatio = computeUnitInSamples(${globs.sampleRate}, ${args.unitAmount}, "${args.unit}")
-            ${ns.setRate!}(${state}, ${args.rate})
+            ${state}.sampleRatio = computeUnitInSamples(${core.SAMPLE_RATE}, ${args.unitAmount}, "${args.unit}")
+            ${ns.setRate}(${state}, ${args.rate})
             ${state}.tickCallback = ${AnonFunc()`
-                ${ns.scheduleNextTick!}(${state})
+                ${ns.scheduleNextTick}(${state})
             `}
         `,
     
-    messageReceivers: ({ 
-        ns,
-        state, 
-        globs, 
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_getLength(m) === 1) {
+    messageReceivers: (
+        { 
+            ns,
+            state,
+        }, {
+            core,
+            msg,
+            bangUtils,
+            actionUtils,
+        }
+    ) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.getLength}(m) === 1) {
                 if (
-                    (msg_isFloatToken(m, 0) && msg_readFloatToken(m, 0) === 0)
-                    || msg_isAction(m, 'stop')
+                    (${msg.isFloatToken}(m, 0) && ${msg.readFloatToken}(m, 0) === 0)
+                    || ${actionUtils.isAction}(m, 'stop')
                 ) {
-                    ${ns.stop!}(${state})
+                    ${ns.stop}(${state})
                     return
     
                 } else if (
-                    msg_isFloatToken(m, 0)
-                    || msg_isBang(m)
+                    ${msg.isFloatToken}(m, 0)
+                    || ${bangUtils.isBang}(m)
                 ) {
-                    ${state}.realNextTick = toFloat(${globs.frame})
-                    ${ns.scheduleNextTick!}(${state})
+                    ${state}.realNextTick = toFloat(${core.FRAME})
+                    ${ns.scheduleNextTick}(${state})
                     return
                 }
             }
         `,
     
-        '1': coldFloatInletWithSetter(ns.setRate!, state),
+        '1': coldFloatInletWithSetter(ns.setRate, state, msg),
     }),
 
-    core: ({ ns }) => 
+    core: ({ ns }, { bangUtils, commons, sked }) => 
         Sequence([
             // Time units are all expressed in samples here
-            Func(ns.setRate!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'rate'),
+            Func(ns.setRate, [
+                Var(ns.State, `state`),
+                Var(`Float`, `rate`),
             ], 'void')`
                 state.rate = Math.max(rate, 0)
             `,
         
-            Func(ns.scheduleNextTick!, [
-                Var(ns.State!, 'state'),
+            Func(ns.scheduleNextTick, [
+                Var(ns.State, `state`),
             ], 'void')`
-                state.snd0(msg_bang())
+                state.snd0(${bangUtils.bang}())
                 state.realNextTick = state.realNextTick + state.rate * state.sampleRatio
-                state.skedId = commons_waitFrame(
+                state.skedId = ${commons.waitFrame}(
                     toInt(Math.round(state.realNextTick)), 
                     state.tickCallback,
                 )
             `,
         
-            Func(ns.stop!, [
-                Var(ns.State!, 'state'),
+            Func(ns.stop, [
+                Var(ns.State, `state`),
             ], 'void')`
-                if (state.skedId !== SKED_ID_NULL) {
-                    commons_cancelWaitFrame(state.skedId)
-                    state.skedId = SKED_ID_NULL
+                if (state.skedId !== ${sked.ID_NULL}) {
+                    ${commons.cancelWaitFrame}(state.skedId)
+                    state.skedId = ${sked.ID_NULL}
                 }
                 state.realNextTick = 0
             `,
@@ -144,7 +152,7 @@ const nodeImplementation: _NodeImplementation = {
     dependencies: [
         computeUnitInSamples,
         bangUtils,
-        stringMsgUtils,
+        actionUtils,
         stdlib.commonsWaitFrame,
     ],
 }

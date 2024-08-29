@@ -25,20 +25,20 @@ describe('global-code.points', () => {
     runTestSuite([
         {
             description: 'interpolateLin > should compute linear interpolation %s',
-            testFunction: () => AnonFunc()`
-                assert_floatsEqual(interpolateLin(                
+            testFunction: ({ globals: { points } }) => AnonFunc()`
+                assert_floatsEqual(${points.interpolateLin}(                
                     0,
                     {x: 0, y: 0},
                     {x: 1, y: 1},
                 ), 0)
 
-                assert_floatsEqual(interpolateLin(                
+                assert_floatsEqual(${points.interpolateLin}(                
                     0.5,
                     {x: 0, y: 0},
                     {x: 1, y: 1},
                 ), 0.5)
 
-                assert_floatsEqual(interpolateLin(                
+                assert_floatsEqual(${points.interpolateLin}(                
                     15.5,
                     {x: -1.5, y: -2},
                     {x: 0.5, y: 2},

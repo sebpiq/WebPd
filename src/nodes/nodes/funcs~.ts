@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
 import { ast } from '@webpd/compiler'
@@ -79,7 +79,7 @@ const nodeImplementations: NodeImplementations = {
             isDspInline: true,
             alphaName: 'mtof_t',
         },
-        dsp: ({ ins }) => ast`mtof(${ins.$0})`,
+        dsp: ({ ins }, { funcs }) => ast`${funcs.mtof}(${ins.$0})`,
         dependencies: [mtof],
     },
     'ftom~': {
@@ -88,7 +88,7 @@ const nodeImplementations: NodeImplementations = {
             isDspInline: true,
             alphaName: 'ftom_t',
         },
-        dsp: ({ ins }) => ast`ftom(${ins.$0})`,
+        dsp: ({ ins }, { funcs }) => ast`${funcs.ftom}(${ins.$0})`,
         dependencies: [ftom],
     },
 }

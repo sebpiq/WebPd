@@ -41,7 +41,7 @@ import {
     ControlsBaseNodeArguments,
     controlsCore,
 } from './controls-base'
-import { messageBuses } from '../global-code/buses'
+import { msgBuses } from '../global-code/buses'
 import { bangUtils } from '../global-code/core'
 
 interface NodeArguments extends ControlsBaseNodeArguments {
@@ -96,93 +96,106 @@ const makeNodeImplementation = ({
 }): _NodeImplementation => {
 
     return {
-        state: ({ ns, node: { args } }) => 
-            Class(ns.State!, [
-                Var('Float', 'minValue', args.minValue),
-                Var('Float', 'maxValue', args.maxValue),
-                Var('Float', 'valueFloat', args.initValue),
-                Var('Message', 'value', 'msg_create([])'),
-                Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
-                Var('string', 'sendBusName', `"${args.sendBusName}"`),
-                Var('MessageHandler', 'messageReceiver', ns.defaultMessageHandler!),
-                Var('MessageHandler', 'messageSender', ns.defaultMessageHandler!),
+        flags: {
+            alphaName: name,
+        },
+
+        state: ({ ns, node: { args } }, { msg }) => 
+            Class(ns.State, [
+                Var(`Float`, `minValue`, args.minValue),
+                Var(`Float`, `maxValue`, args.maxValue),
+                Var(`Float`, `valueFloat`, args.initValue),
+                Var(msg.Message, `value`, `${msg.create}([])`),
+                Var(`string`, `receiveBusName`, `"${args.receiveBusName}"`),
+                Var(`string`, `sendBusName`, `"${args.sendBusName}"`),
+                Var(msg.Handler, `messageReceiver`, ns.defaultMessageHandler),
+                Var(msg.Handler, `messageSender`, ns.defaultMessageHandler),
             ]),
 
-        initialization: ({
-            ns,
-            state,
-            snds,
-            node: { args },
-        }) =>
+        initialization: (
+            {
+                ns,
+                state,
+                snds,
+                node: { args },
+            }, {
+                commons, msg
+            }
+        ) =>
             ast`
                 ${state}.messageSender = ${snds.$0}
-                ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
-                    ${ns.receiveMessage!}(${state}, m)
+                ${state}.messageReceiver = ${AnonFunc([Var(msg.Message, `m`)])`
+                    ${ns.receiveMessage}(${state}, m)
                 `}
-                ${ns.setReceiveBusName!}(${state}, "${args.receiveBusName}")
+                ${ns.setReceiveBusName}(${state}, "${args.receiveBusName}")
     
                 ${args.outputOnLoad ? 
-                    `commons_waitFrame(0, () => ${snds.$0}(msg_floats([${state}.valueFloat])))`: null}
+                    `${commons.waitFrame}(0, () => ${snds.$0}(${msg.floats}([${state}.valueFloat])))`: null}
             `,
         
-        messageReceivers: ({ 
-            ns,
-            state, 
-        }) => ({
-            '0': AnonFunc([Var('Message', 'm')])`
-                ${ns.receiveMessage!}(${state}, m)
+        messageReceivers: (
+            { 
+                ns,
+                state, 
+            },
+            { msg }
+        ) => ({
+            '0': AnonFunc([Var(msg.Message, `m`)])`
+                ${ns.receiveMessage}(${state}, m)
                 return
             `
         }),
 
-        core: ({ ns }) => 
-            Sequence([
-                controlsCore(ns),
+        core: ({ ns }, globals) => {
+            const { msgBuses, bangUtils, msg } = globals
+            return Sequence([
+                controlsCore(ns, globals),
 
-                Func(ns.receiveMessage!, [
-                    Var(ns.State!, 'state'),
-                    Var('Message', 'm'),
+                Func(ns.receiveMessage, [
+                    Var(ns.State, `state`),
+                    Var(msg.Message, `m`),
                 ], 'void')`
-                    if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+                    if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
                         ${prepareStoreValue ? 
-                            `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 0)`)}`
-                            : `state.valueFloat = msg_readFloatToken(m, 0)`}
-                        ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
+                            `state.valueFloat = ${prepareStoreValue(`${msg.readFloatToken}(m, 0)`)}`
+                            : `state.valueFloat = ${msg.readFloatToken}(m, 0)`}
+                        ${ConstVar(msg.Message, `outMessage`, `${msg.floats}([state.valueFloat])`)}
                         state.messageSender(outMessage)
                         if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                            msgBusPublish(state.sendBusName, outMessage)
+                            ${msgBuses.publish}(state.sendBusName, outMessage)
                         }
                         return
         
-                    } else if (msg_isBang(m)) {
+                    } else if (${bangUtils.isBang}(m)) {
                         ${prepareStoreValueBang ? 
                             `state.valueFloat = ${prepareStoreValueBang(`state.valueFloat`)}`
                         : null}
-                        ${ConstVar('Message', 'outMessage', `msg_floats([state.valueFloat])`)}
+                        ${ConstVar(msg.Message, `outMessage`, `${msg.floats}([state.valueFloat])`)}
                         state.messageSender(outMessage)
                         if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                            msgBusPublish(state.sendBusName, outMessage)
+                            ${msgBuses.publish}(state.sendBusName, outMessage)
                         }
                         return
         
                     } else if (
-                        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN]) 
-                        && msg_readStringToken(m, 0) === 'set'
+                        ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}]) 
+                        && ${msg.readStringToken}(m, 0) === 'set'
                     ) {
                         ${prepareStoreValue ? 
-                            `state.valueFloat = ${prepareStoreValue(`msg_readFloatToken(m, 1)`)}`
-                            : `state.valueFloat = msg_readFloatToken(m, 1)`}
+                            `state.valueFloat = ${prepareStoreValue(`${msg.readFloatToken}(m, 1)`)}`
+                            : `state.valueFloat = ${msg.readFloatToken}(m, 1)`}
                         return
                     
-                    } else if (${ns.setSendReceiveFromMessage!}(state, m) === true) {
+                    } else if (${ns.setSendReceiveFromMessage}(state, m) === true) {
                         return
                     }
                 `
-            ]),
+            ])
+        },
 
         dependencies: [
             bangUtils,
-            messageBuses,
+            msgBuses,
             stdlib.commonsWaitFrame,
         ],
     }

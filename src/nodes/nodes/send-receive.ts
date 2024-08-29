@@ -21,7 +21,7 @@
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { messageBuses } from '../global-code/buses'
+import { msgBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
 import { Class, stdlib } from '@webpd/compiler'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
@@ -62,35 +62,35 @@ const builderReceive: NodeBuilder<NodeArguments> = {
 // -------------------------------- node implementation - send ----------------------------------- //
 const nodeImplementationSend: _NodeImplementation = {
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('string', 'busName', `"${args.busName}"`),
+        Class(ns.State, [
+            Var(`string`, `busName`, `"${args.busName}"`),
         ]),
         
     messageReceivers: ({
         state,
-    }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            msgBusPublish(${state}.busName, m)
+    }, { msgBuses, msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            ${msgBuses.publish}(${state}.busName, m)
             return
         `,
     
-        '1': coldStringInlet(`${state}.busName`)
+        '1': coldStringInlet(`${state}.busName`, msg)
     }),
 
     dependencies: [
-        messageBuses, 
+        msgBuses, 
     ],
 }
 
 // -------------------------------- node implementation - receive ----------------------------------- //
 const nodeImplementationReceive: _NodeImplementation = {
-    initialization: ({ node: { args }, snds }) => 
+    initialization: ({ node: { args }, snds }, { msgBuses }) => 
         ast`
-            msgBusSubscribe("${args.busName}", ${snds.$0})
+            ${msgBuses.subscribe}("${args.busName}", ${snds.$0})
         `,
     
     dependencies: [
-        messageBuses, 
+        msgBuses, 
     ],
 }
 

@@ -98,14 +98,14 @@ describe('dac~', () => {
             const nodeImplementations: NodeImplementations = {
                 'dac~': nodeImplementation,
                 counter: {
-                    dsp: ({ globs, outs }) =>
+                    dsp: ({ outs }, { core }) =>
                         Sequence([
                             functional
                                 .countTo(args.channelMapping.length)
                                 .map(
                                     (i) =>
                                         `${outs[`${i}`]} = toFloat(${
-                                            globs.frame
+                                            core.FRAME
                                         }) * Math.pow(10, ${i})`
                                 ),
                         ]),
@@ -150,7 +150,7 @@ describe('dac~', () => {
                 bitDepth,
                 compileResult.code
             )
-            engine.initialize(engine.metadata.audioSettings.sampleRate, 1)
+            engine.initialize(engine.metadata.settings.audio.sampleRate, 1)
             return engine
         }
 

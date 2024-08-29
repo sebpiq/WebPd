@@ -1,5 +1,5 @@
 
-        const metadata: string = '{"libVersion":"0.1.0","audioSettings":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"compilation":{"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}},"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"IORCV_n_0_1_0"}},"messageSenders":{}}}}}'
+        const metadata: string = '{"libVersion":"0.1.0","settings":{"audio":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}}},"compilation":{"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"IO_rcv_n_0_1_0"}},"messageSenders":{}},"globals":{"core":{"createFloatArray":"createFloatArray","x_createListOfArrays":"x_createListOfArrays","x_pushToListOfArrays":"x_pushToListOfArrays","x_getListOfArraysLength":"x_getListOfArraysLength","x_getListOfArraysElem":"x_getListOfArraysElem","x_getInput":"x_getInput","x_getOutput":"x_getOutput"},"commons":{"getArray":"G_commons_getArray","setArray":"G_commons_setArray"},"msg":{"writeStringToken":"G_msg_writeStringToken","writeFloatToken":"G_msg_writeFloatToken","readStringToken":"G_msg_readStringToken","readFloatToken":"G_msg_readFloatToken","FLOAT_TOKEN":"G_msg_FLOAT_TOKEN","STRING_TOKEN":"G_msg_STRING_TOKEN","x_create":"G_msg_x_create","x_getTokenTypes":"G_msg_x_getTokenTypes","x_createTemplate":"G_msg_x_createTemplate"}}}}}'
 
         
                 type FloatArray = Float64Array
@@ -21,190 +21,189 @@ function setFloatDataView(dataView: DataView, position: Int, value: Float): void
 function getFloatDataView(dataView: DataView, position: Int): Float {
                     return dataView.getFloat64(position)
                 }
-function x_core_createListOfArrays(): FloatArray[] {
+function x_createListOfArrays(): FloatArray[] {
                     const arrays: FloatArray[] = []
                     return arrays
                 }
-function x_core_pushToListOfArrays(arrays: FloatArray[], array: FloatArray): void {
+function x_pushToListOfArrays(arrays: FloatArray[], array: FloatArray): void {
                     arrays.push(array)
                 }
-function x_core_getListOfArraysLength(arrays: FloatArray[]): Int {
+function x_getListOfArraysLength(arrays: FloatArray[]): Int {
                     return arrays.length
                 }
-function x_core_getListOfArraysElem(arrays: FloatArray[], index: Int): FloatArray {
+function x_getListOfArraysElem(arrays: FloatArray[], index: Int): FloatArray {
                     return arrays[index]
                 }
+function x_getInput(): FloatArray {
+                    return INPUT
+                }
+function x_getOutput(): FloatArray {
+                    return OUTPUT
+                }
+let IT_FRAME: Int = 0
+let FRAME: Int = 0
+let BLOCK_SIZE: Int = 0
+let SAMPLE_RATE: Float = 0
+let NULL_SIGNAL: Float = 0
+let INPUT: FloatArray = createFloatArray(0)
+let OUTPUT: FloatArray = createFloatArray(0)
 
-            type SkedCallback = (event: SkedEvent) => void
-            type SkedId = Int
-            type SkedMode = Int
-            type SkedEvent = string
-        
-const SKED_ID_NULL: SkedId = -1
-const SKED_ID_COUNTER_INIT: SkedId = 1
-const _SKED_WAIT_IN_PROGRESS: Int = 0
-const _SKED_WAIT_OVER: Int = 1
-const _SKED_MODE_WAIT: Int = 0
-const _SKED_MODE_SUBSCRIBE: Int = 1
-class SkedRequest {
-id: SkedId
-mode: SkedMode
-callback: SkedCallback
+                type G_sked_Callback = (event: G_sked_Event) => void
+                type G_sked_Id = Int
+                type G_sked_Mode = Int
+                type G_sked_Event = string
+            
+const G_sked_ID_NULL: G_sked_Id = -1
+const G_sked__ID_COUNTER_INIT: G_sked_Id = 1
+const G_sked__MODE_WAIT: Int = 0
+const G_sked__MODE_SUBSCRIBE: Int = 1
+class G_sked__Request {
+id: G_sked_Id
+mode: G_sked_Mode
+callback: G_sked_Callback
 }
-class Skeduler {
-events: Map<SkedEvent, Array<SkedId>>
-requests: Map<SkedId, SkedRequest>
+class G_sked_Skeduler {
+events: Map<G_sked_Event, Array<G_sked_Id>>
+requests: Map<G_sked_Id, G_sked__Request>
 isLoggingEvents: boolean
-eventLog: Set<SkedEvent>
-idCounter: SkedId
+eventLog: Set<G_sked_Event>
+idCounter: G_sked_Id
 }
-function sked_create(isLoggingEvents: boolean): Skeduler {
-            return {
-                eventLog: new Set(),
-                events: new Map(),
-                requests: new Map(),
-                idCounter: SKED_ID_COUNTER_INIT,
-                isLoggingEvents,
+function G_sked_create(isLoggingEvents: boolean): G_sked_Skeduler {
+                return {
+                    eventLog: new Set(),
+                    events: new Map(),
+                    requests: new Map(),
+                    idCounter: G_sked__ID_COUNTER_INIT,
+                    isLoggingEvents,
+                }
             }
-        }
-function sked_wait(skeduler: Skeduler, event: SkedEvent, callback: SkedCallback): SkedId {
-            if (skeduler.isLoggingEvents === false) {
-                throw new Error("Please activate skeduler's isLoggingEvents")
-            }
+function G_sked_wait(skeduler: G_sked_Skeduler, event: G_sked_Event, callback: G_sked_Callback): G_sked_Id {
+                if (skeduler.isLoggingEvents === false) {
+                    throw new Error("Please activate skeduler's isLoggingEvents")
+                }
 
-            if (skeduler.eventLog.has(event)) {
-                callback(event)
-                return SKED_ID_NULL
-            } else {
-                return _sked_createRequest(skeduler, event, callback, _SKED_MODE_WAIT)
+                if (skeduler.eventLog.has(event)) {
+                    callback(event)
+                    return G_sked_ID_NULL
+                } else {
+                    return G_sked__createRequest(skeduler, event, callback, G_sked__MODE_WAIT)
+                }
             }
-        }
-function sked_wait_future(skeduler: Skeduler, event: SkedEvent, callback: SkedCallback): SkedId {
-            return _sked_createRequest(skeduler, event, callback, _SKED_MODE_WAIT)
-        }
-function sked_subscribe(skeduler: Skeduler, event: SkedEvent, callback: SkedCallback): SkedId {
-            return _sked_createRequest(skeduler, event, callback, _SKED_MODE_SUBSCRIBE)
-        }
-function sked_emit(skeduler: Skeduler, event: SkedEvent): void {
-            if (skeduler.isLoggingEvents === true) {
-                skeduler.eventLog.add(event)
+function G_sked_waitFuture(skeduler: G_sked_Skeduler, event: G_sked_Event, callback: G_sked_Callback): G_sked_Id {
+                return G_sked__createRequest(skeduler, event, callback, G_sked__MODE_WAIT)
             }
-            if (skeduler.events.has(event)) {
-                const skedIds: Array<SkedId> = skeduler.events.get(event)
-                const skedIdsStaying: Array<SkedId> = []
-                for (let i: Int = 0; i < skedIds.length; i++) {
-                    if (skeduler.requests.has(skedIds[i])) {
-                        const request: SkedRequest = skeduler.requests.get(skedIds[i])
-                        request.callback(event)
-                        if (request.mode === _SKED_MODE_WAIT) {
-                            skeduler.requests.delete(request.id)
-                        } else {
-                            skedIdsStaying.push(request.id)
+function G_sked_subscribe(skeduler: G_sked_Skeduler, event: G_sked_Event, callback: G_sked_Callback): G_sked_Id {
+                return G_sked__createRequest(skeduler, event, callback, G_sked__MODE_SUBSCRIBE)
+            }
+function G_sked_emit(skeduler: G_sked_Skeduler, event: G_sked_Event): void {
+                if (skeduler.isLoggingEvents === true) {
+                    skeduler.eventLog.add(event)
+                }
+                if (skeduler.events.has(event)) {
+                    const skedIds: Array<G_sked_Id> = skeduler.events.get(event)
+                    const skedIdsStaying: Array<G_sked_Id> = []
+                    for (let i: Int = 0; i < skedIds.length; i++) {
+                        if (skeduler.requests.has(skedIds[i])) {
+                            const request: G_sked__Request = skeduler.requests.get(skedIds[i])
+                            request.callback(event)
+                            if (request.mode === G_sked__MODE_WAIT) {
+                                skeduler.requests.delete(request.id)
+                            } else {
+                                skedIdsStaying.push(request.id)
+                            }
                         }
                     }
+                    skeduler.events.set(event, skedIdsStaying)
                 }
-                skeduler.events.set(event, skedIdsStaying)
             }
-        }
-function sked_cancel(skeduler: Skeduler, id: SkedId): void {
-            skeduler.requests.delete(id)
-        }
-function _sked_createRequest(skeduler: Skeduler, event: SkedEvent, callback: SkedCallback, mode: SkedMode): SkedId {
-            const id: SkedId = _sked_nextId(skeduler)
-            const request: SkedRequest = {
-                id, 
-                mode, 
-                callback,
+function G_sked_cancel(skeduler: G_sked_Skeduler, id: G_sked_Id): void {
+                skeduler.requests.delete(id)
             }
-            skeduler.requests.set(id, request)
-            if (!skeduler.events.has(event)) {
-                skeduler.events.set(event, [id])    
-            } else {
-                skeduler.events.get(event).push(id)
+function G_sked__createRequest(skeduler: G_sked_Skeduler, event: G_sked_Event, callback: G_sked_Callback, mode: G_sked_Mode): G_sked_Id {
+                const id: G_sked_Id = G_sked__nextId(skeduler)
+                const request: G_sked__Request = {
+                    id, 
+                    mode, 
+                    callback,
+                }
+                skeduler.requests.set(id, request)
+                if (!skeduler.events.has(event)) {
+                    skeduler.events.set(event, [id])    
+                } else {
+                    skeduler.events.get(event).push(id)
+                }
+                return id
             }
-            return id
-        }
-function _sked_nextId(skeduler: Skeduler): SkedId {
-            return skeduler.idCounter++
-        }
-const _commons_ARRAYS: Map<string, FloatArray> = new Map()
-const _commons_ARRAYS_SKEDULER: Skeduler = sked_create(false)
-function commons_getArray(arrayName: string): FloatArray {
-            if (!_commons_ARRAYS.has(arrayName)) {
+function G_sked__nextId(skeduler: G_sked_Skeduler): G_sked_Id {
+                return skeduler.idCounter++
+            }
+const G_commons__ARRAYS: Map<string, FloatArray> = new Map()
+const G_commons__ARRAYS_SKEDULER: G_sked_Skeduler = G_sked_create(false)
+function G_commons_getArray(arrayName: string): FloatArray {
+            if (!G_commons__ARRAYS.has(arrayName)) {
                 throw new Error('Unknown array ' + arrayName)
             }
-            return _commons_ARRAYS.get(arrayName)
+            return G_commons__ARRAYS.get(arrayName)
         }
-function commons_hasArray(arrayName: string): boolean {
-            return _commons_ARRAYS.has(arrayName)
+function G_commons_hasArray(arrayName: string): boolean {
+            return G_commons__ARRAYS.has(arrayName)
         }
-function commons_setArray(arrayName: string, array: FloatArray): void {
-            _commons_ARRAYS.set(arrayName, array)
-            sked_emit(_commons_ARRAYS_SKEDULER, arrayName)
+function G_commons_setArray(arrayName: string, array: FloatArray): void {
+            G_commons__ARRAYS.set(arrayName, array)
+            G_sked_emit(G_commons__ARRAYS_SKEDULER, arrayName)
         }
-function commons_subscribeArrayChanges(arrayName: string, callback: SkedCallback): SkedId {
-            const id = sked_subscribe(_commons_ARRAYS_SKEDULER, arrayName, callback)
-            if (_commons_ARRAYS.has(arrayName)) {
+function G_commons_subscribeArrayChanges(arrayName: string, callback: G_sked_Callback): G_sked_Id {
+            const id = G_sked_subscribe(G_commons__ARRAYS_SKEDULER, arrayName, callback)
+            if (G_commons__ARRAYS.has(arrayName)) {
                 callback(arrayName)
             }
             return id
         }
-function commons_cancelArrayChangesSubscription(id: SkedId): void {
-            sked_cancel(_commons_ARRAYS_SKEDULER, id)
-        }
-const _commons_FRAME_SKEDULER: Skeduler = sked_create(false)
-function _commons_emitFrame(frame: Int): void {
-            sked_emit(_commons_FRAME_SKEDULER, frame.toString())
-        }
-function commons_waitFrame(frame: Int, callback: SkedCallback): SkedId {
-            return sked_wait_future(_commons_FRAME_SKEDULER, frame.toString(), callback)
-        }
-function commons_cancelWaitFrame(id: SkedId): void {
-            sked_cancel(_commons_FRAME_SKEDULER, id)
+function G_commons_cancelArrayChangesSubscription(id: G_sked_Id): void {
+            G_sked_cancel(G_commons__ARRAYS_SKEDULER, id)
         }
 
-                type MessageFloatToken = Float
-                type MessageCharToken = Int
+const G_commons__FRAME_SKEDULER: G_sked_Skeduler = G_sked_create(false)
+function G_commons__emitFrame(frame: Int): void {
+            G_sked_emit(G_commons__FRAME_SKEDULER, frame.toString())
+        }
+function G_commons_waitFrame(frame: Int, callback: G_sked_Callback): G_sked_Id {
+            return G_sked_waitFuture(G_commons__FRAME_SKEDULER, frame.toString(), callback)
+        }
+function G_commons_cancelWaitFrame(id: G_sked_Id): void {
+            G_sked_cancel(G_commons__FRAME_SKEDULER, id)
+        }
 
-                type MessageTemplate = Array<Int>
-                type MessageHeaderEntry = Int
-                type MessageHeader = Int32Array
-
-                type MessageHandler = (m: Message) => void
+                type G_msg_Template = Array<Int>
                 
-const MSG_FLOAT_TOKEN: MessageHeaderEntry = 0
-const MSG_STRING_TOKEN: MessageHeaderEntry = 1
-function x_msg_create(templateTypedArray: Int32Array): Message {
-                    const template: MessageTemplate = new Array<Int>(templateTypedArray.length)
-                    for (let i: Int = 0; i < templateTypedArray.length; i++) {
-                        template[i] = templateTypedArray[i]
-                    }
-                    return msg_create(template)
-                }
-function x_msg_getTokenTypes(message: Message): MessageHeader {
-                    return message.tokenTypes
-                }
-function x_msg_createTemplate(length: i32): Int32Array {
-                    return new Int32Array(length)
-                }
-function msg_create(template: MessageTemplate): Message {
+                type G_msg__FloatToken = Float
+                type G_msg__CharToken = Int
+
+                type G_msg__HeaderEntry = Int
+
+                type G_msg_Handler = (m: G_msg_Message) => void
+                
+const G_msg_FLOAT_TOKEN: G_msg__HeaderEntry = 0
+const G_msg_STRING_TOKEN: G_msg__HeaderEntry = 1
+function G_msg_create(template: G_msg_Template): G_msg_Message {
                     let i: Int = 0
                     let byteCount: Int = 0
-                    let tokenTypes: Array<MessageHeaderEntry> = []
-                    let tokenPositions: Array<MessageHeaderEntry> = []
+                    let tokenTypes: Array<G_msg__HeaderEntry> = []
+                    let tokenPositions: Array<G_msg__HeaderEntry> = []
 
                     i = 0
                     while (i < template.length) {
                         switch(template[i]) {
-                            case MSG_FLOAT_TOKEN:
-                                byteCount += sizeof<MessageFloatToken>()
-                                tokenTypes.push(MSG_FLOAT_TOKEN)
+                            case G_msg_FLOAT_TOKEN:
+                                byteCount += sizeof<G_msg__FloatToken>()
+                                tokenTypes.push(G_msg_FLOAT_TOKEN)
                                 tokenPositions.push(byteCount)
                                 i += 1
                                 break
-                            case MSG_STRING_TOKEN:
-                                byteCount += sizeof<MessageCharToken>() * template[i + 1]
-                                tokenTypes.push(MSG_STRING_TOKEN)
+                            case G_msg_STRING_TOKEN:
+                                byteCount += sizeof<G_msg__CharToken>() * template[i + 1]
+                                tokenTypes.push(G_msg_STRING_TOKEN)
                                 tokenPositions.push(byteCount)
                                 i += 2
                                 break
@@ -214,7 +213,8 @@ function msg_create(template: MessageTemplate): Message {
                     }
 
                     const tokenCount = tokenTypes.length
-                    const headerByteCount = _msg_computeHeaderLength(tokenCount) * sizeof<MessageHeaderEntry>()
+                    const headerByteCount = G_msg__computeHeaderLength(tokenCount) 
+                        * sizeof<G_msg__HeaderEntry>()
                     byteCount += headerByteCount
 
                     const buffer = new ArrayBuffer(byteCount)
@@ -222,73 +222,73 @@ function msg_create(template: MessageTemplate): Message {
                     let writePosition: Int = 0
                     
                     dataView.setInt32(writePosition, tokenCount)
-                    writePosition += sizeof<MessageHeaderEntry>()
+                    writePosition += sizeof<G_msg__HeaderEntry>()
 
                     for (i = 0; i < tokenCount; i++) {
                         dataView.setInt32(writePosition, tokenTypes[i])
-                        writePosition += sizeof<MessageHeaderEntry>()
+                        writePosition += sizeof<G_msg__HeaderEntry>()
                     }
 
                     dataView.setInt32(writePosition, headerByteCount)
-                    writePosition += sizeof<MessageHeaderEntry>()
+                    writePosition += sizeof<G_msg__HeaderEntry>()
                     for (i = 0; i < tokenCount; i++) {
                         dataView.setInt32(writePosition, headerByteCount + tokenPositions[i])
-                        writePosition += sizeof<MessageHeaderEntry>()
+                        writePosition += sizeof<G_msg__HeaderEntry>()
                     }
 
-                    const header = _msg_unpackHeader(dataView, tokenCount)
+                    const header = G_msg__unpackHeader(dataView, tokenCount)
                     return {
                         dataView,
                         tokenCount,
                         header,
-                        tokenTypes: _msg_unpackTokenTypes(header),
-                        tokenPositions: _msg_unpackTokenPositions(header),
+                        tokenTypes: G_msg__unpackTokenTypes(header),
+                        tokenPositions: G_msg__unpackTokenPositions(header),
                     }
                 }
-function msg_writeStringToken(message: Message, tokenIndex: Int, value: string): void {
+function G_msg_writeStringToken(message: G_msg_Message, tokenIndex: Int, value: string): void {
                     const startPosition = message.tokenPositions[tokenIndex]
                     const endPosition = message.tokenPositions[tokenIndex + 1]
-                    const expectedStringLength: Int = (endPosition - startPosition) / sizeof<MessageCharToken>()
+                    const expectedStringLength: Int = (endPosition - startPosition) / sizeof<G_msg__CharToken>()
                     if (value.length !== expectedStringLength) {
                         throw new Error('Invalid string size, specified ' + expectedStringLength.toString() + ', received ' + value.length.toString())
                     }
 
                     for (let i = 0; i < value.length; i++) {
                         message.dataView.setInt32(
-                            startPosition + i * sizeof<MessageCharToken>(), 
+                            startPosition + i * sizeof<G_msg__CharToken>(), 
                             value.codePointAt(i)
                         )
                     }
                 }
-function msg_writeFloatToken(message: Message, tokenIndex: Int, value: MessageFloatToken): void {
+function G_msg_writeFloatToken(message: G_msg_Message, tokenIndex: Int, value: G_msg__FloatToken): void {
                     setFloatDataView(message.dataView, message.tokenPositions[tokenIndex], value)
                 }
-function msg_readStringToken(message: Message, tokenIndex: Int): string {
+function G_msg_readStringToken(message: G_msg_Message, tokenIndex: Int): string {
                     const startPosition = message.tokenPositions[tokenIndex]
                     const endPosition = message.tokenPositions[tokenIndex + 1]
-                    const stringLength: Int = (endPosition - startPosition) / sizeof<MessageCharToken>()
+                    const stringLength: Int = (endPosition - startPosition) / sizeof<G_msg__CharToken>()
                     let value: string = ''
                     for (let i = 0; i < stringLength; i++) {
-                        value += String.fromCodePoint(message.dataView.getInt32(startPosition + sizeof<MessageCharToken>() * i))
+                        value += String.fromCodePoint(message.dataView.getInt32(startPosition + sizeof<G_msg__CharToken>() * i))
                     }
                     return value
                 }
-function msg_readFloatToken(message: Message, tokenIndex: Int): MessageFloatToken {
+function G_msg_readFloatToken(message: G_msg_Message, tokenIndex: Int): G_msg__FloatToken {
                     return getFloatDataView(message.dataView, message.tokenPositions[tokenIndex])
                 }
-function msg_getLength(message: Message): Int {
+function G_msg_getLength(message: G_msg_Message): Int {
                     return message.tokenTypes.length
                 }
-function msg_getTokenType(message: Message, tokenIndex: Int): Int {
+function G_msg_getTokenType(message: G_msg_Message, tokenIndex: Int): Int {
                     return message.tokenTypes[tokenIndex]
                 }
-function msg_isStringToken(message: Message, tokenIndex: Int): boolean {
-                    return msg_getTokenType(message, tokenIndex) === MSG_STRING_TOKEN
+function G_msg_isStringToken(message: G_msg_Message, tokenIndex: Int): boolean {
+                    return G_msg_getTokenType(message, tokenIndex) === G_msg_STRING_TOKEN
                 }
-function msg_isFloatToken(message: Message, tokenIndex: Int): boolean {
-                    return msg_getTokenType(message, tokenIndex) === MSG_FLOAT_TOKEN
+function G_msg_isFloatToken(message: G_msg_Message, tokenIndex: Int): boolean {
+                    return G_msg_getTokenType(message, tokenIndex) === G_msg_FLOAT_TOKEN
                 }
-function msg_isMatching(message: Message, tokenTypes: Array<MessageHeaderEntry>): boolean {
+function G_msg_isMatching(message: G_msg_Message, tokenTypes: Array<G_msg__HeaderEntry>): boolean {
                     if (message.tokenTypes.length !== tokenTypes.length) {
                         return false
                     }
@@ -299,178 +299,182 @@ function msg_isMatching(message: Message, tokenTypes: Array<MessageHeaderEntry>)
                     }
                     return true
                 }
-function msg_floats(values: Array<Float>): Message {
-                    const message: Message = msg_create(values.map<MessageHeaderEntry>(v => MSG_FLOAT_TOKEN))
+function G_msg_floats(values: Array<Float>): G_msg_Message {
+                    const message: G_msg_Message = G_msg_create(
+                        values.map<G_msg__HeaderEntry>(v => G_msg_FLOAT_TOKEN))
                     for (let i: Int = 0; i < values.length; i++) {
-                        msg_writeFloatToken(message, i, values[i])
+                        G_msg_writeFloatToken(message, i, values[i])
                     }
                     return message
                 }
-function msg_strings(values: Array<string>): Message {
-                    const template: MessageTemplate = []
+function G_msg_strings(values: Array<string>): G_msg_Message {
+                    const template: G_msg_Template = []
                     for (let i: Int = 0; i < values.length; i++) {
-                        template.push(MSG_STRING_TOKEN)
+                        template.push(G_msg_STRING_TOKEN)
                         template.push(values[i].length)
                     }
-                    const message: Message = msg_create(template)
+                    const message: G_msg_Message = G_msg_create(template)
                     for (let i: Int = 0; i < values.length; i++) {
-                        msg_writeStringToken(message, i, values[i])
+                        G_msg_writeStringToken(message, i, values[i])
                     }
                     return message
                 }
-function msg_display(message: Message): string {
+function G_msg_display(message: G_msg_Message): string {
                     let displayArray: Array<string> = []
-                    for (let i: Int = 0; i < msg_getLength(message); i++) {
-                        if (msg_isFloatToken(message, i)) {
-                            displayArray.push(msg_readFloatToken(message, i).toString())
+                    for (let i: Int = 0; i < G_msg_getLength(message); i++) {
+                        if (G_msg_isFloatToken(message, i)) {
+                            displayArray.push(G_msg_readFloatToken(message, i).toString())
                         } else {
-                            displayArray.push('"' + msg_readStringToken(message, i) + '"')
+                            displayArray.push('"' + G_msg_readStringToken(message, i) + '"')
                         }
                     }
                     return '[' + displayArray.join(', ') + ']'
                 }
-class Message {
+class G_msg_Message {
 dataView: DataView
-header: MessageHeader
-tokenCount: MessageHeaderEntry
-tokenTypes: MessageHeader
-tokenPositions: MessageHeader
+header: G_msg__Header
+tokenCount: G_msg__HeaderEntry
+tokenTypes: G_msg__Header
+tokenPositions: G_msg__Header
 }
-function _msg_computeHeaderLength(tokenCount: Int): Int {
+function G_msg_x_create(templateTypedArray: Int32Array): G_msg_Message {
+                    const template: G_msg_Template = new Array<Int>(templateTypedArray.length)
+                    for (let i: Int = 0; i < templateTypedArray.length; i++) {
+                        template[i] = templateTypedArray[i]
+                    }
+                    return G_msg_create(template)
+                }
+function G_msg_x_getTokenTypes(message: G_msg_Message): G_msg__Header {
+                    return message.tokenTypes
+                }
+function G_msg_x_createTemplate(length: i32): Int32Array {
+                    return new Int32Array(length)
+                }
+type G_msg__Header = Int32Array
+function G_msg__computeHeaderLength(tokenCount: Int): Int {
                     return 1 + tokenCount * 2 + 1
                 }
-function _msg_unpackTokenCount(messageDataView: DataView): MessageHeaderEntry {
-                    return messageDataView.getInt32(0)
-                }
-function _msg_unpackHeader(messageDataView: DataView, tokenCount: MessageHeaderEntry): MessageHeader {
-                    const headerLength = _msg_computeHeaderLength(tokenCount)
+function G_msg__unpackHeader(messageDataView: DataView, tokenCount: G_msg__HeaderEntry): G_msg__Header {
+                    const headerLength = G_msg__computeHeaderLength(tokenCount)
                     // TODO : why is this `wrap` not working ?
                     // return Int32Array.wrap(messageDataView.buffer, 0, headerLength)
                     const messageHeader = new Int32Array(headerLength)
                     for (let i = 0; i < headerLength; i++) {
-                        messageHeader[i] = messageDataView.getInt32(sizeof<MessageHeaderEntry>() * i)
+                        messageHeader[i] = messageDataView.getInt32(sizeof<G_msg__HeaderEntry>() * i)
                     }
                     return messageHeader
                 }
-function _msg_unpackTokenTypes(header: MessageHeader): MessageHeader {
+function G_msg__unpackTokenTypes(header: G_msg__Header): G_msg__Header {
                     return header.slice(1, 1 + header[0])
                 }
-function _msg_unpackTokenPositions(header: MessageHeader): MessageHeader {
+function G_msg__unpackTokenPositions(header: G_msg__Header): G_msg__Header {
                     return header.slice(1 + header[0])
                 }
-function msg_isBang(message: Message): boolean {
+function G_msg_nullMessageReceiver(m: G_msg_Message): void {}
+let G_msg_emptyMessage: G_msg_Message = G_msg_create([])
+function G_bangUtils_isBang(message: G_msg_Message): boolean {
             return (
-                msg_isStringToken(message, 0) 
-                && msg_readStringToken(message, 0) === 'bang'
+                G_msg_isStringToken(message, 0) 
+                && G_msg_readStringToken(message, 0) === 'bang'
             )
         }
-function msg_bang(): Message {
-            const message: Message = msg_create([MSG_STRING_TOKEN, 4])
-            msg_writeStringToken(message, 0, 'bang')
+function G_bangUtils_bang(): G_msg_Message {
+            const message: G_msg_Message = G_msg_create([G_msg_STRING_TOKEN, 4])
+            G_msg_writeStringToken(message, 0, 'bang')
             return message
         }
-function msg_emptyToBang(message: Message): Message {
-            if (msg_getLength(message) === 0) {
-                return msg_bang()
+function G_bangUtils_emptyToBang(message: G_msg_Message): G_msg_Message {
+            if (G_msg_getLength(message) === 0) {
+                return G_bangUtils_bang()
             } else {
                 return message
             }
         }
-const MSG_BUSES: Map<string, Array<MessageHandler>> = new Map()
-function msgBusPublish(busName: string, message: Message): void {
+const G_msgBuses__BUSES: Map<string, Array<G_msg_Handler>> = new Map()
+function G_msgBuses_publish(busName: string, message: G_msg_Message): void {
             let i: Int = 0
-            const callbacks: Array<MessageHandler> = MSG_BUSES.has(busName) ? MSG_BUSES.get(busName): []
+            const callbacks: Array<G_msg_Handler> = G_msgBuses__BUSES.has(busName) ? G_msgBuses__BUSES.get(busName): []
             for (i = 0; i < callbacks.length; i++) {
                 callbacks[i](message)
             }
         }
-function msgBusSubscribe(busName: string, callback: MessageHandler): void {
-            if (!MSG_BUSES.has(busName)) {
-                MSG_BUSES.set(busName, [])
+function G_msgBuses_subscribe(busName: string, callback: G_msg_Handler): void {
+            if (!G_msgBuses__BUSES.has(busName)) {
+                G_msgBuses__BUSES.set(busName, [])
             }
-            MSG_BUSES.get(busName).push(callback)
+            G_msgBuses__BUSES.get(busName).push(callback)
         }
-function msgBusUnsubscribe(busName: string, callback: MessageHandler): void {
-            if (!MSG_BUSES.has(busName)) {
+function G_msgBuses_unsubscribe(busName: string, callback: G_msg_Handler): void {
+            if (!G_msgBuses__BUSES.has(busName)) {
                 return
             }
-            const callbacks: Array<MessageHandler> = MSG_BUSES.get(busName)
-            const found: Int = callbacks.indexOf(callback) !== -1
+            const callbacks: Array<G_msg_Handler> = G_msgBuses__BUSES.get(busName)
+            const found: Int = callbacks.indexOf(callback)
             if (found !== -1) {
                 callbacks.splice(found, 1)
             }
         }
-        class NT_osc_t_State {
-phase: Float
-step: Float
-}
-function NT_osc_t_setStep(state: NT_osc_t_State, freq: Float): void {
-                    state.step = (2 * Math.PI / SAMPLE_RATE) * freq
-                }
-function NT_osc_t_setPhase(state: NT_osc_t_State, phase: Float): void {
-                    state.phase = phase % 1.0 * 2 * Math.PI
-                }
-class NT_nbx_State {
+        class NT_nbx_State {
 minValue: Float
 maxValue: Float
 valueFloat: Float
-value: Message
+value: G_msg_Message
 receiveBusName: string
 sendBusName: string
-messageReceiver: MessageHandler
-messageSender: MessageHandler
+messageReceiver: G_msg_Handler
+messageSender: G_msg_Handler
 }
 function NT_nbx_setReceiveBusName(state: NT_nbx_State, busName: string): void {
             if (state.receiveBusName !== "empty") {
-                msgBusUnsubscribe(state.receiveBusName, state.messageReceiver)
+                G_msgBuses_unsubscribe(state.receiveBusName, state.messageReceiver)
             }
             state.receiveBusName = busName
             if (state.receiveBusName !== "empty") {
-                msgBusSubscribe(state.receiveBusName, state.messageReceiver)
+                G_msgBuses_subscribe(state.receiveBusName, state.messageReceiver)
             }
         }
-function NT_nbx_setSendReceiveFromMessage(state: NT_nbx_State, m: Message): boolean {
+function NT_nbx_setSendReceiveFromMessage(state: NT_nbx_State, m: G_msg_Message): boolean {
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'receive'
+                G_msg_isMatching(m, [G_msg_STRING_TOKEN, G_msg_STRING_TOKEN])
+                && G_msg_readStringToken(m, 0) === 'receive'
             ) {
-                NT_nbx_setReceiveBusName(state, msg_readStringToken(m, 1))
+                NT_nbx_setReceiveBusName(state, G_msg_readStringToken(m, 1))
                 return true
 
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'send'
+                G_msg_isMatching(m, [G_msg_STRING_TOKEN, G_msg_STRING_TOKEN])
+                && G_msg_readStringToken(m, 0) === 'send'
             ) {
-                state.sendBusName = msg_readStringToken(m, 1)
+                state.sendBusName = G_msg_readStringToken(m, 1)
                 return true
             }
             return false
         }
-function NT_nbx_defaultMessageHandler(m: Message): void {}
-function NT_nbx_receiveMessage(state: NT_nbx_State, m: Message): void {
-                    if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                        state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 0),state.minValue),state.maxValue)
-                        const outMessage: Message = msg_floats([state.valueFloat])
+function NT_nbx_defaultMessageHandler(m: G_msg_Message): void {}
+function NT_nbx_receiveMessage(state: NT_nbx_State, m: G_msg_Message): void {
+                    if (G_msg_isMatching(m, [G_msg_FLOAT_TOKEN])) {
+                        state.valueFloat = Math.min(Math.max(G_msg_readFloatToken(m, 0),state.minValue),state.maxValue)
+                        const outMessage: G_msg_Message = G_msg_floats([state.valueFloat])
                         state.messageSender(outMessage)
                         if (state.sendBusName !== "empty") {
-                            msgBusPublish(state.sendBusName, outMessage)
+                            G_msgBuses_publish(state.sendBusName, outMessage)
                         }
                         return
         
-                    } else if (msg_isBang(m)) {
+                    } else if (G_bangUtils_isBang(m)) {
                         
-                        const outMessage: Message = msg_floats([state.valueFloat])
+                        const outMessage: G_msg_Message = G_msg_floats([state.valueFloat])
                         state.messageSender(outMessage)
                         if (state.sendBusName !== "empty") {
-                            msgBusPublish(state.sendBusName, outMessage)
+                            G_msgBuses_publish(state.sendBusName, outMessage)
                         }
                         return
         
                     } else if (
-                        msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN]) 
-                        && msg_readStringToken(m, 0) === 'set'
+                        G_msg_isMatching(m, [G_msg_STRING_TOKEN, G_msg_FLOAT_TOKEN]) 
+                        && G_msg_readStringToken(m, 0) === 'set'
                     ) {
-                        state.valueFloat = Math.min(Math.max(msg_readFloatToken(m, 1),state.minValue),state.maxValue)
+                        state.valueFloat = Math.min(Math.max(G_msg_readFloatToken(m, 1),state.minValue),state.maxValue)
                         return
                     
                     } else if (NT_nbx_setSendReceiveFromMessage(state, m) === true) {
@@ -485,26 +489,24 @@ currentValue: Float
 
 
 
+class NT_osc_t_State {
+phase: Float
+step: Float
+}
+function NT_osc_t_setStep(state: NT_osc_t_State, freq: Float): void {
+                    state.step = (2 * Math.PI / SAMPLE_RATE) * freq
+                }
+function NT_osc_t_setPhase(state: NT_osc_t_State, phase: Float): void {
+                    state.phase = phase % 1.0 * 2 * Math.PI
+                }
 
 
-
-        let F: Int = 0
-let FRAME: Int = 0
-let BLOCK_SIZE: Int = 0
-let SAMPLE_RATE: Float = 0
-let NULL_SIGNAL: Float = 0
-function SND_TO_NULL(m: Message): void {}
-let EMPTY_MESSAGE: Message = msg_create([])
-        let INPUT: FloatArray = createFloatArray(0)
-        let OUTPUT: FloatArray = createFloatArray(0)
-
-        
 
         const N_n_0_1_state: NT_nbx_State = {
                                 minValue: -1e+37,
 maxValue: 1e+37,
 valueFloat: 220,
-value: msg_create([]),
+value: G_msg_create([]),
 receiveBusName: "empty",
 sendBusName: "empty",
 messageReceiver: NT_nbx_defaultMessageHandler,
@@ -518,35 +520,35 @@ const N_n_0_0_state: NT_osc_t_State = {
 step: 0,
                             }
         
-function N_n_0_1_rcvs_0(m: Message): void {
+function N_n_0_1_rcvs_0(m: G_msg_Message): void {
                             
                 NT_nbx_receiveMessage(N_n_0_1_state, m)
                 return
             
-                            throw new Error('Node type "nbx", id "n_0_1", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node "n_0_1", inlet "0", unsupported message : ' + G_msg_display(m))
                         }
 
-function N_m_n_0_0_0__routemsg_rcvs_0(m: Message): void {
+function N_m_n_0_0_0__routemsg_rcvs_0(m: G_msg_Message): void {
                             
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
+            if (G_msg_isMatching(m, [G_msg_FLOAT_TOKEN])) {
                 N_m_n_0_0_0__routemsg_snds_0(m)
                 return
             } else {
-                SND_TO_NULL(m)
+                G_msg_nullMessageReceiver(m)
                 return
             }
         
-                            throw new Error('Node type "_routemsg", id "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + msg_display(m))
+                            throw new Error('Node "m_n_0_0_0__routemsg", inlet "0", unsupported message : ' + G_msg_display(m))
                         }
 let N_m_n_0_0_0_sig_outs_0: Float = 0
-function N_m_n_0_0_0_sig_rcvs_0(m: Message): void {
+function N_m_n_0_0_0_sig_rcvs_0(m: G_msg_Message): void {
                             
-        if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-            N_m_n_0_0_0_sig_state.currentValue = msg_readFloatToken(m, 0)
-            return
-        }
-    
-                            throw new Error('Node type "sig~", id "m_n_0_0_0_sig", inlet "0", unsupported message : ' + msg_display(m))
+    if (G_msg_isMatching(m, [G_msg_FLOAT_TOKEN])) {
+        N_m_n_0_0_0_sig_state.currentValue = G_msg_readFloatToken(m, 0)
+        return
+    }
+
+                            throw new Error('Node "m_n_0_0_0_sig", inlet "0", unsupported message : ' + G_msg_display(m))
                         }
 
 
@@ -554,16 +556,16 @@ let N_n_0_0_outs_0: Float = 0
 
 
 
-function N_m_n_0_0_0__routemsg_snds_0(m: Message): void {
+function N_m_n_0_0_0__routemsg_snds_0(m: G_msg_Message): void {
                         N_m_n_0_0_0_sig_rcvs_0(m)
 COLD_0(m)
                     }
 
-        function COLD_0(m: Message): void {
+        function COLD_0(m: G_msg_Message): void {
                     N_m_n_0_0_0_sig_outs_0 = N_m_n_0_0_0_sig_state.currentValue
                     NT_osc_t_setStep(N_n_0_0_state, N_m_n_0_0_0_sig_outs_0)
                 }
-        function IORCV_n_0_1_0(m: Message): void {
+        function IO_rcv_n_0_1_0(m: G_msg_Message): void {
                     N_n_0_1_rcvs_0(m)
                 }
         
@@ -576,12 +578,12 @@ COLD_0(m)
 
             
                 N_n_0_1_state.messageSender = N_m_n_0_0_0__routemsg_rcvs_0
-                N_n_0_1_state.messageReceiver = function (m: Message): void {
+                N_n_0_1_state.messageReceiver = function (m: G_msg_Message): void {
                     NT_nbx_receiveMessage(N_n_0_1_state, m)
                 }
                 NT_nbx_setReceiveBusName(N_n_0_1_state, "empty")
     
-                commons_waitFrame(0, () => N_m_n_0_0_0__routemsg_rcvs_0(msg_floats([N_n_0_1_state.valueFloat])))
+                G_commons_waitFrame(0, () => N_m_n_0_0_0__routemsg_rcvs_0(G_msg_floats([N_n_0_1_state.valueFloat])))
             
 
 
@@ -590,23 +592,19 @@ COLD_0(m)
             NT_osc_t_setStep(N_n_0_0_state, 0)
         
 
-            COLD_0(EMPTY_MESSAGE)
+            COLD_0(G_msg_emptyMessage)
         }
-
-        export function getInput(): FloatArray { return INPUT }
-
-        export function getOutput(): FloatArray { return OUTPUT }
 
         export function dspLoop(): void {
             
-        for (F = 0; F < BLOCK_SIZE; F++) {
-            _commons_emitFrame(FRAME)
+        for (IT_FRAME = 0; IT_FRAME < BLOCK_SIZE; IT_FRAME++) {
+            G_commons__emitFrame(FRAME)
             
                 N_n_0_0_outs_0 = Math.cos(N_n_0_0_state.phase)
                 N_n_0_0_state.phase += N_n_0_0_state.step
             
-OUTPUT[F + BLOCK_SIZE * 0] = N_n_0_0_outs_0
-OUTPUT[F + BLOCK_SIZE * 1] = N_n_0_0_outs_0
+OUTPUT[IT_FRAME + BLOCK_SIZE * 0] = N_n_0_0_outs_0
+OUTPUT[IT_FRAME + BLOCK_SIZE * 1] = N_n_0_0_outs_0
             FRAME++
         }
     
@@ -614,24 +612,26 @@ OUTPUT[F + BLOCK_SIZE * 1] = N_n_0_0_outs_0
 
         export {
             metadata,
-            IORCV_n_0_1_0,
+            IO_rcv_n_0_1_0,
         }
 
         
-export { x_core_createListOfArrays }
-export { x_core_pushToListOfArrays }
-export { x_core_getListOfArraysLength }
-export { x_core_getListOfArraysElem }
+export { x_createListOfArrays }
+export { x_pushToListOfArrays }
+export { x_getListOfArraysLength }
+export { x_getListOfArraysElem }
+export { x_getInput }
+export { x_getOutput }
 export { createFloatArray }
-export { commons_getArray }
-export { commons_setArray }
-export { x_msg_create }
-export { x_msg_getTokenTypes }
-export { x_msg_createTemplate }
-export { msg_writeStringToken }
-export { msg_writeFloatToken }
-export { msg_readStringToken }
-export { msg_readFloatToken }
-export { MSG_FLOAT_TOKEN }
-export { MSG_STRING_TOKEN }
+export { G_commons_getArray }
+export { G_commons_setArray }
+export { G_msg_x_create }
+export { G_msg_x_getTokenTypes }
+export { G_msg_x_createTemplate }
+export { G_msg_writeStringToken }
+export { G_msg_writeFloatToken }
+export { G_msg_readStringToken }
+export { G_msg_readFloatToken }
+export { G_msg_FLOAT_TOKEN }
+export { G_msg_STRING_TOKEN }
     

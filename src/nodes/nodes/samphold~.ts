@@ -54,9 +54,9 @@ const nodeImplementation: _NodeImplementation = {
     },
 
     state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'signalMemory', 0),
-            Var('Float', 'controlMemory', 0),
+        Class(ns.State, [
+            Var(`Float`, `signalMemory`, 0),
+            Var(`Float`, `controlMemory`, 0),
         ]),
 
     dsp: ({ ins, outs, state }) => ast`
@@ -64,25 +64,25 @@ const nodeImplementation: _NodeImplementation = {
         ${state}.controlMemory = ${ins.$1}
     `,
 
-    messageReceivers: ({ state }) => ({
-        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+    messageReceivers: ({ state }, { msg }) => ({
+        '0_message': AnonFunc([ Var(msg.Message, `m`) ], `void`)`
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-                && msg_readStringToken(m, 0) === 'set'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'set'
             ) {
-                ${state}.signalMemory = msg_readFloatToken(m, 1)
+                ${state}.signalMemory = ${msg.readFloatToken}(m, 1)
                 return
     
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_FLOAT_TOKEN])
-                && msg_readStringToken(m, 0) === 'reset'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.FLOAT_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'reset'
             ) {
-                ${state}.controlMemory = msg_readFloatToken(m, 1)
+                ${state}.controlMemory = ${msg.readFloatToken}(m, 1)
                 return
     
             } else if (
-                msg_isMatching(m, [MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'reset'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'reset'
             ) {
                 ${state}.controlMemory = 1e20
                 return

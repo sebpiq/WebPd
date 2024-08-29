@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, Func, Sequence, Class } from '@webpd/compiler'
+import { Code, Func, Sequence, Class, AnonFunc, ConstVar, Var, ast, VariableNamesIndex } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
@@ -28,9 +28,8 @@ import {
     ControlsBaseNodeArguments,
     controlsCore,
 } from './controls-base'
-import { messageBuses } from '../global-code/buses'
+import { msgBuses } from '../global-code/buses'
 import { bangUtils, msgUtils } from '../global-code/core'
-import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export type _NodeImplementation = NodeImplementation<ControlsBaseNodeArguments>
@@ -51,63 +50,73 @@ const makeNodeImplementation = ({
     initValueCode,
     messageMatch,
 }: {
-    name: string,
-    initValueCode: Code,
-    messageMatch?: (messageName: VariableName) => Code
+    name: string
+    initValueCode: (globals: VariableNamesIndex['globals']) => Code,
+    messageMatch?: (messageName: VariableName, globals: VariableNamesIndex['globals']) => Code
 }): _NodeImplementation => {
 
     return {
-        state: ({ ns, node: { args } }) => 
-            Class(ns.State!, [
-                Var('Message', 'value', initValueCode),
-                Var('string', 'receiveBusName', `"${args.receiveBusName}"`),
-                Var('string', 'sendBusName', `"${args.sendBusName}"`),
-                Var('MessageHandler', 'messageReceiver', ns.defaultMessageHandler),
-                Var('MessageHandler', 'messageSender', ns.defaultMessageHandler),
-            ]),
+        flags: {
+            alphaName: name,
+        },
 
-        initialization: ({
-            ns,
-            state, 
-            node: { args },
-            snds,
-        }) => ast`
-            ${state}.messageReceiver = ${AnonFunc([Var('Message', 'm')])`
+        state: ({ ns, node: { args } }, globals) => {
+            const { msg } = globals
+            return Class(ns.State, [
+                Var(msg.Message, `value`, initValueCode(globals)),
+                Var(`string`, `receiveBusName`, `"${args.receiveBusName}"`),
+                Var(`string`, `sendBusName`, `"${args.sendBusName}"`),
+                Var(msg.Handler, `messageReceiver`, ns.defaultMessageHandler),
+                Var(msg.Handler, `messageSender`, ns.defaultMessageHandler),
+            ])
+        },
+
+        initialization: (
+            {
+                ns,
+                state, 
+                node: { args },
+                snds,
+            }, 
+            { msg }
+        ) => ast`
+            ${state}.messageReceiver = ${AnonFunc([Var(msg.Message, `m`)])`
                 ${ns.receiveMessage}(${state}, m)
             `}
             ${state}.messageSender = ${snds.$0}
             ${ns.setReceiveBusName}(${state}, "${args.receiveBusName}")
         `,
 
-        messageReceivers: ({ ns, state }) => ({
-            '0': AnonFunc([Var('Message', 'm')])`
+        messageReceivers: ({ ns, state }, { msg }) => ({
+            '0': AnonFunc([Var(msg.Message, `m`)])`
                 ${ns.receiveMessage}(${state}, m)
                 return
             `,
         }),
 
-        core: ({ ns }) => 
-            Sequence([
-                controlsCore(ns),
+        core: ({ ns }, globals) => {
+            const { msg, msgBuses, bangUtils, msgUtils } = globals
+            return Sequence([
+                controlsCore(ns, globals),
 
                 Func(ns.receiveMessage, [
-                    Var(ns.State!, 'state'),
-                    Var('Message', 'm'),
+                    Var(ns.State, `state`),
+                    Var(msg.Message, `m`),
                 ], 'void')`
-                    if (msg_isBang(m)) {
+                    if (${bangUtils.isBang}(m)) {
                         state.messageSender(state.value)
                         if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                            msgBusPublish(state.sendBusName, state.value)
+                            ${msgBuses.publish}(state.sendBusName, state.value)
                         }
                         return
                     
                     } else if (
-                        msg_getTokenType(m, 0) === MSG_STRING_TOKEN
-                        && msg_readStringToken(m, 0) === 'set'
+                        ${msg.getTokenType}(m, 0) === ${msg.STRING_TOKEN}
+                        && ${msg.readStringToken}(m, 0) === 'set'
                     ) {
-                        ${ConstVar('Message', 'setMessage', 'msg_slice(m, 1, msg_getLength(m))')}
+                        ${ConstVar(msg.Message, `setMessage`, `${msgUtils.slice}(m, 1, ${msg.getLength}(m))`)}
                         ${messageMatch ? 
-                            `if (${messageMatch('setMessage')}) {`: null} 
+                            `if (${messageMatch('setMessage', globals)}) {`: null} 
                                 state.value = setMessage    
                                 return
                         ${messageMatch ? 
@@ -117,23 +126,24 @@ const makeNodeImplementation = ({
                         return
                         
                     } ${messageMatch ? 
-                        `else if (${messageMatch('m')}) {`: 
+                        `else if (${messageMatch('m', globals)}) {`: 
                         `else {`}
                     
                         state.value = m
                         state.messageSender(state.value)
                         if (state.sendBusName !== "${EMPTY_BUS_NAME}") {
-                            msgBusPublish(state.sendBusName, state.value)
+                            ${msgBuses.publish}(state.sendBusName, state.value)
                         }
                         return
         
                     }
                 `
-            ]),
+            ])
+        },
 
         dependencies: [
             bangUtils,
-            messageBuses,
+            msgBuses,
             msgUtils,
         ],
     }
@@ -148,17 +158,17 @@ const builders = {
 const nodeImplementations = {
     'floatatom': makeNodeImplementation({
         name: 'floatatom',
-        initValueCode: `msg_floats([0])`,
-        messageMatch: (m) => `msg_isMatching(${m}, [MSG_FLOAT_TOKEN])`
+        initValueCode: ({ msg }) => `${msg.floats}([0])`,
+        messageMatch: (m, { msg }) => `${msg.isMatching}(${m}, [${msg.FLOAT_TOKEN}])`
     }),
     'symbolatom': makeNodeImplementation({
         name: 'symbolatom',
-        initValueCode: `msg_strings([''])`,
-        messageMatch: (m) => `msg_isMatching(${m}, [MSG_STRING_TOKEN])`
+        initValueCode: ({ msg }) => `${msg.strings}([''])`,
+        messageMatch: (m, { msg }) => `${msg.isMatching}(${m}, [${msg.STRING_TOKEN}])`
     }),
     'listbox': makeNodeImplementation({
         name: 'listbox',
-        initValueCode: `msg_bang()`,
+        initValueCode: ({ bangUtils }) => `${bangUtils.bang}()`,
     })
 }
 

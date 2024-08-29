@@ -18,14 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AnonFunc, Class, Sequence, stdlib } from '@webpd/compiler'
+import { AnonFunc, Class, Sequence, stdlib, Func, Var, ast } from '@webpd/compiler'
 import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { Func, Var, ast } from '@webpd/compiler'
-import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     delayName: string,
@@ -57,79 +55,72 @@ const builder: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation - shared ------------------------------ //
-const variableNamesSharedList = [
-    'NOOP',
-    'setDelayName',
-    'setRawOffset',
-    'updateOffset',
-]
-
 const sharedNodeImplementation: _NodeImplementation = {
 
-    state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('string', 'delayName', '""'),
-            Var('buf_SoundBuffer', 'buffer', 'DELAY_BUFFERS_NULL'),
-            Var('Float', 'rawOffset', 0),
-            Var('Int', 'offset', 0),
-            Var('(_: string) => void', 'setDelayNameCallback', ns.NOOP!)
+    state: ({ ns }, { buf, delayBuffers }) => 
+        Class(ns.State, [
+            Var(`string`, `delayName`, `""`),
+            Var(buf.SoundBuffer, `buffer`, delayBuffers.NULL_BUFFER),
+            Var(`Float`, `rawOffset`, 0),
+            Var(`Int`, `offset`, 0),
+            Var(`(_: string) => void`, `setDelayNameCallback`, ns.NOOP)
         ]),
 
-    initialization: ({ ns, node: { args }, state }) => ast`
-        ${state}.setDelayNameCallback = ${AnonFunc([Var('string', '_')])`
-            ${state}.buffer = DELAY_BUFFERS.get(${state}.delayName)
-            ${ns.updateOffset!}(${state})
+    initialization: ({ ns, node: { args }, state }, { delayBuffers }) => ast`
+        ${state}.setDelayNameCallback = ${AnonFunc([Var(`string`, `_`)])`
+            ${state}.buffer = ${delayBuffers._BUFFERS}.get(${state}.delayName)
+            ${ns.updateOffset}(${state})
         `}
 
         if ("${args.delayName}".length) {
-            ${ns.setDelayName!}(${state}, "${args.delayName}", ${state}.setDelayNameCallback)
+            ${ns.setDelayName}(${state}, "${args.delayName}", ${state}.setDelayNameCallback)
         }
     `,
 
-    dsp: ({ ns, state, outs, ins }) => ({
+    dsp: ({ ns, state, outs, ins }, { buf }) => ({
         inlets: {
-            '0': ast`${ns.setRawOffset!}(${state}, ${ins.$0})`
+            '0': ast`${ns.setRawOffset}(${state}, ${ins.$0})`
         },    
-        loop: ast`${outs.$0} = buf_readSample(${state}.buffer, ${state}.offset)`,
+        loop: ast`${outs.$0} = ${buf.readSample}(${state}.buffer, ${state}.offset)`,
     }),
 
-    core: ({ ns, globs }) => 
+    core: ({ ns }, { core, sked, delayBuffers }) => 
         Sequence([
-            Func(ns.setDelayName!, [
-                Var(ns.State!, 'state'),
-                Var('string', 'delayName'),
-                Var('SkedCallback', 'callback'),
+            Func(ns.setDelayName, [
+                Var(ns.State, `state`),
+                Var(`string`, `delayName`),
+                Var(sked.Callback, `callback`),
             ])`
                 if (state.delayName.length) {
-                    state.buffer = DELAY_BUFFERS_NULL
+                    state.buffer = ${delayBuffers.NULL_BUFFER}
                 }
                 state.delayName = delayName
                 if (state.delayName.length) {
-                    DELAY_BUFFERS_get(state.delayName, callback)
+                    ${delayBuffers.wait}(state.delayName, callback)
                 }
             `,
 
-            Func(ns.setRawOffset!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'rawOffset'),
+            Func(ns.setRawOffset, [
+                Var(ns.State, `state`),
+                Var(`Float`, `rawOffset`),
             ])`
                 state.rawOffset = rawOffset
-                ${ns.updateOffset!}(state)
+                ${ns.updateOffset}(state)
             `,
 
-            Func(ns.updateOffset!, [
-                Var(ns.State!, 'state'),
+            Func(ns.updateOffset, [
+                Var(ns.State, `state`),
             ])`
                 state.offset = toInt(Math.round(
                     Math.min(
-                        Math.max(computeUnitInSamples(${globs.sampleRate}, state.rawOffset, "msec"), 0), 
+                        Math.max(computeUnitInSamples(${core.SAMPLE_RATE}, state.rawOffset, "msec"), 0), 
                         toFloat(state.buffer.length - 1)
                     )
                 ))
             `,
 
-            Func(ns.NOOP!, [
-                Var('string', '_')
+            Func(ns.NOOP, [
+                Var(`string`, `_`)
             ])``,
         ]),
 

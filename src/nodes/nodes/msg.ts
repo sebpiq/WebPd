@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, DspGraph } from '@webpd/compiler'
+import { Class, DspGraph, VariableNamesIndex } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
@@ -67,20 +67,22 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------ node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
 
-    state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Array<MessageTemplate>', 'outTemplates', '[]'),
-            Var('Array<Message>', 'outMessages', '[]'),
-            Var('Array<(m: Message) => Message>', 'messageTransferFunctions', '[]'),
+    state: ({ ns }, { msg }) => 
+        Class(ns.State, [
+            Var(`Array<${msg.Template}>`, `outTemplates`, `[]`),
+            Var(`Array<${msg.Message}>`, `outMessages`, `[]`),
+            Var(`Array<(m: ${msg.Message}) => ${msg.Message}>`, `messageTransferFunctions`, `[]`),
         ]),
 
-    initialization: (context) => {
+    initialization: (context, globals) => {
         const { node: { args }, state } = context
+        const { msg } = globals
         const transferCodes = args.templates.map(
             (template, i) => buildMsgTransferCode(
                 context,
+                globals,
                 template,
-                i
+                i,
             )
         )
     
@@ -93,8 +95,8 @@ const nodeImplementation: _NodeImplementation = {
             ${state}.messageTransferFunctions = [
                 ${transferCodes.flatMap(({ inMessageUsed, outMessageCode }, i) => [
                     AnonFunc([
-                        Var('Message', 'inMessage')
-                    ], 'Message')`
+                        Var(msg.Message, `inMessage`)
+                    ], msg.Message)`
                         ${inMessageUsed ? outMessageCode: null}
                         return ${state}.outMessages[${i}]
                     `, ','
@@ -103,47 +105,50 @@ const nodeImplementation: _NodeImplementation = {
         `
     }, 
 
-    messageReceivers: ({
-        snds,
-        state,
-    }) => {
+    messageReceivers: (
+        {
+            snds,
+            state,
+        }, 
+        { msg }
+    ) => {
         return {
-            '0': AnonFunc([Var('Message', 'm')])`
+            '0': AnonFunc([Var(msg.Message, `m`)])`
                 if (
-                    msg_isStringToken(m, 0) 
-                    && msg_readStringToken(m, 0) === 'set'
+                    ${msg.isStringToken}(m, 0) 
+                    && ${msg.readStringToken}(m, 0) === 'set'
                 ) {
                     ${state}.outTemplates = [[]]
-                    for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
-                        if (msg_isFloatToken(m, i)) {
-                            ${state}.outTemplates[0].push(MSG_FLOAT_TOKEN)
+                    for (${Var(`Int`, `i`, `1`)}; i < ${msg.getLength}(m); i++) {
+                        if (${msg.isFloatToken}(m, i)) {
+                            ${state}.outTemplates[0].push(${msg.FLOAT_TOKEN})
                         } else {
-                            ${state}.outTemplates[0].push(MSG_STRING_TOKEN)
-                            ${state}.outTemplates[0].push(msg_readStringToken(m, i).length)
+                            ${state}.outTemplates[0].push(${msg.STRING_TOKEN})
+                            ${state}.outTemplates[0].push(${msg.readStringToken}(m, i).length)
                         }
                     }
     
-                    ${ConstVar('Message', 'message', `msg_create(${state}.outTemplates[0])`)}
-                    for (${Var('Int', 'i', '1')}; i < msg_getLength(m); i++) {
-                        if (msg_isFloatToken(m, i)) {
-                            msg_writeFloatToken(
-                                message, i - 1, msg_readFloatToken(m, i)
+                    ${ConstVar(msg.Message, `message`, `${msg.create}(${state}.outTemplates[0])`)}
+                    for (${Var(`Int`, `i`, `1`)}; i < ${msg.getLength}(m); i++) {
+                        if (${msg.isFloatToken}(m, i)) {
+                            ${msg.writeFloatToken}(
+                                message, i - 1, ${msg.readFloatToken}(m, i)
                             )
                         } else {
-                            msg_writeStringToken(
-                                message, i - 1, msg_readStringToken(m, i)
+                            ${msg.writeStringToken}(
+                                message, i - 1, ${msg.readStringToken}(m, i)
                             )
                         }
                     }
                     ${state}.outMessages[0] = message
                     ${state}.messageTransferFunctions.splice(0, ${state}.messageTransferFunctions.length - 1)
-                    ${state}.messageTransferFunctions[0] = ${AnonFunc([Var('Message', 'm')], 'Message')`
+                    ${state}.messageTransferFunctions[0] = ${AnonFunc([Var(msg.Message, `m`)], msg.Message)`
                         return ${state}.outMessages[0]
                     `}
                     return
     
                 } else {
-                    for (${Var('Int', 'i', '0')}; i < ${state}.messageTransferFunctions.length; i++) {
+                    for (${Var(`Int`, `i`, `0`)}; i < ${state}.messageTransferFunctions.length; i++) {
                         ${snds.$0}(${state}.messageTransferFunctions[i](m))
                     }
                     return
@@ -163,6 +168,7 @@ export {
 
 const buildMsgTransferCode = (
     { state }: Parameters<_NodeImplementation['initialization']>[0],
+    { msg }: VariableNamesIndex['globals'],
     template: Array<DspGraph.NodeArgument>, 
     index: number,
 ) => {
@@ -177,17 +183,17 @@ const buildMsgTransferCode = (
         if (operation.type === 'noop') {
             const { inIndex } = operation
             outTemplateCode.push(ast`
-                ${outTemplate}.push(msg_getTokenType(inMessage, ${inIndex}))
-                if (msg_isStringToken(inMessage, ${inIndex})) {
-                    stringMem[${stringMemCount}] = msg_readStringToken(inMessage, ${inIndex})
+                ${outTemplate}.push(${msg.getTokenType}(inMessage, ${inIndex}))
+                if (${msg.isStringToken}(inMessage, ${inIndex})) {
+                    stringMem[${stringMemCount}] = ${msg.readStringToken}(inMessage, ${inIndex})
                     ${outTemplate}.push(stringMem[${stringMemCount}].length)
                 }
             `)
             outMessageCode.push(ast`
-                if (msg_isFloatToken(inMessage, ${inIndex})) {
-                    msg_writeFloatToken(${outMessage}, ${outIndex}, msg_readFloatToken(inMessage, ${inIndex}))
-                } else if (msg_isStringToken(inMessage, ${inIndex})) {
-                    msg_writeStringToken(${outMessage}, ${outIndex}, stringMem[${stringMemCount}])
+                if (${msg.isFloatToken}(inMessage, ${inIndex})) {
+                    ${msg.writeFloatToken}(${outMessage}, ${outIndex}, ${msg.readFloatToken}(inMessage, ${inIndex}))
+                } else if (${msg.isStringToken}(inMessage, ${inIndex})) {
+                    ${msg.writeStringToken}(${outMessage}, ${outIndex}, stringMem[${stringMemCount}])
                 }
             `)
             stringMemCount++
@@ -195,38 +201,38 @@ const buildMsgTransferCode = (
             outTemplateCode.push(ast`
                 stringToken = "${operation.template}"
                 ${operation.variables.map(({placeholder, inIndex}) => `
-                    if (msg_isFloatToken(inMessage, ${inIndex})) {
-                        otherStringToken = msg_readFloatToken(inMessage, ${inIndex}).toString()
+                    if (${msg.isFloatToken}(inMessage, ${inIndex})) {
+                        otherStringToken = ${msg.readFloatToken}(inMessage, ${inIndex}).toString()
                         if (otherStringToken.endsWith('.0')) {
                             otherStringToken = otherStringToken.slice(0, -2)
                         }
                         stringToken = stringToken.replace("${placeholder}", otherStringToken)
-                    } else if (msg_isStringToken(inMessage, ${inIndex})) {
-                        stringToken = stringToken.replace("${placeholder}", msg_readStringToken(inMessage, ${inIndex}))
+                    } else if (${msg.isStringToken}(inMessage, ${inIndex})) {
+                        stringToken = stringToken.replace("${placeholder}", ${msg.readStringToken}(inMessage, ${inIndex}))
                     }`
                 ).join('\n')}
                 stringMem[${stringMemCount}] = stringToken
-                ${outTemplate}.push(MSG_STRING_TOKEN)
+                ${outTemplate}.push(${msg.STRING_TOKEN})
                 ${outTemplate}.push(stringMem[${stringMemCount}].length)
             `)
             outMessageCode.push(ast`
-                msg_writeStringToken(${outMessage}, ${outIndex}, stringMem[${stringMemCount}])
+                ${msg.writeStringToken}(${outMessage}, ${outIndex}, stringMem[${stringMemCount}])
             `)
             stringMemCount++
         } else if (operation.type === 'string-constant') {
             outTemplateCode.push(ast`
-                ${outTemplate}.push(MSG_STRING_TOKEN)
+                ${outTemplate}.push(${msg.STRING_TOKEN})
                 ${outTemplate}.push(${operation.value.length})
             `)
             outMessageCode.push(ast`
-                msg_writeStringToken(${outMessage}, ${outIndex}, "${operation.value}")
+                ${msg.writeStringToken}(${outMessage}, ${outIndex}, "${operation.value}")
             `)
         } else if (operation.type === 'float-constant') {
             outTemplateCode.push(ast`
-                ${outTemplate}.push(MSG_FLOAT_TOKEN)
+                ${outTemplate}.push(${msg.FLOAT_TOKEN})
             `)
             outMessageCode.push(ast`
-                msg_writeFloatToken(${outMessage}, ${outIndex}, ${operation.value})
+                ${msg.writeFloatToken}(${outMessage}, ${outIndex}, ${operation.value})
             `)
         }
     })
@@ -239,12 +245,12 @@ const buildMsgTransferCode = (
     return {
         inMessageUsed,
         outMessageCode: ast`
-            ${hasStringTemplate ? Var('string', 'stringToken'): null}
-            ${hasStringTemplate ? Var('string', 'otherStringToken'): null}
-            ${inMessageUsed ? Var('Array<string>', 'stringMem', '[]'): null}
+            ${hasStringTemplate ? Var(`string`, `stringToken`): null}
+            ${hasStringTemplate ? Var(`string`, `otherStringToken`): null}
+            ${inMessageUsed ? Var(`Array<string>`, `stringMem`, `[]`): null}
             ${outTemplate} = []
             ${outTemplateCode}
-            ${outMessage} = msg_create(${outTemplate})
+            ${outMessage} = ${msg.create}(${outTemplate})
             ${outMessageCode}
         `
     }

@@ -172,9 +172,9 @@ describe('controls-atoms', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'] = (msg) =>
                         received.push(msg)
-                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'] = (msg) =>
                         receivedControl.push(msg)
 
                     engine.io.messageReceivers.send['0'](
@@ -213,9 +213,9 @@ describe('controls-atoms', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'] = (msg) =>
                         received.push(msg)
-                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'] = (msg) =>
                         receivedControl.push(msg)
 
                     engine.io.messageReceivers.send['0'](['bang'])
@@ -245,9 +245,9 @@ describe('controls-atoms', () => {
                     const received: Array<Message> = []
                     const receivedControl: Array<Message> = []
 
-                    engine.io.messageSenders.receive['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.receive['0'] = (msg) =>
                         received.push(msg)
-                    engine.io.messageSenders.control['0'].onMessage = (msg) =>
+                    engine.io.messageSenders.control['0'] = (msg) =>
                         receivedControl.push(msg)
 
                     engine.io.messageReceivers.send['0'](

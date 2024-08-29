@@ -56,57 +56,60 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = { 
-    state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'floatFilter', typeof args.filters[0] === 'number' ? args.filters[0]: 0),
-            Var('string', 'stringFilter', `"${args.filters[0]}"`),
-            Var('Int', 'filterType', typeof args.filters[0] === 'number' ? 'MSG_FLOAT_TOKEN' : 'MSG_STRING_TOKEN'),
+    state: ({ node: { args }, ns }, { msg }) => 
+        Class(ns.State, [
+            Var(`Float`, `floatFilter`, typeof args.filters[0] === `number` ? args.filters[0]: 0),
+            Var(`string`, `stringFilter`, `"${args.filters[0]}"`),
+            Var(`Int`, `filterType`, typeof args.filters[0] === `number` ? msg.FLOAT_TOKEN : msg.STRING_TOKEN),
         ]),
 
-    messageReceivers: ({ snds, state, node: { args } }) => {
+    messageReceivers: (
+        { snds, state, node: { args } }, 
+        { msg, bangUtils, msgUtils }
+    ) => {
         if (args.filters.length > 1) {
             return {
-                '0': AnonFunc([Var('Message', 'm')])`
+                '0': AnonFunc([Var(msg.Message, `m`)])`
                     ${args.filters.map((filter, i) => functional.renderSwitch(
                         [filter === 'float', `
-                            if (msg_isFloatToken(m, 0)) {
+                            if (${msg.isFloatToken}(m, 0)) {
                                 ${snds[i]}(m)
                                 return
                             }
                         `],
                         [filter === 'symbol', `
-                            if (msg_isStringToken(m, 0)) {
+                            if (${msg.isStringToken}(m, 0)) {
                                 ${snds[i]}(m)
                                 return
                             }
                         `],
                         [filter === 'list', `
-                            if (msg_getLength(m).length > 1) {
+                            if (${msg.getLength}(m).length > 1) {
                                 ${snds[i]}(m)
                                 return
                             }
                         `],
                         [filter === 'bang', `
-                            if (msg_isBang(m)) {
+                            if (${bangUtils.isBang}(m)) {
                                 ${snds[i]}(m)
                                 return
                             }
                         `],
                         [typeof filter === 'number', `
                             if (
-                                msg_isFloatToken(m, 0)
-                                && msg_readFloatToken(m, 0) === ${filter}
+                                ${msg.isFloatToken}(m, 0)
+                                && ${msg.readFloatToken}(m, 0) === ${filter}
                             ) {
-                                ${snds[i]}(msg_emptyToBang(msg_shift(m)))
+                                ${snds[i]}(${bangUtils.emptyToBang}(${msgUtils.shift}(m)))
                                 return
                             }
                         `],
                         [typeof filter === 'string', `
                             if (
-                                msg_isStringToken(m, 0) 
-                                && msg_readStringToken(m, 0) === "${filter}"
+                                ${msg.isStringToken}(m, 0) 
+                                && ${msg.readStringToken}(m, 0) === "${filter}"
                             ) {
-                                ${snds[i]}(msg_emptyToBang(msg_shift(m)))
+                                ${snds[i]}(${bangUtils.emptyToBang}(${msgUtils.shift}(m)))
                                 return
                             }`
                         ],
@@ -119,34 +122,34 @@ const nodeImplementation: _NodeImplementation = {
         
         } else {
             return {
-                '0': AnonFunc([Var('Message', 'm')])`
-                    if (${state}.filterType === MSG_STRING_TOKEN) {
+                '0': AnonFunc([Var(msg.Message, `m`)])`
+                    if (${state}.filterType === ${msg.STRING_TOKEN}) {
                         if (
                             (${state}.stringFilter === 'float'
-                                && msg_isFloatToken(m, 0))
+                                && ${msg.isFloatToken}(m, 0))
                             || (${state}.stringFilter === 'symbol'
-                                && msg_isStringToken(m, 0))
+                                && ${msg.isStringToken}(m, 0))
                             || (${state}.stringFilter === 'list'
-                                && msg_getLength(m) > 1)
+                                && ${msg.getLength}(m) > 1)
                             || (${state}.stringFilter === 'bang' 
-                                && msg_isBang(m))
+                                && ${bangUtils.isBang}(m))
                         ) {
                             ${snds.$0}(m)
                             return
                         
                         } else if (
-                            msg_isStringToken(m, 0)
-                            && msg_readStringToken(m, 0) === ${state}.stringFilter
+                            ${msg.isStringToken}(m, 0)
+                            && ${msg.readStringToken}(m, 0) === ${state}.stringFilter
                         ) {
-                            ${snds.$0}(msg_emptyToBang(msg_shift(m)))
+                            ${snds.$0}(${bangUtils.emptyToBang}(${msgUtils.shift}(m)))
                             return
                         }
     
                     } else if (
-                        msg_isFloatToken(m, 0)
-                        && msg_readFloatToken(m, 0) === ${state}.floatFilter
+                        ${msg.isFloatToken}(m, 0)
+                        && ${msg.readFloatToken}(m, 0) === ${state}.floatFilter
                     ) {
-                        ${snds.$0}(msg_emptyToBang(msg_shift(m)))
+                        ${snds.$0}(${bangUtils.emptyToBang}(${msgUtils.shift}(m)))
                         return
                     }
                 
@@ -154,12 +157,12 @@ const nodeImplementation: _NodeImplementation = {
                 return
                 `,
     
-                '1': AnonFunc([Var('Message', 'm')])`
-                    ${state}.filterType = msg_getTokenType(m, 0)
-                    if (${state}.filterType === MSG_STRING_TOKEN) {
-                        ${state}.stringFilter = msg_readStringToken(m, 0)
+                '1': AnonFunc([Var(msg.Message, `m`)])`
+                    ${state}.filterType = ${msg.getTokenType}(m, 0)
+                    if (${state}.filterType === ${msg.STRING_TOKEN}) {
+                        ${state}.stringFilter = ${msg.readStringToken}(m, 0)
                     } else {
-                        ${state}.floatFilter = msg_readFloatToken(m, 0)
+                        ${state}.floatFilter = ${msg.readFloatToken}(m, 0)
                     }
                     return
                 `

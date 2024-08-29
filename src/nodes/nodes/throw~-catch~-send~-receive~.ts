@@ -21,8 +21,8 @@
 import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { signalBuses } from '../global-code/buses'
-import { AnonFunc, Class, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { sigBuses } from '../global-code/buses'
+import { AnonFunc, Class, Func, Sequence, Var, VariableNamesIndex, ast } from '@webpd/compiler'
 import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
@@ -93,25 +93,25 @@ const builderCatch: NodeBuilder<NodeArguments> = {
 }
 
 // ------------------------------- node implementation ------------------------------ //
-const sharedCore = (ns: { [name: string]: VariableName }) =>
+const sharedCore = (ns: { [name: string]: VariableName }, { sigBuses }: VariableNamesIndex['globals']) =>
     Sequence([
-        Func(ns.setBusName!, [
-            Var(ns.State!, 'state'), Var('string', 'busName')
+        Func(ns.setBusName, [
+            Var(ns.State, `state`), Var(`string`, `busName`)
         ], 'void')`
             if (busName.length) {
                 state.busName = busName
-                resetSignalBus(state.busName)
+                ${sigBuses.reset}(state.busName)
             }
         `,
     ])
 
 const sharedNodeImplementation: _NodeImplementation = {
     state: ({ ns }) =>
-        Class(ns.State!, [Var('string', 'busName', '""')]),
+        Class(ns.State, [Var(`string`, `busName`, `""`)]),
 
     initialization: ({ ns, node: { args }, state }) =>
         ast`
-        ${ns.setBusName!}(${state}, "${args.busName}")
+        ${ns.setBusName}(${state}, "${args.busName}")
     `,
 }
 
@@ -123,27 +123,27 @@ const nodeImplementationThrow: _NodeImplementation = {
         alphaName: 'throw_t',
     },
 
-    dsp: ({ ins, state }) => ast`
-        addAssignSignalBus(${state}.busName, ${ins.$0})
+    dsp: ({ ins, state }, { sigBuses }) => ast`
+        ${sigBuses.addAssign}(${state}.busName, ${ins.$0})
     `,
 
-    messageReceivers: ({ ns, state }) => ({
-        '0_message': AnonFunc([ Var('Message', 'm') ], 'void')`
+    messageReceivers: ({ ns, state }, { msg }) => ({
+        '0_message': AnonFunc([ Var(msg.Message, `m`) ], `void`)`
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'set'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'set'
             ) {
-                ${ns.setBusName!}(${state}, msg_readStringToken(m, 1))
+                ${ns.setBusName}(${state}, ${msg.readStringToken}(m, 1))
                 return
             }
         `
     }),
 
-    core: ({ ns }) => 
-        sharedCore(ns),
+    core: ({ ns }, globals) => 
+        sharedCore(ns, globals),
 
     dependencies: [ 
-        signalBuses,
+        sigBuses,
     ]
 }
 
@@ -155,19 +155,16 @@ const nodeImplementationCatch: _NodeImplementation = {
         alphaName: 'catch_t',
     },
 
-    dsp: ({
-        outs,
-        state,
-    }) => ast`
-        ${outs.$0} = readSignalBus(${state}.busName)
-        resetSignalBus(${state}.busName)
+    dsp: ({ outs, state }, { sigBuses }) => ast`
+        ${outs.$0} = ${sigBuses.read}(${state}.busName)
+        ${sigBuses.reset}(${state}.busName)
     `,
 
-    core: ({ ns }) => 
-        sharedCore(ns),
+    core: ({ ns }, globals) => 
+        sharedCore(ns, globals),
 
     dependencies: [
-        signalBuses,
+        sigBuses,
     ],
 }
 
@@ -179,15 +176,15 @@ const nodeImplementationSend: _NodeImplementation = {
         alphaName: 'send_t',
     },
 
-    dsp: ({ state, ins }) => ast`
-        setSignalBus(${state}.busName, ${ins.$0})
+    dsp: ({ state, ins }, { sigBuses }) => ast`
+        ${sigBuses.set}(${state}.busName, ${ins.$0})
     `,
 
-    core: ({ ns }) => 
-        sharedCore(ns),
+    core: ({ ns }, globals) => 
+        sharedCore(ns, globals),
 
     dependencies: [
-        signalBuses,
+        sigBuses,
     ],
 }
 
@@ -200,26 +197,26 @@ const nodeImplementationReceive: _NodeImplementation = {
         isDspInline: true,
     },
 
-    dsp: ({ state }) => 
-        ast`readSignalBus(${state}.busName)`,
+    dsp: ({ state }, { sigBuses }) => 
+        ast`${sigBuses.read}(${state}.busName)`,
     
-    messageReceivers: ({ ns, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
+    messageReceivers: ({ ns, state }, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
             if (
-                msg_isMatching(m, [MSG_STRING_TOKEN, MSG_STRING_TOKEN])
-                && msg_readStringToken(m, 0) === 'set'
+                ${msg.isMatching}(m, [${msg.STRING_TOKEN}, ${msg.STRING_TOKEN}])
+                && ${msg.readStringToken}(m, 0) === 'set'
             ) {
-                ${ns.setBusName!}(${state}, msg_readStringToken(m, 1))
+                ${ns.setBusName}(${state}, ${msg.readStringToken}(m, 1))
                 return
             }
         `
     }),
 
-    core: ({ ns }) => 
-        sharedCore(ns),
+    core: ({ ns }, globals) => 
+        sharedCore(ns, globals),
 
     dependencies: [
-        signalBuses,
+        sigBuses,
     ]
 }
 

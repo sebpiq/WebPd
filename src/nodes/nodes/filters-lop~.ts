@@ -65,29 +65,29 @@ const nodeImplementation: _NodeImplementation = {
     },
 
     state: ({ ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'previous', 0),
-            Var('Float', 'coeff', 0),
+        Class(ns.State, [
+            Var(`Float`, `previous`, 0),
+            Var(`Float`, `coeff`, 0),
         ]),
         
     dsp: ({ ns, ins, state, outs }) => ({
         inlets: {
-            '1': ast`${ns.setFreq!}(${state}, ${ins.$1})`
+            '1': ast`${ns.setFreq}(${state}, ${ins.$1})`
         },
         loop: ast`${state}.previous = ${outs.$0} = ${state}.coeff * ${ins.$0} + (1 - ${state}.coeff) * ${state}.previous`
     }),
 
-    messageReceivers: ({ ns, state }) => ({
-        '1': coldFloatInletWithSetter(ns.setFreq!, state),
+    messageReceivers: ({ ns, state }, { msg }) => ({
+        '1': coldFloatInletWithSetter(ns.setFreq, state, msg),
     }),
 
-    core: ({ globs, ns }) => 
+    core: ({ ns }, { core }) => 
         Sequence([
-            Func(ns.setFreq!, [
-                Var(ns.State!, 'state'),
-                Var('Float', 'freq'),
+            Func(ns.setFreq, [
+                Var(ns.State, `state`),
+                Var(`Float`, `freq`),
             ], 'void')`
-                state.coeff = Math.max(Math.min(freq * 2 * Math.PI / ${globs.sampleRate}, 1), 0)
+                state.coeff = Math.max(Math.min(freq * 2 * Math.PI / ${core.SAMPLE_RATE}, 1), 0)
             `
         ])
 }

@@ -51,19 +51,19 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
     state: ({ node: { args }, ns }) => 
-        Class(ns.State!, [
-            Var('Float', 'minValue', args.minValue),
-            Var('Float', 'maxValue', args.maxValue),
+        Class(ns.State, [
+            Var(`Float`, `minValue`, args.minValue),
+            Var(`Float`, `maxValue`, args.maxValue),
         ]),
     
-    messageReceivers: ({ snds, state }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                ${snds[0]}(msg_floats([
+    messageReceivers: ({ snds, state }, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+                ${snds[0]}(${msg.floats}([
                     Math.max(
                         Math.min(
                             ${state}.maxValue, 
-                            msg_readFloatToken(m, 0)
+                            ${msg.readFloatToken}(m, 0)
                         ), 
                         ${state}.minValue
                     )
@@ -72,8 +72,8 @@ const nodeImplementation: _NodeImplementation = {
             }
         `,
     
-        '1': coldFloatInlet(`${state}.minValue`),
-        '2': coldFloatInlet(`${state}.maxValue`),
+        '1': coldFloatInlet(`${state}.minValue`, msg),
+        '2': coldFloatInlet(`${state}.maxValue`, msg),
     }),
 }
 

@@ -21,14 +21,14 @@
 import {
     NodeImplementation,
     NodeImplementations,
-    GlobalCodeGenerator,
+    GlobalDefinitions,
 } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { pow } from '../global-code/funcs'
-import { AnonFunc, ast, Class, Func, Sequence, Var } from '@webpd/compiler'
+import { AnonFunc, ast, Class, Func, Sequence, Var, VariableNamesIndex } from '@webpd/compiler'
 import { Code } from '@webpd/compiler'
 
 interface NodeArguments {
@@ -56,6 +56,7 @@ const makeBuilder = (defaultValue: number): NodeBuilder<NodeArguments> => ({
 })
 
 // ------------------------------- node implementation ------------------------------ //
+// prettier-ignore
 const makeNodeImplementation = ({
     operationName,
     generateOperation,
@@ -67,9 +68,10 @@ const makeNodeImplementation = ({
     generateOperation: (
         state: Parameters<
             _NodeImplementation['messageReceivers']
-        >[0]['state']
+        >[0]['state'],
+        globals: VariableNamesIndex['globals']
     ) => Code
-    dependencies?: Array<GlobalCodeGenerator>
+    dependencies?: Array<GlobalDefinitions>
     prepareLeftOp?: Code
     prepareRightOp?: Code
 }): _NodeImplementation => {
@@ -80,44 +82,47 @@ const makeNodeImplementation = ({
         },
 
         state: ({ ns }) => 
-            Class(ns.State!, [
-                Var('Float', 'leftOp', 0), 
-                Var('Float', 'rightOp', 0)
+            Class(ns.State, [
+                Var(`Float`, `leftOp`, 0), 
+                Var(`Float`, `rightOp`, 0)
             ]),
         
         initialization: ({ ns, state, node: { args } }) => ast`
-            ${ns.setLeft!}(${state}, 0)
-            ${ns.setRight!}(${state}, ${args.value})
+            ${ns.setLeft}(${state}, 0)
+            ${ns.setRight}(${state}, ${args.value})
         `,
 
-        messageReceivers: ({ ns, state, snds }) => ({
-            '0': AnonFunc([Var('Message', 'm')])`
-                if (msg_isMatching(m, [MSG_FLOAT_TOKEN])) {
-                    ${ns.setLeft!}(${state}, msg_readFloatToken(m, 0))
-                    ${snds.$0}(msg_floats([${generateOperation(state)}]))
-                    return
-                
-                } else if (msg_isBang(m)) {
-                    ${snds.$0}(msg_floats([${generateOperation(state)}]))
-                    return
-                }
-            `,
+        messageReceivers: ({ ns, state, snds }, globals) => {
+            const { bangUtils, msg } = globals
+            return {
+                '0': AnonFunc([Var(msg.Message, `m`)])`
+                    if (${msg.isMatching}(m, [${msg.FLOAT_TOKEN}])) {
+                        ${ns.setLeft}(${state}, ${msg.readFloatToken}(m, 0))
+                        ${snds.$0}(${msg.floats}([${generateOperation(state, globals)}]))
+                        return
+                    
+                    } else if (${bangUtils.isBang}(m)) {
+                        ${snds.$0}(${msg.floats}([${generateOperation(state, globals)}]))
+                        return
+                    }
+                `,
 
-            '1': coldFloatInletWithSetter(ns.setRight!, state),
-        }),
+                '1': coldFloatInletWithSetter(ns.setRight, state, msg),
+            }
+        },
 
         core: ({ ns }) => 
             Sequence([
-                Func(ns.setLeft!, [
-                    Var(ns.State!, 'state'),
-                    Var('Float', 'value'),
+                Func(ns.setLeft, [
+                    Var(ns.State, `state`),
+                    Var(`Float`, `value`),
                 ], 'void')`
                     state.leftOp = ${prepareLeftOp ? prepareLeftOp: 'value'}
                 `,
 
-                Func(ns.setRight!, [
-                    Var(ns.State!, 'state'),
-                    Var('Float', 'value'),
+                Func(ns.setRight, [
+                    Var(ns.State, `state`),
+                    Var(`Float`, `value`),
                 ], 'void')`
                     state.rightOp = ${prepareRightOp ? prepareRightOp: 'value'}
                 `,
@@ -176,7 +181,7 @@ const nodeImplementations: NodeImplementations = {
     }),
     pow: makeNodeImplementation({
         operationName: 'pow',
-        generateOperation: (state) => `pow(${state}.leftOp, ${state}.rightOp)`,
+        generateOperation: (state, { funcs }) => `${funcs.pow}(${state}.leftOp, ${state}.rightOp)`,
         dependencies: [pow],
     }),
     log: makeNodeImplementation({

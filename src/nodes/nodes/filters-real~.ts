@@ -74,9 +74,9 @@ const makeNodeImplementation = ({
         },
 
         state: ({ ns }) => 
-            Class(ns.State!, [
-                Var('Float', 'lastOutput', 0),
-                Var('Float', 'lastInput', 0),
+            Class(ns.State, [
+                Var(`Float`, `lastOutput`, 0),
+                Var(`Float`, `lastInput`, 0),
             ]),
 
         dsp: ({ ins, state, outs }) => ast`

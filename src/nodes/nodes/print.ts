@@ -48,9 +48,9 @@ const builder: NodeBuilder<NodeArguments> = {
 
 // ------------------------------- node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = { 
-    messageReceivers: ({ node: { args } }) => ({
-        '0': AnonFunc([Var('Message', 'm')])`
-            console.log("${args.prefix} " + msg_display(m))
+    messageReceivers: ({ node: { args } }, { msg }) => ({
+        '0': AnonFunc([Var(msg.Message, `m`)])`
+            console.log("${args.prefix} " + ${msg.display}(m))
             return
         `,
     }) 
