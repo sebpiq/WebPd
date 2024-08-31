@@ -33,6 +33,7 @@ import * as line from './nodes/line'
 import * as funcsTilde from './nodes/funcs~'
 import * as tabread from './nodes/tabread'
 import * as tabwrite from './nodes/tabwrite'
+import * as tabwriteTilde from './nodes/tabwrite~'
 import * as tabreadTilde from './nodes/tabread~-tabread4~'
 import * as tabplayTilde from './nodes/tabplay~'
 import * as readsfTilde from './nodes/readsf~'
@@ -104,6 +105,7 @@ const NODE_BUILDERS: NodeBuilders = {
     'adc~': adcTilde.builder,
     'samplerate~': sampleRateTilde.builder,
     'tabplay~': tabplayTilde.builder,
+    'tabwrite~': tabwriteTilde.builder,
     'readsf~': readsfTilde.builder,
     'writesf~': writesfTilde.builder,
     'vd~': { aliasTo: 'delread4~' },
@@ -188,6 +190,7 @@ const NODE_IMPLEMENTATIONS: NodeImplementations = {
     'adc~': adcTilde.nodeImplementation,
     'samplerate~': sampleRateTilde.nodeImplementation,
     'tabplay~': tabplayTilde.nodeImplementation,
+    'tabwrite~': tabwriteTilde.nodeImplementation,
     'readsf~': readsfTilde.nodeImplementation,
     'writesf~': writesfTilde.nodeImplementation,
     'delwrite~': delwriteTilde.nodeImplementation,
