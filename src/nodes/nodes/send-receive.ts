@@ -23,7 +23,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { msgBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
-import { Class, stdlib } from '@webpd/compiler'
+import { Class } from '@webpd/compiler'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {

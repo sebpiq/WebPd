@@ -21,6 +21,11 @@
 import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { nodeImplementation, builder } from './msg'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeTranslateArgs } from '../test-helpers'
+import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import { builders as sendReceiveBuilders, nodeImplementations as sendReceiveNodeImplementations } from './send-receive'
+import compile, { Message } from '@webpd/compiler'
+import { createTestEngine } from '@webpd/compiler/src/test-helpers'
+import assert from 'assert'
 
 describe('msg', () => {
 
@@ -28,28 +33,59 @@ describe('msg', () => {
         describe('translateArgs', () => {
             it('should handle args as expected', () => {
                 testNodeTranslateArgs(builder, ['a', 12, 'hello $1'], {
-                    templates: [['a', 12, 'hello $1']],
+                    msgSpecs: [{ tokens: ['a', 12, 'hello $1'], send: null }],
                 })
                 testNodeTranslateArgs(builder, ['a', 12, ',', 'hello $1'], {
-                    templates: [['a', 12], ['hello $1']],
+                    msgSpecs: [
+                        { tokens: ['a', 12], send: null }, 
+                        { tokens: ['hello $1'], send: null },
+                    ],
                 })
                 testNodeTranslateArgs(builder, [',', 1, ',', 2], {
-                    templates: [[1], [2]],
+                    msgSpecs: [
+                        { tokens: [1], send: null }, 
+                        { tokens: [2], send: null }
+                    ],
+                })
+                testNodeTranslateArgs(builder, [';', 'bla', 1], {
+                    msgSpecs: [
+                        { tokens: [1], send: 'bla' },
+                    ],
+                })
+                // Ignore ";" if last token
+                testNodeTranslateArgs(builder, [666, ';'], {
+                    msgSpecs: [
+                        { tokens: [666], send: null },
+                    ],
+                })
+                // Same send if several messages after ";"
+                testNodeTranslateArgs(builder, [';', 'bla', 'hello', ',', 1, ';', 'blo', 666], {
+                    msgSpecs: [
+                        { tokens: ['hello'], send: 'bla' },
+                        { tokens: [1], send: 'bla' },
+                        { tokens: [666], send: 'blo' },
+                    ],
                 })
             })
 
             it('should interpret and trim "symbol" prefix', () => {
                 testNodeTranslateArgs(builder, ['symbol'], {
-                    templates: [['']],
+                    msgSpecs: [
+                        { tokens: [''], send: null }
+                    ],
                 })
                 testNodeTranslateArgs(builder, ['symbol', 'bla'], {
-                    templates: [['bla']],
+                    msgSpecs: [
+                        { tokens: ['bla'], send: null }
+                    ],
                 })
                 testNodeTranslateArgs(builder, ['symbol', 123], {
-                    templates: [['']],
+                    msgSpecs: [
+                        { tokens: [''], send: null }
+                    ],
                 })
                 testNodeTranslateArgs(builder, ['symbol', 'poi', 'iop'], {
-                    templates: [['poi']],
+                    msgSpecs: [{ tokens: ['poi'], send: null }],
                 })
             })
         })
@@ -64,7 +100,7 @@ describe('msg', () => {
                         target,
                         bitDepth,
                         node: buildNode(builder, 'msg', {
-                            templates: [[123, 'hello']],
+                            msgSpecs: [{ tokens: [123, 'hello'], send: null }],
                         }),
                         nodeImplementation,
                     },
@@ -96,7 +132,7 @@ describe('msg', () => {
                         target,
                         bitDepth,
                         node: buildNode(builder, 'msg', {
-                            templates: [[123, '$2', '$1']],
+                            msgSpecs: [{ tokens: [123, '$2', '$1'], send: null }],
                         }),
                         nodeImplementation,
                     },
@@ -130,7 +166,7 @@ describe('msg', () => {
                         target,
                         bitDepth,
                         node: buildNode(builder, 'msg', {
-                            templates: [['hello_$2', '$1', 'greetings']],
+                            msgSpecs: [{ tokens: ['hello_$2', '$1', 'greetings'], send: null }],
                         }),
                         nodeImplementation,
                     },
@@ -157,14 +193,17 @@ describe('msg', () => {
         )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
-            'should sequentially send all messages in templates %s',
+            'should sequentially send all messages in msgSpecs %s',
             async ({ target, bitDepth }) => {
                 await nodeImplementationsTestHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
                         node: buildNode(builder, 'msg', {
-                            templates: [[123, '$1'], ['bla-$1']],
+                            msgSpecs: [
+                                { tokens: [123, '$1'], send: null }, 
+                                { tokens: ['bla-$1'], send: null },
+                            ],
                         }),
                         nodeImplementation,
                     },
@@ -197,7 +236,10 @@ describe('msg', () => {
                         target,
                         bitDepth,
                         node: buildNode(builder, 'msg', {
-                            templates: [[123, '$1'], ['bla-$1']],
+                            msgSpecs: [
+                                { tokens: [123, '$1'], send: null },
+                                { tokens: ['bla-$1'], send: null },
+                            ],
                         }),
                         nodeImplementation,
                     },
@@ -226,6 +268,65 @@ describe('msg', () => {
                         },
                     ],
                 )
+            }
+        )
+
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should transfer directly messages without dollar strings %s',
+            async ({ target, bitDepth }) => {
+                const msgArgs = { msgSpecs: [{ tokens: [123, 'hello'], send: 'BLA' }] }
+                const receiveArgs = { busName: 'BLA' }
+
+                const graph = makeGraph({
+                    msg: {
+                        type: 'msg',
+                        ...builder.build(msgArgs),
+                        args: msgArgs,
+                    },                    
+                    receive: {
+                        type: 'receive',
+                        ...sendReceiveBuilders['receive'].build(receiveArgs),
+                        args: receiveArgs,
+                    },
+                })
+
+                const nodeImplementations = {
+                    msg: nodeImplementation,
+                    receive: sendReceiveNodeImplementations['receive'],
+                }
+    
+                const compileResult = compile(graph, nodeImplementations, target, {
+                    audio: {
+                        bitDepth,
+                        channelCount: { in: 0, out: 0 },
+                    },
+                    io: {
+                        messageReceivers: {
+                            msg: { portletIds: ['0'] },
+                        },
+                        messageSenders: {
+                            receive: { portletIds: ['0'] },
+                        },
+                    },
+                })
+    
+                if (compileResult.status !== 0) {
+                    throw new Error('Compilation failed')
+                }
+    
+                const engine = await createTestEngine(
+                    target,
+                    bitDepth,
+                    compileResult.code
+                )
+                engine.initialize(44100, 1)
+
+                const received: Array<Message> = []
+                engine.io.messageSenders.receive['0'] = (msg) =>
+                    received.push(msg)
+                
+                engine.io.messageReceivers.msg['0'](['bang'])
+                assert.deepStrictEqual(received, [[123, 'hello']])
             }
         )
     })

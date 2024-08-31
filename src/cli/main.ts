@@ -253,6 +253,16 @@ const exitError = (msg: string) => {
     process.exit(1)
 }
 
+const exitUnknownError = (err: Error) => {
+    exitError(
+        'Unkown error occurred.' +
+            '\nIf you think this is a bug, please report it with the command you typed and its output.' +
+            '\nPlease follow also the guidelines at https://github.com/sebpiq/WebPd/?tab=readme-ov-file#reporting-a-bug' +
+            '\n\n' +
+            err.stack
+    )
+}
+
 const main = (): void => {
     process.stdout.write(
         (colors as any).brightMagenta.bold(`~ WebPd ${packageInfo.version} ~`)
@@ -297,7 +307,7 @@ const main = (): void => {
         )
         .option(
             '--audio-duration <seconds>',
-            'Duration of the generated audio in seconds.',
+            'Duration of the generated audio in seconds.'
         )
         .option('--check-support')
         .option('--whats-implemented')
@@ -328,7 +338,9 @@ const main = (): void => {
     const outFilepath: string | null = options.output || null
     const engine: Task['engine'] = options.engine || DEFAULT_ENGINE
     let outFormat: BuildFormat | null = options.outputFormat || null
-    const audioDuration: number = options.audioDuration ? Number(options.audioDuration): 30
+    const audioDuration: number = options.audioDuration
+        ? Number(options.audioDuration)
+        : 30
 
     const artefacts: Artefacts = {}
 
@@ -435,7 +447,7 @@ const main = (): void => {
                 }
             })
             .catch((err) => {
-                throw err
+                exitUnknownError(err)
             })
             .finally(() => {
                 process.stdout.write(
@@ -447,4 +459,8 @@ const main = (): void => {
 
 // NOTE : if (process.argv[1] === fileURLToPath(import.meta.url))
 // not working apparently when installing executable with npm.
-main()
+try {
+    main()
+} catch (err) {
+    exitUnknownError(err)
+}

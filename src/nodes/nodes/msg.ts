@@ -18,41 +18,65 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, DspGraph, VariableNamesIndex } from '@webpd/compiler'
+import { Class, Message, MessageToken, Sequence, VariableNamesIndex } from '@webpd/compiler'
 import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
 import { AstElement } from '@webpd/compiler/src/ast/types'
+import { msgBuses } from '../global-code/buses'
 
-interface NodeArguments { templates: Array<Array<DspGraph.NodeArgument>> }
+interface NodeArguments { msgSpecs: Array<MsgSpec> }
 
 type _NodeImplementation = NodeImplementation<NodeArguments>
 
-// TODO : msg [ symbol $1 ( has the fllowing behavior :
+interface MsgSpec {
+    tokens: Message,
+    send: string | null,
+}
+
+// TODO : msg [ symbol $1 ( has the following behavior :
 //      sends "" when receiving a number
 //      sends <string> when receiving a string
 // ------------------------------- node builder ------------------------------ //
 const builder: NodeBuilder<NodeArguments> = {
     skipDollarArgsResolution: true,
     translateArgs: ({ args }) => {
-        const templates: Array<Array<DspGraph.NodeArgument>> = [[]]
-        args.forEach(arg => {
-            if (arg === ',') {
-                templates.push([])
-            } else {
-                templates[templates.length - 1].push(arg)
-            }
-        })
-        return ({
-            templates: templates
-                .filter(template => template.length)
-                .map(template => {
-                    if (template[0] === 'symbol') {
-                        return [typeof template[1] === 'string' ? template[1]: '' || '']
+        const msgSpecs: Array<MsgSpec> = [{ tokens: [], send: null }]
+        let index = 0
+        let send: null | string = null
+
+        while (index < args.length) {
+            const arg = args[index++]
+            if (arg === ',' || arg === ';') {
+                // If this is the last token, we just ignore it
+                // (no length - 1, because index was already incremented)
+                if (index === args.length) {
+                    continue
+                }
+                
+                if (arg === ';') {
+                    let send_ = args[index++]
+                    if (typeof send_ !== 'string') {
+                        throw new Error(`Expected a string after ";" from [msg( with args [${args.join(' ')}]`)
                     }
-                    return template
+                    send = send_
+                }
+                msgSpecs.push({ tokens: [], send })
+                
+            } else {
+                msgSpecs[msgSpecs.length - 1].tokens.push(arg)
+            }
+        }
+        return {
+            msgSpecs: msgSpecs
+                .filter(msgSpec => msgSpec.tokens.length)
+                .map(msgSpec => {
+                    if (msgSpec.tokens[0] === 'symbol') {
+                        msgSpec.tokens = [typeof msgSpec.tokens[1] === 'string' ? msgSpec.tokens[1]: '']
+                    }
+                    return msgSpec
                 }),
-        })
+        }
     },
     build: () => ({
         inlets: {
@@ -67,41 +91,45 @@ const builder: NodeBuilder<NodeArguments> = {
 // ------------------------------ node implementation ------------------------------ //
 const nodeImplementation: _NodeImplementation = {
 
-    state: ({ ns }, { msg }) => 
+    state: ({ ns }) => 
         Class(ns.State, [
-            Var(`Array<${msg.Template}>`, `outTemplates`, `[]`),
-            Var(`Array<${msg.Message}>`, `outMessages`, `[]`),
-            Var(`Array<(m: ${msg.Message}) => ${msg.Message}>`, `messageTransferFunctions`, `[]`),
+            Var(`Array<${ns.TokenSpec}>`, `msgSpecs`, `[]`),
         ]),
 
     initialization: (context, globals) => {
         const { node: { args }, state } = context
         const { msg } = globals
-        const transferCodes = args.templates.map(
-            (template, i) => buildMsgTransferCode(
+        const transferCode = args.msgSpecs.map(
+            (msgSpec, i) => buildTransferCode(
                 context,
                 globals,
-                template,
+                msgSpec,
                 i,
             )
         )
     
         return ast`
-            ${transferCodes
-                .filter(({ inMessageUsed }) => !inMessageUsed)
-                .map(({ outMessageCode }) => outMessageCode)
-            }
-            
-            ${state}.messageTransferFunctions = [
-                ${transferCodes.flatMap(({ inMessageUsed, outMessageCode }, i) => [
-                    AnonFunc([
-                        Var(msg.Message, `inMessage`)
-                    ], msg.Message)`
-                        ${inMessageUsed ? outMessageCode: null}
-                        return ${state}.outMessages[${i}]
-                    `, ','
-                ])}
+            ${state}.msgSpecs = [
+                ${transferCode.map(({ isStaticMsg, code }, i) => ast`
+                    {
+                        transferFunction: ${AnonFunc([
+                            Var(msg.Message, `inMessage`)
+                        ], msg.Message)`
+                            ${!isStaticMsg ? code: null}
+                            return ${state}.msgSpecs[${i}].outMessage
+                        `},
+                        outTemplate: [],
+                        outMessage: ${msg.EMPTY_MESSAGE},
+                        send: ${args.msgSpecs[i].send ? `"${args.msgSpecs[i].send}"`: `""`},
+                        hasSend: ${args.msgSpecs[i].send ? `true`: `false`},
+                    },`
+                )}
             ]
+
+            ${transferCode
+                .filter(({ isStaticMsg }) => isStaticMsg)
+                .map(({ code }) => code)
+            }
         `
     }, 
 
@@ -110,7 +138,9 @@ const nodeImplementation: _NodeImplementation = {
             snds,
             state,
         }, 
-        { msg }
+        { 
+            msg, msgBuses
+        }
     ) => {
         return {
             '0': AnonFunc([Var(msg.Message, `m`)])`
@@ -118,44 +148,66 @@ const nodeImplementation: _NodeImplementation = {
                     ${msg.isStringToken}(m, 0) 
                     && ${msg.readStringToken}(m, 0) === 'set'
                 ) {
-                    ${state}.outTemplates = [[]]
+                    ${ConstVar(msg.Template, `outTemplate`, `[]`)}
                     for (${Var(`Int`, `i`, `1`)}; i < ${msg.getLength}(m); i++) {
                         if (${msg.isFloatToken}(m, i)) {
-                            ${state}.outTemplates[0].push(${msg.FLOAT_TOKEN})
+                            outTemplate.push(${msg.FLOAT_TOKEN})
                         } else {
-                            ${state}.outTemplates[0].push(${msg.STRING_TOKEN})
-                            ${state}.outTemplates[0].push(${msg.readStringToken}(m, i).length)
+                            outTemplate.push(${msg.STRING_TOKEN})
+                            outTemplate.push(${msg.readStringToken}(m, i).length)
                         }
                     }
-    
-                    ${ConstVar(msg.Message, `message`, `${msg.create}(${state}.outTemplates[0])`)}
+
+                    ${ConstVar(msg.Message, `outMessage`, `${msg.create}(outTemplate)`)}
                     for (${Var(`Int`, `i`, `1`)}; i < ${msg.getLength}(m); i++) {
                         if (${msg.isFloatToken}(m, i)) {
                             ${msg.writeFloatToken}(
-                                message, i - 1, ${msg.readFloatToken}(m, i)
+                                outMessage, i - 1, ${msg.readFloatToken}(m, i)
                             )
                         } else {
                             ${msg.writeStringToken}(
-                                message, i - 1, ${msg.readStringToken}(m, i)
+                                outMessage, i - 1, ${msg.readStringToken}(m, i)
                             )
                         }
                     }
-                    ${state}.outMessages[0] = message
-                    ${state}.messageTransferFunctions.splice(0, ${state}.messageTransferFunctions.length - 1)
-                    ${state}.messageTransferFunctions[0] = ${AnonFunc([Var(msg.Message, `m`)], msg.Message)`
-                        return ${state}.outMessages[0]
-                    `}
+
+                    ${state}.msgSpecs.splice(0, ${state}.msgSpecs.length - 1)
+                    ${state}.msgSpecs[0] = {
+                        transferFunction: ${AnonFunc([Var(msg.Message, `m`)], msg.Message)`
+                            return ${state}.msgSpecs[0].outMessage
+                        `},
+                        outTemplate: outTemplate,
+                        outMessage: outMessage,
+                        send: "",
+                        hasSend: false,
+                    }
                     return
     
                 } else {
-                    for (${Var(`Int`, `i`, `0`)}; i < ${state}.messageTransferFunctions.length; i++) {
-                        ${snds.$0}(${state}.messageTransferFunctions[i](m))
+                    for (${Var(`Int`, `i`, `0`)}; i < ${state}.msgSpecs.length; i++) {
+                        if (${state}.msgSpecs[i].hasSend) {
+                            ${msgBuses.publish}(${state}.msgSpecs[i].send, ${state}.msgSpecs[i].transferFunction(m))
+                        } else {
+                            ${snds.$0}(${state}.msgSpecs[i].transferFunction(m))
+                        }
                     }
                     return
                 }
             `,
         }
     },
+
+    core: ({ ns }, { msg }) => Sequence([
+        Class(ns.TokenSpec, [
+            Var(`(m: ${msg.Message}) => ${msg.Message}`, `transferFunction`),
+            Var(msg.Template, `outTemplate`),
+            Var(msg.Message, `outMessage`),
+            Var(`string`, `send`),
+            Var(`boolean`, `hasSend`),
+        ])
+    ]),
+
+    dependencies: [ msgBuses ]
 }
 
 export { 
@@ -166,21 +218,24 @@ export {
 
 // ---------------------------------------------------------------------------- //
 
-const buildMsgTransferCode = (
+const buildTransferCode = (
     { state }: Parameters<_NodeImplementation['initialization']>[0],
     { msg }: VariableNamesIndex['globals'],
-    template: Array<DspGraph.NodeArgument>, 
+    msgSpec: MsgSpec, 
     index: number,
 ) => {
-    const outTemplate = `${state}.outTemplates[${index}]`
-    const outMessage = `${state}.outMessages[${index}]`
-    const operations = buildMessageTransferOperations(template)
+    const outTemplate = `${state}.msgSpecs[${index}].outTemplate`
+    const outMessage = `${state}.msgSpecs[${index}].outMessage`
     let outTemplateCode: Array<AstElement> = []
     let outMessageCode: Array<AstElement> = []
     let stringMemCount = 0
+    let hasStringTemplate = false
+    let isStaticMsg = true
 
-    operations.forEach((operation, outIndex) => {
+    msgSpec.tokens.forEach((token, outIndex) => {
+        const operation = guessTokenOperation(token)
         if (operation.type === 'noop') {
+            isStaticMsg = false
             const { inIndex } = operation
             outTemplateCode.push(ast`
                 ${outTemplate}.push(${msg.getTokenType}(inMessage, ${inIndex}))
@@ -198,6 +253,8 @@ const buildMsgTransferCode = (
             `)
             stringMemCount++
         } else if (operation.type === 'string-template') {
+            isStaticMsg = false
+            hasStringTemplate = true
             outTemplateCode.push(ast`
                 stringToken = "${operation.template}"
                 ${operation.variables.map(({placeholder, inIndex}) => `
@@ -237,93 +294,89 @@ const buildMsgTransferCode = (
         }
     })
 
-    const hasStringTemplate = operations.some((op) => op.type === 'string-template')
-    const inMessageUsed = operations.some(
-        (op) => op.type === 'noop' || op.type === 'string-template'
-    )
+    const initCode = ast`
+        ${hasStringTemplate ? Var(`string`, `stringToken`): null}
+        ${hasStringTemplate ? Var(`string`, `otherStringToken`): null}
+        ${!isStaticMsg ? Var(`Array<string>`, `stringMem`, `[]`): null}
+    `
+    outTemplateCode.unshift(ast`${outTemplate} = []`)
+    outMessageCode.unshift(ast`${outMessage} = ${msg.create}(${outTemplate})`)
 
     return {
-        inMessageUsed,
-        outMessageCode: ast`
-            ${hasStringTemplate ? Var(`string`, `stringToken`): null}
-            ${hasStringTemplate ? Var(`string`, `otherStringToken`): null}
-            ${inMessageUsed ? Var(`Array<string>`, `stringMem`, `[]`): null}
-            ${outTemplate} = []
-            ${outTemplateCode}
-            ${outMessage} = ${msg.create}(${outTemplate})
-            ${outMessageCode}
-        `
+        isStaticMsg,
+        code: Sequence([
+            initCode,
+            ...outTemplateCode,
+            ...outMessageCode,
+        ])
     }
 }
 
-const buildMessageTransferOperations = (
-    template: Array<DspGraph.NodeArgument>
-): Array<MessageTransferOperation> => {
-    // Creates an array of transfer functions `inVal -> outVal`.
-    return template.map((templateElem) => {
-        if (typeof templateElem === 'string') {
-            const matchDollar = DOLLAR_VAR_RE.exec(templateElem)
+const guessTokenOperation = (
+    token: MessageToken
+): MessageTokenOperation => {
+    if (typeof token === 'string') {
+        const matchDollar = DOLLAR_VAR_RE.exec(token)
 
-            // If the transfer is a dollar var :
-            //      ['bla', 789] - ['$1'] -> ['bla']
-            //      ['bla', 789] - ['$2'] -> [789]
-            if (matchDollar && matchDollar[0] === templateElem) {
-                // -1, because $1 corresponds to value 0.
-                const inIndex = parseInt(matchDollar[1], 10) - 1
-                return { type: 'noop', inIndex }
-            } else if (matchDollar) {
-                const variables: MessageTransferOperationStringTemplate['variables'] =
-                    []
-                let matched: RegExpMatchArray | null
-                while ((matched = DOLLAR_VAR_RE_GLOB.exec(templateElem))) {
-                    // position -1, because $1 corresponds to value 0.
-                    variables.push({
-                        placeholder: matched[0],
-                        inIndex: parseInt(matched[1]!, 10) - 1,
-                    })
-                }
-                return {
-                    type: 'string-template',
-                    template: templateElem,
-                    variables,
-                }
-
-                // Else the input doesn't matter
-            } else {
-                return { type: 'string-constant', value: templateElem }
+        // If the transfer is a dollar var :
+        //      ['bla', 789] - ['$1'] -> ['bla']
+        //      ['bla', 789] - ['$2'] -> [789]
+        if (matchDollar && matchDollar[0] === token) {
+            // -1, because $1 corresponds to value 0.
+            const inIndex = parseInt(matchDollar[1], 10) - 1
+            return { type: 'noop', inIndex }
+        } else if (matchDollar) {
+            const variables: MessageTokenOperationStringTemplate['variables'] =
+                []
+            let matched: RegExpMatchArray | null
+            while ((matched = DOLLAR_VAR_RE_GLOB.exec(token))) {
+                // position -1, because $1 corresponds to value 0.
+                variables.push({
+                    placeholder: matched[0],
+                    inIndex: parseInt(matched[1]!, 10) - 1,
+                })
             }
+            return {
+                type: 'string-template',
+                template: token,
+                variables,
+            }
+
+            // Else the input doesn't matter
         } else {
-            return { type: 'float-constant', value: templateElem }
+            return { type: 'string-constant', value: token }
         }
-    })
+    } else {
+        return { type: 'float-constant', value: token }
+    }
 }
 
 const DOLLAR_VAR_RE = /\$(\d+)/
 const DOLLAR_VAR_RE_GLOB = /\$(\d+)/g
 
-interface MessageTransferOperationNoop {
+interface MessageTokenOperationNoop {
     type: 'noop'
     inIndex: number
 }
 
-interface MessageTransferOperationFloatConstant {
+interface MessageTokenOperationFloatConstant {
     type: 'float-constant'
     value: number
 }
 
-interface MessageTransferOperationStringConstant {
+interface MessageTokenOperationStringConstant {
     type: 'string-constant'
     value: string
 }
 
-interface MessageTransferOperationStringTemplate {
+interface MessageTokenOperationStringTemplate {
     type: 'string-template'
     template: string
     variables: Array<{ placeholder: string; inIndex: number }>
 }
 
-type MessageTransferOperation =
-    | MessageTransferOperationNoop
-    | MessageTransferOperationFloatConstant
-    | MessageTransferOperationStringConstant
-    | MessageTransferOperationStringTemplate
+type MessageTokenOperation =
+    | MessageTokenOperationNoop
+    | MessageTokenOperationFloatConstant
+    | MessageTokenOperationStringConstant
+    | MessageTokenOperationStringTemplate
