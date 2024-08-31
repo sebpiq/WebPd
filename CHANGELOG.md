@@ -1,3 +1,10 @@
+1.0.0-alpha.10
+---------------
+
+- major rewrite of the engine for better management of variable names
+- object `[tabwrite~]`
+- support for ";" for msg objects
+
 1.0.0-alpha.9
 ---------------
 
