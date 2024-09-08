@@ -18,36 +18,35 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { PdJson } from '@webpd/pd-parser'
 import {
     AbstractionLoader,
-    Settings,
     UnknownNodeTypeError,
     makeAbstractionLoader,
-} from '../build'
-import { defaultSettingsForBuild as defaultSettingsForBuildBase } from '../build/build'
-
-export const defaultSettingsForBuild = (rootUrl: string): Settings => ({
-    ...defaultSettingsForBuildBase(),
-    abstractionLoader: makeUrlAbstractionLoader(rootUrl),
-})
+} from '../../build'
+import path from 'path'
+import { isFileSync } from './fs-helpers'
+import fs from 'fs'
 
 /**
- * Helper to build an abstraction loader from a root url.
+ * Helper to build an abstraction loader from a root path on the file system.
  * The returned loader will :
- * - use the root url to resolve relative paths for abstractions.
+ * - use the root path to resolve relative paths for abstractions.
  * - suffix all abstraction names with .pd if they don't already have an extension.
  *
  * @param rootUrl
  * @returns
  */
-export const makeUrlAbstractionLoader = (rootUrl: string): AbstractionLoader =>
-    makeAbstractionLoader(async (nodeType) => {
-        const url = `${rootUrl}/${
+export const makeFsAbstractionLoader = (
+    rootDirPath: string
+): AbstractionLoader =>
+    makeAbstractionLoader(async (nodeType: PdJson.NodeType) => {
+        const filepath = path.resolve(
+            rootDirPath,
             nodeType.endsWith('.pd') ? nodeType : `${nodeType}.pd`
-        }`
-        const response = await fetch(url)
-        if (!response.ok) {
+        )
+        if (!isFileSync(filepath)) {
             throw new UnknownNodeTypeError(nodeType)
         }
-        return await response.text()
+        return (await fs.promises.readFile(filepath)).toString()
     })

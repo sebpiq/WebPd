@@ -15,15 +15,15 @@ import { listBuildSteps, guessFormat } from '../build/formats'
 import { getArtefact } from '../build/helpers'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes/index'
-import { isDirectorySync, isFileSync } from '../nodejs/fs-helpers'
-import { makeFsAbstractionLoader } from '../nodejs/build-helpers'
+import { isDirectorySync, isFileSync } from '../environments/nodejs/fs-helpers'
+import { makeFsAbstractionLoader } from '../environments/nodejs/build-helpers'
 setAsc(asc)
 
 const BIT_DEPTH = 64
 const BLOCK_SIZE = 1024 * 8
 const SAMPLE_RATE = 44100
 const CHANNEL_COUNT = { in: 2, out: 2 }
-const WAV_PREVIEW_DURATION = 30
+const DEFAULT_AUDIO_DURATION = 30
 
 const ENGINE_OPTIONS: ReadonlyArray<BuildFormat> = ['javascript', 'wasm']
 const DEFAULT_ENGINE: Task['engine'] = 'wasm'
@@ -340,7 +340,7 @@ const main = (): void => {
     let outFormat: BuildFormat | null = options.outputFormat || null
     const audioDuration: number = options.audioDuration
         ? Number(options.audioDuration)
-        : 30
+        : DEFAULT_AUDIO_DURATION
 
     const artefacts: Artefacts = {}
 

@@ -17,7 +17,7 @@ export default {
     },
     plugins: [
         string({
-            include: ['./src/assets/*'],
+            include: ['**/assets/*'],
         }),
         typescript({
             tsconfig: path.resolve(CONFIGS_DIR, 'cli.tsconfig.json'),

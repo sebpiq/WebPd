@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Artefacts } from './types'
-import { IoMessageSpecMetadata } from './io'
-import WEBPD_RUNTIME_CODE from '../assets/runtime.js.txt'
+import { Artefacts } from '../types'
+import { IoMessageSpecMetadata } from '../io'
+import WEBPD_RUNTIME_CODE from './assets/runtime.js.txt'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {

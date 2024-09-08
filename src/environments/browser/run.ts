@@ -19,7 +19,7 @@
  */
 
 import { Code } from '@webpd/compiler'
-import { WasmBuffer } from '../build/types'
+import { WasmBuffer } from '../../build/types'
 import {
     WebPdWorkletNode,
     WebPdWorkletNodeMessageHandler,

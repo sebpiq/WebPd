@@ -17,6 +17,6 @@
         "resolveJsonModule": true
     },
     "include": [
-        "../src/runtime.main.ts"
+        "../src/build/build-app/runtime.main.ts"
     ]
 }
