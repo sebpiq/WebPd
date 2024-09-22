@@ -27,8 +27,8 @@ import {
     getFloatArrayType,
 } from '@webpd/compiler'
 import * as wavefile from 'wavefile'
-import { getArtefact } from './helpers'
-import { Artefacts, RenderAudioSettings } from './types'
+import { getArtefact } from '../helpers'
+import { Artefacts, RenderAudioSettings } from '../types'
 
 type CombinedAudioSettings = AudioSettings & RenderAudioSettings
 

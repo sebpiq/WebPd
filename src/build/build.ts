@@ -20,14 +20,10 @@
 
 import compile from '@webpd/compiler'
 import parse from '@webpd/pd-parser'
-import buildApp from './build-app'
-import {
-    discoverGuiControls,
-} from '../gui-controls'
-import { collectIoMessageReceiversFromGui, collectIoMessageReceiversFromSendNodes } from './io'
+import buildApp from './outputs/app'
 import toDspGraph from '../compile-dsp-graph/to-dsp-graph'
-import { compileAssemblyscript } from './build-wasm'
-import { renderWav } from './build-audio'
+import { compileAssemblyscript } from './outputs/wasm'
+import { renderWav } from './outputs/audio'
 import {
     UnknownNodeTypeError,
     getArtefact,
@@ -37,6 +33,7 @@ import { Artefacts, BuildSettings } from './types'
 import { BuildFormat, listBuildSteps } from './formats'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
+import { applyIoDefaults } from './outputs/io'
 
 interface BuildSuccess {
     status: 0
@@ -216,36 +213,7 @@ export const performBuildStep = async (
             }
 
             if (toDspGraphResult.status === 0) {
-                // If io.messageReceivers are not defined, we infer them by
-                // discovering UI controls and generating messageReceivers for each one.
-                if (!io.messageReceivers) {
-                    const { controls } = discoverGuiControls(
-                        toDspGraphResult.pd
-                    )
-                    
-                    io.messageReceivers = {
-                        ...collectIoMessageReceiversFromGui(
-                            controls,
-                            toDspGraphResult.graph
-                        ),
-                        ...collectIoMessageReceiversFromSendNodes(
-                            toDspGraphResult.pd,
-                            toDspGraphResult.graph
-                        )
-                    }
-                }
-
-                artefacts.dspGraph = {
-                    graph: toDspGraphResult.graph,
-                    arrays: toDspGraphResult.arrays,
-                    pd: toDspGraphResult.pd,
-                    io: {
-                        messageReceivers: {},
-                        messageSenders: {},
-                        ...io,
-                    },
-                }
-
+                artefacts.dspGraph = toDspGraphResult
                 return { status: 0, warnings }
             } else {
                 const unknownNodeTypes = Object.values(
@@ -290,9 +258,13 @@ export const performBuildStep = async (
                 target,
                 {
                     audio: audioSettings,
-                    io: artefacts.dspGraph.io,
+                    io: applyIoDefaults(
+                        io,
+                        artefacts.dspGraph.graph,
+                        artefacts.dspGraph.pd
+                    ),
                     arrays: artefacts.dspGraph!.arrays,
-                }
+                },
             )
             if (compileCodeResult.status === 0) {
                 if (target === 'javascript') {
@@ -329,7 +301,7 @@ export const performBuildStep = async (
             return { status: 0, warnings: [] }
 
         case 'app':
-            artefacts.app = buildApp(artefacts)
+            artefacts.app = await buildApp(artefacts)
             return { status: 0, warnings: [] }
 
         default:

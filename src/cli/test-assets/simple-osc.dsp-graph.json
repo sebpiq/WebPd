@@ -1,4 +1,5 @@
 {
+  "status": 0,
   "graph": {
     "n_0_0": {
       "id": "n_0_0",
@@ -187,7 +188,6 @@
       }
     }
   },
-  "arrays": {},
   "pd": {
     "patches": {
       "0": {
@@ -290,26 +290,6 @@
     "arrays": {},
     "rootPatchId": "0"
   },
-  "io": {
-    "messageReceivers": {
-      "n_0_1": {
-        "portletIds": [
-          "0"
-        ],
-        "metadata": {
-          "group": "control:float",
-          "type": "nbx",
-          "label": "",
-          "position": [
-            99,
-            43
-          ],
-          "initValue": 220,
-          "minValue": -1e+37,
-          "maxValue": 1e+37
-        }
-      }
-    },
-    "messageSenders": {}
-  }
+  "arrays": {},
+  "abstractionsLoadingWarnings": {}
 }

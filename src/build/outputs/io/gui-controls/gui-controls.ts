@@ -19,32 +19,32 @@
  */
 import { CONTROL_TYPE, PdJson } from '@webpd/pd-parser'
 
-export interface Point {
+interface Point {
     x: number
     y: number
 }
 
-export interface Rectangle {
+interface Rectangle {
     topLeft: Point
     bottomRight: Point
 }
 
-export interface Control {
+interface Control {
     type: 'control'
     patch: PdJson.Patch
     node: PdJson.ControlNode
 }
 
-export interface ControlContainer {
+interface ControlContainer {
     type: 'container'
     patch: PdJson.Patch
     node: PdJson.Node
     children: Array<ControlTree>
 }
 
-export type ControlTree = Control | ControlContainer
+type ControlTree = Control | ControlContainer
 
-export interface Comment {
+interface Comment {
     type: 'comment'
     patch: PdJson.Patch
     node: PdJson.Node
@@ -69,7 +69,7 @@ export const discoverGuiControls = (pdJson: PdJson.Pd) => {
     }
 }
 
-export const _discoverGuiControlsRecursive = (
+const _discoverGuiControlsRecursive = (
     pdJson: PdJson.Pd,
     patch: PdJson.Patch,
     viewport: Rectangle | null = null
@@ -181,7 +181,7 @@ export const traverseGuiControls = (
     })
 }
 
-export const _makeTranslationTransform = (fromPoint: Point, toPoint: Point) => {
+const _makeTranslationTransform = (fromPoint: Point, toPoint: Point) => {
     const xOffset = toPoint.x - fromPoint.x
     const yOffset = toPoint.y - fromPoint.y
     return (fromPoint: Point) => {
@@ -197,7 +197,7 @@ const _sumPoints = (p1: Point, p2: Point) => ({
     y: p1.y + p2.y,
 })
 
-export const _computeRectanglesIntersection = (r1: Rectangle, r2: Rectangle) => {
+const _computeRectanglesIntersection = (r1: Rectangle, r2: Rectangle) => {
     const topLeft = {
         x: Math.max(r1.topLeft.x, r2.topLeft.x),
         y: Math.max(r1.topLeft.y, r2.topLeft.y),
@@ -213,7 +213,7 @@ export const _computeRectanglesIntersection = (r1: Rectangle, r2: Rectangle) => 
     }
 }
 
-export const _isPointInsideRectangle = (p: Point, r: Rectangle) =>
+const _isPointInsideRectangle = (p: Point, r: Rectangle) =>
     r.topLeft.x <= p.x &&
     p.x <= r.bottomRight.x &&
     r.topLeft.y <= p.y &&
@@ -257,4 +257,11 @@ const _assertPatchLayout = (layout: PdJson.Patch['layout']) => {
         viewportWidth,
         viewportHeight,
     }
+}
+
+export const _FOR_TESTING = {
+    _discoverGuiControlsRecursive,
+    _makeTranslationTransform,
+    _computeRectanglesIntersection,
+    _isPointInsideRectangle,
 }

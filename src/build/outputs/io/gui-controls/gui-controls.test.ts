@@ -20,12 +20,13 @@
 import { PdJson } from '@webpd/pd-parser'
 import { makePd } from '@webpd/pd-parser/src/test-helpers'
 import assert from 'assert'
-import {
+import { _FOR_TESTING } from './gui-controls'
+const {
+    _discoverGuiControlsRecursive,
     _makeTranslationTransform,
     _computeRectanglesIntersection,
     _isPointInsideRectangle,
-    _discoverGuiControlsRecursive,
-} from './gui-controls'
+} = _FOR_TESTING
 
 describe('math-utils', () => {
     describe('models', () => {

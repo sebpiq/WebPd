@@ -36,7 +36,6 @@ export interface Artefacts {
         graph: DspGraph.Graph
         arrays: DspGraph.Arrays
         pd: PdJson.Pd
-        io: CompilationSettings['io']
     }
     javascript?: string
     assemblyscript?: string

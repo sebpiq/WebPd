@@ -192,8 +192,8 @@ function G_msg_display(message) {
                         .map(t => typeof t === 'string' ? '"' + t + '"' : t.toString())
                         .join(', ') + ']'
                 }
-function G_msg_nullMessageReceiver(m) {}
-let G_msg_emptyMessage = G_msg_create([])
+function G_msg_VOID_MESSAGE_RECEIVER(m) {}
+let G_msg_EMPTY_MESSAGE = G_msg_create([])
 function G_bangUtils_isBang(message) {
             return (
                 G_msg_isStringToken(message, 0) 
@@ -301,6 +301,8 @@ function NT_nbx_receiveMessage(state, m) {
 
 
 
+
+
 function NT_osc_t_setStep(state, freq) {
                     state.step = (2 * Math.PI / SAMPLE_RATE) * freq
                 }
@@ -342,7 +344,7 @@ function N_m_n_0_0_0__routemsg_rcvs_0(m) {
                 N_m_n_0_0_0__routemsg_snds_0(m)
                 return
             } else {
-                G_msg_nullMessageReceiver(m)
+                G_msg_VOID_MESSAGE_RECEIVER(m)
                 return
             }
         
@@ -359,11 +361,23 @@ function N_m_n_0_0_0_sig_rcvs_0(m) {
                             throw new Error('Node "m_n_0_0_0_sig", inlet "0", unsupported message : ' + G_msg_display(m))
                         }
 
+function N_n_ioSnd_n_0_1_0_rcvs_0(m) {
+                            
+                IO_snd_n_0_1_0(m)
+                return
+            
+                            throw new Error('Node "n_ioSnd_n_0_1_0", inlet "0", unsupported message : ' + G_msg_display(m))
+                        }
+
 
 let N_n_0_0_outs_0 = 0
 
 
 
+function N_n_0_1_snds_0(m) {
+                        N_m_n_0_0_0__routemsg_rcvs_0(m)
+N_n_ioSnd_n_0_1_0_rcvs_0(m)
+                    }
 function N_m_n_0_0_0__routemsg_snds_0(m) {
                         N_m_n_0_0_0_sig_rcvs_0(m)
 COLD_0(m)
@@ -376,10 +390,10 @@ COLD_0(m)
         function IO_rcv_n_0_1_0(m) {
                     N_n_0_1_rcvs_0(m)
                 }
-        
+        const IO_snd_n_0_1_0 = (m) => {exports.io.messageSenders['n_0_1']['0'](m)}
 
         const exports = {
-            metadata: {"libVersion":"0.1.0","settings":{"audio":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{}}},"compilation":{"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"IO_rcv_n_0_1_0"}},"messageSenders":{}},"globals":{"commons":{"getArray":"G_commons_getArray","setArray":"G_commons_setArray"}}}}},
+            metadata: {"libVersion":"0.1.0","settings":{"audio":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"io":{"messageReceivers":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}},"messageSenders":{"n_0_1":{"portletIds":["0"],"metadata":{"group":"control:float","type":"nbx","label":"","position":[99,43],"initValue":220,"minValue":-1e+37,"maxValue":1e+37}}}}},"compilation":{"variableNamesIndex":{"io":{"messageReceivers":{"n_0_1":{"0":"IO_rcv_n_0_1_0"}},"messageSenders":{"n_0_1":{"0":"IO_snd_n_0_1_0"}}},"globals":{"commons":{"getArray":"G_commons_getArray","setArray":"G_commons_setArray"}}}}},
             initialize: (sampleRate, blockSize) => {
                 exports.metadata.settings.audio.sampleRate = sampleRate
                 exports.metadata.settings.audio.blockSize = blockSize
@@ -387,14 +401,15 @@ COLD_0(m)
                 BLOCK_SIZE = blockSize
 
                 
-                N_n_0_1_state.messageSender = N_m_n_0_0_0__routemsg_rcvs_0
+                N_n_0_1_state.messageSender = N_n_0_1_snds_0
                 N_n_0_1_state.messageReceiver = function (m) {
                     NT_nbx_receiveMessage(N_n_0_1_state, m)
                 }
                 NT_nbx_setReceiveBusName(N_n_0_1_state, "empty")
     
-                G_commons_waitFrame(0, () => N_m_n_0_0_0__routemsg_rcvs_0(G_msg_floats([N_n_0_1_state.valueFloat])))
+                G_commons_waitFrame(0, () => N_n_0_1_snds_0(G_msg_floats([N_n_0_1_state.valueFloat])))
             
+
 
 
 
@@ -402,7 +417,7 @@ COLD_0(m)
             NT_osc_t_setStep(N_n_0_0_state, 0)
         
 
-                COLD_0(G_msg_emptyMessage)
+                COLD_0(G_msg_EMPTY_MESSAGE)
             },
             dspLoop: (INPUT, OUTPUT) => {
                 
@@ -425,7 +440,9 @@ OUTPUT[1][IT_FRAME] = N_n_0_0_outs_0
                         },
                 },
                 messageSenders: {
-                    
+                    n_0_1: {
+                            "0": () => undefined,
+                        },
                 },
             }
         }

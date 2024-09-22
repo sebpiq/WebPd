@@ -17,9 +17,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Artefacts } from '../types'
+import { CompilerTarget, EngineMetadata } from '@webpd/compiler'
+import { Artefacts } from '../../types'
 import { IoMessageSpecMetadata } from '../io'
 import WEBPD_RUNTIME_CODE from './assets/runtime.js.txt'
+import { readMetadata } from '@webpd/compiler'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {
@@ -28,19 +30,32 @@ export interface Settings {
 
 export type GeneratedApp = { [filename: string]: string | ArrayBuffer }
 
-export default (artefacts: Artefacts): GeneratedApp => {
+export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
     if (!artefacts.javascript && !artefacts.wasm) {
         throw new Error(`Needs at least javascript or wasm to run`)
     }
-    const compiledPatchFilename = artefacts.javascript
-        ? 'patch.js'
-        : 'patch.wasm'
+
+    let target: CompilerTarget
+    let compiledPatchFilename: string
+    let engineMetadata: EngineMetadata
+    let compiledPatchCode: string | ArrayBuffer
+
+    if (artefacts.javascript) {
+        target = 'javascript'
+        compiledPatchFilename = 'patch.js'
+        engineMetadata = await readMetadata('javascript', artefacts.javascript)
+        compiledPatchCode = artefacts.javascript
+
+    } else {
+        target = 'assemblyscript'
+        compiledPatchFilename = 'patch.wasm'
+        engineMetadata = await readMetadata('assemblyscript', artefacts.wasm)
+        compiledPatchCode = artefacts.wasm
+    }
 
     const generatedApp: GeneratedApp = {
         [WEBPD_RUNTIME_FILENAME]: WEBPD_RUNTIME_CODE,
-        [compiledPatchFilename]: artefacts.javascript
-            ? artefacts.javascript
-            : artefacts.wasm,
+        [compiledPatchFilename]: compiledPatchCode,
         // prettier-ignore
         'index.html': `
 <!DOCTYPE html>
@@ -98,7 +113,7 @@ export default (artefacts: Artefacts): GeneratedApp => {
 
                 // Fetch the patch code
                 response = await fetch('${compiledPatchFilename}')
-                patch = await ${artefacts.javascript ? 
+                patch = await ${target === 'javascript' ? 
                     'response.text()': 'response.arrayBuffer()'}
 
                 // Comment this if you don't need audio input
@@ -171,10 +186,8 @@ export default (artefacts: Artefacts): GeneratedApp => {
             
             // Here is an index of objects IDs to which you can send messages, with hints so you can find the right ID.
             // Note that by default only GUI objects (bangs, sliders, etc ...) are available.${
-                artefacts.dspGraph 
-                && artefacts.dspGraph.io 
-                && Object.keys(artefacts.dspGraph.io.messageReceivers).length ? 
-                    Object.entries(artefacts.dspGraph.io.messageReceivers)
+                Object.keys(engineMetadata.settings.io.messageReceivers).length ? 
+                    Object.entries(engineMetadata.settings.io.messageReceivers)
                         .map(([nodeId, {portletIds, metadata: _metadata}]) => portletIds.map(portletId => {
                             const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
                             if (!metadata) {
