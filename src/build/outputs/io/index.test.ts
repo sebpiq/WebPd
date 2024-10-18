@@ -62,56 +62,74 @@ describe('build.outputs.io', () => {
                                     label: 'blu-hsl',
                                 } as any,
                             },
+                            '4': {
+                                type: 's',
+                                args: ['blo'],
+                                nodeClass: 'generic',
+                                layout: {
+                                    x: 333,
+                                    y: 44,
+                                },
+                            },
                         },
                     },
                 },
             })
 
-            const result = await toDspGraph(pdJson, 
+            const result = await toDspGraph(
+                pdJson,
                 {
                     msg: builder,
                     hsl: buildersControlsFloat.hsl,
                     send: buildersSendReceive.send,
+                    s: {
+                        aliasTo: 'send',
+                    },
                 },
                 () => Promise.reject('could not load abstraction')
             )
             assert.strictEqual(result.status, 0)
             const io = applyIoDefaults({}, result.graph, pdJson)
 
-            assert.deepStrictEqual<IoMessageSpecs>(
-                io.messageReceivers,
-                {
-                    n_0_1: {
-                        portletIds: ['0'],
-                        metadata: {
-                            group: 'control',
-                            type: 'msg',
-                            label: 'bli-msg',
-                            position: [11, 22],
-                        },
+            assert.deepStrictEqual<IoMessageSpecs>(io.messageReceivers, {
+                n_0_1: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'control',
+                        type: 'msg',
+                        label: 'bli-msg',
+                        position: [11, 22],
                     },
-                    n_0_2: {
-                        portletIds: ['0'],
-                        metadata: {
-                            group: 'send',
-                            name: 'bla',
-                            position: [33, 44],
-                        },
+                },
+                n_0_2: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'send',
+                        name: 'bla',
+                        position: [33, 44],
                     },
-                    n_0_3: {
-                        portletIds: ['0'],
-                        metadata: {
-                            group: 'control:float',
-                            type: 'hsl',
-                            label: 'blu-hsl',
-                            minValue: 0,
-                            maxValue: 127,
-                            initValue: 44.4,
-                            position: [55, 66],
-                        },
+                },
+                n_0_3: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'control:float',
+                        type: 'hsl',
+                        label: 'blu-hsl',
+                        minValue: 0,
+                        maxValue: 127,
+                        initValue: 44.4,
+                        position: [55, 66],
                     },
-                }
-            )
+                },
+                n_0_4: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'send',
+                        name: 'blo',
+                        position: [333, 44],
+                    },
+                },
+            })
         })
 
         it('should add automatically generated messageSenders for GUI and [receive]', async () => {
@@ -148,56 +166,74 @@ describe('build.outputs.io', () => {
                                     label: 'blu-hsl',
                                 } as any,
                             },
+                            '4': {
+                                type: 'r',
+                                args: ['blo'],
+                                nodeClass: 'generic',
+                                layout: {
+                                    x: 333,
+                                    y: 44,
+                                },
+                            },
                         },
                     },
                 },
             })
 
-            const result = await toDspGraph(pdJson, 
+            const result = await toDspGraph(
+                pdJson,
                 {
                     msg: builder,
                     hsl: buildersControlsFloat.hsl,
                     receive: buildersSendReceive.receive,
+                    r: {
+                        aliasTo: 'receive',
+                    },
                 },
                 () => Promise.reject('could not load abstraction')
             )
             assert.strictEqual(result.status, 0)
             const io = applyIoDefaults({}, result.graph, pdJson)
 
-            assert.deepStrictEqual<IoMessageSpecs>(
-                io.messageSenders,
-                {
-                    n_0_1: {
-                        portletIds: ['0'],
-                        metadata: {
-                            group: 'control',
-                            type: 'msg',
-                            label: 'bli-msg',
-                            position: [11, 22],
-                        },
+            assert.deepStrictEqual<IoMessageSpecs>(io.messageSenders, {
+                n_0_1: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'control',
+                        type: 'msg',
+                        label: 'bli-msg',
+                        position: [11, 22],
                     },
-                    n_0_2: {
-                        portletIds: ['0'],
-                        metadata: {
-                            group: 'receive',
-                            name: 'bla',
-                            position: [33, 44],
-                        },
+                },
+                n_0_2: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'receive',
+                        name: 'bla',
+                        position: [33, 44],
                     },
-                    n_0_3: {
-                        portletIds: ['0'],
-                        metadata: {
-                            group: 'control:float',
-                            type: 'hsl',
-                            label: 'blu-hsl',
-                            minValue: 0,
-                            maxValue: 127,
-                            initValue: 44.4,
-                            position: [55, 66],
-                        },
+                },
+                n_0_3: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'control:float',
+                        type: 'hsl',
+                        label: 'blu-hsl',
+                        minValue: 0,
+                        maxValue: 127,
+                        initValue: 44.4,
+                        position: [55, 66],
                     },
-                }
-            )
+                },
+                n_0_4: {
+                    portletIds: ['0'],
+                    metadata: {
+                        group: 'receive',
+                        name: 'blo',
+                        position: [333, 44],
+                    },
+                },
+            })
         })
     })
 })

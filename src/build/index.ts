@@ -45,4 +45,3 @@ export {
     NODE_IMPLEMENTATIONS,
 } from '../nodes/index'
 export { buildGraphNodeId } from '../compile-dsp-graph/to-dsp-graph'
-export { collectIoMessageReceiversFromGui, collectIoMessageReceiversFromSendNodes } from './outputs/io/send-receive'

@@ -7,9 +7,9 @@ import path from 'path'
 import { CONFIGS_DIR, SRC_DIR, TMP_DIR } from './paths.js'
 
 export default {
-    input: path.resolve(SRC_DIR, 'build', 'build-app', 'runtime.main.ts'),
+    input: path.resolve(SRC_DIR, 'build', 'outputs', 'app', 'runtime.main.ts'),
     output: {
-        file: path.resolve(SRC_DIR, 'build', 'build-app', 'assets', 'runtime.js.txt'),
+        file: path.resolve(SRC_DIR, 'build', 'outputs', 'app', 'assets', 'runtime.js.txt'),
         format: 'iife',
         name: 'WebPdRuntime',
     },

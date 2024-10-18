@@ -3,11 +3,12 @@
 ```
 🟥 = not planned and might never be implemented
 🟧 = planned for v1.0.0 but not done yet
+🟩 = done
 ```
 
-🟧 **Receiving messages from the patch (outlet listeners).** 
+🟩 **Sending messages to the patch (messageReceivers).** 
 
-Note : there is already all the infrastructure for this in place. The only thing missing is a way for users to specify to the compiler which nodes should be listened to for messages. In particular, for now `outlet listeners` (as well as `inlet callers`, their counterparts for sending message to the patch) are specified by passing the compiler a node ID. Issue with that is that it is not easy for the user to guess the ID of a given node after compilation. 
+🟩 **Receiving messages from the patch (messageSenders).** 
 
 🟧 **Box with just number inside as a shortcut for float.** 
 

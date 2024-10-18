@@ -131,6 +131,33 @@ describe('cli', () => {
         })
     })
 
+    describe('generate from io.pd', () => {
+        const PATHS = {
+            patch: resolve(__dirname, 'test-assets', 'io.pd'),
+            app: resolve(__dirname, 'test-assets', 'io'),
+        }
+
+        it('should generate an html app', async () => {
+            const outDirPath = resolve(TMP_DIR, 'test-patch-app')
+            await mkdir(outDirPath, { recursive: true })
+            await exec(
+                `node ${CLI_PATH} -i ${PATHS.patch} -o ${outDirPath} -f app`
+            )
+            const actualFiles = await readdir(outDirPath)
+            const expectedFiles = await readdir(PATHS.app)
+            actualFiles.sort()
+            expectedFiles.sort()
+            assert.deepStrictEqual(actualFiles, expectedFiles)
+            for (let filename of actualFiles) {
+                await assertFileContentSame(
+                    resolve(outDirPath, filename),
+                    resolve(PATHS.app, filename),
+                    filename.endsWith('.wasm') ? 'binary' : 'utf8'
+                )
+            }
+        })
+    })
+
     describe('Non-regression tests using example patch ginger2.pd', () => {
         const PATHS = {
             patch: resolve(__dirname, 'test-assets', 'ginger2.pd'),

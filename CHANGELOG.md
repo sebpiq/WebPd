@@ -1,3 +1,8 @@
+1.0.0-alpha.11
+---------------
+
+- support for receiving messages from the patch
+
 1.0.0-alpha.10
 ---------------
 

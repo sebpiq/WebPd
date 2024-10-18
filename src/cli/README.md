@@ -27,4 +27,5 @@ node bin/cli.mjs -i src/cli/test-assets/simple-osc.pd -o src/cli/test-assets/sim
 node bin/cli.mjs -i src/cli/test-assets/simple-osc.pd -o src/cli/test-assets/simple-osc.wasm
 node bin/cli.mjs -i src/cli/test-assets/simple-osc.pd -o src/cli/test-assets/simple-osc.wav
 node bin/cli.mjs -i src/cli/test-assets/simple-osc.pd -o src/cli/test-assets/simple-osc-app -f app
+node bin/cli.mjs -i src/cli/test-assets/io.pd -o src/cli/test-assets/io/ -f app 
 ```

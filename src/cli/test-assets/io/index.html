@@ -130,9 +130,13 @@
             
             // Here is an index of objects IDs to which you can send messages, with hints so you can find the right ID.
             // Note that by default only GUI objects (bangs, sliders, etc ...) are available.
-            //  - nodeId "n_0_1" portletId "0"
-            //      * type "nbx"
-            //      * position [99,43]
+            //  - nodeId "n_0_2" portletId "0"
+            //      * type "bng"
+            //      * position [105,92]
+            
+            //  - nodeId "n_0_5" portletId "0"
+            //      * type "send"
+            //      * send "BLA"
             
 
             // ------------- 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT
@@ -146,11 +150,18 @@
             // - portletId : the ID of the object portlet that is sending the message.
             // - message : the message that was sent. It is a list of strings and / or numbers.
             const receiveMsgFromWebPd = (nodeId, portletId, message) => {
-                if (nodeId === "n_0_1" && portletId === "0") {
+                if (nodeId === "n_0_2" && portletId === "0") {
                     console.log('Message received from :\n'
-                        + '	* nodeId "n_0_1" portletId "0"\n'
-                        + '	* type "nbx"\n'
-                        + '	* position [99,43]\n'
+                        + '	* nodeId "n_0_2" portletId "0"\n'
+                        + '	* type "bng"\n'
+                        + '	* position [105,92]\n'
+                    )
+                }
+                if (nodeId === "n_0_6" && portletId === "0") {
+                    console.log('Message received from :\n'
+                        + '	* nodeId "n_0_6" portletId "0"\n'
+                        + '	* type "receive"\n'
+                        + '	* receive "BLA"'
                     )
                 }                
             }

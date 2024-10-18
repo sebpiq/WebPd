@@ -17,11 +17,13 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { CompilerTarget, EngineMetadata } from '@webpd/compiler'
+import { Code, CompilerTarget, EngineMetadata } from '@webpd/compiler'
 import { Artefacts } from '../../types'
 import { IoMessageSpecMetadata } from '../io'
 import WEBPD_RUNTIME_CODE from './assets/runtime.js.txt'
 import { readMetadata } from '@webpd/compiler'
+import { IoMessageSpecMetadataControl, IoMessageSpecMetadataControlFloat } from '../io/gui-controls'
+import { IoMessageSpecMetadataSendReceive } from '../io/send-receive'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {
@@ -95,7 +97,7 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
             // SUMMARY
             // 1. WEB PAGE INITIALIZATION
             // 2. SENDING MESSAGES FROM JAVASCRIPT TO THE PATCH
-            // 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT (coming soon ...)
+            // 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT
 
 
             // ------------- 1. WEB PAGE INITIALIZATION
@@ -136,7 +138,11 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
                 webpdNode = await WebPdRuntime.run(
                     audioContext, 
                     patch, 
-                    WebPdRuntime.defaultSettingsForRun('./${compiledPatchFilename}'),
+                    WebPdRuntime.defaultSettingsForRun(
+                        './${compiledPatchFilename}',
+                        // Comment this if you don't need to receive messages from the patch
+                        receiveMsgFromWebPd,
+                    ),
                 )
                 webpdNode.connect(audioContext.destination)
 
@@ -186,37 +192,66 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
             
             // Here is an index of objects IDs to which you can send messages, with hints so you can find the right ID.
             // Note that by default only GUI objects (bangs, sliders, etc ...) are available.${
-                Object.keys(engineMetadata.settings.io.messageReceivers).length ? 
-                    Object.entries(engineMetadata.settings.io.messageReceivers)
-                        .map(([nodeId, {portletIds, metadata: _metadata}]) => portletIds.map(portletId => {
-                            const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
-                            if (!metadata) {
-                                return ''
-                            } else if (metadata.group === 'control' || metadata.group === 'control:float') {
-                            return `
+                renderIoMessageReceiversOrSenders(
+                    engineMetadata.settings.io.messageReceivers,
+                    // Render controls
+                    (nodeId, portletId, metadata) => `
             //  - nodeId "${nodeId}" portletId "${portletId}"
             //      * type "${metadata.type}"
             //      * position ${JSON.stringify(metadata.position)}${
                 metadata.label ? `
             //      * label "${metadata.label}"` : ''}
-            `
-                            } else if (metadata.group === 'send') {
-                                return `
+            `, 
+                    // Render send/receive
+                    (nodeId, portletId, metadata) => `
             //  - nodeId "${nodeId}" portletId "${portletId}"
             //      * type "send"
             //      * send "${metadata.name}"
-            `
-                            } else {
-                                return ''
-                            }
-                        })).join('')
-                : `
-            // EMPTY (did you place a GUI object in your patch ?)
-`}
-
+            `,
+                    // Render if empty io specs
+                    `
+            // EMPTY (did you place a GUI object or send object in your patch ?)
+`)}
 
             // ------------- 3. SENDING MESSAGES FROM THE PATCH TO JAVASCRIPT
-            // Coming soon ... 
+            // Use the function receiveMsgFromWebPd to receive a message from an object inside your patch.
+            // 
+            // Parameters : 
+            // - nodeId: the ID of the object that is sending a message. 
+            //          This ID is a string that has been assigned by WebPd at compilation.
+            //          You can find below the list of available IDs with hints to help you 
+            //          identify the object you want to interact with.
+            // - portletId : the ID of the object portlet that is sending the message.
+            // - message : the message that was sent. It is a list of strings and / or numbers.
+            const receiveMsgFromWebPd = (nodeId, portletId, message) => {${
+                renderIoMessageReceiversOrSenders(
+                    engineMetadata.settings.io.messageSenders,
+                    // Render controls
+                    (nodeId, portletId, metadata) => `
+                if (nodeId === "${nodeId}" && portletId === "${portletId}") {
+                    console.log('Message received from :\\n'
+                        + '\t* nodeId "${nodeId}" portletId "${portletId}"\\n'
+                        + '\t* type "${metadata.type}"\\n'
+                        + '\t* position ${JSON.stringify(metadata.position)}\\n'${
+                    metadata.label ? `
+                        + '\t* label "${metadata.label}"'` : ''}
+                    )
+                }`,
+                    // Render send/receive
+                    (nodeId, portletId, metadata) => `
+                if (nodeId === "${nodeId}" && portletId === "${portletId}") {
+                    console.log('Message received from :\\n'
+                        + '\t* nodeId "${nodeId}" portletId "${portletId}"\\n'
+                        + '\t* type "receive"\\n'
+                        + '\t* receive "${metadata.name}"'
+                    )
+                }`,
+                    // Render if empty io specs
+                    `
+                // /!\ there seems to be no message senders in the patch. 
+                // Add a GUI object or a send object in your patch to be able to receive messages.
+`)}                
+            }
 
         </script>
     </body>
@@ -224,3 +259,23 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
     }
     return generatedApp
 }
+
+const renderIoMessageReceiversOrSenders = (
+    ioSpec: EngineMetadata['settings']['io']['messageReceivers'] | EngineMetadata['settings']['io']['messageSenders'],
+    renderControl: (nodeId: string, portletId: string, metadata: IoMessageSpecMetadataControl | IoMessageSpecMetadataControlFloat) => Code,
+    renderSendReceive: (nodeId: string, portletId: string, metadata: IoMessageSpecMetadataSendReceive) => Code,
+    emptyString: string
+) => Object.keys(ioSpec).length ? 
+Object.entries(ioSpec)
+    .map(([nodeId, {portletIds, metadata: _metadata}]) => portletIds.map(portletId => {
+        const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
+        if (!metadata) {
+            return ''
+        } else if (metadata.group === 'control' || metadata.group === 'control:float') {
+            return renderControl(nodeId, portletId, metadata)
+        } else if (metadata.group === 'send' || metadata.group === 'receive') {
+            return renderSendReceive(nodeId, portletId, metadata)
+        } else {
+            return ''
+        }
+    })).join(''): emptyString

@@ -61,7 +61,7 @@ export const collectIoMessageSendersFromReceiveNodes = (
 const _collectNodes = (
     pdJson: PdJson.Pd,
     graph: DspGraph.Graph,
-    pdNodeType: 'send' | 'receive'
+    nodeType: 'send' | 'receive'
 ) => {
     const rootPatch = pdJson.patches[pdJson.rootPatchId]
     return Object.values(rootPatch.nodes)
@@ -69,11 +69,11 @@ const _collectNodes = (
             const nodeId = buildGraphNodeId(rootPatch.id, pdNode.id)
             const node = graph[nodeId]
             if (
-                pdNode.type === pdNodeType &&
                 // Important because some nodes are deleted at dsp-graph compilation.
                 // and if we declare messageReceivers for them it will cause error.
                 // TODO : maybe the compiler should detect this instead of doing it here ?
-                !!node
+                !!node &&
+                node.type === nodeType
             ) {
                 return [pdNode, node] as [PdJson.Node, DspGraph.Node]
             } else {

@@ -20,13 +20,38 @@
 import { fsWeb } from '@webpd/runtime'
 import { urlDirName } from './url-helpers'
 import { Settings } from './run'
-import { Code, readMetadata as readMetadataRaw } from '@webpd/compiler'
+import { Code, Message, readMetadata as readMetadataRaw } from '@webpd/compiler'
 import { WasmBuffer } from '../../build/types'
+import { DspGraph } from '@webpd/compiler/src'
 
-export const defaultSettingsForRun = (patchUrl: string): Settings => {
+export const defaultSettingsForRun = (
+    patchUrl: string,
+    messageSender?: (
+        nodeId: DspGraph.NodeId,
+        outletId: DspGraph.PortletId,
+        message: Message
+    ) => void
+): Settings => {
     const rootUrl = urlDirName(patchUrl)
     return {
-        messageHandler: (node, message) => fsWeb(node, message, { rootUrl }),
+        messageHandler: (node, messageEvent) => {
+            const message = messageEvent.data
+            switch (message.type) {
+                case 'fs':
+                    return fsWeb(node, messageEvent, { rootUrl })
+                case 'io:messageSender':
+                    if (messageSender) {
+                        messageSender(
+                            message.payload.nodeId,
+                            message.payload.portletId,
+                            message.payload.message
+                        )
+                    }
+                    return null
+                default:
+                    return null
+            }
+        },
     }
 }
 
