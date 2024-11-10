@@ -154,8 +154,8 @@ describe('delread~ / delwrite~', () => {
             const compileResult = compile(graph, nodeImplementations, target, {
                 io: {
                     messageReceivers: {
-                        delayTimeMsec: { portletIds: ['0'] },
-                        delayW: { portletIds: ['0_message'] },
+                        delayTimeMsec: ['0'],
+                        delayW: ['0_message'],
                     },
                 },
                 audio: {

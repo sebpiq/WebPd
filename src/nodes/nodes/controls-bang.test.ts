@@ -188,12 +188,12 @@ describe('controls-bang', () => {
                 },
                 io: {
                     messageReceivers: {
-                        send: { portletIds: ['0'] },
-                        bang: { portletIds: ['0'] },
+                        send: ['0'],
+                        bang: ['0'],
                     },
                     messageSenders: {
-                        receive: { portletIds: ['0'] },
-                        bang: { portletIds: ['0'] },
+                        receive: ['0'],
+                        bang: ['0'],
                     },
                 },
             })

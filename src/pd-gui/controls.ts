@@ -18,62 +18,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { CONTROL_TYPE, PdJson } from '@webpd/pd-parser'
+import { getRootPatch } from './utils'
+import { Control, ControlContainer, ControlTreeNode, Point, Rectangle } from './types'
 
-interface Point {
-    x: number
-    y: number
-}
+export const discoverPdGuiControls = (pdJson: PdJson.Pd) =>
+    _discoverPdGuiControlsRecursive(pdJson, getRootPatch(pdJson))
 
-interface Rectangle {
-    topLeft: Point
-    bottomRight: Point
-}
-
-interface Control {
-    type: 'control'
-    patch: PdJson.Patch
-    node: PdJson.ControlNode
-}
-
-interface ControlContainer {
-    type: 'container'
-    patch: PdJson.Patch
-    node: PdJson.Node
-    children: Array<ControlTree>
-}
-
-type ControlTree = Control | ControlContainer
-
-interface Comment {
-    type: 'comment'
-    patch: PdJson.Patch
-    node: PdJson.Node
-    text: string
-}
-
-export const discoverGuiControls = (pdJson: PdJson.Pd) => {
-    const rootPatch = pdJson.patches[pdJson.rootPatchId]
-    return {
-        controls: _discoverGuiControlsRecursive(pdJson, rootPatch),
-        comments: Object.values(pdJson.patches[pdJson.rootPatchId].nodes)
-            .filter((node) => node.type === 'text')
-            .map((node) => {
-                const comment: Comment = {
-                    type: 'comment',
-                    patch: rootPatch,
-                    node,
-                    text: node.args[0]!.toString(),
-                }
-                return comment
-            }),
-    }
-}
-
-const _discoverGuiControlsRecursive = (
+const _discoverPdGuiControlsRecursive = (
     pdJson: PdJson.Pd,
     patch: PdJson.Patch,
     viewport: Rectangle | null = null
-): Array<Control | ControlContainer> => {
+): Array<ControlTreeNode> => {
     if (viewport === null) {
         viewport = {
             topLeft: { x: -Infinity, y: -Infinity },
@@ -81,7 +36,7 @@ const _discoverGuiControlsRecursive = (
         }
     }
 
-    const controls: Array<Control | ControlContainer> = []
+    const controls: Array<ControlTreeNode> = []
     Object.values(patch.nodes).forEach((node) => {
         if (node.type === 'pd' && node.nodeClass === 'subpatch') {
             const subpatch = pdJson!.patches[node.patchId]
@@ -126,7 +81,7 @@ const _discoverGuiControlsRecursive = (
                 return
             }
 
-            const children = _discoverGuiControlsRecursive(
+            const children = _discoverPdGuiControlsRecursive(
                 pdJson,
                 subpatch,
                 visibleSubpatchViewport
@@ -169,7 +124,7 @@ const _discoverGuiControlsRecursive = (
 }
 
 export const traverseGuiControls = (
-    controls: Array<ControlTree>,
+    controls: Array<ControlTreeNode>,
     func: (control: Control) => void
 ) => {
     controls.forEach((control) => {
@@ -260,7 +215,7 @@ const _assertPatchLayout = (layout: PdJson.Patch['layout']) => {
 }
 
 export const _FOR_TESTING = {
-    _discoverGuiControlsRecursive,
+    _discoverGuiControlsRecursive: _discoverPdGuiControlsRecursive,
     _makeTranslationTransform,
     _computeRectanglesIntersection,
     _isPointInsideRectangle,

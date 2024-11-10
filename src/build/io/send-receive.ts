@@ -17,13 +17,15 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { DspGraph, CompilationSettings } from '@webpd/compiler'
+import { DspGraph, CompilationSettings, CustomMetadata } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
-import { buildGraphNodeId } from '../../../compile-dsp-graph/to-dsp-graph'
-import { NodeArguments as SendReceiveNodeArguments } from '../../../nodes/nodes/send-receive'
+import { buildGraphNodeId } from '../../compile-dsp-graph/to-dsp-graph'
+import { NodeArguments as SendReceiveNodeArguments } from '../../nodes/nodes/send-receive'
 
-export interface IoMessageSpecMetadataSendReceive {
+export interface SendReceiveMetadata extends CustomMetadata {
     group: 'send' | 'receive'
+    nodeId: DspGraph.NodeId
+    portletId: DspGraph.PortletId
     name: string
     position: [number, number]
 }
@@ -32,30 +34,40 @@ export const collectIoMessageReceiversFromSendNodes = (
     pdJson: PdJson.Pd,
     graph: DspGraph.Graph
 ) =>
-    _collectNodes(pdJson, graph, 'send').reduce(
-        (messageReceivers, [pdNode, node]) => ({
-            ...messageReceivers,
-            [node.id]: {
-                portletIds: ['0'],
-                metadata: _buildIoMetadata(pdNode, node) as any,
+    _collectNodes(pdJson, graph, 'send').reduce<
+        [
+            CompilationSettings['io']['messageReceivers'],
+            Array<SendReceiveMetadata>
+        ]
+    >(
+        ([messageReceivers, customMetadata], [pdNode, node]) => [
+            {
+                ...messageReceivers,
+                [node.id]: ['0'],
             },
-        }),
-        {} as CompilationSettings['io']['messageReceivers']
+            [...customMetadata, _buildSendReceiveMetadata(pdNode, node)],
+        ],
+        [{}, []]
     )
 
 export const collectIoMessageSendersFromReceiveNodes = (
     pdJson: PdJson.Pd,
     graph: DspGraph.Graph
 ) =>
-    _collectNodes(pdJson, graph, 'receive').reduce(
-        (messageSenders, [pdNode, node]) => ({
-            ...messageSenders,
-            [node.id]: {
-                portletIds: ['0'],
-                metadata: _buildIoMetadata(pdNode, node) as any,
+    _collectNodes(pdJson, graph, 'receive').reduce<
+        [
+            CompilationSettings['io']['messageSenders'],
+            Array<SendReceiveMetadata>
+        ]
+    >(
+        ([messageSenders, customMetadata], [pdNode, node]) => [
+            {
+                ...messageSenders,
+                [node.id]: ['0'],
             },
-        }),
-        {} as CompilationSettings['io']['messageSenders']
+            [...customMetadata, _buildSendReceiveMetadata(pdNode, node)],
+        ],
+        [{}, []]
     )
 
 const _collectNodes = (
@@ -83,14 +95,19 @@ const _collectNodes = (
         .filter((pair) => pair !== null)
 }
 
-const _buildIoMetadata = (pdNode: PdJson.Node, node: DspGraph.Node) => {
+const _buildSendReceiveMetadata = (
+    pdNode: PdJson.Node,
+    node: DspGraph.Node
+): SendReceiveMetadata => {
     const layout = pdNode.layout || {}
     return {
         group: node.type as 'send' | 'receive',
+        nodeId: node.id,
+        portletId: '0',
         name: (node.args as SendReceiveNodeArguments).busName,
         position:
             layout.x !== undefined && layout.y !== undefined
                 ? [layout.x, layout.y]
                 : undefined,
-    } as IoMessageSpecMetadataSendReceive
+    }
 }

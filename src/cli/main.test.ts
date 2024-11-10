@@ -158,6 +158,26 @@ describe('cli', () => {
         })
     })
 
+    describe('generate from comments.pd', () => {
+        const PATHS = {
+            patch: resolve(__dirname, 'test-assets', 'comments.pd'),
+            javascript: resolve(__dirname, 'test-assets', 'comments.js'),
+            assemblyscript: resolve(__dirname, 'test-assets', 'comments.as'),
+        }
+
+        it('should generate a js file', async () => {
+            const outPath = resolve(TMP_DIR, 'test-patch.js')
+            await exec(`node ${CLI_PATH} -i ${PATHS.patch} -o ${outPath}`)
+            await assertFileContentSame(outPath, PATHS.javascript, 'utf8')
+        })
+
+        it('should generate an as file', async () => {
+            const outPath = resolve(TMP_DIR, 'test-patch.as')
+            await exec(`node ${CLI_PATH} -i ${PATHS.patch} -o ${outPath}`)
+            await assertFileContentSame(outPath, PATHS.assemblyscript, 'utf8')
+        })
+    })
+
     describe('Non-regression tests using example patch ginger2.pd', () => {
         const PATHS = {
             patch: resolve(__dirname, 'test-assets', 'ginger2.pd'),

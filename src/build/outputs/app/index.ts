@@ -19,11 +19,14 @@
  */
 import { Code, CompilerTarget, EngineMetadata } from '@webpd/compiler'
 import { Artefacts } from '../../types'
-import { IoMessageSpecMetadata } from '../io'
+import { IoMetadata } from '../../io'
 import WEBPD_RUNTIME_CODE from './assets/runtime.js.txt'
 import { readMetadata } from '@webpd/compiler'
-import { IoMessageSpecMetadataControl, IoMessageSpecMetadataControlFloat } from '../io/gui-controls'
-import { IoMessageSpecMetadataSendReceive } from '../io/send-receive'
+import {
+    GuiControlControlGenericMetadata,
+    GuiControlFloatMetadata,
+} from '../../io/pd-gui-controls'
+import { SendReceiveMetadata } from '../../io/send-receive'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {
@@ -47,7 +50,6 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
         compiledPatchFilename = 'patch.js'
         engineMetadata = await readMetadata('javascript', artefacts.javascript)
         compiledPatchCode = artefacts.javascript
-
     } else {
         target = 'assemblyscript'
         compiledPatchFilename = 'patch.wasm'
@@ -55,6 +57,8 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
         compiledPatchCode = artefacts.wasm
     }
 
+    const customMetadata: IoMetadata =
+        engineMetadata.customMetadata || {}
     const generatedApp: GeneratedApp = {
         [WEBPD_RUNTIME_FILENAME]: WEBPD_RUNTIME_CODE,
         [compiledPatchFilename]: compiledPatchCode,
@@ -193,18 +197,18 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
             // Here is an index of objects IDs to which you can send messages, with hints so you can find the right ID.
             // Note that by default only GUI objects (bangs, sliders, etc ...) are available.${
                 renderIoMessageReceiversOrSenders(
-                    engineMetadata.settings.io.messageReceivers,
+                    customMetadata.messageReceivers,
                     // Render controls
-                    (nodeId, portletId, metadata) => `
-            //  - nodeId "${nodeId}" portletId "${portletId}"
+                    (metadata) => `
+            //  - nodeId "${metadata.nodeId}" portletId "${metadata.portletId}"
             //      * type "${metadata.type}"
             //      * position ${JSON.stringify(metadata.position)}${
                 metadata.label ? `
             //      * label "${metadata.label}"` : ''}
             `, 
                     // Render send/receive
-                    (nodeId, portletId, metadata) => `
-            //  - nodeId "${nodeId}" portletId "${portletId}"
+                    (metadata) => `
+            //  - nodeId "${metadata.nodeId}" portletId "${metadata.portletId}"
             //      * type "send"
             //      * send "${metadata.name}"
             `,
@@ -225,12 +229,12 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
             // - message : the message that was sent. It is a list of strings and / or numbers.
             const receiveMsgFromWebPd = (nodeId, portletId, message) => {${
                 renderIoMessageReceiversOrSenders(
-                    engineMetadata.settings.io.messageSenders,
+                    customMetadata.messageSenders,
                     // Render controls
-                    (nodeId, portletId, metadata) => `
-                if (nodeId === "${nodeId}" && portletId === "${portletId}") {
+                    (metadata) => `
+                if (nodeId === "${metadata.nodeId}" && portletId === "${metadata.portletId}") {
                     console.log('Message received from :\\n'
-                        + '\t* nodeId "${nodeId}" portletId "${portletId}"\\n'
+                        + '\t* nodeId "${metadata.nodeId}" portletId "${metadata.portletId}"\\n'
                         + '\t* type "${metadata.type}"\\n'
                         + '\t* position ${JSON.stringify(metadata.position)}\\n'${
                     metadata.label ? `
@@ -238,10 +242,10 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
                     )
                 }`,
                     // Render send/receive
-                    (nodeId, portletId, metadata) => `
-                if (nodeId === "${nodeId}" && portletId === "${portletId}") {
+                    (metadata) => `
+                if (nodeId === "${metadata.nodeId}" && portletId === "${metadata.portletId}") {
                     console.log('Message received from :\\n'
-                        + '\t* nodeId "${nodeId}" portletId "${portletId}"\\n'
+                        + '\t* nodeId "${metadata.nodeId}" portletId "${metadata.portletId}"\\n'
                         + '\t* type "receive"\\n'
                         + '\t* receive "${metadata.name}"'
                     )
@@ -261,21 +265,33 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
 }
 
 const renderIoMessageReceiversOrSenders = (
-    ioSpec: EngineMetadata['settings']['io']['messageReceivers'] | EngineMetadata['settings']['io']['messageSenders'],
-    renderControl: (nodeId: string, portletId: string, metadata: IoMessageSpecMetadataControl | IoMessageSpecMetadataControlFloat) => Code,
-    renderSendReceive: (nodeId: string, portletId: string, metadata: IoMessageSpecMetadataSendReceive) => Code,
+    ioSpec:
+        | IoMetadata['messageReceivers']
+        | IoMetadata['messageSenders'],
+    renderControl: (
+        metadata: GuiControlControlGenericMetadata | GuiControlFloatMetadata
+    ) => Code,
+    renderSendReceive: (metadata: SendReceiveMetadata) => Code,
     emptyString: string
-) => Object.keys(ioSpec).length ? 
-Object.entries(ioSpec)
-    .map(([nodeId, {portletIds, metadata: _metadata}]) => portletIds.map(portletId => {
-        const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
-        if (!metadata) {
-            return ''
-        } else if (metadata.group === 'control' || metadata.group === 'control:float') {
-            return renderControl(nodeId, portletId, metadata)
-        } else if (metadata.group === 'send' || metadata.group === 'receive') {
-            return renderSendReceive(nodeId, portletId, metadata)
-        } else {
-            return ''
-        }
-    })).join(''): emptyString
+) =>
+    ioSpec.length
+        ? ioSpec
+              .map((metadata) => {
+                  if (!metadata) {
+                      return ''
+                  } else if (
+                      metadata.group === 'control' ||
+                      metadata.group === 'control:float'
+                  ) {
+                      return renderControl(metadata)
+                  } else if (
+                      metadata.group === 'send' ||
+                      metadata.group === 'receive'
+                  ) {
+                      return renderSendReceive(metadata)
+                  } else {
+                      return ''
+                  }
+              })
+              .join('')
+        : emptyString

@@ -17,66 +17,81 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { DspGraph, CompilationSettings } from '@webpd/compiler'
+import { DspGraph, CompilationSettings, CustomMetadata } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
-import { buildGraphNodeId } from '../../../../compile-dsp-graph/to-dsp-graph'
-import { discoverGuiControls, traverseGuiControls } from './gui-controls'
-import { builders } from '../../../../nodes/nodes/controls-float'
+import { buildGraphNodeId } from '../../compile-dsp-graph/to-dsp-graph'
+import {
+    discoverPdGuiControls,
+    traverseGuiControls,
+} from '../../pd-gui/controls'
+import { builders } from '../../nodes/nodes/controls-float'
 
 const FLOAT_CONTROL_TYPES = [...Object.keys(builders), 'floatatom']
 
-interface IoMessageSpecMetadataControlBase {
+interface GuiControlBaseMetadata extends CustomMetadata {
     group: string
     type: PdJson.NodeType
+    nodeId: DspGraph.NodeId
+    portletId: DspGraph.PortletId
     position: [number, number]
     label?: string
 }
 
-export interface IoMessageSpecMetadataControlFloat
-    extends IoMessageSpecMetadataControlBase {
+export interface GuiControlFloatMetadata extends GuiControlBaseMetadata {
     group: 'control:float'
     initValue: number
     minValue: number
     maxValue: number
 }
 
-export interface IoMessageSpecMetadataControl
-    extends IoMessageSpecMetadataControlBase {
+export interface GuiControlControlGenericMetadata
+    extends GuiControlBaseMetadata {
     group: 'control'
 }
+
+export type GuiControlMetadata =
+    | GuiControlControlGenericMetadata
+    | GuiControlFloatMetadata
 
 export const collectIoMessageReceiversFromGui = (
     pd: PdJson.Pd,
     graph: DspGraph.Graph
 ) =>
-    _collectNodes(pd, graph).reduce(
-        (messageReceivers, [pdNode, node]) => ({
-            ...messageReceivers,
-            [node.id]: {
-                portletIds: ['0'],
-                metadata: _buildIoMetadata(pdNode, node) as any,
+    _collectNodes(pd, graph).reduce<
+        [
+            CompilationSettings['io']['messageReceivers'],
+            Array<GuiControlMetadata>
+        ]
+    >(
+        ([messageReceivers, customMetadata], [pdNode, node]) => [
+            {
+                ...messageReceivers,
+                [node.id]: ['0'],
             },
-        }),
-        {} as CompilationSettings['io']['messageReceivers']
+            [...customMetadata, _buildGuiControlMetadata(pdNode, node)],
+        ],
+        [{}, []]
     )
 
 export const collectIoMessageSendersFromGui = (
     pd: PdJson.Pd,
     graph: DspGraph.Graph
 ) =>
-    _collectNodes(pd, graph).reduce(
-        (messageSenders, [pdNode, node]) => ({
-            ...messageSenders,
-            [node.id]: {
-                portletIds: ['0'],
-                metadata: _buildIoMetadata(pdNode, node) as any,
+    _collectNodes(pd, graph).reduce<
+        [CompilationSettings['io']['messageSenders'], Array<GuiControlMetadata>]
+    >(
+        ([messageSenders, customMetadata], [pdNode, node]) => [
+            {
+                ...messageSenders,
+                [node.id]: ['0'],
             },
-        }),
-        {} as CompilationSettings['io']['messageSenders']
+            [...customMetadata, _buildGuiControlMetadata(pdNode, node)],
+        ],
+        [{}, []]
     )
 
 const _collectNodes = (pdJson: PdJson.Pd, graph: DspGraph.Graph) => {
-    const { controls } = discoverGuiControls(pdJson)
+    const controls = discoverPdGuiControls(pdJson)
     const nodePairs: Array<[PdJson.ControlNode, DspGraph.Node]> = []
     traverseGuiControls(controls, (control) => {
         const nodeId = buildGraphNodeId(control.patch.id, control.node.id)
@@ -91,13 +106,16 @@ const _collectNodes = (pdJson: PdJson.Pd, graph: DspGraph.Graph) => {
     return nodePairs
 }
 
-const _buildIoMetadata = (pdNode: PdJson.ControlNode, node: DspGraph.Node) => {
+const _buildGuiControlMetadata = (
+    pdNode: PdJson.ControlNode,
+    node: DspGraph.Node
+): GuiControlMetadata => {
     const layout = pdNode.layout || {}
-    let metadata:
-        | IoMessageSpecMetadataControl
-        | IoMessageSpecMetadataControlFloat = {
+    let metadata: GuiControlMetadata = {
         group: 'control',
         type: pdNode.type,
+        nodeId: node.id,
+        portletId: '0',
         label: (layout as any).label,
         position:
             layout.x !== undefined && layout.y !== undefined
