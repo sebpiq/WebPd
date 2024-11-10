@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2023 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
+ * Copyright (c) 2022-2025 Sébastien Piquemal <sebpiq@protonmail.com>, Chris McCormick.
  *
  * This file is part of WebPd
  * (see https://github.com/sebpiq/WebPd).
