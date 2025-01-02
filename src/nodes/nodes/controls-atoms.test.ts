@@ -131,12 +131,12 @@ describe('controls-atoms', () => {
                         },
                         io: {
                             messageReceivers: {
-                                send: { portletIds: ['0'] },
-                                control: { portletIds: ['0'] },
+                                send: ['0'],
+                                control: ['0'],
                             },
                             messageSenders: {
-                                receive: { portletIds: ['0'] },
-                                control: { portletIds: ['0'] },
+                                receive: ['0'],
+                                control: ['0'],
                             },
                         },
                     }

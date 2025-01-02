@@ -36,6 +36,14 @@ export const resolvePatch = (
     return patch
 }
 
+export const resolveRootPatch = (pd: PdJson.Pd): PdJson.Patch => {
+    const rootPatch = pd.patches[pd.rootPatchId]
+    if (!rootPatch) {
+        throw new Error(`Could not resolve root patch`)
+    }
+    return rootPatch
+}
+
 export const resolvePdNode = (
     patch: PdJson.Patch,
     nodeId: PdJson.LocalId

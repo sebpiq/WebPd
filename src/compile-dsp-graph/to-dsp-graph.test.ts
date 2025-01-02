@@ -23,7 +23,7 @@ import toDspGraph, {
     Compilation,
     _buildNodes,
     _buildConnections,
-    buildImplicitGraphNodeId,
+    _FOR_TESTING,
 } from './to-dsp-graph'
 import {
     assertGraphConnections,
@@ -43,6 +43,8 @@ import {
     makePd,
 } from '@webpd/pd-parser/src/test-helpers'
 import { AbstractionLoader } from './instantiate-abstractions'
+
+const { _buildImplicitGraphNodeId } = _FOR_TESTING
 
 const DUMMY_NODE_TYPE = pdJsonNodeDefaults('').type
 
@@ -908,7 +910,7 @@ describe('toDspGraph', () => {
     describe('buildImplicitGraphNodeId', () => {
         it('should remove special chars', () => {
             assert.strictEqual(
-                buildImplicitGraphNodeId(
+                _buildImplicitGraphNodeId(
                     { nodeId: 'nodeId', portletId: 'inletId' },
                     'sig~'
                 ),

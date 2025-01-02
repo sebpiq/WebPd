@@ -302,10 +302,10 @@ describe('msg', () => {
                     },
                     io: {
                         messageReceivers: {
-                            msg: { portletIds: ['0'] },
+                            msg: ['0'],
                         },
                         messageSenders: {
-                            receive: { portletIds: ['0'] },
+                            receive: ['0'],
                         },
                     },
                 })

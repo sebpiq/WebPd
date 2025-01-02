@@ -1,3 +1,9 @@
+1.0.0-alpha.12
+---------------
+
+- improved default messageSenders / messageReceivers when building a patch
+- by default metadata now contains GUI info when compiled from .pd patch
+
 1.0.0-alpha.11
 ---------------
 

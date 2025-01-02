@@ -24,6 +24,7 @@ import {
     resolvePatch,
     resolvePdNode,
     resolvePdNodeDollarArgs,
+    resolveRootPatch,
 } from './compile-helpers'
 import instantiateAbstractions, {
     AbstractionLoader,
@@ -70,7 +71,7 @@ export type Compilation = {
     readonly nodeBuilders: NodeBuilders
 }
 
-interface CompilationSuccess {
+export interface CompilationSuccess {
     readonly status: 0
     readonly graph: DspGraph.Graph
     readonly arrays: DspGraph.Arrays
@@ -79,7 +80,7 @@ interface CompilationSuccess {
     readonly abstractionsLoadingWarnings?: AbstractionsLoadingWarnings
 }
 
-interface CompilationFailure {
+export interface CompilationFailure {
     readonly status: 1
     readonly abstractionsLoadingErrors: AbstractionsLoadingErrors
     readonly abstractionsLoadingWarnings?: AbstractionsLoadingWarnings
@@ -98,7 +99,7 @@ export const buildGraphPortletId = (pdPortletId: PdJson.PortletId) =>
     pdPortletId.toString(10)
 
 /** Node id for nodes added while converting from PdJson */
-export const buildImplicitGraphNodeId = (
+const _buildImplicitGraphNodeId = (
     sink: DspGraph.ConnectionEndpoint,
     nodeType: DspGraph.NodeType
 ): DspGraph.NodeId => {
@@ -138,7 +139,7 @@ export default async (
         nodeBuilders,
         graph: {},
     }
-    const rootPatch = _resolveRootPatch(pdWithResolvedAbstractions)
+    const rootPatch = resolveRootPatch(pdWithResolvedAbstractions)
     _traversePatches(compilation, [rootPatch], _buildNodes)
     _buildConnections(compilation, [rootPatch])
     Object.values(compilation.graph).forEach((node) => {
@@ -357,7 +358,7 @@ const _buildConnectionToSignalSink = (
         }
         const implicitMixerNode = dspGraph.mutators.addNode(graph, {
             ...dspGraph.helpers.nodeDefaults(
-                buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.MIXER),
+                _buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.MIXER),
                 IMPLICIT_NODE_TYPES.MIXER
             ),
             args: mixerNodeArgs,
@@ -387,7 +388,7 @@ const _buildConnectionToSignalSink = (
         }
         implicitSigNode = dspGraph.mutators.addNode(graph, {
             ...dspGraph.helpers.nodeDefaults(
-                buildImplicitGraphNodeId(
+                _buildImplicitGraphNodeId(
                     sink,
                     IMPLICIT_NODE_TYPES.CONSTANT_SIGNAL
                 ),
@@ -415,7 +416,7 @@ const _buildConnectionToSignalSink = (
         const routeMsgArgs: RouteMsgNodeArguments = {}
         const implicitRouteMsgNode = dspGraph.mutators.addNode(graph, {
             ...dspGraph.helpers.nodeDefaults(
-                buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.ROUTE_MSG),
+                _buildImplicitGraphNodeId(sink, IMPLICIT_NODE_TYPES.ROUTE_MSG),
                 IMPLICIT_NODE_TYPES.ROUTE_MSG
             ),
             args: routeMsgArgs,
@@ -744,14 +745,6 @@ const _rootPatch = (patchPath: PatchPath) => {
     return firstRootPatch
 }
 
-const _resolveRootPatch = (pd: PdJson.Pd): PdJson.Patch => {
-    const rootPatch = pd.patches[pd.rootPatchId]
-    if (!rootPatch) {
-        throw new Error(`Could not resolve root patch`)
-    }
-    return rootPatch
-}
-
 const _resolveSubpatchPortletNode = (
     portletNodeIds: Array<PdJson.LocalId>,
     portletId: PdJson.PortletId
@@ -794,3 +787,7 @@ const _arePdGlobEndpointsEqual = (
     _currentPatch(pp1).id === _currentPatch(pp2).id &&
     ep1.nodeId === ep2.nodeId &&
     ep1.portletId === ep2.portletId
+
+export const _FOR_TESTING = {
+    _buildImplicitGraphNodeId
+}

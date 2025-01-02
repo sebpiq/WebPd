@@ -23,6 +23,7 @@ import {
     resolveNodeType,
     resolvePatch,
     resolvePdNodeDollarArgs,
+    resolveRootPatch,
 } from './compile-helpers'
 import { NodeBuilders } from './types'
 
@@ -125,7 +126,7 @@ export default async (
         abstractionLoader,
     }
 
-    const rootPatch = _resolveRootPatch(compilation.pd)
+    const rootPatch = resolveRootPatch(compilation.pd)
     Object.values(compilation.pd.arrays).forEach(
         (array) => (array.args = resolveArrayDollarArgs(rootPatch, array.args))
     )
@@ -221,7 +222,7 @@ const _instantiateAbstractionsRecurs = async (
             pd,
             resolutionResult.pd
         )
-        const newRootPatch = _resolveRootPatch(abstractionInstance)
+        const newRootPatch = resolveRootPatch(abstractionInstance)
 
         // Replace the abstraction node by a subpatch node, so that the abstraction
         // can be dealt with the same way a subpatch is handled.
@@ -261,14 +262,6 @@ const _instantiateAbstractionsRecurs = async (
             newNamemap
         )
     }
-}
-
-const _resolveRootPatch = (pd: PdJson.Pd): PdJson.Patch => {
-    const rootPatch = pd.patches[pd.rootPatchId]
-    if (!rootPatch) {
-        throw new Error(`Could not resolve root patch`)
-    }
-    return rootPatch
 }
 
 const _resolveAbstraction = async (

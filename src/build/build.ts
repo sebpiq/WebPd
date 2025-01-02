@@ -33,7 +33,7 @@ import { Artefacts, BuildSettings } from './types'
 import { BuildFormat, listBuildSteps } from './formats'
 import { NODE_BUILDERS, NODE_IMPLEMENTATIONS } from '../nodes'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
-import { applyIoDefaults } from './outputs/io'
+import { applySettingsDefaults } from './outputs/javascript-assemblyscript'
 
 interface BuildSuccess {
     status: 0
@@ -252,19 +252,21 @@ export const performBuildStep = async (
 
         case 'javascript':
         case 'assemblyscript':
+            // Build compile settings dynamically,
+            // collecting io from the patch
             const compileCodeResult = compile(
                 artefacts.dspGraph.graph,
                 nodeImplementations,
                 target,
-                {
-                    audio: audioSettings,
-                    io: applyIoDefaults(
+                applySettingsDefaults(
+                    {
+                        audio: audioSettings,
                         io,
-                        artefacts.dspGraph.graph,
-                        artefacts.dspGraph.pd
-                    ),
-                    arrays: artefacts.dspGraph!.arrays,
-                },
+                        arrays: artefacts.dspGraph!.arrays,
+                    },
+                    artefacts.dspGraph!.graph,
+                    artefacts.pdJson
+                )
             )
             if (compileCodeResult.status === 0) {
                 if (target === 'javascript') {

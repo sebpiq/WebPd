@@ -94,13 +94,13 @@ describe('send / receive', () => {
                 },
                 io: {
                     messageReceivers: {
-                        send1: { portletIds: ['0', '1'] },
-                        send2: { portletIds: ['0'] },
+                        send1: ['0', '1'],
+                        send2: ['0'],
                     },
                     messageSenders: {
-                        receive1: { portletIds: ['0'] },
-                        receive2: { portletIds: ['0'] },
-                        receive2bis: { portletIds: ['0'] },
+                        receive1: ['0'],
+                        receive2: ['0'],
+                        receive2bis: ['0'],
                     },
                 },
             })

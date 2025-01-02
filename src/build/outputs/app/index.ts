@@ -17,13 +17,20 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, CompilerTarget, EngineMetadata } from '@webpd/compiler'
-import { Artefacts } from '../../types'
-import { IoMessageSpecMetadata } from '../io'
+import {
+    Code,
+    CompilerTarget,
+    dspGraph,
+    DspGraph,
+    EngineMetadata,
+} from '@webpd/compiler'
+import { Artefacts, WebPdMetadata } from '../../types'
 import WEBPD_RUNTIME_CODE from './assets/runtime.js.txt'
 import { readMetadata } from '@webpd/compiler'
-import { IoMessageSpecMetadataControl, IoMessageSpecMetadataControlFloat } from '../io/gui-controls'
-import { IoMessageSpecMetadataSendReceive } from '../io/send-receive'
+import { traversePdGui } from '../../../pd-gui'
+import { PdGuiNode } from '../../../pd-gui/types'
+import { NodeArguments as NodeArgumentsSendReceive } from '../../../nodes/nodes/send-receive'
+import { PdJson } from '@webpd/pd-parser'
 export const WEBPD_RUNTIME_FILENAME = 'webpd-runtime.js'
 
 export interface Settings {
@@ -47,12 +54,17 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
         compiledPatchFilename = 'patch.js'
         engineMetadata = await readMetadata('javascript', artefacts.javascript)
         compiledPatchCode = artefacts.javascript
-
     } else {
         target = 'assemblyscript'
         compiledPatchFilename = 'patch.wasm'
         engineMetadata = await readMetadata('assemblyscript', artefacts.wasm)
         compiledPatchCode = artefacts.wasm
+    }
+
+    const webPdMetadata =
+        engineMetadata.customMetadata as unknown as WebPdMetadata
+    if (!webPdMetadata.pdGui || !webPdMetadata.graph || !webPdMetadata.pdNodes) {
+        throw new Error(`Missing data in WebPd metadata`)
     }
 
     const generatedApp: GeneratedApp = {
@@ -194,19 +206,20 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
             // Note that by default only GUI objects (bangs, sliders, etc ...) are available.${
                 renderIoMessageReceiversOrSenders(
                     engineMetadata.settings.io.messageReceivers,
+                    webPdMetadata,
                     // Render controls
-                    (nodeId, portletId, metadata) => `
-            //  - nodeId "${nodeId}" portletId "${portletId}"
-            //      * type "${metadata.type}"
-            //      * position ${JSON.stringify(metadata.position)}${
-                metadata.label ? `
-            //      * label "${metadata.label}"` : ''}
+                    (node, portletId, layout) => `
+            //  - nodeId "${node.id}" portletId "${portletId}"
+            //      * type "${node.type}"
+            //      * position ${layout.x} ${layout.y}${
+                layout.label ? `
+            //      * label "${layout.label}"` : ''}
             `, 
                     // Render send/receive
-                    (nodeId, portletId, metadata) => `
-            //  - nodeId "${nodeId}" portletId "${portletId}"
+                    (node, portletId) => `
+            //  - nodeId "${node.id}" portletId "${portletId}"
             //      * type "send"
-            //      * send "${metadata.name}"
+            //      * send "${node.args.busName}"
             `,
                     // Render if empty io specs
                     `
@@ -226,24 +239,25 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
             const receiveMsgFromWebPd = (nodeId, portletId, message) => {${
                 renderIoMessageReceiversOrSenders(
                     engineMetadata.settings.io.messageSenders,
+                    webPdMetadata,
                     // Render controls
-                    (nodeId, portletId, metadata) => `
-                if (nodeId === "${nodeId}" && portletId === "${portletId}") {
+                    (node, portletId, layout) => `
+                if (nodeId === "${node.id}" && portletId === "${portletId}") {
                     console.log('Message received from :\\n'
-                        + '\t* nodeId "${nodeId}" portletId "${portletId}"\\n'
-                        + '\t* type "${metadata.type}"\\n'
-                        + '\t* position ${JSON.stringify(metadata.position)}\\n'${
-                    metadata.label ? `
-                        + '\t* label "${metadata.label}"'` : ''}
+                        + '\t* nodeId "${node.id}" portletId "${portletId}"\\n'
+                        + '\t* type "${node.type}"\\n'
+                        + '\t* position ${layout.x} ${layout.y}\\n'${
+                    layout.label ? `
+                        + '\t* label "${layout.label}"'` : ''}
                     )
                 }`,
                     // Render send/receive
-                    (nodeId, portletId, metadata) => `
-                if (nodeId === "${nodeId}" && portletId === "${portletId}") {
+                    (node, portletId) => `
+                if (nodeId === "${node.id}" && portletId === "${portletId}") {
                     console.log('Message received from :\\n'
-                        + '\t* nodeId "${nodeId}" portletId "${portletId}"\\n'
+                        + '\t* nodeId "${node.id}" portletId "${portletId}"\\n'
                         + '\t* type "receive"\\n'
-                        + '\t* receive "${metadata.name}"'
+                        + '\t* receive "${node.args.busName}"'
                     )
                 }`,
                     // Render if empty io specs
@@ -261,21 +275,58 @@ export default async (artefacts: Artefacts): Promise<GeneratedApp> => {
 }
 
 const renderIoMessageReceiversOrSenders = (
-    ioSpec: EngineMetadata['settings']['io']['messageReceivers'] | EngineMetadata['settings']['io']['messageSenders'],
-    renderControl: (nodeId: string, portletId: string, metadata: IoMessageSpecMetadataControl | IoMessageSpecMetadataControlFloat) => Code,
-    renderSendReceive: (nodeId: string, portletId: string, metadata: IoMessageSpecMetadataSendReceive) => Code,
+    ioMessageSpecs: EngineMetadata['settings']['io'][
+        | 'messageReceivers'
+        | 'messageSenders'],
+    webPdMetadata: WebPdMetadata,
+    renderControl: (
+        node: DspGraph.Node,
+        portletId: DspGraph.PortletId,
+        layout: PdJson.ControlNode['layout']
+    ) => Code,
+    renderSendReceive: (
+        node: DspGraph.Node<NodeArgumentsSendReceive>,
+        portletId: DspGraph.PortletId
+    ) => Code,
     emptyString: string
-) => Object.keys(ioSpec).length ? 
-Object.entries(ioSpec)
-    .map(([nodeId, {portletIds, metadata: _metadata}]) => portletIds.map(portletId => {
-        const metadata = _metadata as unknown as (IoMessageSpecMetadata | undefined)
-        if (!metadata) {
-            return ''
-        } else if (metadata.group === 'control' || metadata.group === 'control:float') {
-            return renderControl(nodeId, portletId, metadata)
-        } else if (metadata.group === 'send' || metadata.group === 'receive') {
-            return renderSendReceive(nodeId, portletId, metadata)
-        } else {
-            return ''
-        }
-    })).join(''): emptyString
+) => {
+    if (Object.keys(ioMessageSpecs).length) {
+        const indexedPdGuiNodes: { [nodeId: DspGraph.NodeId]: PdGuiNode } = {}
+        traversePdGui(webPdMetadata.pdGui, (pdGuiNode) => {
+            if (pdGuiNode.nodeClass === 'control') {
+                indexedPdGuiNodes[pdGuiNode.nodeId] = pdGuiNode
+            }
+        })
+
+        return Object.entries(ioMessageSpecs)
+            .flatMap(([nodeId, portletIds]) =>
+                portletIds.map((portletId) => {
+                    const node = dspGraph.getters.getNode(
+                        webPdMetadata.graph,
+                        nodeId
+                    )
+
+                    if (node.type === 'send' || node.type === 'receive') {
+                        return renderSendReceive(
+                            node as DspGraph.Node<NodeArgumentsSendReceive>,
+                            portletId
+                        )
+                    }
+
+                    const pdGuiNode = indexedPdGuiNodes[nodeId]
+                    if (!pdGuiNode) {
+                        return ''
+                    } else if (pdGuiNode.nodeClass === 'control') {
+                        const pdNode =
+                            webPdMetadata.pdNodes[pdGuiNode.patchId][pdGuiNode.pdNodeId]
+                        return renderControl(node, portletId, pdNode.layout)
+                    } else {
+                        return ''
+                    }
+                })
+            )
+            .join('')
+    } else {
+        return emptyString
+    }
+}

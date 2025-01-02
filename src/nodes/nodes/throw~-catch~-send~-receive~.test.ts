@@ -142,7 +142,7 @@ describe('throw~ / catch~', () => {
             const compileResult = compile(graph, nodeImplementations, target, {
                 io: {
                     messageReceivers: {
-                        throw2: { portletIds: ['0_message'] },
+                        throw2: ['0_message'],
                     },
                 },
                 audio: {
@@ -264,7 +264,7 @@ describe('throw~ / catch~', () => {
             const compileResult = compile(graph, nodeImplementations, target, {
                 io: {
                     messageReceivers: {
-                        receive2: { portletIds: ['0'] },
+                        receive2: ['0'],
                     },
                 },
                 audio: {

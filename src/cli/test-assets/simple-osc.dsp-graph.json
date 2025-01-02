@@ -205,11 +205,11 @@
             "id": "0",
             "type": "osc~",
             "args": [],
+            "nodeClass": "generic",
             "layout": {
               "x": 99,
               "y": 73
-            },
-            "nodeClass": "generic"
+            }
           },
           "1": {
             "id": "1",
@@ -222,6 +222,7 @@
               "",
               ""
             ],
+            "nodeClass": "control",
             "layout": {
               "x": 99,
               "y": 43,
@@ -237,18 +238,17 @@
               "fgColor": "#000000",
               "labelColor": "#000000",
               "logHeight": "256"
-            },
-            "nodeClass": "control"
+            }
           },
           "2": {
             "id": "2",
             "type": "dac~",
             "args": [],
+            "nodeClass": "generic",
             "layout": {
               "x": 99,
               "y": 106
-            },
-            "nodeClass": "generic"
+            }
           }
         },
         "connections": [

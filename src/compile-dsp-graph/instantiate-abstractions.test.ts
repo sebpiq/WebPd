@@ -24,6 +24,7 @@ import { pdJsonNodeDefaults, makePd } from '@webpd/pd-parser/src/test-helpers'
 import { NodeBuilders } from './types'
 import instantiateAbstractions from './instantiate-abstractions'
 import { PdJson } from '@webpd/pd-parser'
+import { resolveRootPatch } from './compile-helpers'
 
 const DUMMY_NODE_TYPE = pdJsonNodeDefaults('').type
 
@@ -117,7 +118,7 @@ describe('instantiateAbstractions', () => {
             pd: pdWithResolvedAbstractions,
             abstractions,
         } = results
-        const rootPatch = pdWithResolvedAbstractions.patches[pdWithResolvedAbstractions.rootPatchId]
+        const rootPatch = resolveRootPatch(pdWithResolvedAbstractions)
 
         assert.deepStrictEqual(Object.keys(rootPatch.nodes).sort(), [
             'array1',

@@ -26,6 +26,7 @@ import {
 import { PdJson } from '@webpd/pd-parser'
 import { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions'
 import { NodeBuilders } from '../compile-dsp-graph/types'
+import { PdGuiNode } from '../pd-gui/types'
 
 export type WasmBuffer = ArrayBuffer
 
@@ -57,4 +58,12 @@ export interface BuildSettings {
     nodeImplementations: NodeImplementations
     abstractionLoader: AbstractionLoader
     io?: CompilationSettings['io']
+}
+
+export interface WebPdMetadata {
+    graph: DspGraph.Graph
+    pdNodes: {
+        [patchId: PdJson.GlobalId]: { [pdNodeId: PdJson.LocalId]: PdJson.Node }
+    }
+    pdGui: Array<PdGuiNode>
 }

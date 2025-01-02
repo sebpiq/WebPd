@@ -20,50 +20,42 @@
 import { DspGraph, CompilationSettings } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { buildGraphNodeId } from '../../../compile-dsp-graph/to-dsp-graph'
-import { NodeArguments as SendReceiveNodeArguments } from '../../../nodes/nodes/send-receive'
-
-export interface IoMessageSpecMetadataSendReceive {
-    group: 'send' | 'receive'
-    name: string
-    position: [number, number]
-}
+import { resolveRootPatch } from '../../../compile-dsp-graph/compile-helpers'
 
 export const collectIoMessageReceiversFromSendNodes = (
     pdJson: PdJson.Pd,
     graph: DspGraph.Graph
 ) =>
-    _collectNodes(pdJson, graph, 'send').reduce(
-        (messageReceivers, [pdNode, node]) => ({
+    _collectSendReceiveNodes(pdJson, graph, 'send').reduce<
+        CompilationSettings['io']['messageReceivers']
+    >(
+        (messageReceivers, node) => ({
             ...messageReceivers,
-            [node.id]: {
-                portletIds: ['0'],
-                metadata: _buildIoMetadata(pdNode, node) as any,
-            },
+            [node.id]: ['0'],
         }),
-        {} as CompilationSettings['io']['messageReceivers']
+        {}
     )
 
 export const collectIoMessageSendersFromReceiveNodes = (
     pdJson: PdJson.Pd,
     graph: DspGraph.Graph
 ) =>
-    _collectNodes(pdJson, graph, 'receive').reduce(
-        (messageSenders, [pdNode, node]) => ({
+    _collectSendReceiveNodes(pdJson, graph, 'receive').reduce<
+        CompilationSettings['io']['messageSenders']
+    >(
+        (messageSenders, node) => ({
             ...messageSenders,
-            [node.id]: {
-                portletIds: ['0'],
-                metadata: _buildIoMetadata(pdNode, node) as any,
-            },
+            [node.id]: ['0'],
         }),
-        {} as CompilationSettings['io']['messageSenders']
+        {}
     )
 
-const _collectNodes = (
+const _collectSendReceiveNodes = (
     pdJson: PdJson.Pd,
     graph: DspGraph.Graph,
     nodeType: 'send' | 'receive'
 ) => {
-    const rootPatch = pdJson.patches[pdJson.rootPatchId]
+    const rootPatch = resolveRootPatch(pdJson)
     return Object.values(rootPatch.nodes)
         .map((pdNode) => {
             const nodeId = buildGraphNodeId(rootPatch.id, pdNode.id)
@@ -75,22 +67,10 @@ const _collectNodes = (
                 !!node &&
                 node.type === nodeType
             ) {
-                return [pdNode, node] as [PdJson.Node, DspGraph.Node]
+                return node
             } else {
                 return null
             }
         })
-        .filter((pair) => pair !== null)
-}
-
-const _buildIoMetadata = (pdNode: PdJson.Node, node: DspGraph.Node) => {
-    const layout = pdNode.layout || {}
-    return {
-        group: node.type as 'send' | 'receive',
-        name: (node.args as SendReceiveNodeArguments).busName,
-        position:
-            layout.x !== undefined && layout.y !== undefined
-                ? [layout.x, layout.y]
-                : undefined,
-    } as IoMessageSpecMetadataSendReceive
+        .filter((node) => node !== null)
 }

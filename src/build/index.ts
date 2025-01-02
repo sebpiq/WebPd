@@ -39,6 +39,7 @@ export { AbstractionLoader } from '../compile-dsp-graph/instantiate-abstractions
 export {
     Artefacts,
     BuildSettings as Settings,
+    WebPdMetadata,
 } from './types'
 export {
     NODE_BUILDERS,
