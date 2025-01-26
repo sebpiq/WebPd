@@ -18,20 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {
-    AudioSettings,
-    CompilerTarget,
-} from '@webpd/compiler/src/compile/types'
-import { Message } from '@webpd/compiler/src/run/types'
 import { nodeImplementations, builders } from './send-receive'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import compile from '@webpd/compiler'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile, {
+    AudioSettings,
+    CompilerTarget,
+    Message,
+} from '@webpd/compiler'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 describe('send / receive', () => {
     describe('builder [send]', () => {
@@ -59,7 +57,7 @@ describe('send / receive', () => {
             target: CompilerTarget,
             bitDepth: AudioSettings['bitDepth']
         ) => {
-            const graph = makeGraph({
+            const graph = testHelpers.makeGraph({
                 send1: {
                     type: 'send',
                     ...builders['send'].build({ busName: 'BUS1' }),
@@ -109,7 +107,7 @@ describe('send / receive', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(
+            const engine = await testHelpers.createTestEngine(
                 target,
                 bitDepth,
                 compileResult.code

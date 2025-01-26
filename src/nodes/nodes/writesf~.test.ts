@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './writesf~'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeBuild, testNodeTranslateArgs } from '../test-helpers'
 
@@ -64,7 +64,7 @@ describe('writesf~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send out request to open read stream %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -113,7 +113,7 @@ describe('writesf~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should start / stop streaming on start / stop %s',
             async ({ target, bitDepth, floatArrayType }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -167,7 +167,7 @@ describe('writesf~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should print infos %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

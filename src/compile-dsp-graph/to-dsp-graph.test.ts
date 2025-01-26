@@ -25,11 +25,7 @@ import toDspGraph, {
     _buildConnections,
     _FOR_TESTING,
 } from './to-dsp-graph'
-import {
-    assertGraphConnections,
-    assertGraphsEqual,
-    assertNodesEqual,
-} from '@webpd/compiler/src/dsp-graph/test-helpers'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { NodeBuilders } from './types'
 import { nodeBuilders as subpatchNodeBuilders } from '../nodes/nodes/subpatch'
 import { builder as mixerNodeBuilder } from '../nodes/nodes/_mixer~'
@@ -37,12 +33,8 @@ import { builder as routeMsgBuilder } from '../nodes/nodes/_routemsg'
 import { builder as sigNodeBuilder } from '../nodes/nodes/sig~'
 import { DspGraph } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
-import {
-    pdJsonNodeDefaults,
-    pdJsonDefaults,
-    makePd,
-} from '@webpd/pd-parser/src/test-helpers'
 import { AbstractionLoader } from './instantiate-abstractions'
+import { pdJsonNodeDefaults, pdJsonDefaults, makePd } from './test-helpers'
 
 const { _buildImplicitGraphNodeId } = _FOR_TESTING
 
@@ -190,7 +182,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph, arrays } = compilationResult
 
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 // ['n1', 0, 'spNode', 0],
                 ['n_0_n1', '0', 'n_1_n5', '0'],
                 ['n_0_n1', '0', 'n_1_n5', '1'],
@@ -282,7 +274,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphsEqual(
+            testHelpers.assertGraphsEqual(
                 graph,
                 {
                     n_0_n1: {},
@@ -292,7 +284,7 @@ describe('toDspGraph', () => {
                 true
             )
 
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['n_0_n1', '1', 'n_2_n1', '1'],
                 ['n_2_n1', '2', 'n_0_n2', '2'],
             ])
@@ -328,7 +320,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphsEqual(
+            testHelpers.assertGraphsEqual(
                 graph,
                 {
                     n_0_msg: {},
@@ -338,7 +330,7 @@ describe('toDspGraph', () => {
                 },
                 true
             )
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['n_0_msg', '0', 'm_n_1_tabread_0__routemsg', '0'],
                 ['m_n_1_tabread_0__routemsg', '0', 'm_n_1_tabread_0_sig', '0'],
                 ['m_n_1_tabread_0_sig', '0', 'n_1_tabread', '0'],
@@ -376,7 +368,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphsEqual(
+            testHelpers.assertGraphsEqual(
                 graph,
                 {
                     n_1_msg: {},
@@ -386,7 +378,7 @@ describe('toDspGraph', () => {
                 },
                 true
             )
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['n_1_msg', '0', 'm_n_0_tabread_0__routemsg', '0'],
                 ['m_n_0_tabread_0__routemsg', '0', 'm_n_0_tabread_0_sig', '0'],
                 ['m_n_0_tabread_0__routemsg', '1', 'n_0_tabread', '0_message'],
@@ -460,7 +452,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['m_n_1_tabread2_0_sig', '0', 'n_1_tabread2', '0'],
                 ['n_1_tabread2', '0', 'm_n_2_tabread1_0__mixer', '0'],
                 ['m_n_1_tabread3_0_sig', '0', 'n_1_tabread3', '0'],
@@ -507,7 +499,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['m_n_0_0_0_sig', '0', 'n_0_0', '0'],
                 ['m_n_1_1_0_sig', '0', 'n_1_1', '0'],
                 ['n_0_0', '0', 'm_n_1_2_0__mixer', '0'],
@@ -555,7 +547,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['n_0_n1', '0', 'n_0_n2', '0'],
                 ['n_1_n3', '0', 'n_0_n2', '0'],
             ])
@@ -584,7 +576,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphsEqual(graph, {}, true)
+            testHelpers.assertGraphsEqual(graph, {}, true)
         })
 
         it('should be able to handle abstractions', async () => {
@@ -667,7 +659,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph, pd: pdWithResolvedAbstractions } = compilationResult
 
-            assertGraphsEqual(
+            testHelpers.assertGraphsEqual(
                 graph,
                 {
                     // Main patch
@@ -683,7 +675,7 @@ describe('toDspGraph', () => {
 
             assert.strictEqual(pdWithResolvedAbstractions.rootPatchId, '0')
 
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['n_0_n1', '0', 'n_2_n1', '0'],
                 ['n_2_n1', '0', 'n_3_n1', '0'],
                 ['n_3_n1', '0', 'n_0_n2', '0'],
@@ -743,7 +735,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphsEqual(
+            testHelpers.assertGraphsEqual(
                 graph,
                 {
                     n_1_n1: {},
@@ -893,7 +885,7 @@ describe('toDspGraph', () => {
             assert.ok(compilationResult.status === 0)
             const { graph } = compilationResult
 
-            assertGraphsEqual(
+            testHelpers.assertGraphsEqual(
                 graph,
                 {
                     n_0_1: { type: 'tabread~' },
@@ -901,7 +893,7 @@ describe('toDspGraph', () => {
                 },
                 true
             )
-            assertGraphConnections(graph, [
+            testHelpers.assertGraphConnections(graph, [
                 ['m_n_0_1_0_sig', '0', 'n_0_1', '0'],
             ])
         })
@@ -1052,7 +1044,7 @@ describe('toDspGraph', () => {
 
             _buildNodes(compilation, [pd.patches['0']!])
 
-            assertGraphsEqual(
+            testHelpers.assertGraphsEqual(
                 compilation.graph,
                 {
                     n_0_someNode: {
@@ -1248,7 +1240,7 @@ describe('toDspGraph', () => {
                 'n_0_nodeSource',
             ])
 
-            assertGraphConnections(compilation.graph, [
+            testHelpers.assertGraphConnections(compilation.graph, [
                 ['n_0_nodeSource', '0', 'n_0_nodeSink', '0'],
             ])
         })
@@ -1297,7 +1289,7 @@ describe('toDspGraph', () => {
                 'n_0_nodeSource3',
             ])
 
-            assertGraphConnections(compilation.graph, [
+            testHelpers.assertGraphConnections(compilation.graph, [
                 ['n_0_nodeSource1', '0', 'm_n_0_nodeSink_0__mixer', '0'],
                 ['n_0_nodeSource2', '0', 'm_n_0_nodeSink_0__mixer', '1'],
                 ['n_0_nodeSource3', '0', 'm_n_0_nodeSink_0__mixer', '2'],
@@ -1305,7 +1297,7 @@ describe('toDspGraph', () => {
                 ['m_n_0_nodeSink_0__mixer', '0', 'n_0_nodeSink', '0'],
             ])
 
-            assertNodesEqual(
+            testHelpers.assertNodesEqual(
                 compilation.graph['m_n_0_nodeSink_0__mixer']!,
                 {
                     type: '_mixer~',
@@ -1367,12 +1359,12 @@ describe('toDspGraph', () => {
                 ].sort()
             )
 
-            assertGraphConnections(compilation.graph, [
+            testHelpers.assertGraphConnections(compilation.graph, [
                 ['m_n_0_nodeSink1_0_sig', '0', 'n_0_nodeSink1', '0'],
                 ['m_n_0_nodeSink2_0_sig', '0', 'n_0_nodeSink2', '0'],
             ])
 
-            assertNodesEqual(
+            testHelpers.assertNodesEqual(
                 compilation.graph['m_n_0_nodeSink1_0_sig']!,
                 {
                     type: 'sig~',
@@ -1381,7 +1373,7 @@ describe('toDspGraph', () => {
                 true
             )
 
-            assertNodesEqual(
+            testHelpers.assertNodesEqual(
                 compilation.graph['m_n_0_nodeSink2_0_sig']!,
                 {
                     type: 'sig~',
@@ -1429,7 +1421,7 @@ describe('toDspGraph', () => {
                 ].sort()
             )
 
-            assertGraphConnections(compilation.graph, [
+            testHelpers.assertGraphConnections(compilation.graph, [
                 ['m_n_0_nodeSignalSink_0_sig', '0', 'n_0_nodeSignalSink', '0'],
                 [
                     'n_0_nodeMessageSource',
@@ -1445,7 +1437,7 @@ describe('toDspGraph', () => {
                 ],
             ])
 
-            assertNodesEqual(
+            testHelpers.assertNodesEqual(
                 compilation.graph['m_n_0_nodeSignalSink_0__routemsg']!,
                 {
                     type: '_routemsg',
@@ -1516,7 +1508,7 @@ describe('toDspGraph', () => {
                 ].sort()
             )
 
-            assertGraphConnections(compilation.graph, [
+            testHelpers.assertGraphConnections(compilation.graph, [
                 ['n_0_nodeSignalSource', '0', 'n_0_nodeSignalSink', '0'],
                 [
                     'n_0_nodeMessageSource',
@@ -1532,7 +1524,7 @@ describe('toDspGraph', () => {
                 ],
             ])
 
-            assertNodesEqual(
+            testHelpers.assertNodesEqual(
                 compilation.graph['m_n_0_nodeSignalSink_0__routemsg']!,
                 {
                     type: '_routemsg',
@@ -1580,7 +1572,7 @@ describe('toDspGraph', () => {
                 'n_0_nodeSource2',
             ])
             
-            assertNodesEqual(
+            testHelpers.assertNodesEqual(
                 compilation.graph['n_0_nodeSink']!,
                 {
                     sources: {

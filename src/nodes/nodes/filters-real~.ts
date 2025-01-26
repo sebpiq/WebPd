@@ -18,12 +18,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { Class, Code } from '@webpd/compiler'
-import { ast, Var } from '@webpd/compiler'
-import { VariableName } from '@webpd/compiler/src/ast/types'
+import {
+    ast,
+    Var,
+    Class,
+    Code,
+    NodeImplementation,
+    NodeImplementations,
+    VariableName,
+} from '@webpd/compiler'
 
 interface NodeArguments {
     initValue: number

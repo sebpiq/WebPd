@@ -19,7 +19,7 @@
  */
 
 import assert from 'assert'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS } from '../test-helpers'
 import { nodeImplementation, builder } from './noise~'
 
@@ -27,7 +27,7 @@ describe('noise~', () => {
 
     describe('implementation', () => {
         const testOutputFrames = (
-            frames: Array<nodeImplementationsTestHelpers.FrameNodeOut>
+            frames: Array<testHelpers.FrameNodeOut>
         ) => {
             const values = new Set(frames.map((frame) => frame.outs['0'] as number))
             values.forEach((value) => {
@@ -46,7 +46,7 @@ describe('noise~', () => {
             }
             const inputFrames = [{}, {}, {}]
             testOutputFrames(
-                await nodeImplementationsTestHelpers.generateFramesForNode(
+                await testHelpers.generateFramesForNode(
                     nodeTestSettings,
                     inputFrames
                 )

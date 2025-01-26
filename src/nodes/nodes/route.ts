@@ -18,8 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, DspGraph, Sequence, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Class, DspGraph, NodeImplementation, functional } from '@webpd/compiler'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils, msgUtils } from '../global-code/core'
 import { AnonFunc, Var } from '@webpd/compiler'

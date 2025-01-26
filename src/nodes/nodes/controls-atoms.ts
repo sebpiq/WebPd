@@ -17,8 +17,19 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Code, Func, Sequence, Class, AnonFunc, ConstVar, Var, ast, VariableNamesIndex } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import {
+    Code,
+    Func,
+    Sequence,
+    Class,
+    AnonFunc,
+    ConstVar,
+    Var,
+    ast,
+    VariableNamesIndex,
+    VariableName,
+    NodeImplementation,
+} from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
@@ -30,7 +41,6 @@ import {
 } from './controls-base'
 import { msgBuses } from '../global-code/buses'
 import { bangUtils, msgUtils } from '../global-code/core'
-import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export type _NodeImplementation = NodeImplementation<ControlsBaseNodeArguments>
 

@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -57,7 +57,7 @@ describe('random', () => {
                     { ins: { '0': [['bang'], ['bang'], ['bang'], ['bang']] } },
                 ]
                 const outputFrames =
-                    await nodeImplementationsTestHelpers.generateFramesForNode(
+                    await testHelpers.generateFramesForNode(
                         nodeTestSettings,
                         inputFrames
                     )
@@ -86,7 +86,7 @@ describe('random', () => {
                     { ins: { '0': [['bang'], ['bang'], ['bang'], ['bang']] } },
                 ]
                 const outputFrames =
-                    await nodeImplementationsTestHelpers.generateFramesForNode(
+                    await testHelpers.generateFramesForNode(
                         nodeTestSettings,
                         inputFrames
                     )

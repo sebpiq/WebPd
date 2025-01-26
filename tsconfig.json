@@ -1,5 +1,5 @@
 {
-    "extends": "./node_modules/@webpd/dev/tsconfig.json",
+    "extends": "./node_modules/@webpd/dev/configs/base.tsconfig.json",
     "include": [
         "./src/**/*.ts"
     ],

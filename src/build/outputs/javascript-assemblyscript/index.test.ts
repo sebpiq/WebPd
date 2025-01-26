@@ -17,14 +17,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { makePd } from '@webpd/pd-parser/src/test-helpers'
 import assert from 'assert'
-import { IoMessageSpecs } from '@webpd/compiler/src/compile/types'
 import { builders as buildersSendReceive } from '../../../nodes/nodes/send-receive'
 import { builders as buildersControlsFloat } from '../../../nodes/nodes/controls-float'
 import { builder } from '../../../nodes/nodes/msg'
 import toDspGraph, { CompilationSuccess } from '../../../compile-dsp-graph/to-dsp-graph'
 import { applySettingsDefaults } from '.'
+import { CompilationSettings } from '@webpd/compiler'
+import { makePd } from '../../../compile-dsp-graph/test-helpers'
 
 describe('build.outputs.javascript-assemblyscript', () => {
     describe('applySettingsDefaults', () => {
@@ -99,7 +99,7 @@ describe('build.outputs.javascript-assemblyscript', () => {
             )
 
             // ASSERT
-            assert.deepStrictEqual<IoMessageSpecs>(io.messageReceivers, {
+            assert.deepStrictEqual<CompilationSettings['io']['messageReceivers']>(io.messageReceivers, {
                 n_0_1: ['0'],
                 n_0_2: ['0'],
                 n_0_3: ['0'],
@@ -208,7 +208,7 @@ describe('build.outputs.javascript-assemblyscript', () => {
             )
 
             // ASSERT
-            assert.deepStrictEqual<IoMessageSpecs>(io.messageSenders, {
+            assert.deepStrictEqual<CompilationSettings['io']['messageReceivers']>(io.messageSenders, {
                 n_0_1: ['0'],
                 n_0_2: ['0'],
                 n_0_3: ['0'],

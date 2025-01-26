@@ -18,11 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { bangUtils, actionUtils } from '../global-code/core'
-import { Class, Sequence, stdlib } from '@webpd/compiler'
+import { Class, NodeImplementation, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
 import { nodeCoreTabBase, NodeArguments } from './tab-base'
 

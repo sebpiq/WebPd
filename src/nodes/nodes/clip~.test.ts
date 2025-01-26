@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './clip~'
 import {
     buildNode,
@@ -46,7 +46,7 @@ describe('clip~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should clip signal to [min, max] %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -67,7 +67,7 @@ describe('clip~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change min max on message inlets %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './sig~'
 import {
     buildNode,
@@ -44,7 +44,7 @@ describe('sig~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output constant value and change it with message %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

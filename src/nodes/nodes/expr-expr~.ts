@@ -28,11 +28,10 @@ import {
     Sequence,
     Var,
     VariableNamesIndex,
-} from '@webpd/compiler'
-import {
-    NodeImplementation,
+    VariableName,
     NodeImplementations,
-} from '@webpd/compiler/src/compile/types'
+    NodeImplementation,
+} from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
@@ -41,7 +40,6 @@ import {
     messageTokenToFloat,
     messageTokenToString,
 } from '../type-arguments'
-import { VariableName } from '@webpd/compiler/src/ast/types'
 
 interface NodeArguments {
     tokenizedExpressions: Array<Array<ExpressionToken>>

@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -44,7 +44,7 @@ describe('unpack', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should unpack values %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -67,7 +67,7 @@ describe('unpack', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should unpack values even if message shorter than object args %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

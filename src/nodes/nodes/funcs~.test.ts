@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementations, builders } from './funcs~'
 import {
     buildNode,
@@ -30,7 +30,7 @@ describe('func~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should apply the expected function %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -49,7 +49,7 @@ describe('func~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should apply the expected function %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -73,7 +73,7 @@ describe('func~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should apply the expected function %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -105,7 +105,7 @@ describe('func~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should apply the expected function %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -137,7 +137,7 @@ describe('func~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should apply the expected function %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -157,7 +157,7 @@ describe('func~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should apply the expected function %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

@@ -18,10 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './msg'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeTranslateArgs } from '../test-helpers'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
 import { builders as sendReceiveBuilders, nodeImplementations as sendReceiveNodeImplementations } from './send-receive'
 import compile, { Message } from '@webpd/compiler'
 import { createTestEngine } from '@webpd/compiler/src/test-helpers'
@@ -95,7 +94,7 @@ describe('msg', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should transfer directly messages without dollar strings %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -127,7 +126,7 @@ describe('msg', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should substitute entire dollar strings %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -161,7 +160,7 @@ describe('msg', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should substitute dollar strings within strings %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -195,7 +194,7 @@ describe('msg', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should sequentially send all messages in msgSpecs %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -231,7 +230,7 @@ describe('msg', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should set new message when using "set" %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -277,7 +276,7 @@ describe('msg', () => {
                 const msgArgs = { msgSpecs: [{ tokens: [123, 'hello'], send: 'BLA' }] }
                 const receiveArgs = { busName: 'BLA' }
 
-                const graph = makeGraph({
+                const graph = testHelpers.makeGraph({
                     msg: {
                         type: 'msg',
                         ...builder.build(msgArgs),

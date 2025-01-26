@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -41,7 +41,7 @@ describe('spigot', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should bypass when open %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -59,7 +59,7 @@ describe('spigot', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should block when closed %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -77,7 +77,7 @@ describe('spigot', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should open / close with inlet 1 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

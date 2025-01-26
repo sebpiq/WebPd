@@ -18,8 +18,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { Func, Sequence, Var, VariableNamesIndex } from '@webpd/compiler'
-import { AstElement, VariableName } from '@webpd/compiler/src/ast/types'
+import {
+    Func,
+    Sequence,
+    Var,
+    VariableNamesIndex,
+    AstElement,
+    VariableName,
+} from '@webpd/compiler'
 
 export const EMPTY_BUS_NAME = 'empty'
 

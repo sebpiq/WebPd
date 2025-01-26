@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -84,7 +84,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output to the appropriate outlet if matches filter %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -108,7 +108,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output bang if all tokens are filtered out %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -128,7 +128,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output to last outlet if not matching %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -148,7 +148,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output float if float filter %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -172,7 +172,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output string if symbol filter %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -196,7 +196,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output bang if bang filter %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -222,7 +222,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change the filter with inlet 1 if single filter arguments  %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -254,7 +254,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output float if float filter %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -278,7 +278,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output string if symbol filter %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -302,7 +302,7 @@ describe('route', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output bang if bang filter %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

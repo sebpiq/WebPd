@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementations, builders } from './tabread~-tabread4~'
 import {
     buildNode,
@@ -46,7 +46,7 @@ describe('tabread~ tabread4~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change array when sent set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -77,7 +77,7 @@ describe('tabread~ tabread4~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should update array when new array set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -103,7 +103,7 @@ describe('tabread~ tabread4~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should clip input to array\'s bounds %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -126,7 +126,7 @@ describe('tabread~ tabread4~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read from sample when receiving float %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -150,7 +150,7 @@ describe('tabread~ tabread4~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read from sample when receiving float %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

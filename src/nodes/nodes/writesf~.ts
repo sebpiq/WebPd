@@ -19,12 +19,11 @@
  */
 
 import { stdlib, functional, Class, Sequence } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { actionUtils } from '../global-code/core'
 import { readWriteFsOpts, soundFileOpenOpts } from '../global-code/fs'
-import { AnonFunc, ConstVar, Func, Var, ast } from '@webpd/compiler'
+import { AnonFunc, ConstVar, Func, Var, ast, NodeImplementation } from '@webpd/compiler'
 
 const BLOCK_SIZE = 44100 * 5
 

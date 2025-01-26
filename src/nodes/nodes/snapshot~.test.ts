@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './snapshot~'
 import {
     buildNode,
@@ -31,7 +31,7 @@ describe('snapshot~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send input snapshot on bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

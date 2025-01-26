@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './tabwrite~'
 import {
     buildNode,
@@ -45,7 +45,7 @@ describe('tabwrite~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change array when sent set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -87,7 +87,7 @@ describe('tabwrite~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should write from beginning to end when receiving bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -125,7 +125,7 @@ describe('tabwrite~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should stop writing when receiving stop %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -170,7 +170,7 @@ describe('tabwrite~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should write from given position when receiving start %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

@@ -18,7 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -27,20 +26,18 @@ import {
     testParametersCombine,
 } from '../test-helpers'
 import { nodeImplementations, builders, NodeArguments } from './controls-float'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
     nodeImplementations as nodeImplementationsSendReceive,
     builders as buildersSendReceive,
 } from './send-receive'
-import {
-    CompilerTarget,
-    AudioSettings,
-    NodeImplementations,
-} from '@webpd/compiler/src/compile/types'
-import { Message } from '@webpd/compiler/src/run/types'
 import assert from 'assert'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
-import compile from '@webpd/compiler'
+import compile, {
+    AudioSettings,
+    CompilerTarget,
+    NodeImplementations,
+    Message,
+} from '@webpd/compiler'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 const NODE_TYPES_NUMBERS = ['hsl', 'hradio', 'vsl', 'vradio'] as const
 const NODE_TYPES_ALL = [...NODE_TYPES_NUMBERS, 'nbx', 'tgl'] as const
@@ -153,7 +150,7 @@ describe('controls-float', () => {
             it.each(CONTROLS_TEST_PARAMETERS_ALL)(
                 'should send message on load if init %s',
                 async ({ target, bitDepth, nodeType }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -193,7 +190,7 @@ describe('controls-float', () => {
                     ...nodeImplementationsSendReceive,
                 }
 
-                const graph = makeGraph({
+                const graph = testHelpers.makeGraph({
                     control: {
                         type: controlType,
                         ...builders[controlType].build(controlArgs),
@@ -233,7 +230,7 @@ describe('controls-float', () => {
                                 receive: ['0'],
                                 control: ['0'],
                             },
-                        }
+                        },
                     }
                 )
 
@@ -241,7 +238,7 @@ describe('controls-float', () => {
                     throw new Error('Compilation failed')
                 }
 
-                const engine = await createTestEngine(
+                const engine = await testHelpers.createTestEngine(
                     target,
                     bitDepth,
                     compileResult.code
@@ -341,12 +338,18 @@ describe('controls-float', () => {
                     assert.deepStrictEqual(received, [])
                     assert.deepStrictEqual(receivedControl, [])
 
-                    engine.io.messageReceivers.control['0'](['receive', 'BUS_TO_CTRL'])
+                    engine.io.messageReceivers.control['0']([
+                        'receive',
+                        'BUS_TO_CTRL',
+                    ])
                     engine.io.messageReceivers.send['0']([888])
                     assert.deepStrictEqual(received, [])
                     assert.deepStrictEqual(receivedControl, [[888]])
 
-                    engine.io.messageReceivers.control['0'](['send', 'BUS_FROM_CTRL'])
+                    engine.io.messageReceivers.control['0']([
+                        'send',
+                        'BUS_FROM_CTRL',
+                    ])
                     engine.io.messageReceivers.control['0']([999])
                     assert.deepStrictEqual(received, [[999]])
                     assert.deepStrictEqual(receivedControl, [[888], [999]])
@@ -358,7 +361,7 @@ describe('controls-float', () => {
             it.each(CONTROLS_TEST_PARAMETERS_NUMBERS)(
                 'should handle messages as expected %s',
                 async ({ target, bitDepth, nodeType }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -396,7 +399,7 @@ describe('controls-float', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should handle messages as expected %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -434,7 +437,7 @@ describe('controls-float', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should handle messages as expected %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,

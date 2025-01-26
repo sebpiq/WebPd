@@ -18,8 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, Code, Sequence, stdlib } from '@webpd/compiler'
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
+import { Class, Code, NodeImplementation, NodeImplementations, Sequence } from '@webpd/compiler'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'

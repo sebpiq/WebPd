@@ -18,10 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { soundFileOpenOpts } from '../global-code/fs'
-import { Sequence, stdlib } from '@webpd/compiler'
+import { NodeImplementation, Sequence, stdlib } from '@webpd/compiler'
 import { AnonFunc, Class, ConstVar, Func, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {}

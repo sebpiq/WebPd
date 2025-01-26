@@ -18,12 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { msgBuses } from '../global-code/buses'
 import { coldStringInlet } from '../standard-message-receivers'
-import { Class } from '@webpd/compiler'
+import { Class, NodeImplementation } from '@webpd/compiler'
 import { AnonFunc, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {

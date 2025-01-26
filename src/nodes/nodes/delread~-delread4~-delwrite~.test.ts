@@ -18,12 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
-import {
-    AudioSettings,
-    CompilerTarget,
-    NodeImplementations,
-} from '@webpd/compiler/src/compile/types'
 import {
     nodeImplementations as nodeImplementationsDelRead,
     builders as buildersDelRead,
@@ -43,10 +37,14 @@ import {
     builder as builderDac,
 } from './dac~'
 import { testNodeTranslateArgs, testParametersCombine } from '../test-helpers'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import compile, { ast } from '@webpd/compiler'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile, {
+    ast,
+    AudioSettings,
+    CompilerTarget,
+    NodeImplementations,
+} from '@webpd/compiler'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 const SAMPLE_RATE = 44100
 // const DELREAD_NODE_TYPES = ['delread~', 'delread4~'] as const
@@ -115,7 +113,7 @@ describe('delread~ / delwrite~', () => {
 
             const dacArgs = { channelMapping: [0] }
 
-            const graph = makeGraph({
+            const graph = testHelpers.makeGraph({
                 counter: {
                     type: 'counter',
                     sinks: { '0': [['delayW', '0']] },
@@ -168,7 +166,7 @@ describe('delread~ / delwrite~', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(
+            const engine = await testHelpers.createTestEngine(
                 target,
                 bitDepth,
                 compileResult.code
@@ -194,20 +192,24 @@ describe('delread~ / delwrite~', () => {
                     }
                 )
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[0], [1], [2], [3]]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [0],
+                    [1],
+                    [2],
+                    [3],
+                ])
 
                 // Change the delay 2 samples
                 engine.io.messageReceivers['delayTimeMsec']['0']([
                     (2 * 1000) / SAMPLE_RATE,
                 ])
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[2], [3], [4], [5]]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [2],
+                    [3],
+                    [4],
+                    [5],
+                ])
             }
         )
 
@@ -228,10 +230,12 @@ describe('delread~ / delwrite~', () => {
                     }
                 )
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[0], [1], [2], [3]]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [0],
+                    [1],
+                    [2],
+                    [3],
+                ])
 
                 // Change the delay 2 samples
                 engine.io.messageReceivers['delayTimeMsec']['0']([
@@ -239,10 +243,12 @@ describe('delread~ / delwrite~', () => {
                 ])
                 engine.io.messageReceivers['delayW']['0_message'](['clear'])
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[0], [0], [0], [4]]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [0],
+                    [0],
+                    [0],
+                    [4],
+                ])
             }
         )
     })

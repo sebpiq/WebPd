@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './delay'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeTranslateArgs } from '../test-helpers'
 
@@ -44,7 +44,7 @@ describe('delay', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should start delay passed as arg on bang or start %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -67,7 +67,7 @@ describe('delay', () => {
         )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should cancel previous delay %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,
@@ -88,7 +88,7 @@ describe('delay', () => {
         })
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should stop the delay on stop %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,
@@ -110,7 +110,7 @@ describe('delay', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should set the delay and start it on float %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -133,7 +133,7 @@ describe('delay', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should set the time unit on tempo message %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -160,7 +160,7 @@ describe('delay', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should set the delay with message on inlet 1 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -183,7 +183,7 @@ describe('delay', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should work with different time unit %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

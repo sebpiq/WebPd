@@ -17,8 +17,17 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, Func, Sequence, Class, AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import {
+    stdlib,
+    Func,
+    Sequence,
+    Class,
+    AnonFunc,
+    ConstVar,
+    Var,
+    ast,
+    NodeImplementation,
+} from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'

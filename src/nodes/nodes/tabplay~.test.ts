@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './tabplay~'
 import {
     buildNode,
@@ -41,7 +41,7 @@ describe('tabplay~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change array when sent set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -67,7 +67,7 @@ describe('tabplay~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read from beginning to end when receiving bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -94,7 +94,7 @@ describe('tabplay~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should stop reading when receiving stop %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -123,7 +123,7 @@ describe('tabplay~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read from sample when receiving float %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -148,7 +148,7 @@ describe('tabplay~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should update array when new array set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -176,7 +176,7 @@ describe('tabplay~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read from sample to sample when receiving 2 floats %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -202,7 +202,7 @@ describe('tabplay~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should stop at array length even if received bigger read end number %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

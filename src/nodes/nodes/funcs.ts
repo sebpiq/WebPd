@@ -17,15 +17,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+import { NodeBuilder } from '../../compile-dsp-graph/types'
+import { ftom, mtof } from '../global-code/funcs'
 import {
+    Code,
+    VariableNamesIndex,
     NodeImplementation,
     NodeImplementations,
     GlobalDefinitions,
-} from '@webpd/compiler/src/compile/types'
-import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { ftom, mtof } from '../global-code/funcs'
-import { Code, VariableNamesIndex } from '@webpd/compiler'
-import { AnonFunc, Var, ConstVar } from '@webpd/compiler'
+    AnonFunc,
+    Var,
+    ConstVar,
+} from '@webpd/compiler'
 
 interface NodeArguments {}
 type _NodeImplementation = NodeImplementation<NodeArguments>

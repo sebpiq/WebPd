@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementations, builders } from './osc~-phasor~'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeTranslateArgs } from '../test-helpers'
 
@@ -35,12 +35,12 @@ describe('osc~', () => {
     describe('implementation', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should oscillate at the given frequency %s', async ({ target, bitDepth }) => {
             const { sampleRate } =
-                nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
+                testHelpers.ENGINE_DSP_PARAMS
             const frequency1 = 100
             const frequency2 = 200
             const frequency3 = 50
             const J = (2 * Math.PI) / sampleRate
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,
@@ -80,11 +80,11 @@ describe('osc~', () => {
             'should reset phase with second inlet %s',
             async ({ target, bitDepth }) => {
                 const { sampleRate } =
-                    nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
+                    testHelpers.ENGINE_DSP_PARAMS
                 const frequency = 100
                 const J = (2 * Math.PI * frequency) / sampleRate
 
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -119,12 +119,12 @@ describe('osc~', () => {
     describe('phasor~ implementation', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should have the expected signal output %s', async ({ target, bitDepth }) => {
             const { sampleRate } =
-                nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS
+                testHelpers.ENGINE_DSP_PARAMS
             const frequency1 = 100
             const frequency2 = 300
             const J = frequency1 / sampleRate
 
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,

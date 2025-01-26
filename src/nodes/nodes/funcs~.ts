@@ -18,10 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { ftom, mtof } from '../global-code/funcs'
-import { ast } from '@webpd/compiler'
+import { ast, NodeImplementations } from '@webpd/compiler'
 
 interface NodeArguments {}
 
@@ -70,8 +69,7 @@ const nodeImplementations: NodeImplementations = {
             isDspInline: true,
             alphaName: 'sqrt_t',
         },
-        dsp: ({ ins }) =>
-            ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0`,
+        dsp: ({ ins }) => ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0`,
     },
     'mtof~': {
         flags: {

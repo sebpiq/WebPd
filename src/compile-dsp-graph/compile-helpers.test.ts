@@ -18,9 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { makePd } from '@webpd/pd-parser/src/test-helpers'
 import assert from 'assert'
 import { resolveDollarArg } from './compile-helpers'
+import { makePd } from './test-helpers'
 
 describe('pdjson-helpers', () => {
     describe('resolveDollarArg', () => {

@@ -18,11 +18,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, functional } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import { Class, functional, NodeImplementation } from '@webpd/compiler'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { assertTypeArgument, messageTokenToFloat, messageTokenToString, resolveTypeArgumentAlias, TypeArgument } from '../type-arguments'
+import {
+    assertTypeArgument,
+    messageTokenToFloat,
+    messageTokenToString,
+    resolveTypeArgumentAlias,
+    TypeArgument,
+} from '../type-arguments'
 import { AnonFunc, ConstVar, Var } from '@webpd/compiler'
 
 interface NodeArguments {

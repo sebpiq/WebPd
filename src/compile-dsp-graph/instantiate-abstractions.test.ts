@@ -20,11 +20,11 @@
 
 import assert from 'assert'
 import { _buildNodes, _buildConnections } from './to-dsp-graph'
-import { pdJsonNodeDefaults, makePd } from '@webpd/pd-parser/src/test-helpers'
 import { NodeBuilders } from './types'
 import instantiateAbstractions from './instantiate-abstractions'
 import { PdJson } from '@webpd/pd-parser'
 import { resolveRootPatch } from './compile-helpers'
+import { pdJsonNodeDefaults, makePd } from './test-helpers'
 
 const DUMMY_NODE_TYPE = pdJsonNodeDefaults('').type
 

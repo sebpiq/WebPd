@@ -18,16 +18,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import { Message } from '@webpd/compiler'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
 import { nodeImplementation, builder } from './line'
-import { FrameNodeIn, FrameNodeOut } from '@webpd/compiler/src/test-helpers-node-implementations'
 import assert from 'assert'
-import { Message } from '@webpd/compiler/src/run/types'
 
 describe('line', () => {
     describe('builder', () => {
@@ -47,7 +46,7 @@ describe('line', () => {
 
     describe('implementation', () => {
 
-        const gatherOuts = (outputFrames: Array<FrameNodeOut>) => {
+        const gatherOuts = (outputFrames: Array<testHelpers.FrameNodeOut>) => {
             const nonEmptyFrames: {[frame: number]: Array<Message>} = {}
             outputFrames.forEach((frame, i) => {
                 const frameOut0 = frame.outs['0'] as Array<Message>
@@ -61,7 +60,7 @@ describe('line', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should jump directly to value if no duration provided %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -87,7 +86,7 @@ describe('line', () => {
             'should ramp to value if duration provided %s',
             async ({ target, bitDepth }) => {
                 // Ramp 0 to 10 in 2 * 882 samples
-                const inputFrames: Array<FrameNodeIn> = [
+                const inputFrames: Array<testHelpers.FrameNodeIn> = [
                     { ins: { '0': [[10, 40]] } },
                 ]
                 // go to end of line
@@ -99,7 +98,7 @@ describe('line', () => {
                     inputFrames.push({})
                 }
                 
-                const outputFrames = await nodeImplementationsTestHelpers.generateFramesForNode(
+                const outputFrames = await testHelpers.generateFramesForNode(
                     {
                         target,
                         bitDepth,
@@ -124,7 +123,7 @@ describe('line', () => {
             'should interrupt if setting another ramp in the middle %s',
             async ({ target, bitDepth }) => {
                 // Ramp 10 to 0 in 2 * 882 samples
-                const inputFrames: Array<FrameNodeIn> = [
+                const inputFrames: Array<testHelpers.FrameNodeIn> = [
                     { ins: { '0': [[0, 40]] } },
                 ]
                 for (let i = 0; i < 440; i++) {
@@ -142,7 +141,7 @@ describe('line', () => {
                     inputFrames.push({})
                 }
                 
-                const outputFrames = await nodeImplementationsTestHelpers.generateFramesForNode(
+                const outputFrames = await testHelpers.generateFramesForNode(
                     {
                         target,
                         bitDepth,
@@ -168,14 +167,14 @@ describe('line', () => {
             'should set grain if 3 floats to first inlet %s',
             async ({ target, bitDepth }) => {
                 // Ramp 1 to 11 in 4 * 882 samples, grain 2 * 882 samples
-                const inputFrames: Array<FrameNodeIn> = [
+                const inputFrames: Array<testHelpers.FrameNodeIn> = [
                     { ins: { '0': [[11, 80, 40]] } },
                 ]
                 for (let i = 0; i < 10 * 882; i++) {
                     inputFrames.push({})
                 }
                 
-                const outputFrames = await nodeImplementationsTestHelpers.generateFramesForNode(
+                const outputFrames = await testHelpers.generateFramesForNode(
                     {
                         target,
                         bitDepth,
@@ -200,7 +199,7 @@ describe('line', () => {
             'should interrupt if sending stop %s',
             async ({ target, bitDepth }) => {
                 // Ramp 10 to 0 in 2 * 882 samples
-                const inputFrames: Array<FrameNodeIn> = [
+                const inputFrames: Array<testHelpers.FrameNodeIn> = [
                     { ins: { '0': [[0, 40]] } },
                 ]
                 for (let i = 0; i < 440; i++) {
@@ -223,7 +222,7 @@ describe('line', () => {
                     inputFrames.push({})
                 }
                 
-                const outputFrames = await nodeImplementationsTestHelpers.generateFramesForNode(
+                const outputFrames = await testHelpers.generateFramesForNode(
                     {
                         target,
                         bitDepth,
@@ -249,7 +248,7 @@ describe('line', () => {
             'should interrupt if sending set %s',
             async ({ target, bitDepth }) => {
                 // Ramp 10 to 0 in 2 * 882 samples
-                const inputFrames: Array<FrameNodeIn> = [
+                const inputFrames: Array<testHelpers.FrameNodeIn> = [
                     { ins: { '0': [[0, 40]] } },
                 ]
                 for (let i = 0; i < 440; i++) {
@@ -272,7 +271,7 @@ describe('line', () => {
                     inputFrames.push({})
                 }
                 
-                const outputFrames = await nodeImplementationsTestHelpers.generateFramesForNode(
+                const outputFrames = await testHelpers.generateFramesForNode(
                     {
                         target,
                         bitDepth,

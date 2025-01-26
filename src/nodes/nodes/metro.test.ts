@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './metro'
 import {
     buildNode,
@@ -26,7 +26,7 @@ import {
     testNodeTranslateArgs,
 } from '../test-helpers'
 
-const SAMPLE_RATE = nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS.sampleRate
+const SAMPLE_RATE = testHelpers.ENGINE_DSP_PARAMS.sampleRate
 
 describe('metro', () => {
     describe('builder', () => {
@@ -50,7 +50,7 @@ describe('metro', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should start metro at rate passed as arg %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -76,7 +76,7 @@ describe('metro', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should start metro when sent 1 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -97,7 +97,7 @@ describe('metro', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should start metro at rate passed to inlet 1 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -126,7 +126,7 @@ describe('metro', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should stop metro when receiving stop %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -150,7 +150,7 @@ describe('metro', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should stop metro when receiving 0 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -174,7 +174,7 @@ describe('metro', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output several times if banged several times at same frame %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

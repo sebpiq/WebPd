@@ -19,8 +19,7 @@
  */
 
 import { AnonFunc, Var } from '@webpd/compiler'
-import { VariableName } from '@webpd/compiler/src/ast/types'
-import { VariableNamesIndex } from '@webpd/compiler'
+import { VariableNamesIndex, VariableName } from '@webpd/compiler'
 
 
 // prettier-ignore

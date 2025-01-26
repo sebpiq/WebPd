@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -26,7 +26,7 @@ import {
 } from '../test-helpers'
 import { nodeImplementation, builder } from './timer'
 
-const SAMPLE_RATE = nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS.sampleRate
+const SAMPLE_RATE = testHelpers.ENGINE_DSP_PARAMS.sampleRate
 
 describe('timer', () => {
     describe('builder', () => {
@@ -48,7 +48,7 @@ describe('timer', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should mesure ellapsed time since beginning if not banged %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -69,7 +69,7 @@ describe('timer', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should mesure ellapsed time since last time banged on inlet 0 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -90,7 +90,7 @@ describe('timer', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should mesure ellapsed time in the unit that was configured %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

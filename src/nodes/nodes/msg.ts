@@ -18,11 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Class, Message, MessageToken, Sequence, VariableNamesIndex } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import {
+    AstElement,
+    AnonFunc,
+    ConstVar,
+    Var,
+    Class,
+    Message,
+    MessageToken,
+    NodeImplementation,
+    Sequence,
+    VariableNamesIndex,
+    ast,
+} from '@webpd/compiler'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
-import { AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
-import { AstElement } from '@webpd/compiler/src/ast/types'
 import { msgBuses } from '../global-code/buses'
 
 interface NodeArguments { msgSpecs: Array<MsgSpec> }

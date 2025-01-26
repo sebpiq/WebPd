@@ -18,11 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { PdJson } from '@webpd/pd-parser'
-import { makePd } from '@webpd/pd-parser/src/test-helpers'
 import assert from 'assert'
 import { _FOR_TESTING } from '.'
 import { PdGuiNode } from './types'
 import { buildGraphNodeId } from '../build'
+import { makePd } from '../compile-dsp-graph/test-helpers'
 const {
     _discoverPdGuiRecursive,
 } = _FOR_TESTING

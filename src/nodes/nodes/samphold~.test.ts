@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './samphold~'
 import {
     buildNode,
@@ -30,7 +30,7 @@ describe('samphold~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should update signal when control value decreases %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -49,7 +49,7 @@ describe('samphold~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should set signal on set message %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -65,7 +65,7 @@ describe('samphold~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should reset control on reset message with a value %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -81,7 +81,7 @@ describe('samphold~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should reset control on reset message without value %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

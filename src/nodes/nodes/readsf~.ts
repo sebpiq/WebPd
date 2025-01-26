@@ -18,8 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { stdlib, functional, Class, Func, Sequence, AnonFunc, ConstVar, Var, ast } from '@webpd/compiler'
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
+import {
+    stdlib,
+    functional,
+    Class,
+    Func,
+    Sequence,
+    AnonFunc,
+    ConstVar,
+    Var,
+    ast,
+    NodeImplementation,
+} from '@webpd/compiler'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils, actionUtils } from '../global-code/core'

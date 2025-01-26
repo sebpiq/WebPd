@@ -20,13 +20,6 @@
 
 import assert from 'assert'
 import {
-    AudioSettings,
-    CompilerTarget,
-    NodeImplementations,
-} from '@webpd/compiler/src/compile/types'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
-import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeBuild,
     testNodeTranslateArgs,
@@ -34,10 +27,14 @@ import {
     TEST_PATCH,
 } from '../test-helpers'
 import { nodeImplementation, builder } from './dac~'
-import compile, { functional } from '@webpd/compiler'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile, { functional, CompilerTarget } from '@webpd/compiler'
 import { PartialNode } from '../../compile-dsp-graph/types'
-import { Sequence } from '@webpd/compiler'
+import {
+    Sequence,
+    AudioSettings,
+    NodeImplementations,
+} from '@webpd/compiler'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 describe('dac~', () => {
     describe('builder', () => {
@@ -114,7 +111,7 @@ describe('dac~', () => {
 
             const dacPartial: PartialNode = builder.build(args)
 
-            const graph = makeGraph({
+            const graph = testHelpers.makeGraph({
                 counter: {
                     type: 'counter',
                     outlets: dacPartial.inlets,
@@ -145,7 +142,7 @@ describe('dac~', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(
+            const engine = await testHelpers.createTestEngine(
                 target,
                 bitDepth,
                 compileResult.code
@@ -161,11 +158,8 @@ describe('dac~', () => {
                     channelMapping: [0, 3],
                 })
                 assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.roundNestedFloats(
-                        await nodeImplementationsTestHelpers.generateFrames(
-                            engine,
-                            4
-                        )
+                    testHelpers.roundNestedFloats(
+                        await testHelpers.generateFrames(engine, 4)
                     ),
                     [
                         [0, 0, 0, 0],
@@ -184,11 +178,8 @@ describe('dac~', () => {
                     channelMapping: [-1, 2, 10],
                 })
                 assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.roundNestedFloats(
-                        await nodeImplementationsTestHelpers.generateFrames(
-                            engine,
-                            4
-                        )
+                    testHelpers.roundNestedFloats(
+                        await testHelpers.generateFrames(engine, 4)
                     ),
                     [
                         [0, 0, 0, 0],

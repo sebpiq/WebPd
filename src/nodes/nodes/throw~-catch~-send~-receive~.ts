@@ -18,12 +18,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation, NodeImplementations } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
 import { sigBuses } from '../global-code/buses'
-import { AnonFunc, Class, Func, Sequence, Var, VariableNamesIndex, ast } from '@webpd/compiler'
-import { VariableName } from '@webpd/compiler/src/ast/types'
+import {
+    AnonFunc,
+    Class,
+    Func,
+    NodeImplementation,
+    NodeImplementations,
+    Sequence,
+    Var,
+    VariableName,
+    VariableNamesIndex,
+    ast,
+} from '@webpd/compiler'
 
 interface NodeArguments {
     busName: string,

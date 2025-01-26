@@ -19,7 +19,7 @@
  */
 
 import { FS_OPERATION_SUCCESS } from '@webpd/compiler'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './soundfiler'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS } from '../test-helpers'
 
@@ -28,7 +28,7 @@ describe('soundfiler', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read soundfile into arrays, truncating the data to array size %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -101,7 +101,7 @@ describe('soundfiler', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read soundfile resizing to array size if -resize %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -157,7 +157,7 @@ describe('soundfiler', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read soundfile resizing to maxSize if -resize -maxsize <value> %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -226,7 +226,7 @@ describe('soundfiler', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read soundfile resizing to maxSize if -resize -maxsize <value> %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -291,7 +291,7 @@ describe('soundfiler', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should write from arrays to soundfile taking the biggest array %s',
             async ({ target, bitDepth, floatArrayType }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -348,7 +348,7 @@ describe('soundfiler', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should write from arrays to soundfile using skip and maxsize %s',
             async ({ target, bitDepth, floatArrayType }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -398,7 +398,7 @@ describe('soundfiler', () => {
 
     describe('generic', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should parse right sound file infos %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,
@@ -441,7 +441,7 @@ describe('soundfiler', () => {
         })
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should just do nothing if unknown array %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,

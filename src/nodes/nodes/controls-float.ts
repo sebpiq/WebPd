@@ -27,11 +27,9 @@ import {
     ast,
     Func,
     Class,
-} from '@webpd/compiler'
-import {
     NodeImplementation,
     NodeImplementations,
-} from '@webpd/compiler/src/compile/types'
+} from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertNumber, assertOptionalString } from '../validation'

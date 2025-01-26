@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './_mixer~'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeBuild } from '../test-helpers'
 
@@ -45,7 +45,7 @@ describe('_mixer~', () => {
 
     describe('implementation', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should sum incoming signals together %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,

@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -41,7 +41,7 @@ describe('float / int', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should output stored value on bang %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -66,7 +66,7 @@ describe('float / int', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should store and output value on float %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -92,7 +92,7 @@ describe('float / int', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should round stored value correctly %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,

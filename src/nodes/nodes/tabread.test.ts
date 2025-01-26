@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './tabread'
 import {
     buildNode,
@@ -41,7 +41,7 @@ describe('tabread', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should read value at given index %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -62,7 +62,7 @@ describe('tabread', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should round index and limit between 0 and array length %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -84,7 +84,7 @@ describe('tabread', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should update array when new array set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -107,7 +107,7 @@ describe('tabread', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change array when sent set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

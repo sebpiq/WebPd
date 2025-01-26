@@ -18,13 +18,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString, assertOptionalNumber } from '../validation'
 import { actionUtils } from '../global-code/core'
 import { delayBuffers } from '../global-code/delay-buffers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { AnonFunc, Class, Func, Sequence, Var, ast, stdlib } from '@webpd/compiler'
+import {
+    AnonFunc,
+    Class,
+    Func,
+    NodeImplementation,
+    Sequence,
+    Var,
+    ast,
+    stdlib,
+} from '@webpd/compiler'
 
 interface NodeArguments {
     delayName: string,

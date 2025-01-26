@@ -19,12 +19,6 @@
  */
 
 import assert from 'assert'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
-import {
-    AudioSettings,
-    CompilerTarget,
-} from '@webpd/compiler/src/compile/types'
 import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeBuild,
@@ -34,9 +28,13 @@ import {
 } from '../test-helpers'
 import { builder, nodeImplementation as nodeImplementationAdc } from './adc~'
 import { nodeImplementation as nodeImplementationDac } from './dac~'
-import compile, { functional } from '@webpd/compiler'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile, {
+    functional,
+    AudioSettings,
+    CompilerTarget,
+} from '@webpd/compiler'
 import { PartialNode } from '../../compile-dsp-graph/types'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 const nodeImplementations = {
     'adc~': nodeImplementationAdc,
@@ -104,7 +102,7 @@ describe('adc~', () => {
         ) => {
             const adcPartial: PartialNode = builder.build(args)
 
-            const graph = makeGraph({
+            const graph = testHelpers.makeGraph({
                 adc: {
                     type: 'adc~',
                     args,
@@ -140,7 +138,7 @@ describe('adc~', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(
+            const engine = await testHelpers.createTestEngine(
                 target,
                 bitDepth,
                 compileResult.code
@@ -160,14 +158,14 @@ describe('adc~', () => {
                     .map((i) => new floatArrayType([i + 0.1]))
 
                 assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.roundNestedFloats(
-                        await nodeImplementationsTestHelpers.generateFrames(
+                    testHelpers.roundNestedFloats(
+                        await testHelpers.generateFrames(
                             engine,
                             1,
                             engineInput
                         )
                     ),
-                    nodeImplementationsTestHelpers.roundNestedFloats([
+                    testHelpers.roundNestedFloats([
                         [6.1, 3.1, 0.1],
                     ])
                 )
@@ -184,14 +182,14 @@ describe('adc~', () => {
                     .countTo(channelCount.in)
                     .map((i) => new floatArrayType([i + 0.1]))
                 assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.roundNestedFloats(
-                        await nodeImplementationsTestHelpers.generateFrames(
+                    testHelpers.roundNestedFloats(
+                        await testHelpers.generateFrames(
                             engine,
                             1,
                             engineInput
                         )
                     ),
-                    nodeImplementationsTestHelpers.roundNestedFloats([
+                    testHelpers.roundNestedFloats([
                         [0, 0, 2.1],
                     ])
                 )

@@ -2,7 +2,7 @@
   "name": "webpd",
   "version": "1.0.0-alpha.12",
   "type": "module",
-  "main": "./dist/WebPd/src/index.js",
+  "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
     "webpd": "./bin/cli.mjs"
@@ -15,6 +15,7 @@
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "WebPd is a compiler for audio programming language Pure Data allowing to run .pd patches on web pages.",
   "license": "LGPL-3.0",
+  "private": false,
   "engines": {
     "node": ">=18.0.0"
   },
@@ -33,30 +34,19 @@
     "build:dist": "npx rollup --config configs/dist.rollup.js",
     "build:runtime": "npx rollup --config configs/runtime.rollup.js",
     "build": "npm run clean; npm run build:runtime; npm run build:dist; npm run build:cli",
-    "clean": "rm -rf dist ; rm -rf bin"
+    "clean": "rm -rf dist ; rm -rf bin",
+    "postpublish": "git tag -a v$(node -p \"require('./package.json').version\") -m \"Release $(node -p \"require('./package.json').version\")\" ; git push --tags"
   },
   "dependencies": {
     "wavefile": "^11.0.0"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^24.0.1",
-    "@rollup/plugin-json": "^6.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.1",
-    "@rollup/plugin-typescript": "^11.0.0",
-    "@types/jest": "^29.4.0",
-    "@types/node": "^18.14.4",
-    "@webpd/compiler": "file:../WebPd_compiler",
-    "@webpd/dev": "file:../WebPd_dev",
-    "@webpd/pd-parser": "file:../WebPd_pd-parser",
-    "@webpd/runtime": "file:../WebPd_runtime",
+    "@webpd/compiler": "^0.1.1",
+    "@webpd/dev": "github:sebpiq/WebPd_dev#v1",
+    "@webpd/pd-parser": "^1.0.0",
+    "@webpd/runtime": "^0.1.2",
     "assemblyscript": "^0.27.24",
     "colors": "^1.4.0",
-    "commander": "^10.0.0",
-    "jest": "^29.4.3",
-    "rollup": "^3.18.0",
-    "rollup-plugin-string": "^3.0.0",
-    "rollup-plugin-visualizer": "^5.9.0",
-    "ts-jest": "^29.0.5",
-    "tslib": "^2.5.0"
+    "commander": "^10.0.0"
   }
 }

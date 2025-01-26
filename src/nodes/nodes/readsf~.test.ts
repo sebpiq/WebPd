@@ -19,7 +19,7 @@
  */
 
 import { FS_OPERATION_SUCCESS } from '@webpd/compiler'
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './readsf~'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeBuild, testNodeTranslateArgs } from '../test-helpers'
 
@@ -69,7 +69,7 @@ describe('readsf~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send out request to open read stream %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -136,7 +136,7 @@ describe('readsf~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output signal 0 when reading done %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -205,7 +205,7 @@ describe('readsf~', () => {
         it.each([NODE_IMPLEMENTATION_TEST_PARAMETERS[0]])(
             'should interrupt reading when new open request sent %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -276,7 +276,7 @@ describe('readsf~', () => {
         )
 
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)('should print infos %s', async ({ target, bitDepth }) => {
-            await nodeImplementationsTestHelpers.assertNodeOutput(
+            await testHelpers.assertNodeOutput(
                 {
                     target,
                     bitDepth,

@@ -18,13 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import { builders, nodeImplementations } from './binop~'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 describe('binop~', () => {
     describe('builders', () => {
@@ -44,7 +44,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should work with signal as inlet 1 %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -72,7 +72,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should work with signal as inlet 1 %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -92,7 +92,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should work with signal as inlet 1 %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -120,7 +120,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should work with signal as inlet 1 %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -148,7 +148,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should work with signal as inlet 1 %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -174,7 +174,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should output 0 if division by 0 %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -191,7 +191,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should output expected result %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -219,7 +219,7 @@ describe('binop~', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should output expected result %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,

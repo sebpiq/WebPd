@@ -17,12 +17,15 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import {
-    GlobalDefinitions,
-} from '@webpd/compiler/src/compile/types'
 import { ValidationError } from './validation'
-import { VariableName } from '@webpd/compiler/src/ast/types'
-import { Func, Var, ConstVar, VariableNamesIndex } from '@webpd/compiler'
+import {
+    Func,
+    Var,
+    ConstVar,
+    VariableNamesIndex,
+    VariableName,
+    GlobalDefinitions,
+} from '@webpd/compiler'
 
 export type TypeArgument = 'float' | 'bang' | 'symbol' | 'list' | 'anything'
 
@@ -101,7 +104,7 @@ export const messageTokenToFloat: GlobalDefinitions = {
         } else {
             return 0
         }
-    `
+    `,
 }
 
 export const messageTokenToString: GlobalDefinitions = {
@@ -121,5 +124,5 @@ export const messageTokenToString: GlobalDefinitions = {
         } else {
             return 'float'
         }
-    `
+    `,
 }

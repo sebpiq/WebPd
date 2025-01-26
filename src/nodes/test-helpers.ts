@@ -18,15 +18,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DspGraph, dspGraph } from '@webpd/compiler'
-import { AudioSettings, CompilerTarget } from '@webpd/compiler/src/compile/types'
-import { PdJson } from '@webpd/pd-parser'
 import {
-    makePd,
-    pdJsonNodeDefaults,
-} from '@webpd/pd-parser/src/test-helpers'
+    DspGraph,
+    dspGraph,
+    AudioSettings,
+    CompilerTarget,
+} from '@webpd/compiler'
+import { PdJson } from '@webpd/pd-parser'
 import assert from 'assert'
 import { NodeBuilder, PartialNode } from '../compile-dsp-graph/types'
+import { makePd, pdJsonNodeDefaults } from '../compile-dsp-graph/test-helpers'
 
 export const SAMPLE_RATE = 44100
 
@@ -65,7 +66,7 @@ export const buildNode = <NodeArgsType>(
     }
 }
 
-const TEST_PD = makePd({patches: {'0': {}}})
+const TEST_PD = makePd({ patches: { '0': {} } })
 export const TEST_PATCH = TEST_PD.patches['0']
 export const TEST_NODE_ID = '0'
 
@@ -95,11 +96,15 @@ export const testNodeBuild = <NodeArguments>(
     })
 }
 
-export const testParametersCombine = <T>(key: string, values: ReadonlyArray<any>) =>
-    values.map(
-        (value) =>
+export const testParametersCombine = <T>(
+    key: string,
+    values: ReadonlyArray<any>
+) =>
+    values
+        .map((value) =>
             NODE_IMPLEMENTATION_TEST_PARAMETERS.map((params) => ({
                 ...params,
                 [key]: value,
             }))
-    ).flat() as Array<NodeImplementationTestParameters & T>
+        )
+        .flat() as Array<NodeImplementationTestParameters & T>

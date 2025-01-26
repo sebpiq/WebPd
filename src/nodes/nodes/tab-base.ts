@@ -20,9 +20,15 @@
 
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalString } from '../validation'
-import { Func, Sequence, Var, ConstVar, VariableNamesIndex } from '@webpd/compiler'
+import {
+    Func,
+    Sequence,
+    Var,
+    ConstVar,
+    VariableNamesIndex,
+    VariableName,
+} from '@webpd/compiler'
 import { _NodeImplementation } from './controls-float'
-import { VariableName } from '@webpd/compiler/src/ast/types'
 
 export interface NodeArguments {
     arrayName: string

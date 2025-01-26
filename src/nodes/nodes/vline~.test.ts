@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import { nodeImplementation, builder } from './vline~'
 import {
     buildNode,
@@ -34,7 +34,7 @@ describe('vline~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should schedule several line with 1, 2 or 3 floats %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -67,7 +67,7 @@ describe('vline~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should schedule an instant change and ramp at later time %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -96,7 +96,7 @@ describe('vline~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should handle message inputs %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -127,7 +127,7 @@ describe('vline~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should be handle instant change and line at the same frame %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -154,7 +154,7 @@ describe('vline~', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should stop the line on "stop" %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

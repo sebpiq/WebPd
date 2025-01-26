@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -28,7 +28,7 @@ import {
 import { nodeImplementation, builder } from './pipe'
 
 const SAMPLE_RATIO =
-    1000 / nodeImplementationsTestHelpers.ENGINE_DSP_PARAMS.sampleRate
+    1000 / testHelpers.ENGINE_DSP_PARAMS.sampleRate
 
 describe('pipe', () => {
     describe('builder', () => {
@@ -91,7 +91,7 @@ describe('pipe', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should delay messages of specified time %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -113,7 +113,7 @@ describe('pipe', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should changed delay when sending on last inlet %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -136,7 +136,7 @@ describe('pipe', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should not change delay / content of already scheduled messages %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -166,7 +166,7 @@ describe('pipe', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output all messages immediately on flush %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -203,7 +203,7 @@ describe('pipe', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should clear messages %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -233,7 +233,7 @@ describe('pipe', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should schedule last message again on bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -258,7 +258,7 @@ describe('pipe', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should schedule a single message sent as a list %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

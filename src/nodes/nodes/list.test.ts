@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -82,7 +82,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should append input with stored message %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -103,7 +103,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change stored list on inlet 1 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -128,7 +128,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should take empty input if sending bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -157,7 +157,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output bang if empty output %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -180,7 +180,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should prepend input with stored message %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -201,7 +201,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change stored list on inlet 1 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -226,7 +226,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should take empty input if sending bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -255,7 +255,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output bang if empty output %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -278,7 +278,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should split the message at split point %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -299,7 +299,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should change the split point with inlet 1 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -324,7 +324,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output on last inlet if split point higher than input length %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -345,7 +345,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should turn empty list into a bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -371,7 +371,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output bang if empty output %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -394,7 +394,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should do nothing with messages %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -415,7 +415,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output bang if empty output %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -438,7 +438,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send the message length %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -459,7 +459,7 @@ describe('list', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should send 0 for bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

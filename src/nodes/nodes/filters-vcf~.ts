@@ -18,11 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { Class, Func, Sequence, Var, ast } from '@webpd/compiler'
+import { Class, Func, NodeImplementation, Sequence, Var, ast } from '@webpd/compiler'
 
 interface NodeArguments {
     frequency: number,

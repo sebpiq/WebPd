@@ -18,7 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -485,7 +485,7 @@ describe('expr', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output the specified calculations %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -515,7 +515,7 @@ describe('expr', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should have default values set %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -538,7 +538,7 @@ describe('expr', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should work with signal %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -568,7 +568,7 @@ describe('expr', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should output latest results on bang %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -595,7 +595,7 @@ describe('expr', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should unpack list on inlet 0 %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -620,7 +620,7 @@ describe('expr', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should work with math functions %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,
@@ -648,7 +648,7 @@ describe('expr', () => {
         it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
             'should convert output to float %s',
             async ({ target, bitDepth }) => {
-                await nodeImplementationsTestHelpers.assertNodeOutput(
+                await testHelpers.assertNodeOutput(
                     {
                         target,
                         bitDepth,

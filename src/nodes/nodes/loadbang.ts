@@ -18,10 +18,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { bangUtils } from '../global-code/core'
-import { stdlib } from '@webpd/compiler'
+import { NodeImplementation, stdlib } from '@webpd/compiler'
 import { ast } from '@webpd/compiler'
 
 interface NodeArguments {}

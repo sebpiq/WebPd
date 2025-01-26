@@ -18,13 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { NodeImplementation } from '@webpd/compiler/src/compile/types'
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber, assertOptionalString } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
 import { computeUnitInSamples } from '../global-code/timing'
-import { Class, Sequence, stdlib } from '@webpd/compiler'
+import { Class, NodeImplementation, Sequence, stdlib } from '@webpd/compiler'
 import { ast, Var, Func, AnonFunc, ConstVar } from '@webpd/compiler'
 
 interface NodeArguments { 

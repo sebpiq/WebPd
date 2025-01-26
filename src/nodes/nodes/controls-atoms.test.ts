@@ -18,7 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
@@ -26,20 +25,18 @@ import {
     testParametersCombine,
 } from '../test-helpers'
 import { nodeImplementations, builders, NodeArguments } from './controls-atoms'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import {
     nodeImplementations as nodeImplementationsSendReceive,
     builders as buildersSendReceive,
 } from './send-receive'
-import {
-    CompilerTarget,
-    AudioSettings,
-    NodeImplementations,
-} from '@webpd/compiler/src/compile/types'
-import { Message } from '@webpd/compiler/src/run/types'
 import assert from 'assert'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
-import compile from '@webpd/compiler'
+import compile, {
+    AudioSettings,
+    CompilerTarget,
+    NodeImplementations,
+    Message,
+} from '@webpd/compiler'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 const NODE_TYPES = ['symbolatom', 'listbox', 'floatatom'] as const
 
@@ -98,7 +95,7 @@ describe('controls-atoms', () => {
                     ...nodeImplementationsSendReceive,
                 }
 
-                const graph = makeGraph({
+                const graph = testHelpers.makeGraph({
                     control: {
                         type: controlType,
                         ...builders[controlType].build(controlArgs),
@@ -146,7 +143,7 @@ describe('controls-atoms', () => {
                     throw new Error('Compilation failed')
                 }
 
-                const engine = await createTestEngine(
+                const engine = await testHelpers.createTestEngine(
                     target,
                     bitDepth,
                     compileResult.code
@@ -290,7 +287,7 @@ describe('controls-atoms', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should handle messages as expected %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -327,7 +324,7 @@ describe('controls-atoms', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should be initialized with 0 %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -352,7 +349,7 @@ describe('controls-atoms', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should handle messages as expected %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -389,7 +386,7 @@ describe('controls-atoms', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should be initialized with empty string %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -417,7 +414,7 @@ describe('controls-atoms', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should handle messages as expected %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,
@@ -463,7 +460,7 @@ describe('controls-atoms', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should be initialized with bang list %s',
                 async ({ target, bitDepth }) => {
-                    await nodeImplementationsTestHelpers.assertNodeOutput(
+                    await testHelpers.assertNodeOutput(
                         {
                             target,
                             bitDepth,

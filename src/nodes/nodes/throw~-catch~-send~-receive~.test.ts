@@ -18,12 +18,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as nodeImplementationsTestHelpers from '@webpd/compiler/src/test-helpers-node-implementations'
-import {
-    AudioSettings,
-    CompilerTarget,
-    NodeImplementations,
-} from '@webpd/compiler/src/compile/types'
 import {
     nodeImplementations as nodeImplementationsThrowCatchSendReceive,
     builders,
@@ -37,10 +31,14 @@ import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
-import compile, { ast } from '@webpd/compiler'
-import { makeGraph } from '@webpd/compiler/src/dsp-graph/test-helpers'
+import compile, {
+    ast,
+    AudioSettings,
+    CompilerTarget,
+    NodeImplementations,
+} from '@webpd/compiler'
+import * as testHelpers from '@webpd/compiler/src/test-helpers'
 
 describe('throw~ / catch~', () => {
     describe('builder [throw~]', () => {
@@ -101,7 +99,7 @@ describe('throw~ / catch~', () => {
 
             const dacArgs = { channelMapping: [0] }
 
-            const graph = makeGraph({
+            const graph = testHelpers.makeGraph({
                 counter: {
                     type: 'counter',
                     sinks: {
@@ -155,7 +153,11 @@ describe('throw~ / catch~', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(target, bitDepth, compileResult.code)
+            const engine = await testHelpers.createTestEngine(
+                target,
+                bitDepth,
+                compileResult.code
+            )
             engine.initialize(engine.metadata.settings.audio.sampleRate, 1)
             return engine
         }
@@ -174,10 +176,12 @@ describe('throw~ / catch~', () => {
                     }
                 )
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[0], [2], [4], [6]]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [0],
+                    [2],
+                    [4],
+                    [6],
+                ])
             }
         )
 
@@ -195,12 +199,17 @@ describe('throw~ / catch~', () => {
                     }
                 )
 
-                engine.io.messageReceivers.throw2['0_message'](['set', 'unknown_bus'])
+                engine.io.messageReceivers.throw2['0_message']([
+                    'set',
+                    'unknown_bus',
+                ])
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [[0], [1], [2], [3]]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [0],
+                    [1],
+                    [2],
+                    [3],
+                ])
             }
         )
     })
@@ -225,7 +234,7 @@ describe('throw~ / catch~', () => {
 
             const dacArgs = { channelMapping: [0, 1] }
 
-            const graph = makeGraph({
+            const graph = testHelpers.makeGraph({
                 counter: {
                     type: 'counter',
                     sinks: {
@@ -277,7 +286,11 @@ describe('throw~ / catch~', () => {
                 throw new Error('Compilation failed')
             }
 
-            const engine = await createTestEngine(target, bitDepth, compileResult.code)
+            const engine = await testHelpers.createTestEngine(
+                target,
+                bitDepth,
+                compileResult.code
+            )
             engine.initialize(engine.metadata.settings.audio.sampleRate, 1)
             return engine
         }
@@ -296,15 +309,12 @@ describe('throw~ / catch~', () => {
                     }
                 )
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [
-                        [0, 0],
-                        [1, 1],
-                        [2, 2],
-                        [3, 3],
-                    ]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [0, 0],
+                    [1, 1],
+                    [2, 2],
+                    [3, 3],
+                ])
             }
         )
 
@@ -324,15 +334,12 @@ describe('throw~ / catch~', () => {
 
                 engine.io.messageReceivers.receive2['0'](['set', 'unknown_bus'])
 
-                assert.deepStrictEqual(
-                    nodeImplementationsTestHelpers.generateFrames(engine, 4),
-                    [
-                        [0, 0],
-                        [1, 0],
-                        [2, 0],
-                        [3, 0],
-                    ]
-                )
+                assert.deepStrictEqual(testHelpers.generateFrames(engine, 4), [
+                    [0, 0],
+                    [1, 0],
+                    [2, 0],
+                    [3, 0],
+                ])
             }
         )
     })
