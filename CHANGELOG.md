@@ -1,3 +1,8 @@
+1.0.0-alpha.13
+---------------
+
+- small bug fix for Pd comments containing double quotes
+
 1.0.0-alpha.12
 ---------------
 

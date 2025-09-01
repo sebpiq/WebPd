@@ -205,7 +205,7 @@ let G_msg_EMPTY_MESSAGE = G_msg_create([])
         
 
         const exports = {
-            metadata: {"libVersion":"0.1.0","customMetadata":{"pdNodes":{"0":{"0":{"id":"0","type":"text","args":["bla bla"],"nodeClass":"text","layout":{"x":101,"y":85}},"1":{"id":"1","type":"text","args":["hello"],"nodeClass":"text","layout":{"x":149,"y":125}}}},"graph":{},"pdGui":[{"nodeClass":"text","patchId":"0","pdNodeId":"0"},{"nodeClass":"text","patchId":"0","pdNodeId":"1"}]},"settings":{"audio":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"io":{"messageReceivers":{},"messageSenders":{}}},"compilation":{"variableNamesIndex":{"io":{"messageReceivers":{},"messageSenders":{}},"globals":{"commons":{"getArray":"G_commons_getArray","setArray":"G_commons_setArray"}}}}},
+            metadata: {"libVersion":"0.1.2","customMetadata":{"pdNodes":{"0":{"0":{"id":"0","type":"text","args":["bla bla"],"nodeClass":"text","layout":{"x":101,"y":85}},"1":{"id":"1","type":"text","args":["hello"],"nodeClass":"text","layout":{"x":149,"y":125}}}},"graph":{},"pdGui":[{"nodeClass":"text","patchId":"0","pdNodeId":"0"},{"nodeClass":"text","patchId":"0","pdNodeId":"1"}]},"settings":{"audio":{"bitDepth":64,"channelCount":{"in":2,"out":2},"sampleRate":0,"blockSize":0},"io":{"messageReceivers":{},"messageSenders":{}}},"compilation":{"variableNamesIndex":{"io":{"messageReceivers":{},"messageSenders":{}},"globals":{"commons":{"getArray":"G_commons_getArray","setArray":"G_commons_setArray"}}}}},
             initialize: (sampleRate, blockSize) => {
                 exports.metadata.settings.audio.sampleRate = sampleRate
                 exports.metadata.settings.audio.blockSize = blockSize
