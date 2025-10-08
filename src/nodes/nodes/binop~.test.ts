@@ -24,7 +24,7 @@ import {
     NODE_IMPLEMENTATION_TEST_PARAMETERS,
     testNodeTranslateArgs,
 } from '../test-helpers'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 
 describe('binop~', () => {
     describe('builders', () => {

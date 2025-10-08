@@ -23,13 +23,21 @@ import {
     dspGraph,
     AudioSettings,
     CompilerTarget,
+    testHelpers
 } from '@webpd/compiler'
 import { PdJson } from '@webpd/pd-parser'
 import assert from 'assert'
 import { NodeBuilder, PartialNode } from '../compile-dsp-graph/types'
 import { makePd, pdJsonNodeDefaults } from '../compile-dsp-graph/test-helpers'
+import asc from 'assemblyscript/asc'
 
 export const SAMPLE_RATE = 44100
+
+export const initializeTests = () => {
+    testHelpers.setAsc(asc)
+}
+
+initializeTests()
 
 export interface NodeImplementationTestParameters {
     target: CompilerTarget

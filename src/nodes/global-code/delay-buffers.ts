@@ -19,7 +19,7 @@
  */
 import { stdlib } from '@webpd/compiler'
 import { ConstVar, Func, Sequence, Var } from '@webpd/compiler'
-import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler'
 
 export const delayBuffers: GlobalDefinitions = {
     namespace: 'delayBuffers',

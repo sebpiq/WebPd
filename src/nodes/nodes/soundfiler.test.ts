@@ -19,7 +19,7 @@
  */
 
 import { FS_OPERATION_SUCCESS } from '@webpd/compiler'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 import { nodeImplementation, builder } from './soundfiler'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS } from '../test-helpers'
 

@@ -18,13 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { runTestSuite } from '@webpd/compiler/src/test-helpers'
+import { testHelpers, stdlib, AnonFunc, ConstVar } from '@webpd/compiler'
 import { bangUtils, msgUtils } from './core'
-import { stdlib } from '@webpd/compiler'
-import { AnonFunc, ConstVar } from '@webpd/compiler'
+import { initializeTests } from '../test-helpers'
+initializeTests()
 
 describe('global-code.core', () => {
-    runTestSuite([
+    testHelpers.runTestSuite([
         {
             description: 'bangUtils > isBang > should match given message %s',
             testFunction: ({ globals: { bangUtils, msg } }) => AnonFunc()`

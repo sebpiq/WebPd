@@ -18,9 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { Class, Func, Var } from '@webpd/compiler'
-import {
-    GlobalDefinitions,
-} from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler'
 
 export const point: GlobalDefinitions = {
     namespace: 'points',

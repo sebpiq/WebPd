@@ -37,7 +37,7 @@ import compile, {
     NodeImplementations,
     Message,
 } from '@webpd/compiler'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 
 const NODE_TYPES_NUMBERS = ['hsl', 'hradio', 'vsl', 'vradio'] as const
 const NODE_TYPES_ALL = [...NODE_TYPES_NUMBERS, 'nbx', 'tgl'] as const

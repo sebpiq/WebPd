@@ -20,9 +20,8 @@
 import { fsWeb } from '@webpd/runtime'
 import { urlDirName } from './url-helpers'
 import { Settings } from './run'
-import { Code, Message, readMetadata as readMetadataRaw } from '@webpd/compiler'
+import { Code, Message, DspGraph, readMetadata as readMetadataRaw } from '@webpd/compiler'
 import { WasmBuffer } from '../../build/types'
-import { DspGraph } from '@webpd/compiler/src'
 
 export const defaultSettingsForRun = (
     patchUrl: string,

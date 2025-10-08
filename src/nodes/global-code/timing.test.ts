@@ -17,12 +17,13 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { stdlib, AnonFunc } from '@webpd/compiler'
+import { stdlib, AnonFunc, testHelpers } from "@webpd/compiler"
 import { computeUnitInSamples } from './timing'
-import { runTestSuite } from '@webpd/compiler/src/test-helpers'
+import { initializeTests } from '../test-helpers'
+initializeTests()
 
-describe('timing', () => {
-    runTestSuite([
+describe('global-code.timing', () => {
+    testHelpers.runTestSuite([
         {
             description: 'computeUnitInSamples > should convert milliseconds to samples %s',
             testFunction: () => AnonFunc()`

@@ -18,11 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { interpolateLin } from './points'
-import { runTestSuite } from '@webpd/compiler/src/test-helpers'
-import { stdlib, AnonFunc } from '@webpd/compiler'
+import { testHelpers, stdlib, AnonFunc } from '@webpd/compiler'
+import { initializeTests } from '../test-helpers'
+initializeTests()
 
 describe('global-code.points', () => {
-    runTestSuite([
+    testHelpers.runTestSuite([
         {
             description: 'interpolateLin > should compute linear interpolation %s',
             testFunction: ({ globals: { points } }) => AnonFunc()`

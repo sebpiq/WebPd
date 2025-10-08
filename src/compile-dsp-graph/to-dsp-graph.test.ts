@@ -25,7 +25,7 @@ import toDspGraph, {
     _buildConnections,
     _FOR_TESTING,
 } from './to-dsp-graph'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 import { NodeBuilders } from './types'
 import { nodeBuilders as subpatchNodeBuilders } from '../nodes/nodes/subpatch'
 import { builder as mixerNodeBuilder } from '../nodes/nodes/_mixer~'

@@ -19,7 +19,7 @@
  */
 import { stdlib } from '@webpd/compiler'
 import { ConstVar, Func, Var } from '@webpd/compiler'
-import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler'
 
 // TODO : support for -raw (see soundfiler help)
 // TODO : find a better way to factorize this code

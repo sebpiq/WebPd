@@ -34,7 +34,7 @@ import compile, {
     CompilerTarget,
 } from '@webpd/compiler'
 import { PartialNode } from '../../compile-dsp-graph/types'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 
 const nodeImplementations = {
     'adc~': nodeImplementationAdc,

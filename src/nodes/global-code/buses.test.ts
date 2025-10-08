@@ -18,11 +18,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { AnonFunc, ConstVar, Func, Sequence, Var, stdlib } from "@webpd/compiler"
-import { runTestSuite } from "@webpd/compiler/src/test-helpers"
+import { testHelpers } from "@webpd/compiler"
 import { msgBuses, sigBuses } from "./buses"
+import { initializeTests } from '../test-helpers'
+initializeTests()
 
 describe('global-code.buses', () => {
-    runTestSuite([
+    testHelpers.runTestSuite([
         {
             description: 'sigBuses > read > should read from given bus %s',
             testFunction: ({ globals: { sigBuses } }) => AnonFunc()`
@@ -66,7 +68,7 @@ describe('global-code.buses', () => {
         ])
     }])
 
-    runTestSuite([
+    testHelpers.runTestSuite([
         {
             description: 'msgBuses > publish - subscribe > should publish to given bus %s',
             testFunction: ({ globals: { msgBuses, msg }}) => AnonFunc()`

@@ -19,7 +19,7 @@
  */
 
 import { Message } from '@webpd/compiler'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 import {
     buildNode,
     NODE_IMPLEMENTATION_TEST_PARAMETERS,

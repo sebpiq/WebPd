@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler'
 import { interpolateLin } from './points'
 import { Class, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
 

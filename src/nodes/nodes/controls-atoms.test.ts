@@ -36,7 +36,7 @@ import compile, {
     NodeImplementations,
     Message,
 } from '@webpd/compiler'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 
 const NODE_TYPES = ['symbolatom', 'listbox', 'floatatom'] as const
 

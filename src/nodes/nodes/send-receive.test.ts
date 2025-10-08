@@ -29,7 +29,7 @@ import compile, {
     CompilerTarget,
     Message,
 } from '@webpd/compiler'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 
 describe('send / receive', () => {
     describe('builder [send]', () => {

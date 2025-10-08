@@ -44,7 +44,7 @@ import compile, {
     CompilerTarget,
     NodeImplementations,
 } from '@webpd/compiler'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 
 const SAMPLE_RATE = 44100
 // const DELREAD_NODE_TYPES = ['delread~', 'delread4~'] as const

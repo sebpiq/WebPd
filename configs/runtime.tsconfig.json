@@ -18,5 +18,10 @@
     },
     "include": [
         "../src/build/outputs/app/runtime.main.ts"
+    ],
+    "exclude": [
+        "../src/**/*.test.ts",
+        "../src/**/*.test.*.ts",
+        "../src/**/*test-helpers*"
     ]
 }

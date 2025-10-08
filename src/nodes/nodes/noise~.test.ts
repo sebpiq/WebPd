@@ -19,7 +19,7 @@
  */
 
 import assert from 'assert'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS } from '../test-helpers'
 import { nodeImplementation, builder } from './noise~'
 

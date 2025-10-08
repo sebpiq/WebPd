@@ -19,11 +19,19 @@
  */
 
 import { linesUtils } from './lines'
-import { runTestSuite } from '@webpd/compiler/src/test-helpers'
-import { stdlib } from '@webpd/compiler'
-import { AnonFunc, ConstVar, Func, Sequence, Var } from '@webpd/compiler'
-import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
+import { 
+    testHelpers, 
+    stdlib, 
+    AnonFunc, 
+    ConstVar, 
+    Func, 
+    Sequence, 
+    Var, 
+    GlobalDefinitions,
+} from '@webpd/compiler'
 import { point } from './points'
+import { initializeTests } from '../test-helpers'
+initializeTests()
 
 const lineTestUtils: GlobalDefinitions = {
     namespace: 'lineTestUtils',
@@ -92,7 +100,7 @@ const lineTestUtils: GlobalDefinitions = {
 }
 
 describe('global-code.lines', () => {
-    runTestSuite(
+    testHelpers.runTestSuite(
         [
             {
                 description:

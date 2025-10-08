@@ -34,7 +34,7 @@ import {
     AudioSettings,
     NodeImplementations,
 } from '@webpd/compiler'
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 
 describe('dac~', () => {
     describe('builder', () => {

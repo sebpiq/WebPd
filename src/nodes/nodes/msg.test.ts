@@ -18,12 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import * as testHelpers from '@webpd/compiler/src/test-helpers'
+import { testHelpers } from '@webpd/compiler'
 import { nodeImplementation, builder } from './msg'
 import { buildNode, NODE_IMPLEMENTATION_TEST_PARAMETERS, testNodeTranslateArgs } from '../test-helpers'
 import { builders as sendReceiveBuilders, nodeImplementations as sendReceiveNodeImplementations } from './send-receive'
 import compile, { Message } from '@webpd/compiler'
-import { createTestEngine } from '@webpd/compiler/src/test-helpers'
 import assert from 'assert'
 
 describe('msg', () => {
@@ -313,7 +312,7 @@ describe('msg', () => {
                     throw new Error('Compilation failed')
                 }
     
-                const engine = await createTestEngine(
+                const engine = await testHelpers.createTestEngine(
                     target,
                     bitDepth,
                     compileResult.code

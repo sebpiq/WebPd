@@ -41,7 +41,7 @@
     "wavefile": "^11.0.0"
   },
   "devDependencies": {
-    "@webpd/compiler": "^0.1.2",
+    "@webpd/compiler": "^0.2.1",
     "@webpd/dev": "github:sebpiq/WebPd_dev#v1",
     "@webpd/pd-parser": "^1.0.0",
     "@webpd/runtime": "^0.1.2",

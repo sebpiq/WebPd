@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { GlobalDefinitions } from '@webpd/compiler/src/compile/types'
+import { GlobalDefinitions } from '@webpd/compiler'
 import { stdlib, Sequence, ConstVar, Var, Func } from '@webpd/compiler'
 
 export const sigBuses: GlobalDefinitions = {
