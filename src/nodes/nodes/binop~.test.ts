@@ -243,5 +243,33 @@ describe('binop~', () => {
             )
         })
 
+        describe('log~', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should output expected result %s',
+                async ({ target, bitDepth }) => {
+                    await testHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['log~'], 'log~', { value: Math.E }),
+                            nodeImplementation: nodeImplementations['log~'],
+                        },
+                        [
+                            { ins: { '0': 1, '1': Math.E } },
+                            { outs: { '0': 0 } },
+                        ],
+                        [
+                            { ins: { '0': Math.E, '1': Math.E } },
+                            { outs: { '0': 1 } },
+                        ],
+                        [
+                            { ins: { '0': 8, '1': 2 } },
+                            { outs: { '0': 3 } },
+                        ]
+                    )
+                }
+            )
+        })
+
     })
 })

@@ -46,7 +46,7 @@ use :
 NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI objects.
 
 ```
-141 object supported (incomplete implementation for some) : 
+147 object supported (incomplete implementation for some) : 
 [pd]
 [inlet]
 [outlet]
@@ -59,10 +59,12 @@ NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI
 [min~]
 [max~]
 [pow~]
+[log~]
 [abs~]
 [cos~]
 [wrap~]
 [sqrt~]
+[exp~]
 [mtof~]
 [ftom~]
 [osc~]
@@ -93,6 +95,7 @@ NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI
 [adc~]
 [samplerate~]
 [tabplay~]
+[tabwrite~]
 [readsf~]
 [writesf~]
 [vd~]
@@ -122,6 +125,7 @@ NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI
 [%]
 [pow]
 [log]
+[atan2]
 [||]
 [&&]
 [>]
@@ -132,6 +136,10 @@ NOTE : some of these objects, such as `[openpanel]` are no-ops since they are UI
 [!=]
 [abs]
 [cos]
+[sin]
+[tan]
+[atan]
+[exp]
 [wrap]
 [sqrt]
 [mtof]

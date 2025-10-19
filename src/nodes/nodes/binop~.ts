@@ -20,7 +20,7 @@
 
 import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
-import { pow } from '../global-code/funcs'
+import { log, pow } from '../global-code/funcs'
 import { ast, NodeImplementations } from '@webpd/compiler'
 
 interface NodeArguments {
@@ -114,6 +114,15 @@ const nodeImplementations: NodeImplementations = {
         dsp: ({ ins }, { funcs }) => ast`${funcs.pow}(${ins.$0}, ${ins.$1})`,
         dependencies: [pow],
     },
+    'log~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'log_t',
+        },
+        dsp: ({ ins }, { funcs }) => ast`${funcs.log}(${ins.$0}, ${ins.$1} > 0 ? ${ins.$1} : Math.E)`,
+        dependencies: [log],
+    },
 }
 
 const builders = {
@@ -124,6 +133,7 @@ const builders = {
     'min~': makeBuilder(0),
     'max~': makeBuilder(0),
     'pow~': makeBuilder(0),
+    'log~': makeBuilder(Math.E),
 }
 
 export { builders, nodeImplementations, NodeArguments }

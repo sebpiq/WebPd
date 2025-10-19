@@ -57,3 +57,15 @@ export const pow: GlobalDefinitions = {
         return leftOp > 0 || (Math.round(rightOp) === rightOp) ? Math.pow(leftOp, rightOp): 0
     `,
 }
+
+// TODO : tests (see in binop)
+export const log: GlobalDefinitions = {
+    namespace: 'funcs',
+    // prettier-ignore
+    code: ({ ns: funcs }) => Func(funcs.log, [
+        Var(`Float`, `leftOp`),
+        Var(`Float`, `rightOp`),
+    ], 'Float')`
+        return Math.max(Math.log(leftOp) / Math.log(rightOp), -1000)
+    `,
+}

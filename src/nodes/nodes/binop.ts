@@ -22,7 +22,7 @@ import { NodeBuilder } from '../../compile-dsp-graph/types'
 import { assertOptionalNumber } from '../validation'
 import { bangUtils } from '../global-code/core'
 import { coldFloatInletWithSetter } from '../standard-message-receivers'
-import { pow } from '../global-code/funcs'
+import { log, pow } from '../global-code/funcs'
 import { AnonFunc, ast, Class, Func, Sequence, Var, VariableNamesIndex } from '@webpd/compiler'
 import {
     Code,
@@ -186,8 +186,15 @@ const nodeImplementations: NodeImplementations = {
     }),
     log: makeNodeImplementation({
         operationName: 'log',
+        prepareRightOp: `value > 0 ? value : Math.E`,
+        generateOperation: (state, { funcs }) =>
+            `${funcs.log}(${state}.leftOp, ${state}.rightOp)`,
+        dependencies: [log],
+    }),
+    atan2: makeNodeImplementation({
+        operationName: 'atan2',
         generateOperation: (state) =>
-            `Math.log(${state}.leftOp) / Math.log(${state}.rightOp)`,
+            `Math.atan2(${state}.leftOp, ${state}.rightOp)`,
     }),
     '||': makeNodeImplementation({
         operationName: 'or',
@@ -246,6 +253,7 @@ const builders = {
     '%': makeBuilder(0),
     pow: makeBuilder(0),
     log: makeBuilder(Math.E),
+    atan2: makeBuilder(0),
     '||': makeBuilder(0),
     '&&': makeBuilder(0),
     '>': makeBuilder(0),

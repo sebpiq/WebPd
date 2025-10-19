@@ -642,5 +642,61 @@ describe('binop', () => {
                 }
             )
         })
+
+        describe('log', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should compute natural logarithm %s',
+                async ({ target, bitDepth }) => {
+                    await testHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['log'], 'log', { value: Math.E }),
+                            nodeImplementation: nodeImplementations['log'],
+                        },
+                        [
+                            { ins: { '0': [[1], [Math.E], [10], [0]] } },
+                            { outs: { '0': [[0], [1], [Math.log(10)], [-1000]] } },
+                        ],
+                        [
+                            { ins: { '1': [[-10]] } },
+                            { outs: { '0': [] } },
+                        ],
+                        [
+                            { ins: { '0': [[10]] } },
+                            { outs: { '0': [[Math.log(10)]] } },
+                        ],
+                    )
+                }
+            )
+        })
+
+        describe('atan2', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should compute atan2(y, x) %s',
+                async ({ target, bitDepth }) => {
+                    await testHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['atan2'], 'atan2', { value: 1 }),
+                            nodeImplementation: nodeImplementations['atan2'],
+                        },
+                        [
+                            { ins: { '0': [[1], [0], [-1]] } },
+                            { outs: { '0': [[Math.PI/4], [0], [-Math.PI/4]] } },
+                        ],
+                        [
+                            { ins: { '1': [[-1]] } },
+                            { outs: { '0': [] } },
+                        ],
+                        [
+                            { ins: { '0': [[1]] } },
+                            { outs: { '0': [[3/4 * Math.PI]] } },
+                        ],
+                    )
+                }
+            )
+        })
     })
 })

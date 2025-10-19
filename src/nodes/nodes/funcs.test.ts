@@ -84,6 +84,86 @@ describe('funcs', () => {
             )
         })
 
+        describe('sin', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should apply the expected function %s',
+                async ({ target, bitDepth }) => {
+                    await testHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['sin'], 'sin', {}),
+                            nodeImplementation: nodeImplementations['sin'],
+                        },
+                        [
+                            { ins: { '0': [[0], [Math.PI / 2], [Math.PI], [(3 * Math.PI) / 2]] } },
+                            { outs: { '0': [[0], [1], [0], [-1]] } },
+                        ]
+                    )
+                }
+            )
+        })
+
+        describe('tan', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should apply the expected function %s',
+                async ({ target, bitDepth }) => {
+                    await testHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['tan'], 'tan', {}),
+                            nodeImplementation: nodeImplementations['tan'],
+                        },
+                        [
+                            { ins: { '0': [[0], [Math.PI / 4], [Math.PI]] } },
+                            { outs: { '0': [[0], [1], [0]] } },
+                        ]
+                    )
+                }
+            )
+        })
+
+        describe('atan', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should apply the expected function %s',
+                async ({ target, bitDepth }) => {
+                    await testHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['atan'], 'atan', {}),
+                            nodeImplementation: nodeImplementations['atan'],
+                        },
+                        [
+                            { ins: { '0': [[0], [1], [-1], [Math.sqrt(3)], [-Math.sqrt(3)]] } },
+                            { outs: { '0': [[0], [Math.PI / 4], [-Math.PI / 4], [Math.PI / 3], [-Math.PI / 3]] } },
+                        ]
+                    )
+                }
+            )
+        })
+
+        describe('exp', () => {
+            it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+                'should apply the expected function %s',
+                async ({ target, bitDepth }) => {
+                    await testHelpers.assertNodeOutput(
+                        {
+                            target,
+                            bitDepth,
+                            node: buildNode(builders['exp'], 'exp', {}),
+                            nodeImplementation: nodeImplementations['exp'],
+                        },
+                        [
+                            { ins: { '0': [[0], [1], [2]] } },
+                            { outs: { '0': [[1], [Math.E], [Math.E * Math.E]] } },
+                        ]
+                    )
+                }
+            )
+        })
+
         describe('sqrt', () => {
             it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
                 'should apply the expected function %s',

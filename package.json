@@ -1,6 +1,6 @@
 {
   "name": "webpd",
-  "version": "1.0.0-alpha.13",
+  "version": "1.0.0-alpha.14",
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
@@ -12,6 +12,7 @@
     "dist",
     "webpd.png"
   ],
+  "sideEffects": false,
   "author": "Sébastien Piquemal <sebpiq@gmail.com>",
   "description": "WebPd is a compiler for audio programming language Pure Data allowing to run .pd patches on web pages.",
   "license": "LGPL-3.0",
@@ -41,7 +42,7 @@
     "wavefile": "^11.0.0"
   },
   "devDependencies": {
-    "@webpd/compiler": "^0.2.1",
+    "@webpd/compiler": "^0.2.2",
     "@webpd/dev": "github:sebpiq/WebPd_dev#v1",
     "@webpd/pd-parser": "^1.0.0",
     "@webpd/runtime": "^0.1.2",

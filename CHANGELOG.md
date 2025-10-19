@@ -1,3 +1,9 @@
+1.0.0-alpha.14
+---------------
+
+- added `[sin]`, `[tan]`, `[atan]`, `[exp]`, `[atan2]`, `[log~]`, `[exp~]`
+- upgraded `@webpd/compiler` (release with distributed test-helpers).
+
 1.0.0-alpha.13
 ---------------
 

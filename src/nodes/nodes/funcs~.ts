@@ -71,6 +71,14 @@ const nodeImplementations: NodeImplementations = {
         },
         dsp: ({ ins }) => ast`${ins.$0} >= 0 ? Math.pow(${ins.$0}, 0.5): 0`,
     },
+    'exp~': {
+        flags: {
+            isPureFunction: true,
+            isDspInline: true,
+            alphaName: 'exp_t',
+        },
+        dsp: ({ ins }) => ast`Math.exp(${ins.$0})`,
+    },
     'mtof~': {
         flags: {
             isPureFunction: true,
@@ -96,6 +104,7 @@ const builders = {
     'cos~': builder,
     'wrap~': builder,
     'sqrt~': builder,
+    'exp~': builder,
     'mtof~': builder,
     'ftom~': builder,
 }

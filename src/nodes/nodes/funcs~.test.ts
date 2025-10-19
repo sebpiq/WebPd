@@ -172,4 +172,28 @@ describe('func~', () => {
             }
         )
     })
+
+    describe('implementation exp~', () => {
+        it.each(NODE_IMPLEMENTATION_TEST_PARAMETERS)(
+            'should apply the expected function %s',
+            async ({ target, bitDepth }) => {
+                await testHelpers.assertNodeOutput(
+                    {
+                        target,
+                        bitDepth,
+                        node: buildNode(builders['exp~'], 'exp~', {}),
+                        nodeImplementation: nodeImplementations['exp~'],
+                    },
+                    [
+                        { ins: { '0': 0 } },
+                        { outs: { '0': 1 } },
+                    ],
+                    [
+                        { ins: { '0': 1 } },
+                        { outs: { '0': Math.E } },
+                    ],
+                )
+            }
+        )
+    })
 })
