@@ -2,7 +2,7 @@
   "name": "webpd",
   "version": "1.0.0-alpha.14",
   "type": "module",
-  "main": "./dist/src/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
     "webpd": "./bin/cli.mjs"
@@ -34,16 +34,20 @@
     "build:cli": "npx rollup --config configs/cli.rollup.js",
     "build:dist": "npx rollup --config configs/dist.rollup.js",
     "build:runtime": "npx rollup --config configs/runtime.rollup.js",
-    "build": "npm run clean; npm run build:runtime; npm run build:dist; npm run build:cli",
-    "clean": "rm -rf dist ; rm -rf bin",
-    "postpublish": "git tag -a v$(node -p \"require('./package.json').version\") -m \"Release $(node -p \"require('./package.json').version\")\" ; git push --tags"
+    "build": "npm run clean && npm run build:runtime && npm run build:dist && npm run build:cli",
+    "build:dev:full": "npm run build:dev:deps && npm run link:local && npm run build",
+    "build:dev:deps": "cd ../WebPd_compiler && npm run build:dev:full && cd ../WebPd_pd-parser && npm run build:dev:full && cd ../WebPd_runtime && npm run build:dev:full && cd ../WebPd",
+    "link:local": "cd ../WebPd_compiler && npm link && cd ../WebPd_pd-parser && npm link && cd ../WebPd_runtime && npm link && cd ../WebPd && npm link @webpd/compiler @webpd/pd-parser @webpd/runtime && cd ../WebPd",
+    "unlink:local": "npm unlink @webpd/compiler @webpd/pd-parser @webpd/runtime && cd ../WebPd_compiler && npm unlink . && cd ../WebPd_pd-parser && npm unlink . && cd ../WebPd_runtime && npm unlink . && cd ../WebPd",
+    "clean": "rm -rf dist && rm -rf bin",
+    "postpublish": "git tag -a v$(node -p \"require('./package.json').version\") -m \"Release $(node -p \"require('./package.json').version\")\" && git push --tags"
   },
   "dependencies": {
     "wavefile": "^11.0.0"
   },
   "devDependencies": {
     "@webpd/compiler": "^0.2.2",
-    "@webpd/dev": "github:sebpiq/WebPd_dev#v1",
+    "@webpd/dev": "github:sebpiq/WebPd_dev#v2",
     "@webpd/pd-parser": "^1.0.0",
     "@webpd/runtime": "^0.1.2",
     "assemblyscript": "^0.27.24",
