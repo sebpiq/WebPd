@@ -274,7 +274,7 @@ const exitError = (msg: string) => {
 
 const exitUnknownError = (err: Error) => {
     exitError(
-        'Unkown error occurred.' +
+        'Unknown error occurred.' +
             '\nIf you think this is a bug, please report it with the command you typed and its output.' +
             '\nPlease follow also the guidelines at https://github.com/sebpiq/WebPd/?tab=readme-ov-file#reporting-a-bug' +
             '\n\n' +
